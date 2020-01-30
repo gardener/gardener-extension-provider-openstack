@@ -1,0 +1,18 @@
+images:
+  machine-controller-manager: image-repository:image-tag
+
+replicas: 1
+
+podAnnotations: {}
+
+providerName: provider-foo
+
+namespace:
+  uid: uuid-of-namespace
+
+metricsPort: 10258
+
+vpa:
+  enabled: true
+  updatePolicy:
+    updateMode: "Auto"

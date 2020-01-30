@@ -1,0 +1,99 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "name" . }}
+  labels:
+{{ include "labels" . | indent 4 }}
+rules:
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - backupbuckets
+  - backupbuckets/status
+  - backupentries
+  - backupentries/status
+  - clusters
+  - controlplanes
+  - controlplanes/status
+  - infrastructures
+  - infrastructures/status
+  - workers
+  - workers/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  verbs:
+  - "*"
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - provider-openstack-leader-election
+  verbs:
+  - get
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - ""
+  - apps
+  - batch
+  - rbac.authorization.k8s.io
+  - admissionregistration.k8s.io
+  - apiextensions.k8s.io
+  resources:
+  - namespaces
+  - events
+  - secrets
+  - configmaps
+  - endpoints
+  - deployments
+  - services
+  - serviceaccounts
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  - jobs
+  - pods
+  - pods/log
+  - mutatingwebhookconfigurations
+  - customresourcedefinitions
+  verbs:
+  - "*"
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "name" . }}
+  labels:
+{{ include "labels" . | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "name" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}

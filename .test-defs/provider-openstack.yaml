@@ -1,0 +1,19 @@
+kind: TestDefinition
+metadata:
+  name: gen-provider-openstack
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Generates the openstack provider specific configurations
+  activeDeadlineSeconds: 3600
+
+  command: [bash, -c]
+  args:
+  - >-
+    go run -mod=vendor ./test/tm/generator.go
+    --infrastructure-provider-config-filepath=$INFRASTRUCTURE_PROVIDER_CONFIG_FILEPATH
+    --controlplane-provider-config-filepath=$CONTROLPLANE_PROVIDER_CONFIG_FILEPATH
+    --floating-pool-name=$FLOATING_POOL_NAME
+    --loadbalancer-provider=$LOADBALANCER_PROVIDER
+    --zone=$ZONE
+
+  image: golang:1.13.0

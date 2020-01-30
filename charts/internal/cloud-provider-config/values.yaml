@@ -1,0 +1,22 @@
+kubernetesVersion: 0.0.1
+#[Global]
+authUrl: fooURL
+domainName: fooDomain
+tenantName: fooTenant
+username: barUser
+password: barPass
+# [LoadBalancer]
+lbProvider: foobar
+# floatingNetworkID: foo-bar-123
+# subnetID: foo-bar-123
+# [Metadata]
+dhcpDomain: foobar
+requestTimeout: 2s
+# floatingClasses:
+# - name: A
+#   floatingNetworkID: "1234"
+#   floatingSubnetID: "12345"
+#   subnetID: a464545
+# - name: B
+#   floatingSubnetID: asd12345
+#   subnetID: asd464545

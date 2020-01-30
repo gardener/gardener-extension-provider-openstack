@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-provider-config-kube-controller-manager
+  namespace: {{ .Release.Namespace }}
+data:
+  cloudprovider.conf: |
+    {{- include "cloud-provider-config-global" . | indent 4 }}
+    {{- include "cloud-provider-config-meta" . | indent 4 }}

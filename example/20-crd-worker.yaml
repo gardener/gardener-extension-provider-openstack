@@ -1,0 +1,27 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: workers.extensions.gardener.cloud
+spec:
+  group: extensions.gardener.cloud
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: workers
+    singular: worker
+    kind: Worker
+  additionalPrinterColumns:
+    - name: Type
+      type: string
+      description: The worker type.
+      JSONPath: .spec.type
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  subresources:
+    status: {}

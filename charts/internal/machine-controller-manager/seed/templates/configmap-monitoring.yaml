@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: machine-controller-manager-monitoring-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    extensions.gardener.cloud/configuration: monitoring
+data:
+  scrape_config: |
+    - job_name: machine-controller-manager
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: machine-controller-manager;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+      - source_labels: [ __name__ ]
+        regex: ^(mcm_cloud_api_requests_failed_total|mcm_cloud_api_requests_total|mcm_machine_controller_frozen|mcm_machine_current_status_phase|mcm_machine_deployment_failed_machines|mcm_machine_items_total|mcm_machine_set_failed_machines|mcm_machinedeployment_items_total|mcm_machineset_items_total|mcm_scrape_failure_total|machine_adds|machine_depth|machine_queue_latency|machine_retries|machine_work_duration|machinedeployment_adds|machinedeployment_depth|machinedeployment_queue_latency|machinedeployment_retries|machinedeployment_work_duration|machinesafetyapiserver_adds|machinesafetyapiserver_depth|machinesafetyapiserver_queue_latency|machinesafetyapiserver_retries|machinesafetyapiserver_work_duration|machinesafetyorphanvms_adds|machinesafetyorphanvms_depth|machinesafetyorphanvms_queue_latency|machinesafetyorphanvms_retries|machinesafetyorphanvms_work_duration|machinesafetyovershooting_adds|machinesafetyovershooting_depth|machinesafetyovershooting_latency|machinesafetyovershooting_retries|machinesafetyovershooting_work_duration|machineset_adds|machineset_depth|machineset_queue_latency|machineset_retries|machineset_work_duration|node_adds|node_depth|node_queue_latency|node_retries|node_work_duration|secret_adds|secret_depth|secret_queue_latency|secret_retries|secret_work_duration|process_max_fds|process_open_fds)$
+        action: keep
+
+  alerting_rules: |
+    machine-controller-manager.rules.yaml: |
+      groups:
+      - name: machine-controller-manager.rules
+        rules:
+        - alert: MachineControllerManagerDown
+          expr: absent(up{job="machine-controller-manager"} == 1)
+          for: 15m
+          labels:
+            service: machine-controller-manager
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: There are no running machine controller manager instances. No shoot nodes can be created/maintained.
+            summary: Machine controller manager is down.
+
+  dashboard_operators: |
+    machine-controller-manager-dashboard.json: |-
+{{ .Files.Get "mcm-monitoring-dashboard.json" | indent 6 }}

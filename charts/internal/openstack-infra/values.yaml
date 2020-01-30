@@ -1,0 +1,31 @@
+openstack:
+  authURL: https://keystone/v3/
+  domainName: CP
+  tenantName: kubernetes
+  region: eu-de-1
+  floatingPoolName: my-pool
+
+create:
+  router: true
+
+sshPublicKey: sshkey-12345
+
+router:
+  id: ${openstack_networking_router_v2.router.id}
+
+dnsServers:
+- 8.8.8.8
+
+clusterName: test-namespace
+
+networks:
+  workers: 10.250.0.0/19
+
+outputKeys:
+  routerID: router_id
+  networkID: network_id
+  keyName: key_name
+  securityGroupID: security_group_id
+  securityGroupName: security_group_name
+  floatingNetworkID: floating_network_id
+  subnetID: subnet_id

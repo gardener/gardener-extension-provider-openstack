@@ -1,0 +1,22 @@
+images:
+- name: terraformer
+  sourceRepository: github.com/gardener/terraformer
+  repository: eu.gcr.io/gardener-project/gardener/terraformer
+  tag: "0.18.0"
+- name: machine-controller-manager
+  sourceRepository: github.com/gardener/machine-controller-manager
+  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  tag: "v0.25.0"
+- name: etcd-backup-restore
+  sourceRepository: github.com/gardener/etcd-backup-restore
+  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
+  tag: "0.7.3"
+- name: cloud-controller-manager
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.15"
+- name: cloud-controller-manager
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: k8scloudprovider/openstack-cloud-controller-manager
+  tag: "v1.17.0"
+  targetVersion: ">= 1.15"

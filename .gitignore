@@ -1,0 +1,20 @@
+/.kube-secrets
+/tmp
+/dev
+/local
+**/dev
+/bin
+
+.vscode
+.idea
+.DS_Store
+*~
+
+TODO
+
+# Virtual go & fuse
+.virtualgo
+.fuse_hidden*
+
+# Packr generated files
+*-packr.go

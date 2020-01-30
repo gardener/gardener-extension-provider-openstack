@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-provider-config-cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+data:
+  cloudprovider.conf: |
+    {{- include "cloud-provider-config-global" . | indent 4 }}
+    {{- if .Values.floatingSubnetID }}
+    floating-subnet-id="{{ .Values.floatingSubnetID }}"
+    {{- end }}
+    {{- if .Values.subnetID }}
+    subnet-id="{{ .Values.subnetID }}"
+    {{- end }}
+    {{- include "cloud-provider-config-meta" . | indent 4 }}
+    {{- range $i, $class := .Values.floatingClasses }}
+    [LoadBalancerClass {{ $class.name | quote }}]
+    {{- if $class.floatingNetworkID }}
+    floating-network-id="{{ $class.floatingNetworkID }}"
+    {{- end }}
+    {{- if $class.floatingSubnetID }}
+    floating-subnet-id="{{ $class.floatingSubnetID }}"
+    {{- end }}
+    {{- if $class.subnetID }}
+    subnet-id="{{ $class.subnetID }}"
+    {{- end }}
+    {{- end }}

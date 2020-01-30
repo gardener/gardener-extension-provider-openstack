@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shoot--foobar--openstack
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: core-openstack
+  namespace: shoot--foobar--openstack
+type: Opaque
+data:
+  domainName: AAAA
+  tenantName: AAAA
+  username: AAAA
+  password: AAAA
+
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Cluster
+metadata:
+  name: shoot--foobar--openstack
+spec:
+  cloudProfile:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: CloudProfile
+    spec:
+      providerConfig:
+        apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+        kind: CloudProfileConfig
+        keystoneURL: https://localhost
+      # dnsServers:
+      # - 1.1.1.1
+  seed:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Seed
+  shoot:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Shoot
+    status:
+      lastOperation:
+        state: Succeeded
+
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Infrastructure
+metadata:
+  name: infrastructure
+  namespace: shoot--foobar--openstack
+spec:
+  type: openstack
+  region: eu-de-1
+  secretRef:
+    name: core-openstack
+    namespace: shoot--foobar--openstack
+  providerConfig:
+    apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+    kind: InfrastructureConfig
+    floatingPoolName: MY-FLOATING-POOL
+    networks:
+    # router:
+    #   id: 1234
+      workers: 10.250.0.0/19
+  sshPublicKey: AAAA

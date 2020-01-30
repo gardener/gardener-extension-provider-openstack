@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backupprovider
+  namespace: garden
+type: Opaque
+data:
+# authURL: base64(authentication-url)
+# domainName: base64(domain-name)
+# tenantName: base64(tenant-name)
+# username: base64(username)
+# password: base64(password)
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: BackupEntry
+metadata:
+  name: shoot--foo--bar--sd34f
+spec:
+  type: openstack
+  region: eu-west-1
+  bucketName: cloud--os--fg2d6
+  secretRef:
+    name: backupprovider
+    namespace: garden

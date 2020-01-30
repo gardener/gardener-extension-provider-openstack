@@ -1,0 +1,105 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudprovider
+  namespace: shoot--foobar--openstack
+type: Opaque
+data:
+  domainName: ZGF0YQo=
+  tenantName: ZGF0YQo=
+  username: ZGF0YQo=
+  password: ZGF0YQo=
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Cluster
+metadata:
+  name: shoot--foobar--openstack
+spec:
+  cloudProfile:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: CloudProfile
+    spec:
+      providerConfig:
+        apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+        kind: CloudProfileConfig
+        keystoneURL: https://localhost
+        machineImages:
+          - name: coreos
+            versions:
+              - version: 2135.6.0
+                image: openstackimagename
+                regions:
+                  - name: eu-de-2
+                    id: openstackimageid
+  seed:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Seed
+  shoot:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Shoot
+    spec:
+      region: eu-de-2
+      kubernetes:
+        version: 1.13.4
+      cloud:
+        openstack:
+          networks:
+            pods: 10.243.128.0/17
+    status:
+      lastOperation:
+        state: Succeeded
+---
+# This resource does result in the deployment of the machine-controller-manager, the machine classes,
+# and the desired MachineDeployments. However, it does not create actual virtual machines because the
+# provided infrastructure status data (subnet id, etc.) is not valid/does not exist.
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Worker
+metadata:
+  name: worker
+  namespace: shoot--foobar--openstack
+  annotations:
+    gardener.cloud/operation: reconcile
+spec:
+  type: openstack
+  region: eu-de-2
+  secretRef:
+    name: cloudprovider
+    namespace: shoot--foobar--openstack
+  infrastructureProviderStatus:
+    apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+    kind: InfrastructureStatus
+    node:
+      keyName: ssh-key-name
+    networks:
+      id: network-id
+      subnets:
+      - purpose: nodes
+        id: subnet-id
+    securityGroups:
+    - purpose: nodes
+      name: security-group-name
+  pools:
+  - name: cpu-worker
+    machineType: medium_2_4
+    machineImage:
+      name: coreos
+      version: 2135.6.0
+    minimum: 1
+    maximum: 1
+    maxSurge: 1
+    maxUnavailable: 0
+  #  volume: # overrides the default flavor root disk size and uses a cinder backed block device instead
+  #    type: default
+  #    size: 20Gi
+  # labels:
+  #   key: value
+  # annotations:
+  #   key: value
+  # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  # - key: foo
+  #   value: bar
+  #   effect: NoSchedule
+    userData: IyEvYmluL2Jhc2gKCmVjaG8gImhlbGxvIHdvcmxkIgo=
+    zones:
+    - eu-de-1a

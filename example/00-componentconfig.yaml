@@ -1,0 +1,16 @@
+---
+apiVersion: openstack.provider.extensions.config.gardener.cloud/v1alpha1
+kind: ControllerConfiguration
+clientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 100
+  burst: 130
+etcd:
+  storage:
+    className: gardener.cloud-fast
+    capacity: 25Gi
+#  backup:
+#    schedule: "0 */24 * * *"
+#healthCheckConfig:
+#  syncPeriod: 30s

@@ -1,0 +1,32 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: operatingsystemconfigs.extensions.gardener.cloud
+spec:
+  group: extensions.gardener.cloud
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: operatingsystemconfigs
+    singular: operatingsystemconfig
+    kind: OperatingSystemConfig
+    shortNames:
+    - osc
+  additionalPrinterColumns:
+  - name: Type
+    type: string
+    description: The type of the operating system configuration.
+    JSONPath: .spec.type
+  - name: State
+    type: string
+    JSONPath: .status.lastOperation.state
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp
+  subresources:
+    status: {}

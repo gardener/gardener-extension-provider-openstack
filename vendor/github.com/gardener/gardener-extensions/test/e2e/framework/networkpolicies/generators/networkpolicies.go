@@ -26,7 +26,6 @@ import (
 	"k8s.io/gengo/args"
 	"k8s.io/gengo/generator"
 	"k8s.io/gengo/namer"
-	"k8s.io/gengo/types"
 	"k8s.io/klog"
 )
 
@@ -136,21 +135,6 @@ func (g *genTest) Imports(c *generator.Context) (imports []string) {
 		`networkpolicies "github.com/gardener/gardener-extensions/test/e2e/framework/networkpolicies"`,
 		`sigs.k8s.io/controller-runtime/pkg/client`,
 	)
-}
-
-// args constructs arguments for templates. Usage:
-// g.args(t, "key1", value1, "key2", value2, ...)
-//
-// 't' is loaded with the key 'type'.
-//
-// We could use t directly as the argument, but doing it this way makes it easy
-// to mix in additional parameters.
-func (g *genTest) args(t *types.Type, kv ...interface{}) interface{} {
-	m := map[interface{}]interface{}{"type": t}
-	for i := 0; i < len(kv)/2; i++ {
-		m[kv[i*2]] = kv[i*2+1]
-	}
-	return m
 }
 
 func (g *genTest) simpleArgs(kv ...interface{}) interface{} {

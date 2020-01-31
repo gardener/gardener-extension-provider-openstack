@@ -107,9 +107,9 @@ github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
 github.com/gardener/gardener/test/integration/framework
 github.com/gardener/gardener/test/integration/shoots
-# github.com/gardener/gardener-extensions v1.2.1-0.20200130094329-f359bd0eb552
-github.com/gardener/gardener-extensions/.ci
+# github.com/gardener/gardener-extensions v1.3.0
 github.com/gardener/gardener-extensions/hack
+github.com/gardener/gardener-extensions/hack/.ci
 github.com/gardener/gardener-extensions/hack/api-reference/template
 github.com/gardener/gardener-extensions/hack/code-generator
 github.com/gardener/gardener-extensions/pkg/controller
@@ -546,7 +546,7 @@ google.golang.org/appengine/urlfetch
 gopkg.in/fsnotify.v1
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
-# gopkg.in/ini.v1 v1.51.1
+# gopkg.in/ini.v1 v1.51.0
 gopkg.in/ini.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1

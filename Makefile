@@ -37,7 +37,7 @@ endif
 
 .PHONY: format
 format:
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/format.sh ./cmd ./pkg
+	@$(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/format.sh ./cmd ./pkg ./test
 
 .PHONY: clean
 clean:
@@ -95,7 +95,7 @@ revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
 	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/*
-	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/.ci/*
+	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/.ci/*
 
 .PHONY: start
 start:

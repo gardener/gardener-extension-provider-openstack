@@ -18,10 +18,14 @@ gardener-extension-provider-openstack:
       traits:
         component_descriptor: ~
         draft_release: ~
+        options:
+          public_build_logs: true
     pull-request:
       traits:
         pull-request: ~
         component_descriptor: ~
+        options:
+          public_build_logs: true
     release:
       traits:
         version:

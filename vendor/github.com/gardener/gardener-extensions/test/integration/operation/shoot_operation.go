@@ -50,14 +50,14 @@ func WaitForExtensionCondition(ctx context.Context, logger *logrus.Logger, seedC
 		}
 
 		for _, condition := range acc.GetExtensionStatus().GetConditions() {
-			logger.Infof("extension (ns: %s, name: %s, kind %s) has condition: ConditionType: %s, ConditionStatus: %s, ConditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, string(condition.Type), string(condition.Status), condition.Reason)
+			logger.Infof("extension (ns: %s, name: %s, kind %s) has condition: ConditionType: %s, ConditionStatus: %s, ConditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, condition.Type, condition.Status, condition.Reason)
 			if condition.Type == conditionType && condition.Status == conditionStatus && condition.Reason == conditionReason {
 				logger.Infof("found expected condition.")
 				return retry.Ok()
 			}
 		}
-		logger.Infof("extension (ns: %s, name: %s, kind %s)  does not yet contain expected condition. EXPECTED: (conditionType: %s, conditionStatus: %s, conditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, string(conditionType), string(conditionStatus), conditionReason)
-		return retry.MinorError(fmt.Errorf("extension (ns: %s, name: %s, kind %s)  does not yet contain expected condition. EXPECTED: (conditionType: %s, conditionStatus: %s, conditionReason: %s) . ACTUAL: (conditionType: %s, conditionStatus: %s, conditionReason: %s)", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind))
+		logger.Infof("extension (ns: %s, name: %s, kind %s) does not yet contain expected condition. EXPECTED: (conditionType: %s, conditionStatus: %s, conditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, conditionType, conditionStatus, conditionReason)
+		return retry.MinorError(fmt.Errorf("extension (ns: %s, name: %s, kind %s) does not yet contain expected condition. EXPECTED: (conditionType: %s, conditionStatus: %s, conditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, conditionType, conditionStatus, conditionReason))
 	})
 }
 

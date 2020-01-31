@@ -18,8 +18,8 @@
 package tools
 
 import (
-	_ "github.com/gardener/gardener-extensions/.ci"
 	_ "github.com/gardener/gardener-extensions/hack"
+	_ "github.com/gardener/gardener-extensions/hack/.ci"
 	_ "github.com/gardener/gardener-extensions/hack/api-reference/template"
 	_ "github.com/gardener/gardener-extensions/hack/code-generator"
 
@@ -27,6 +27,7 @@ import (
 	_ "github.com/gobuffalo/packr/v2/packr2"
 	_ "github.com/golang/mock/mockgen"
 	_ "github.com/onsi/ginkgo/ginkgo"
+	_ "k8s.io/code-generator"
 	_ "k8s.io/code-generator/cmd/client-gen"
 	_ "k8s.io/code-generator/cmd/conversion-gen"
 	_ "k8s.io/code-generator/cmd/deepcopy-gen"

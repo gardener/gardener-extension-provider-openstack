@@ -50,17 +50,11 @@ const (
 	DefaultRouterID = "${openstack_networking_router_v2.router.id}"
 )
 
-var (
-	// ChartsPath is the path to the charts
-	ChartsPath = filepath.Join("charts")
-	// InternalChartsPath is the path to the internal charts
-	InternalChartsPath = filepath.Join(ChartsPath, "internal")
-	// StatusTypeMeta is the TypeMeta of the GCP InfrastructureStatus
-	StatusTypeMeta = metav1.TypeMeta{
-		APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "InfrastructureStatus",
-	}
-)
+// StatusTypeMeta is the TypeMeta of the GCP InfrastructureStatus
+var StatusTypeMeta = metav1.TypeMeta{
+	APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+	Kind:       "InfrastructureStatus",
+}
 
 // ComputeTerraformerChartValues computes the values for the OpenStack Terraformer chart.
 func ComputeTerraformerChartValues(

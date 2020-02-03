@@ -14,8 +14,6 @@
 
 package openstack
 
-import "path/filepath"
-
 const (
 	// Name is the name of the OpenStack provider.
 	Name = "provider-openstack"
@@ -63,11 +61,4 @@ const (
 	BackupSecretName = "etcd-backup"
 	// CloudControllerManagerName is a constant for the name of the CloudController deployed by the worker controller.
 	CloudControllerManagerName = "cloud-controller-manager"
-)
-
-var (
-	// ChartsPath is the path to the charts
-	ChartsPath = filepath.Join("controllers", Name, "charts")
-	// InternalChartsPath is the path to the internal charts
-	InternalChartsPath = filepath.Join(ChartsPath, "internal")
 )

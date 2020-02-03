@@ -52,7 +52,7 @@ const (
 
 var (
 	// ChartsPath is the path to the charts
-	ChartsPath = filepath.Join("controllers", "provider-openstack", "charts")
+	ChartsPath = filepath.Join("charts")
 	// InternalChartsPath is the path to the internal charts
 	InternalChartsPath = filepath.Join(ChartsPath, "internal")
 	// StatusTypeMeta is the TypeMeta of the GCP InfrastructureStatus

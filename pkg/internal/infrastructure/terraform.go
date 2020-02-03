@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
+	openstacktypes "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extensions/pkg/controller"
 	"github.com/gardener/gardener-extensions/pkg/terraformer"
 
@@ -134,7 +135,7 @@ func RenderTerraformerChart(
 		return nil, err
 	}
 
-	release, err := renderer.Render(filepath.Join(InternalChartsPath, "openstack-infra"), "openstack-infra", infra.Namespace, values)
+	release, err := renderer.Render(filepath.Join(openstacktypes.InternalChartsPath, "openstack-infra"), "openstack-infra", infra.Namespace, values)
 	if err != nil {
 		return nil, err
 	}

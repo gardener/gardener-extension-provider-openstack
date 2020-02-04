@@ -122,6 +122,8 @@ github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25 h1:nOFITm
 github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25/go.mod h1:yj7YJ6ijo4adcpXQKutPFZfQuKLdM5UMZZUlpbM3vig=
 github.com/gardener/machine-controller-manager v0.25.1-0.20200115123605-0510de7ddfca h1:/6HTQtEEqv84hYfch5oHq6hj1pKgYuZQTnNnvPWeaak=
 github.com/gardener/machine-controller-manager v0.25.1-0.20200115123605-0510de7ddfca/go.mod h1:MH5uAoUYeLQx6A2BRjFQzZtbNmrFYgCEMW6XX1h6i8c=
+github.com/gardener/machine-controller-manager v0.26.0 h1:mIxwx/LP1H3AU73I4qjjxaSg0ES1vXcUTb+TiPJqMB8=
+github.com/gardener/machine-controller-manager v0.26.0/go.mod h1:ADT1C8V9WYWK4S4ifyKVdlpcGtMtJbLZMOAiwmkfff8=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

@@ -107,7 +107,7 @@ func (in *AWSMachineClass) DeepCopyObject() runtime.Object {
 func (in *AWSMachineClassList) DeepCopyInto(out *AWSMachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]AWSMachineClass, len(*in))
@@ -229,7 +229,7 @@ func (in *AlicloudMachineClass) DeepCopyObject() runtime.Object {
 func (in *AlicloudMachineClassList) DeepCopyInto(out *AlicloudMachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]AlicloudMachineClass, len(*in))
@@ -402,7 +402,7 @@ func (in *AzureMachineClass) DeepCopyObject() runtime.Object {
 func (in *AzureMachineClassList) DeepCopyInto(out *AzureMachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]AzureMachineClass, len(*in))
@@ -665,6 +665,11 @@ func (in *AzureVirtualMachineProperties) DeepCopyInto(out *AzureVirtualMachinePr
 		*out = new(AzureSubResource)
 		**out = **in
 	}
+	if in.IdentityID != nil {
+		in, out := &in.IdentityID, &out.IdentityID
+		*out = new(string)
+		**out = **in
+	}
 	if in.Zone != nil {
 		in, out := &in.Zone, &out.Zone
 		*out = new(int)
@@ -770,7 +775,7 @@ func (in *GCPMachineClass) DeepCopyObject() runtime.Object {
 func (in *GCPMachineClassList) DeepCopyInto(out *GCPMachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]GCPMachineClass, len(*in))
@@ -1033,7 +1038,7 @@ func (in *MachineClass) DeepCopyObject() runtime.Object {
 func (in *MachineClassList) DeepCopyInto(out *MachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]MachineClass, len(*in))
@@ -1112,7 +1117,7 @@ func (in *MachineDeploymentCondition) DeepCopy() *MachineDeploymentCondition {
 func (in *MachineDeploymentList) DeepCopyInto(out *MachineDeploymentList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]MachineDeployment, len(*in))
@@ -1276,7 +1281,7 @@ func (in *MachineDeploymentStrategy) DeepCopy() *MachineDeploymentStrategy {
 func (in *MachineList) DeepCopyInto(out *MachineList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Machine, len(*in))
@@ -1354,7 +1359,7 @@ func (in *MachineSetCondition) DeepCopy() *MachineSetCondition {
 func (in *MachineSetList) DeepCopyInto(out *MachineSetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]MachineSet, len(*in))
@@ -1532,7 +1537,7 @@ func (in *MachineTemplate) DeepCopyObject() runtime.Object {
 func (in *MachineTemplateList) DeepCopyInto(out *MachineTemplateList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]MachineTemplate, len(*in))
@@ -1628,7 +1633,7 @@ func (in *OpenStackMachineClass) DeepCopyObject() runtime.Object {
 func (in *OpenStackMachineClassList) DeepCopyInto(out *OpenStackMachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]OpenStackMachineClass, len(*in))
@@ -1742,7 +1747,7 @@ func (in *PacketMachineClass) DeepCopyObject() runtime.Object {
 func (in *PacketMachineClassList) DeepCopyInto(out *PacketMachineClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]PacketMachineClass, len(*in))

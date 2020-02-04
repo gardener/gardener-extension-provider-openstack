@@ -674,6 +674,7 @@ type OpenStackMachineClassSpec struct {
 	Networks         []OpenStackNetwork
 	SecretRef        *corev1.SecretReference
 	PodNetworkCidr   string
+	RootDiskSize     int // in GB
 }
 
 type OpenStackNetwork struct {
@@ -874,6 +875,7 @@ type AzureVirtualMachineProperties struct {
 	OsProfile       AzureOSProfile
 	NetworkProfile  AzureNetworkProfile
 	AvailabilitySet *AzureSubResource
+	IdentityID      *string
 	Zone            *int
 }
 

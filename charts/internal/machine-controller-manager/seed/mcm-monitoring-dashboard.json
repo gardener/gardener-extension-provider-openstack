@@ -547,14 +547,14 @@
           "refId": "A"
         },
         {
-          "expr": "mcm_machineset_items_total",
+          "expr": "mcm_machine_set_items_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "machine set(s)",
           "refId": "B"
         },
         {
-          "expr": "mcm_machinedeployment_items_total",
+          "expr": "mcm_machine_deployment_items_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "machine deployment(s)",

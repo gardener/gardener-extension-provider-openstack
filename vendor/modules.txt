@@ -111,7 +111,6 @@ github.com/gardener/gardener/test/integration/shoots
 github.com/gardener/gardener-extensions/hack
 github.com/gardener/gardener-extensions/hack/.ci
 github.com/gardener/gardener-extensions/hack/api-reference/template
-github.com/gardener/gardener-extensions/hack/code-generator
 github.com/gardener/gardener-extensions/pkg/controller
 github.com/gardener/gardener-extensions/pkg/controller/backupbucket
 github.com/gardener/gardener-extensions/pkg/controller/backupentry

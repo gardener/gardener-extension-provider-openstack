@@ -191,7 +191,7 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, namesp
 	return nil
 }
 
-// cleanupMachineClassSecrets deletes MachineSets having number of desired and actual replicas equaling 0
+// cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0
 func (a *genericActuator) cleanupMachineSets(ctx context.Context, namespace string) error {
 	machineSetList := &machinev1alpha1.MachineSetList{}
 	if err := a.client.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {

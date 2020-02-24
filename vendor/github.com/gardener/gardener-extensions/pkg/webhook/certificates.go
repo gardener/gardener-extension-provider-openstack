@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -118,12 +119,23 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 		return nil, nil, err
 	}
 
-	var dnsNames []string
+	var (
+		dnsNames    []string
+		ipAddresses []net.IP
+	)
+
 	switch mode {
 	case ModeURL:
-		dnsNames = []string{
-			url,
+		if addr := net.ParseIP(url); addr != nil {
+			ipAddresses = []net.IP{
+				addr,
+			}
+		} else {
+			dnsNames = []string{
+				url,
+			}
 		}
+
 	case ModeService:
 		dnsNames = []string{
 			fmt.Sprintf("gardener-extension-%s", name),
@@ -133,10 +145,11 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 	}
 
 	serverConfig := &secrets.CertificateSecretConfig{
-		CommonName: name,
-		DNSNames:   dnsNames,
-		CertType:   secrets.ServerCert,
-		SigningCA:  caCert,
+		CommonName:  name,
+		DNSNames:    dnsNames,
+		IPAddresses: ipAddresses,
+		CertType:    secrets.ServerCert,
+		SigningCA:   caCert,
 	}
 
 	serverCert, err := serverConfig.GenerateCertificate()

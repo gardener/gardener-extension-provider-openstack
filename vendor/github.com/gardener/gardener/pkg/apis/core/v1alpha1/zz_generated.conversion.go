@@ -1492,6 +1492,7 @@ func autoConvert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(in *BackupBu
 	if err := Convert_v1alpha1_BackupBucketProvider_To_core_BackupBucketProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.SecretRef = in.SecretRef
 	// WARNING: in.Seed requires manual conversion: does not exist in peer-type
 	return nil
@@ -1501,12 +1502,14 @@ func autoConvert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(in *core.Bac
 	if err := Convert_core_BackupBucketProvider_To_v1alpha1_BackupBucketProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.SecretRef = in.SecretRef
 	// WARNING: in.SeedName requires manual conversion: does not exist in peer-type
 	return nil
 }
 
 func autoConvert_v1alpha1_BackupBucketStatus_To_core_BackupBucketStatus(in *BackupBucketStatus, out *core.BackupBucketStatus, s conversion.Scope) error {
+	out.ProviderStatus = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderStatus))
 	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
@@ -1520,6 +1523,7 @@ func Convert_v1alpha1_BackupBucketStatus_To_core_BackupBucketStatus(in *BackupBu
 }
 
 func autoConvert_core_BackupBucketStatus_To_v1alpha1_BackupBucketStatus(in *core.BackupBucketStatus, out *BackupBucketStatus, s conversion.Scope) error {
+	out.ProviderStatus = (*ProviderConfig)(unsafe.Pointer(in.ProviderStatus))
 	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
@@ -3498,6 +3502,7 @@ func autoConvert_core_Seed_To_v1alpha1_Seed(in *core.Seed, out *Seed, s conversi
 
 func autoConvert_v1alpha1_SeedBackup_To_core_SeedBackup(in *SeedBackup, out *core.SeedBackup, s conversion.Scope) error {
 	out.Provider = in.Provider
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.SecretRef = in.SecretRef
 	return nil
@@ -3510,6 +3515,7 @@ func Convert_v1alpha1_SeedBackup_To_core_SeedBackup(in *SeedBackup, out *core.Se
 
 func autoConvert_core_SeedBackup_To_v1alpha1_SeedBackup(in *core.SeedBackup, out *SeedBackup, s conversion.Scope) error {
 	out.Provider = in.Provider
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.SecretRef = in.SecretRef
 	return nil
@@ -4054,8 +4060,10 @@ func autoConvert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, 
 }
 
 func autoConvert_v1alpha1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conversion.Scope) error {
+	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
+	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
 	return nil
 }
 
@@ -4065,8 +4073,10 @@ func Convert_v1alpha1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conv
 }
 
 func autoConvert_core_Volume_To_v1alpha1_Volume(in *core.Volume, out *Volume, s conversion.Scope) error {
+	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
+	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
 	return nil
 }
 
@@ -4115,6 +4125,8 @@ func autoConvert_v1alpha1_Worker_To_core_Worker(in *Worker, out *core.Worker, s 
 	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*core.Volume)(unsafe.Pointer(in.Volume))
+	out.DataVolumes = *(*[]core.Volume)(unsafe.Pointer(&in.DataVolumes))
+	out.KubeletDataVolumeName = (*string)(unsafe.Pointer(in.KubeletDataVolumeName))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -4140,6 +4152,8 @@ func autoConvert_core_Worker_To_v1alpha1_Worker(in *core.Worker, out *Worker, s 
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*Volume)(unsafe.Pointer(in.Volume))
+	out.DataVolumes = *(*[]Volume)(unsafe.Pointer(&in.DataVolumes))
+	out.KubeletDataVolumeName = (*string)(unsafe.Pointer(in.KubeletDataVolumeName))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }

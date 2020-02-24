@@ -29,7 +29,6 @@ if [[ -d "$repo_root_dir/charts/" ]]; then
 
     outputFile=$(sed 's/{{-//' $image_tpl_path | sed 's/}}//' | sed 's/define//' | sed 's/-//' | sed 's/end//' | sed 's/"//' | sed 's/"//' |sed 's/image.//' |  sed -e 's/^[ \t]*//' | awk -v RS= '{for (i=1; i<=NF; i++) printf "%s%s", $i, (i==NF?"\n":" ")}')
     echo "enriching creating component descriptor from ${image_tpl_path}"
-    controller_dir="$(basename "$(dirname "$(dirname "${image_tpl_path}")")")"
 
     while read p; do
       line="$(echo -e "$p")"
@@ -46,7 +45,7 @@ if [[ -d "$repo_root_dir/charts/" ]]; then
       elif [[ $REPOSITORY =~ "eu.gcr.io/gardener-project/gardener*" ]]; then
         ${ADD_DEPENDENCIES_CMD} --generic-dependencies "{\"name\": \"$NAME\", \"version\": \"$TAG\"}"
       else
-        ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${controller_dir}-${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
+        ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
       fi
     done < <(echo "$outputFile")
   done

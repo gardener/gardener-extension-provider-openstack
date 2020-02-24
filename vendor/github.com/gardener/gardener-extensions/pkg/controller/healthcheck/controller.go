@@ -162,7 +162,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	}
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
-	log.Log.Info("Registered health check controller", "Kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "health check type", args.registeredExtension.healthConditionType, "sync period", args.SyncPeriod.Duration.String())
+	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "health check type", args.registeredExtension.healthConditionType, "sync period", args.SyncPeriod.Duration.String())
 
 	return ctrl.Watch(&source.Kind{Type: args.registeredExtension.register()}, &handler.EnqueueRequestForObject{}, predicates...)
 }

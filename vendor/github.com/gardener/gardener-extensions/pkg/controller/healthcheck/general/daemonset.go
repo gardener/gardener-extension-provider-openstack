@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,7 +37,7 @@ type DaemonSetHealthChecker struct {
 	checkType   DaemonSetCheckType
 }
 
-// DeploymentCheckType in which cluster the check will be executed
+// DaemonSetCheckType in which cluster the check will be executed
 type DaemonSetCheckType string
 
 const (
@@ -45,7 +45,7 @@ const (
 	DaemonSetCheckTypeShoot DaemonSetCheckType = "Shoot"
 )
 
-// CheckSeedDaemonSetSeed is a healthCheck function to check DaemonSets
+// NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets
 func NewSeedDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
 	return &DaemonSetHealthChecker{
 		name:      name,
@@ -53,7 +53,7 @@ func NewSeedDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
 	}
 }
 
-// CheckStatefulSetShoot is a healthCheck function to check DaemonSets
+// NewShootDaemonSetHealthChecker is a healthCheck function to check DaemonSets
 func NewShootDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
 	return &DaemonSetHealthChecker{
 		name:      name,
@@ -84,7 +84,7 @@ func (healthChecker *DaemonSetHealthChecker) DeepCopy() healthcheck.HealthCheck 
 
 // Check executes the health check
 func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
-	daemonSet := &v1.DaemonSet{}
+	daemonSet := &appsv1.DaemonSet{}
 	var err error
 	if healthChecker.checkType == DaemonSetCheckTypeSeed {
 		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)
@@ -110,7 +110,7 @@ func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request 
 	}, nil
 }
 
-func DaemonSetIsHealthy(daemonSet *v1.DaemonSet) (bool, *string, error) {
+func DaemonSetIsHealthy(daemonSet *appsv1.DaemonSet) (bool, *string, error) {
 	if err := health.CheckDaemonSet(daemonSet); err != nil {
 		reason := "DeamonSetUnhealthy"
 		err := fmt.Errorf("daemonSet %s in namespace %s is unhealthy: %v", daemonSet.Name, daemonSet.Namespace, err)

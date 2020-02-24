@@ -70,8 +70,10 @@ func controlPlane(floatingPoolID string, cfg *api.ControlPlaneConfig) *extension
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: namespace,
 			},
-			ProviderConfig: &runtime.RawExtension{
-				Raw: encode(cfg),
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				ProviderConfig: &runtime.RawExtension{
+					Raw: encode(cfg),
+				},
 			},
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: encode(&api.InfrastructureStatus{

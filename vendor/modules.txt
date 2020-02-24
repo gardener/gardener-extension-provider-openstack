@@ -50,7 +50,7 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener v0.35.1-0.20200128130120-5b69a02f511a
+# github.com/gardener/gardener v1.0.1-0.20200213093126-7a6123b6ae21
 github.com/gardener/gardener/pkg/api/extensions
 github.com/gardener/gardener/pkg/apis/core
 github.com/gardener/gardener/pkg/apis/core/install
@@ -90,14 +90,11 @@ github.com/gardener/gardener/pkg/utils
 github.com/gardener/gardener/pkg/utils/chart
 github.com/gardener/gardener/pkg/utils/context
 github.com/gardener/gardener/pkg/utils/errors
-github.com/gardener/gardener/pkg/utils/flow
 github.com/gardener/gardener/pkg/utils/imagevector
 github.com/gardener/gardener/pkg/utils/kubernetes
-github.com/gardener/gardener/pkg/utils/kubernetes/client
 github.com/gardener/gardener/pkg/utils/kubernetes/health
 github.com/gardener/gardener/pkg/utils/retry
 github.com/gardener/gardener/pkg/utils/secrets
-github.com/gardener/gardener/pkg/utils/time
 github.com/gardener/gardener/pkg/utils/validation/cidr
 github.com/gardener/gardener/pkg/utils/validation/gomega
 github.com/gardener/gardener/pkg/utils/version
@@ -107,7 +104,7 @@ github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
 github.com/gardener/gardener/test/integration/framework
 github.com/gardener/gardener/test/integration/shoots
-# github.com/gardener/gardener-extensions v1.3.0
+# github.com/gardener/gardener-extensions v1.3.1-0.20200219155613-f5f526846320
 github.com/gardener/gardener-extensions/hack
 github.com/gardener/gardener-extensions/hack/.ci
 github.com/gardener/gardener-extensions/hack/api-reference/template
@@ -151,7 +148,7 @@ github.com/gardener/gardener-extensions/test/e2e/framework/networkpolicies/gener
 github.com/gardener/gardener-extensions/test/integration/healthcheck
 github.com/gardener/gardener-extensions/test/integration/operation
 github.com/gardener/gardener-extensions/test/tm/generator
-# github.com/gardener/gardener-resource-manager v0.9.1-0.20200124091350-6ea41bbae81f
+# github.com/gardener/gardener-resource-manager v0.10.0
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper

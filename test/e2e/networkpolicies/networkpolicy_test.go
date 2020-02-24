@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	gardenerframework "github.com/gardener/gardener/test/integration/framework"
 	shootsframework "github.com/gardener/gardener/test/integration/shoots"
 	. "github.com/onsi/ginkgo"
@@ -802,7 +801,7 @@ var _ = Describe("Network Policy Testing", func() {
 
 		getFirstNodeInternalIP := func(ctx context.Context, cl kubernetes.Interface) (string, error) {
 			nodes := &corev1.NodeList{}
-			err := cl.Client().List(ctx, nodes, utilclient.Limit(1))
+			err := cl.Client().List(ctx, nodes, client.Limit(1))
 			if err != nil {
 				return "", err
 			}

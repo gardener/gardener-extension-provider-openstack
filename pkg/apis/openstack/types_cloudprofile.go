@@ -15,6 +15,8 @@
 package openstack
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -81,6 +83,20 @@ type LoadBalancerClass struct {
 	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
 	// configuration is done.
 	SubnetID *string
+}
+
+func (in LoadBalancerClass) String() string {
+	result := fmt.Sprintf("Name: %q", in.Name)
+	if in.FloatingSubnetID != nil {
+		result += fmt.Sprintf(", FloatingSubnetID: %q", *in.FloatingSubnetID)
+	}
+	if in.FloatingNetworkID != nil {
+		result += fmt.Sprintf(", FloatingNetworkID: %q", *in.FloatingNetworkID)
+	}
+	if in.SubnetID != nil {
+		result += fmt.Sprintf(", SubnetID: %q", *in.SubnetID)
+	}
+	return result
 }
 
 // LoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the control plane config.

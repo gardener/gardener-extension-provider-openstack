@@ -27,16 +27,16 @@ import (
 )
 
 var (
-	Codec  runtime.Codec
-	Scheme *runtime.Scheme
+	codec  runtime.Codec
+	scheme *runtime.Scheme
 )
 
 func init() {
-	Scheme = runtime.NewScheme()
-	install.Install(Scheme)
-	yamlSerializer := json.NewYAMLSerializer(json.DefaultMetaFactory, Scheme, Scheme)
-	Codec = versioning.NewDefaultingCodecForScheme(
-		Scheme,
+	scheme = runtime.NewScheme()
+	install.Install(scheme)
+	yamlSerializer := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme, scheme)
+	codec = versioning.NewDefaultingCodecForScheme(
+		scheme,
 		yamlSerializer,
 		yamlSerializer,
 		schema.GroupVersion{Version: "v1alpha1"},
@@ -63,7 +63,7 @@ func Load(data []byte) (*config.ControllerConfiguration, error) {
 		return cfg, nil
 	}
 
-	decoded, _, err := Codec.Decode(data, &schema.GroupVersionKind{Version: "v1alpha1", Kind: "Config"}, cfg)
+	decoded, _, err := codec.Decode(data, &schema.GroupVersionKind{Version: "v1alpha1", Kind: "Config"}, cfg)
 	if err != nil {
 		return nil, err
 	}

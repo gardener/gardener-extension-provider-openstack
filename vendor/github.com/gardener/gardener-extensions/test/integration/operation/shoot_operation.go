@@ -92,7 +92,7 @@ func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, de
 	return replicas, nil
 }
 
-// ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
+// ScaleGardenerResourceManager scales the gardener-resource-manager to the desired replicas
 func ScaleGardenerResourceManager(setupContextTimeout time.Duration, namespace string, client client.Client, desiredReplicas *int32) (*int32, error) {
 	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-resource-manager", namespace)
 }

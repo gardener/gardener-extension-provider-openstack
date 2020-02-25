@@ -173,6 +173,8 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1bet
 		return gardencorev1beta1.LastOperationTypeCreate
 	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
 		return gardencorev1beta1.LastOperationTypeCreate
+	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
+		return gardencorev1beta1.LastOperationTypeMigrate
 	}
 	return gardencorev1beta1.LastOperationTypeReconcile
 }

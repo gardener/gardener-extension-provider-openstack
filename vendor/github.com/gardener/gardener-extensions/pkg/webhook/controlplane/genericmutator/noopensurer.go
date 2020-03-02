@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/coreos/go-systemd/unit"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,8 +48,8 @@ func (e *NoopEnsurer) EnsureKubeSchedulerDeployment(context.Context, EnsurerCont
 	return nil
 }
 
-// EnsureETCDStatefulSet ensures that the etcd stateful sets conform to the provider requirements.
-func (e *NoopEnsurer) EnsureETCDStatefulSet(context.Context, EnsurerContext, *appsv1.StatefulSet) error {
+// EnsureETCD ensures that the etcd stateful sets conform to the provider requirements.
+func (e *NoopEnsurer) EnsureETCD(context.Context, EnsurerContext, *druidv1alpha1.Etcd) error {
 	return nil
 }
 

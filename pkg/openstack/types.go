@@ -26,8 +26,6 @@ const (
 	MachineControllerManagerImageName = "machine-controller-manager"
 	// CloudControllerImageName is the name of the external OpenStackCloudProvider image.
 	CloudControllerImageName = "cloud-controller-manager"
-	// ETCDBackupRestoreImageName is the name of the etcd backup and restore image.
-	ETCDBackupRestoreImageName = "etcd-backup-restore"
 
 	// AuthURL is a constant for the key in a cloud provider secret that holds the OpenStack auth url.
 	AuthURL = "authURL"

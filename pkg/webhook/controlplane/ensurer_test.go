@@ -69,17 +69,6 @@ var _ = Describe("Ensurer", func() {
 				},
 			},
 		)
-		eContextK8s117 = genericmutator.NewInternalEnsurerContext(
-			&extensionscontroller.Cluster{
-				Shoot: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.17.0",
-						},
-					},
-				},
-			},
-		)
 
 		cmKey    = client.ObjectKey{Namespace: namespace, Name: openstack.CloudProviderConfigCloudControllerManagerName}
 		cmKCMKey = client.ObjectKey{Namespace: namespace, Name: openstack.CloudProviderConfigKubeControllerManagerName}
@@ -138,40 +127,7 @@ var _ = Describe("Ensurer", func() {
 			// Call EnsureKubeAPIServerDeployment method and check the result
 			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), eContextK8s116, dep)
 			Expect(err).To(Not(HaveOccurred()))
-			checkKubeAPIServerDeployment(dep, annotations, true)
-		})
-
-		It("should add missing elements to kube-apiserver deployment (k8s >= 1.17)", func() {
-			var (
-				dep = &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: v1beta1constants.DeploymentNameKubeAPIServer},
-					Spec: appsv1.DeploymentSpec{
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Name: "kube-apiserver",
-									},
-								},
-							},
-						},
-					},
-				}
-			)
-
-			// Create mock client
-			client := mockclient.NewMockClient(ctrl)
-			client.EXPECT().Get(context.TODO(), cmKey, &corev1.ConfigMap{}).DoAndReturn(clientGet(cm))
-
-			// Create ensurer
-			ensurer := NewEnsurer(logger)
-			err := ensurer.(inject.Client).InjectClient(client)
-			Expect(err).To(Not(HaveOccurred()))
-
-			// Call EnsureKubeAPIServerDeployment method and check the result
-			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), eContextK8s117, dep)
-			Expect(err).To(Not(HaveOccurred()))
-			checkKubeAPIServerDeployment(dep, annotations, false)
+			checkKubeAPIServerDeployment(dep, annotations)
 		})
 
 		It("should modify existing elements of kube-apiserver deployment", func() {
@@ -210,7 +166,7 @@ var _ = Describe("Ensurer", func() {
 			// Call EnsureKubeAPIServerDeployment method and check the result
 			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), eContextK8s116, dep)
 			Expect(err).To(Not(HaveOccurred()))
-			checkKubeAPIServerDeployment(dep, annotations, true)
+			checkKubeAPIServerDeployment(dep, annotations)
 		})
 	})
 
@@ -245,40 +201,7 @@ var _ = Describe("Ensurer", func() {
 			// Call EnsureKubeControllerManagerDeployment method and check the result
 			err = ensurer.EnsureKubeControllerManagerDeployment(context.TODO(), eContextK8s116, dep)
 			Expect(err).To(Not(HaveOccurred()))
-			checkKubeControllerManagerDeployment(dep, annotations, kubeControllerManagerLabels, true)
-		})
-
-		It("should add missing elements to kube-controller-manager deployment (k8s >= 1.17)", func() {
-			var (
-				dep = &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: v1beta1constants.DeploymentNameKubeControllerManager},
-					Spec: appsv1.DeploymentSpec{
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Name: "kube-controller-manager",
-									},
-								},
-							},
-						},
-					},
-				}
-			)
-
-			// Create mock client
-			client := mockclient.NewMockClient(ctrl)
-			client.EXPECT().Get(context.TODO(), cmKey, &corev1.ConfigMap{}).DoAndReturn(clientGet(cm))
-
-			// Create ensurer
-			ensurer := NewEnsurer(logger)
-			err := ensurer.(inject.Client).InjectClient(client)
-			Expect(err).To(Not(HaveOccurred()))
-
-			// Call EnsureKubeControllerManagerDeployment method and check the result
-			err = ensurer.EnsureKubeControllerManagerDeployment(context.TODO(), eContextK8s117, dep)
-			Expect(err).To(Not(HaveOccurred()))
-			checkKubeControllerManagerDeployment(dep, annotations, kubeControllerManagerLabels, false)
+			checkKubeControllerManagerDeployment(dep, annotations, kubeControllerManagerLabels)
 		})
 
 		It("should modify existing elements of kube-controller-manager deployment", func() {
@@ -322,7 +245,7 @@ var _ = Describe("Ensurer", func() {
 			// Call EnsureKubeControllerManagerDeployment method and check the result
 			err = ensurer.EnsureKubeControllerManagerDeployment(context.TODO(), eContextK8s116, dep)
 			Expect(err).To(Not(HaveOccurred()))
-			checkKubeControllerManagerDeployment(dep, annotations, kubeControllerManagerLabels, true)
+			checkKubeControllerManagerDeployment(dep, annotations, kubeControllerManagerLabels)
 		})
 	})
 
@@ -445,7 +368,7 @@ var _ = Describe("Ensurer", func() {
 	})
 })
 
-func checkKubeAPIServerDeployment(dep *appsv1.Deployment, annotations map[string]string, k8sVersionLessThan117 bool) {
+func checkKubeAPIServerDeployment(dep *appsv1.Deployment, annotations map[string]string) {
 	// Check that the kube-apiserver container still exists and contains all needed command line args,
 	// env vars, and volume mounts
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-apiserver")
@@ -457,16 +380,16 @@ func checkKubeAPIServerDeployment(dep *appsv1.Deployment, annotations map[string
 	Expect(c.VolumeMounts).To(ContainElement(cloudProviderConfigKubeControllerManagerVolumeMount))
 	Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(cloudProviderConfigKubeControllerManagerVolume))
 
-	if !k8sVersionLessThan117 {
-		Expect(c.VolumeMounts).To(ContainElement(etcSSLVolumeMount))
-		Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(etcSSLVolume))
-	}
+	Expect(c.VolumeMounts).To(ContainElement(etcSSLVolumeMount))
+	Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(etcSSLVolume))
+	Expect(c.VolumeMounts).To(ContainElement(usrShareCACertificatesVolumeMount))
+	Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(usrShareCACertificatesVolume))
 
 	// Check that the Pod template contains all needed checksum annotations
 	Expect(dep.Spec.Template.Annotations).To(Equal(annotations))
 }
 
-func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, annotations, labels map[string]string, k8sVersionLessThan117 bool) {
+func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, annotations, labels map[string]string) {
 	// Check that the kube-controller-manager container still exists and contains all needed command line args,
 	// env vars, and volume mounts
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-controller-manager")
@@ -477,10 +400,10 @@ func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, annotations, l
 	Expect(c.VolumeMounts).To(ContainElement(cloudProviderConfigKubeControllerManagerVolumeMount))
 	Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(cloudProviderConfigKubeControllerManagerVolume))
 
-	if !k8sVersionLessThan117 {
-		Expect(c.VolumeMounts).To(ContainElement(etcSSLVolumeMount))
-		Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(etcSSLVolume))
-	}
+	Expect(c.VolumeMounts).To(ContainElement(etcSSLVolumeMount))
+	Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(etcSSLVolume))
+	Expect(c.VolumeMounts).To(ContainElement(usrShareCACertificatesVolumeMount))
+	Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(usrShareCACertificatesVolume))
 
 	// Check that the Pod template contains all needed checksum annotations
 	Expect(dep.Spec.Template.Annotations).To(Equal(annotations))

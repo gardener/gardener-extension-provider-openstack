@@ -25,7 +25,6 @@ import (
 
 	"github.com/coreos/go-systemd/unit"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -59,16 +58,11 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, ectx generi
 	template := &dep.Spec.Template
 	ps := &template.Spec
 
-	cluster, err := ectx.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-apiserver"); c != nil {
 		ensureKubeAPIServerCommandLineArgs(c)
-		ensureVolumeMounts(c, cluster.Shoot.Spec.Kubernetes.Version)
+		ensureVolumeMounts(c)
 	}
-	ensureVolumes(ps, cluster.Shoot.Spec.Kubernetes.Version)
+	ensureVolumes(ps)
 	return e.ensureChecksumAnnotations(ctx, &dep.Spec.Template, dep.Namespace)
 }
 
@@ -77,17 +71,12 @@ func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, ect
 	template := &dep.Spec.Template
 	ps := &template.Spec
 
-	cluster, err := ectx.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-controller-manager"); c != nil {
 		ensureKubeControllerManagerCommandLineArgs(c)
-		ensureVolumeMounts(c, cluster.Shoot.Spec.Kubernetes.Version)
+		ensureVolumeMounts(c)
 	}
 	ensureKubeControllerManagerAnnotations(template)
-	ensureVolumes(ps, cluster.Shoot.Spec.Kubernetes.Version)
+	ensureVolumes(ps)
 	return e.ensureChecksumAnnotations(ctx, &dep.Spec.Template, dep.Namespace)
 }
 
@@ -130,6 +119,21 @@ var (
 		},
 	}
 
+	usrShareCACertificatesName        = "usr-share-ca-certificates"
+	usrShareCACertificatesVolumeMount = corev1.VolumeMount{
+		Name:      usrShareCACertificatesName,
+		MountPath: "/usr/share/ca-certificates",
+		ReadOnly:  true,
+	}
+	usrShareCACertificatesVolume = corev1.Volume{
+		Name: usrShareCACertificatesName,
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: "/usr/share/ca-certificates",
+			},
+		},
+	}
+
 	cloudProviderConfigKubeControllerManagerVolumeMount = corev1.VolumeMount{
 		Name:      openstack.CloudProviderConfigKubeControllerManagerName,
 		MountPath: "/etc/kubernetes/cloudprovider",
@@ -144,32 +148,22 @@ var (
 	}
 )
 
-func ensureVolumeMounts(c *corev1.Container, version string) {
+func ensureVolumeMounts(c *corev1.Container) {
 	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, cloudProviderConfigKubeControllerManagerVolumeMount)
-
-	if mustMountEtcSSLFolder(version) {
-		c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, etcSSLVolumeMount)
-	}
+	// Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
+	// signed by a CA that is not globally trusted.
+	// TODO: This can be remove again once we have migrated to CSI.
+	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, etcSSLVolumeMount)
+	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, usrShareCACertificatesVolumeMount)
 }
 
-func ensureVolumes(ps *corev1.PodSpec, version string) {
+func ensureVolumes(ps *corev1.PodSpec) {
 	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, cloudProviderConfigKubeControllerManagerVolume)
-
-	if mustMountEtcSSLFolder(version) {
-		ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, etcSSLVolume)
-	}
-}
-
-// Beginning with 1.17 Gardener no longer uses the hyperkube image for the Kubernetes control plane components.
-// The hyperkube image contained all the well-known root CAs, but the dedicated images don't. This is why we
-// mount the /etc/ssl folder from the host here.
-// TODO: This can be remove again once we have migrated to CSI.
-func mustMountEtcSSLFolder(version string) bool {
-	k8sVersionAtLeast117, err := versionutils.CompareVersions(version, ">=", "1.17")
-	if err != nil {
-		return false
-	}
-	return k8sVersionAtLeast117
+	// Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
+	// signed by a CA that is not globally trusted.
+	// TODO: This can be remove again once we have migrated to CSI.
+	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, etcSSLVolume)
+	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, usrShareCACertificatesVolume)
 }
 
 func (e *ensurer) ensureChecksumAnnotations(ctx context.Context, template *corev1.PodTemplateSpec, namespace string) error {

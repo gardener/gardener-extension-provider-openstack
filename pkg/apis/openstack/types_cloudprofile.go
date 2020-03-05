@@ -40,6 +40,8 @@ type CloudProfileConfig struct {
 	MachineImages []MachineImages
 	// RequestTimeout specifies the HTTP timeout against the OpenStack API.
 	RequestTimeout *string
+	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
+	UseOctavia *bool
 }
 
 // Constraints is an object containing constraints for the shoots.

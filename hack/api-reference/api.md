@@ -139,6 +139,18 @@ string
 <p>RequestTimeout specifies the HTTP timeout against the OpenStack API.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>useOctavia</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UseOctavia specifies whether the OpenStack Octavia network load balancing is used.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig

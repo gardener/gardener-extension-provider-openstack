@@ -20,10 +20,10 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
 	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
 	mockclient "github.com/gardener/gardener-extensions/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener-extensions/pkg/util"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -33,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -104,14 +105,18 @@ var _ = Describe("ValuesProvider", func() {
 
 		cp = defaultControlPlane()
 
-		cidr               = "10.250.0.0/19"
+		cidr       = "10.250.0.0/19"
+		useOctavia = true
+
 		cloudProfileConfig = &api.CloudProfileConfig{
 			KeyStoneURL:    authURL,
 			DHCPDomain:     dhcpDomain,
 			RequestTimeout: requestTimeout,
+			UseOctavia:     pointer.BoolPtr(useOctavia),
 		}
 		cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
-		cluster                   = &extensionscontroller.Cluster{
+
+		cluster = &extensionscontroller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{
 					ProviderConfig: &gardencorev1beta1.ProviderConfig{
@@ -167,6 +172,7 @@ var _ = Describe("ValuesProvider", func() {
 			"authUrl":           authURL,
 			"dhcpDomain":        dhcpDomain,
 			"requestTimeout":    requestTimeout,
+			"useOctavia":        useOctavia,
 		}
 
 		ccmChartValues = map[string]interface{}{
@@ -317,6 +323,7 @@ var _ = Describe("ValuesProvider", func() {
 				"authUrl":        authURL,
 				"dhcpDomain":     dhcpDomain,
 				"requestTimeout": requestTimeout,
+				"useOctavia":     useOctavia,
 			}
 			// Call GetConfigChartValues method and check the result
 			values, err := vp.GetConfigChartValues(context.TODO(), cp, cluster)

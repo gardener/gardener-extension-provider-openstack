@@ -7,10 +7,6 @@ images:
   sourceRepository: github.com/gardener/machine-controller-manager
   repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
   tag: "v0.26.3"
-- name: etcd-backup-restore
-  sourceRepository: github.com/gardener/etcd-backup-restore
-  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.7.3"
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8s.gcr.io/hyperkube

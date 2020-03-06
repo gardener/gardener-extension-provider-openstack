@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackcmd "github.com/gardener/gardener-extension-provider-openstack/pkg/cmd"
 	openstackbackupbucket "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
@@ -28,7 +29,6 @@ import (
 	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackcontrolplanebackup "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplanebackup"
 	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
 
 	"github.com/gardener/gardener-extensions/pkg/controller"
@@ -142,6 +142,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
 			}
 
+			if err := druidv1alpha1.AddToScheme(scheme); err != nil {
+				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
+			}
+
 			if err := openstackinstall.AddToScheme(scheme); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
 			}
@@ -154,7 +158,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			)
 
 			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)
-			configFileOpts.Completed().ApplyETCDBackup(&openstackcontrolplanebackup.DefaultAddOptions.ETCDBackup)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
 			healthCheckCtrlOpts.Completed().Apply(&healthcheck.DefaultAddOptions.Controller)
 			backupBucketCtrlOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.Controller)

@@ -75,30 +75,6 @@ func HasDeletionTimestamp(obj runtime.Object) (bool, error) {
 	return metadata.GetDeletionTimestamp() != nil, nil
 }
 
-// CreateOrUpdate creates or updates the object. Optionally, it executes a transformation function before the
-// request is made.
-func CreateOrUpdate(ctx context.Context, c client.Client, obj runtime.Object, transform func() error) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Get(ctx, key, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			if transform != nil && transform() != nil {
-				return err
-			}
-			return c.Create(ctx, obj)
-		}
-		return err
-	}
-
-	if transform != nil && transform() != nil {
-		return err
-	}
-	return c.Update(ctx, obj)
-}
-
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
@@ -160,6 +136,32 @@ func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj runtime.
 			return retry.SevereError(err)
 		}
 		return retry.MinorError(fmt.Errorf("resource %s still exists", key.String()))
+	})
+}
+
+// WaitUntilResourcesDeleted waits until the given resources are gone.
+// It respects the given interval and timeout.
+func WaitUntilResourcesDeleted(ctx context.Context, c client.Client, obj runtime.Object, interval time.Duration, opts ...client.ListOption) error {
+	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
+		if err := c.List(ctx, obj, opts...); err != nil {
+			return retry.SevereError(err)
+		}
+		if meta.LenList(obj) == 0 {
+			return retry.Ok()
+		}
+		var remainingItems []string
+		acc := meta.NewAccessor()
+		if err := meta.EachListItem(obj, func(remainingObj runtime.Object) error {
+			name, err := acc.Name(remainingObj)
+			if err != nil {
+				return err
+			}
+			remainingItems = append(remainingItems, name)
+			return nil
+		}); err != nil {
+			return retry.SevereError(err)
+		}
+		return retry.MinorError(fmt.Errorf("resource(s) %s still exists", remainingItems))
 	})
 }
 

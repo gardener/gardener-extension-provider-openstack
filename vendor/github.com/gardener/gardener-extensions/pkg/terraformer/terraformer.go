@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +33,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -114,7 +114,7 @@ func New(
 		variablesName: prefix + TerraformerVariablesSuffix,
 		stateName:     prefix + TerraformerStateSuffix,
 
-		activeDeadlineSeconds: int64(3600),
+		terminationGracePeriodSeconds: int64(3600),
 
 		deadlineCleaning: 10 * time.Minute,
 		deadlinePod:      20 * time.Minute,
@@ -134,7 +134,7 @@ func (t *terraformer) Destroy() error {
 	if err := t.execute(context.TODO(), "destroy"); err != nil {
 		return err
 	}
-	return t.cleanupConfiguration(context.TODO())
+	return t.CleanupConfiguration(context.TODO())
 }
 
 // execute creates a Terraform Pod which runs the provided scriptName (apply or destroy), waits for the Pod to be completed
@@ -175,7 +175,7 @@ func (t *terraformer) execute(ctx context.Context, scriptName string) error {
 	// because of syntax errors. In this case, we want to skip the Terraform destroy pod (as it wouldn't do anything
 	// anyway) and just delete the related ConfigMaps/Secrets.
 	if scriptName == "destroy" {
-		skipApplyOrDestroyPod = t.isStateEmpty()
+		skipApplyOrDestroyPod = t.IsStateEmpty()
 	}
 
 	if !skipApplyOrDestroyPod {
@@ -236,14 +236,15 @@ const (
 
 func (t *terraformer) createOrUpdateServiceAccount(ctx context.Context) error {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: terraformerName}}
-	return kutil.CreateOrUpdate(ctx, t.client, serviceAccount, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, t.client, serviceAccount, func() error {
 		return nil
 	})
+	return err
 }
 
 func (t *terraformer) createOrUpdateRole(ctx context.Context) error {
 	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
-	return kutil.CreateOrUpdate(ctx, t.client, role, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, t.client, role, func() error {
 		role.Rules = []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
@@ -253,11 +254,12 @@ func (t *terraformer) createOrUpdateRole(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 func (t *terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
 	roleBinding := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
-	return kutil.CreateOrUpdate(ctx, t.client, roleBinding, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, t.client, roleBinding, func() error {
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
@@ -272,6 +274,7 @@ func (t *terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 func (t *terraformer) createOrUpdateTerraformerAuth(ctx context.Context) error {
@@ -336,13 +339,11 @@ func (t *terraformer) podSpec(scriptName string) *corev1.PodSpec {
 		tfStateVolumeMountPath = "tf-state-in"
 	)
 
-	activeDeadlineSeconds := t.activeDeadlineSeconds
-	terminationGracePeriodSeconds := t.activeDeadlineSeconds
+	terminationGracePeriodSeconds := t.terminationGracePeriodSeconds
 	shCommand := fmt.Sprintf("sh /terraform.sh %s 2>&1; [[ -f /success ]] && exit 0 || exit 1", scriptName)
 
 	return &corev1.PodSpec{
-		RestartPolicy:         corev1.RestartPolicyNever,
-		ActiveDeadlineSeconds: &activeDeadlineSeconds,
+		RestartPolicy: corev1.RestartPolicyNever,
 		Containers: []corev1.Container{
 			{
 				Name:            "terraform",

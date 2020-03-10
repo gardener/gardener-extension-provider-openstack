@@ -24,7 +24,7 @@ VERIFY                      := true
 LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
 
-WEBHOOK_CONFIG_MODE	:= service
+WEBHOOK_CONFIG_MODE	:= url
 WEBHOOK_CONFIG_URL	:= docker.for.mac.localhost
 EXTENSION_NAMESPACE	:=
 

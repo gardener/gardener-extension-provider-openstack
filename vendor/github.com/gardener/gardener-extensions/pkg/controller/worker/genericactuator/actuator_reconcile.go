@@ -210,8 +210,13 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
+		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
 		case controller.IsHibernated(cluster):
 			replicas = 0
+			a.logger.Info("Adding force deletion label on machine objects", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+			if err := a.markAllMachinesForcefulDeletion(ctx, worker.Namespace); err != nil {
+				return errors.Wrapf(err, "marking all machines for forceful deletion failed")
+			}
 		// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
 		// we can use either min or max.
 		case !clusterAutoscalerUsed:

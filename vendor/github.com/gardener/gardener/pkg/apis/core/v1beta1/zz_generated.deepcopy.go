@@ -951,6 +951,11 @@ func (in *DNSProvider) DeepCopyInto(out *DNSProvider) {
 		*out = new(DNSIncludeExclude)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Primary != nil {
+		in, out := &in.Primary, &out.Primary
+		*out = new(bool)
+		**out = **in
+	}
 	if in.SecretName != nil {
 		in, out := &in.SecretName, &out.SecretName
 		*out = new(string)
@@ -1336,6 +1341,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 	if in.PodPIDsLimit != nil {
 		in, out := &in.PodPIDsLimit, &out.PodPIDsLimit
 		*out = new(int64)
+		**out = **in
+	}
+	if in.ImagePullProgressDeadline != nil {
+		in, out := &in.ImagePullProgressDeadline, &out.ImagePullProgressDeadline
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	return
@@ -2172,6 +2182,11 @@ func (in *ProjectList) DeepCopyObject() runtime.Object {
 func (in *ProjectMember) DeepCopyInto(out *ProjectMember) {
 	*out = *in
 	out.Subject = in.Subject
+	if in.Roles != nil {
+		in, out := &in.Roles, &out.Roles
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -2211,7 +2226,9 @@ func (in *ProjectSpec) DeepCopyInto(out *ProjectSpec) {
 	if in.Members != nil {
 		in, out := &in.Members, &out.Members
 		*out = make([]ProjectMember, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.Namespace != nil {
 		in, out := &in.Namespace, &out.Namespace

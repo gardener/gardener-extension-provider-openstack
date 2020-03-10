@@ -40,10 +40,9 @@ func TerraformerVariablesEnvironmentFromCredentials(creds *Credentials) map[stri
 	}
 }
 
-// NewTerraformer initializes a new Terraformer that has the credentials.
+// NewTerraformer initializes a new Terraformer.
 func NewTerraformer(
 	restConfig *rest.Config,
-	creds *Credentials,
 	purpose,
 	namespace,
 	name string,
@@ -53,11 +52,24 @@ func NewTerraformer(
 		return nil, err
 	}
 
-	variables := TerraformerVariablesEnvironmentFromCredentials(creds)
-
 	return tf.
-		SetVariablesEnvironment(variables).
-		SetActiveDeadlineSeconds(630).
+		SetTerminationGracePeriodSeconds(630).
 		SetDeadlineCleaning(5 * time.Minute).
 		SetDeadlinePod(15 * time.Minute), nil
+}
+
+// NewTerraformerWithAuth initializes a new Terraformer that has the credentials.
+func NewTerraformerWithAuth(
+	restConfig *rest.Config,
+	purpose,
+	namespace,
+	name string,
+	creds *Credentials,
+) (terraformer.Terraformer, error) {
+	tf, err := NewTerraformer(restConfig, purpose, namespace, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return tf.SetVariablesEnvironment(TerraformerVariablesEnvironmentFromCredentials(creds)), nil
 }

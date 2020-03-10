@@ -6,8 +6,8 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/gardener/etcd-druid v0.1.1-0.20200206100633-e7606e1225d7
-	github.com/gardener/gardener v1.0.1-0.20200213093126-7a6123b6ae21
-	github.com/gardener/gardener-extensions v1.4.0
+	github.com/gardener/gardener v1.1.1-0.20200306090858-1aa0c7eb14d1
+	github.com/gardener/gardener-extensions v1.4.1-0.20200306095919-e316500c1379
 	github.com/gardener/machine-controller-manager v0.26.0
 	github.com/go-logr/logr v0.1.0
 	github.com/gobuffalo/packr/v2 v2.1.0
@@ -35,6 +35,7 @@ require (
 )
 
 replace (
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	k8s.io/api => k8s.io/api v0.0.0-20190918155943-95b840bb6a1f // kubernetes-1.16.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655 // kubernetes-1.16.0
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190918160949-bfa5e2e684ad // kubernetes-1.16.0

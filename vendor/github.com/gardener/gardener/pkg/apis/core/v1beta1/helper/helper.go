@@ -142,7 +142,7 @@ func ConditionsNeedUpdate(existingConditions, newConditions []gardencorev1beta1.
 // IsResourceSupported returns true if a given combination of kind/type is part of a controller resources list.
 func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string) bool {
 	for _, resource := range resources {
-		if resource.Kind == resourceKind && strings.ToLower(resource.Type) == strings.ToLower(resourceType) {
+		if resource.Kind == resourceKind && strings.EqualFold(resource.Type, resourceType) {
 			return true
 		}
 	}
@@ -429,7 +429,7 @@ func validateShootedSeed(shootedSeed *ShootedSeed, fldPath *field.Path) field.Er
 	allErrs := field.ErrorList{}
 
 	if shootedSeed.APIServer != nil {
-		allErrs = append(validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer")))
+		allErrs = validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer"))
 	}
 
 	return allErrs
@@ -504,7 +504,7 @@ func ReadShootedSeed(shoot *gardencorev1beta1.Shoot) (*ShootedSeed, error) {
 		return nil, nil
 	}
 
-	val, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
+	val, ok := v1beta1constants.GetShootUseAsSeedAnnotation(shoot.Annotations)
 	if !ok {
 		return nil, nil
 	}
@@ -547,7 +547,7 @@ func ShootWantsClusterAutoscaler(shoot *gardencorev1beta1.Shoot) (bool, error) {
 // ShootIgnoresAlerts checks if the alerts for the annotated shoot cluster should be ignored.
 func ShootIgnoresAlerts(shoot *gardencorev1beta1.Shoot) bool {
 	ignore := false
-	if value, ok := shoot.Annotations[v1beta1constants.AnnotationShootIgnoreAlerts]; ok {
+	if value, ok := v1beta1constants.GetShootIgnoreAlertsAnnotation(shoot.Annotations); ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore
@@ -587,7 +587,7 @@ func GetMachineImagesFor(shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.Sh
 // cloud-specific machine image will be returned.
 func DetermineMachineImageForName(cloudProfile *gardencorev1beta1.CloudProfile, name string) (bool, gardencorev1beta1.MachineImage, error) {
 	for _, image := range cloudProfile.Spec.MachineImages {
-		if strings.ToLower(image.Name) == strings.ToLower(name) {
+		if strings.EqualFold(image.Name, name) {
 			return true, image, nil
 		}
 	}
@@ -719,7 +719,7 @@ func determineNextKubernetesVersions(cloudProfile *gardencorev1beta1.CloudProfil
 // SetMachineImageVersionsToMachineImage sets imageVersions to the matching imageName in the machineImages.
 func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1beta1.MachineImage, imageName string, imageVersions []gardencorev1beta1.ExpirableVersion) ([]gardencorev1beta1.MachineImage, error) {
 	for index, image := range machineImages {
-		if strings.ToLower(image.Name) == strings.ToLower(imageName) {
+		if strings.EqualFold(image.Name, imageName) {
 			machineImages[index].Versions = imageVersions
 			return machineImages, nil
 		}
@@ -741,4 +741,36 @@ func WrapWithLastError(err error, lastError *gardencorev1beta1.LastError) error 
 		return err
 	}
 	return errors.Wrapf(err, "last error: %s", lastError.Description)
+}
+
+// IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.
+// This indicates to extensions that they should not mutate the object.
+// Gardener marks the kube-apiserver Service and Deployment as managed by it when it uses SNI to expose them.
+func IsAPIServerExposureManaged(obj metav1.Object) bool {
+	if obj == nil {
+		return false
+	}
+
+	if v, found := obj.GetLabels()[v1beta1constants.LabelAPIServerExposure]; found &&
+		v == v1beta1constants.LabelAPIServerExposureGardenerManaged {
+		return true
+	}
+
+	return false
+}
+
+// FindPrimaryDNSProvider finds the primary provider among the given `providers`.
+// It returns the first provider in case no primary provider is available or the first one if multiple candidates are found.
+func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardencorev1beta1.DNSProvider {
+	for _, provider := range providers {
+		if provider.Primary != nil && *provider.Primary {
+			primaryProvider := provider
+			return &primaryProvider
+		}
+	}
+	// TODO: timuthy - Only required for migration and can be removed in a future version.
+	if len(providers) > 0 {
+		return &providers[0]
+	}
+	return nil
 }

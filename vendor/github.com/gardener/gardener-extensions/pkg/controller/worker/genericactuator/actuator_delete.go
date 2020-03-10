@@ -54,6 +54,12 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 		return err
 	}
 
+	// Redeploy generated machine classes to update credentials machine-controller-manager used.
+	a.logger.Info("Deploying the machine classes", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
+		return errors.Wrapf(err, "failed to deploy the machine classes")
+	}
+
 	// Mark all existing machines to become forcefully deleted.
 	a.logger.Info("Deleting all machines", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 	if err := a.markAllMachinesForcefulDeletion(ctx, worker.Namespace); err != nil {

@@ -36,7 +36,7 @@ import (
 //   with TF_VAR_).
 // * configurationDefined indicates whether the required configuration ConfigMaps/Secrets have been
 //   successfully defined.
-// * activeDeadlineSeconds is the respective Pod spec field passed to Terraformer Pods.
+// * terminationGracePeriodSeconds is the respective Pod spec field passed to Terraformer Pods.
 // * deadlineCleaning is the timeout to wait Terraformer Pods to be cleaned up.
 // * deadlinePod is the time to wait apply/destroy Pod to be completed.
 type terraformer struct {
@@ -55,7 +55,7 @@ type terraformer struct {
 	variablesEnvironment map[string]string
 	configurationDefined bool
 
-	activeDeadlineSeconds int64
+	terminationGracePeriodSeconds int64
 
 	deadlineCleaning time.Duration
 	deadlinePod      time.Duration
@@ -89,15 +89,19 @@ const (
 // Terraformer is the Terraformer interface.
 type Terraformer interface {
 	SetVariablesEnvironment(tfVarsEnvironment map[string]string) Terraformer
-	SetActiveDeadlineSeconds(int64) Terraformer
+	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer
 	SetDeadlinePod(time.Duration) Terraformer
 	InitializeWith(initializer Initializer) Terraformer
 	Apply() error
 	Destroy() error
+	GetRawState(context.Context) (*RawState, error)
+	GetState() ([]byte, error)
+	IsStateEmpty() bool
+	CleanupConfiguration(ctx context.Context) error
 	GetStateOutputVariables(variables ...string) (map[string]string, error)
 	ConfigExists() (bool, error)
-	GetRawState(context.Context) (*RawState, error)
+	NumberOfResources(context.Context) (int, error)
 }
 
 // Initializer can initialize a Terraformer.

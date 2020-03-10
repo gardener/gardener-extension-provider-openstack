@@ -40,8 +40,8 @@ type terraformStateV4 struct {
 	Outputs map[string]outputState `json:"outputs"`
 }
 
-// getState returns the Terraform state as byte slice.
-func (t *terraformer) getState() ([]byte, error) {
+// GetState returns the Terraform state as byte slice.
+func (t *terraformer) GetState() ([]byte, error) {
 	ctx := context.TODO()
 	configMap := &corev1.ConfigMap{}
 	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
@@ -61,7 +61,7 @@ func (t *terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 		foundVariables  = sets.NewString()
 	)
 
-	stateConfigMap, err := t.getState()
+	stateConfigMap, err := t.GetState()
 	if err != nil {
 		return nil, err
 	}
@@ -89,9 +89,9 @@ func (t *terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 	return output, nil
 }
 
-// isStateEmpty returns true if the Terraform state is empty, and false otherwise.
-func (t *terraformer) isStateEmpty() bool {
-	state, err := t.getState()
+// IsStateEmpty returns true if the Terraform state is empty, and false otherwise.
+func (t *terraformer) IsStateEmpty() bool {
+	state, err := t.GetState()
 	if err != nil {
 		return apierrors.IsNotFound(err)
 	}

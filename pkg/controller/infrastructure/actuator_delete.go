@@ -20,20 +20,28 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
 
+	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-func (a *actuator) delete(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	tf, err := internal.NewTerraformer(a.RESTConfig(), infrastructure.TerraformerPurpose, infra.Namespace, infra.Name)
+	if err != nil {
+		return fmt.Errorf("could not create the Terraformer: %+v", err)
+	}
+
+	// If the Terraform state is empty then we can exit early as we didn't create anything. Though, we clean up potentially
+	// created configmaps/secrets related to the Terraformer.
+	stateIsEmpty := tf.IsStateEmpty()
+	if stateIsEmpty {
+		a.logger.Info("exiting early as infrastructure state is empty - nothing to do")
+		return tf.CleanupConfiguration(ctx)
+	}
+
 	creds, err := infrastructure.GetCredentialsFromInfrastructure(ctx, a.Client(), infra)
 	if err != nil {
 		return err
-	}
-
-	tf, err := internal.NewTerraformer(a.RESTConfig(), creds, infrastructure.TerraformerPurpose, infra.Namespace, infra.Name)
-	if err != nil {
-		return fmt.Errorf("could not create the Terraformer: %+v", err)
 	}
 
 	return tf.

@@ -12,6 +12,7 @@ lbProvider: foobar
 # [Metadata]
 dhcpDomain: foobar
 requestTimeout: 2s
+#useOctavia: false
 # floatingClasses:
 # - name: A
 #   floatingNetworkID: "1234"

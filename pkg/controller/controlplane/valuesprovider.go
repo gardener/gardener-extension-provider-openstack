@@ -217,20 +217,11 @@ func getConfigChartValues(
 		return nil, errors.Wrapf(err, "could not determine subnet from infrastructureProviderStatus of controlplane '%s'", util.ObjectName(cp))
 	}
 
-	var (
-		keyStoneURL    string
-		dhcpDomain     *string
-		requestTimeout *string
-	)
-
 	if cloudProfileConfig == nil {
 		return nil, fmt.Errorf("cloud profile config is nil - cannot determine keystone URL and other parameters")
 	}
 
-	dhcpDomain = cloudProfileConfig.DHCPDomain
-	requestTimeout = cloudProfileConfig.RequestTimeout
-
-	keyStoneURL, err = helper.FindKeyStoneURL(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneURL, cp.Spec.Region)
+	keyStoneURL, err := helper.FindKeyStoneURL(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneURL, cp.Spec.Region)
 	if err != nil {
 		return nil, err
 	}
@@ -246,8 +237,9 @@ func getConfigChartValues(
 		"floatingNetworkID": infraStatus.Networks.FloatingPool.ID,
 		"subnetID":          subnet.ID,
 		"authUrl":           keyStoneURL,
-		"dhcpDomain":        dhcpDomain,
-		"requestTimeout":    requestTimeout,
+		"dhcpDomain":        cloudProfileConfig.DHCPDomain,
+		"requestTimeout":    cloudProfileConfig.RequestTimeout,
+		"useOctavia":        cloudProfileConfig.UseOctavia != nil && *cloudProfileConfig.UseOctavia,
 	}
 
 	if cpConfig.LoadBalancerClasses == nil {

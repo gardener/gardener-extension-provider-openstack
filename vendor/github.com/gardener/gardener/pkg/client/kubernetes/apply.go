@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"io"
 
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
 	memcache "k8s.io/client-go/discovery/cached/memory"
@@ -64,7 +65,7 @@ func NewApplierForConfig(config *rest.Config) (*Applier, error) {
 	return NewApplierInternal(config, cachedDiscoveryClient)
 }
 
-func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstructured, options ApplierOptions) error {
+func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstructured, options MergeFuncs) error {
 	if desired.GetNamespace() == "" {
 		desired.SetNamespace(metav1.NamespaceDefault)
 	}
@@ -75,7 +76,7 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 	}
 
 	if len(key.Name) == 0 {
-		return fmt.Errorf("Missing 'metadata.name' in: %+v", desired)
+		return fmt.Errorf("missing 'metadata.name' in: %+v", desired)
 	}
 
 	current := &unstructured.Unstructured{}
@@ -92,7 +93,7 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 		return err
 	}
 
-	if err := c.mergeObjects(desired, current, options.MergeFuncs); err != nil {
+	if err := c.mergeObjects(desired, current, options); err != nil {
 		return err
 	}
 
@@ -104,7 +105,7 @@ func (c *Applier) deleteObject(ctx context.Context, desired *unstructured.Unstru
 		desired.SetNamespace(metav1.NamespaceDefault)
 	}
 	if len(desired.GetName()) == 0 {
-		return fmt.Errorf("Missing 'metadata.name' in: %+v", desired)
+		return fmt.Errorf("missing 'metadata.name' in: %+v", desired)
 	}
 
 	err := c.client.Delete(ctx, desired)
@@ -115,63 +116,128 @@ func (c *Applier) deleteObject(ctx context.Context, desired *unstructured.Unstru
 
 }
 
-// DefaultApplierOptions contains options for common k8s objects, e.g. Service, ServiceAccount.
-var DefaultApplierOptions = ApplierOptions{
-	MergeFuncs: map[schema.GroupKind]MergeFunc{
-		corev1.SchemeGroupVersion.WithKind("Service").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
-			// We do not want to overwrite a Service's `.spec.clusterIP', `.spec.healthCheckNodePort` or '.spec.ports[*].nodePort' values.
-			oldPorts := oldObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
-			newPorts := newObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
-			ports := []map[string]interface{}{}
+// DefaultMergeFuncs contains options for common k8s objects, e.g. Service, ServiceAccount.
+var DefaultMergeFuncs = MergeFuncs{
+	corev1.SchemeGroupVersion.WithKind("Service").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
+		newSvcType, found, _ := unstructured.NestedString(newObj.Object, "spec", "type")
+		if !found {
+			newSvcType = string(corev1.ServiceTypeClusterIP)
+			_ = unstructured.SetNestedField(newObj.Object, newSvcType, "spec", "type")
+		}
 
-			// Check whether ports of the newObj have also been present previously. If yes, take the nodePort
-			// of the existing object.
+		oldSvcType, found, _ := unstructured.NestedString(oldObj.Object, "spec", "type")
+		if !found {
+			oldSvcType = string(corev1.ServiceTypeClusterIP)
+
+		}
+
+		switch newSvcType {
+		case string(corev1.ServiceTypeLoadBalancer), string(corev1.ServiceTypeNodePort):
+			oldPorts, found, _ := unstructured.NestedSlice(oldObj.Object, "spec", "ports")
+			if !found {
+				// no old ports probably means that the service was of type External name before.
+				break
+			}
+
+			newPorts, found, _ := unstructured.NestedSlice(newObj.Object, "spec", "ports")
+			if !found {
+				// no new ports is safe to ignore
+				break
+			}
+
+			ports := []interface{}{}
 			for _, newPort := range newPorts {
 				np := newPort.(map[string]interface{})
+				npName, _, _ := unstructured.NestedString(np, "name")
+				npPort, _ := nestedFloat64OrInt64(np, "port")
+				nodePort, ok := nestedFloat64OrInt64(np, "nodePort")
 
-				for _, oldPort := range oldPorts {
-					op := oldPort.(map[string]interface{})
-					// np["port"] is of type float64 (due to Helm Tiller rendering) while op["port"] is of type int64.
-					// Equality can only be checked via their string representations.
-					if fmt.Sprintf("%v", np["port"]) == fmt.Sprintf("%v", op["port"]) {
-						if nodePort, ok := op["nodePort"]; ok {
-							np["nodePort"] = nodePort
-						}
+				for _, oldPortObj := range oldPorts {
+					op := oldPortObj.(map[string]interface{})
+					opName, _, _ := unstructured.NestedString(op, "name")
+					opPort, _ := nestedFloat64OrInt64(op, "port")
+
+					if (opName == npName || opPort == npPort) && (!ok || nodePort == 0) {
+						np["nodePort"] = op["nodePort"]
 					}
 				}
+
 				ports = append(ports, np)
 			}
 
-			newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
-			newObj.Object["spec"].(map[string]interface{})["healthCheckNodePort"] = oldObj.Object["spec"].(map[string]interface{})["healthCheckNodePort"]
-			newObj.Object["spec"].(map[string]interface{})["ports"] = ports
-		},
-		corev1.SchemeGroupVersion.WithKind("ServiceAccount").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
-			// We do not want to overwrite a ServiceAccount's `.secrets[]` list or `.imagePullSecrets[]`.
-			newObj.Object["secrets"] = oldObj.Object["secrets"]
-			newObj.Object["imagePullSecrets"] = oldObj.Object["imagePullSecrets"]
-		},
-		{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}: func(newObj, oldObj *unstructured.Unstructured) {
-			// Never override the status of VPA resources
-			newObj.Object["status"] = oldObj.Object["status"]
-		},
+			_ = unstructured.SetNestedSlice(newObj.Object, ports, "spec", "ports")
+
+		case string(corev1.ServiceTypeExternalName):
+			// there is no ClusterIP in this case
+			return
+		}
+
+		// ClusterIP is immutable unless that old service is of type ExternalName
+		if oldSvcType != string(corev1.ServiceTypeExternalName) {
+			newClusterIP, _, _ := unstructured.NestedString(newObj.Object, "spec", "clusterIP")
+			if newClusterIP != string(corev1.ClusterIPNone) || newSvcType != string(corev1.ServiceTypeClusterIP) {
+				oldClusterIP, _, _ := unstructured.NestedString(oldObj.Object, "spec", "clusterIP")
+				_ = unstructured.SetNestedField(newObj.Object, oldClusterIP, "spec", "clusterIP")
+			}
+		}
+
+		newETP, _, _ := unstructured.NestedString(newObj.Object, "spec", "externalTrafficPolicy")
+		oldETP, _, _ := unstructured.NestedString(oldObj.Object, "spec", "externalTrafficPolicy")
+
+		if oldSvcType == string(corev1.ServiceTypeLoadBalancer) &&
+			newSvcType == string(corev1.ServiceTypeLoadBalancer) &&
+			newETP == string(corev1.ServiceExternalTrafficPolicyTypeLocal) &&
+			oldETP == string(corev1.ServiceExternalTrafficPolicyTypeLocal) {
+			newHealthCheckPort, _ := nestedFloat64OrInt64(newObj.Object, "spec", "healthCheckNodePort")
+			if newHealthCheckPort == 0 {
+				oldHealthCheckPort, _ := nestedFloat64OrInt64(oldObj.Object, "spec", "healthCheckNodePort")
+				_ = unstructured.SetNestedField(newObj.Object, oldHealthCheckPort, "spec", "healthCheckNodePort")
+			}
+		}
+
+	},
+	corev1.SchemeGroupVersion.WithKind("ServiceAccount").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
+		// We do not want to overwrite a ServiceAccount's `.secrets[]` list or `.imagePullSecrets[]`.
+		newObj.Object["secrets"] = oldObj.Object["secrets"]
+		newObj.Object["imagePullSecrets"] = oldObj.Object["imagePullSecrets"]
+	},
+	{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}: func(newObj, oldObj *unstructured.Unstructured) {
+		// Never override the status of VPA resources
+		newObj.Object["status"] = oldObj.Object["status"]
 	},
 }
 
-// CopyApplierOptions returns a copies of the provided applier options.
-func CopyApplierOptions(in ApplierOptions) ApplierOptions {
-	out := ApplierOptions{
-		MergeFuncs: make(map[schema.GroupKind]MergeFunc, len(in.MergeFuncs)),
+func nestedFloat64OrInt64(obj map[string]interface{}, fields ...string) (int64, bool) {
+	val, found, err := unstructured.NestedFieldNoCopy(obj, fields...)
+	if !found || err != nil {
+		return 0, found
 	}
 
-	for k, v := range in.MergeFuncs {
-		out.MergeFuncs[k] = v
+	f, ok := val.(float64)
+	if ok {
+		return int64(f), true
+	}
+
+	i, ok := val.(int64)
+	if ok {
+		return i, true
+	}
+
+	return 0, false
+}
+
+// CopyApplierOptions returns a copies of the provided applier options.
+func CopyApplierOptions(in MergeFuncs) MergeFuncs {
+	out := make(MergeFuncs, len(in))
+
+	for k, v := range in {
+		out[k] = v
 	}
 
 	return out
 }
 
-func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeFuncs map[schema.GroupKind]MergeFunc) error {
+func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeFuncs MergeFuncs) error {
 	newObj.SetResourceVersion(oldObj.GetResourceVersion())
 
 	// We do not want to overwrite the Finalizers.
@@ -187,45 +253,61 @@ func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeF
 // ApplyManifest is a function which does the same like `kubectl apply -f <file>`. It takes a bunch of manifests <m>,
 // all concatenated in a byte slice, and sends them one after the other to the API server. If a resource
 // already exists at the API server, it will update it. It returns an error as soon as the first error occurs.
-func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, options ApplierOptions) error {
+func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, options MergeFuncs) error {
+	allErrs := &multierror.Error{
+		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("failed to apply manifests"),
+	}
+
 	for {
 		obj, err := r.Read()
 		if err == io.EOF {
-			return nil
+			break
 		}
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, fmt.Errorf("could not read object: %+v", err))
+			continue
 		}
 		if obj == nil {
 			continue
 		}
 
 		if err := c.applyObject(ctx, obj, options); err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, fmt.Errorf("could not apply object of kind %q \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
+			continue
 		}
 	}
+
+	return allErrs.ErrorOrNil()
 }
 
 // DeleteManifest is a function which does the same like `kubectl delete -f <file>`. It takes a bunch of manifests <m>,
 // all concatenated in a byte slice, and sends them one after the other to the API server for deletion.
 // It returns an error as soon as the first error occurs.
 func (c *Applier) DeleteManifest(ctx context.Context, r UnstructuredReader) error {
+	allErrs := &multierror.Error{
+		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("failed to delete manifests"),
+	}
+
 	for {
 		obj, err := r.Read()
 		if err == io.EOF {
-			return nil
+			break
 		}
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, fmt.Errorf("could not read object: %+v", err))
+			continue
 		}
 		if obj == nil {
 			continue
 		}
 
 		if err := c.deleteObject(ctx, obj); err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, fmt.Errorf("could not delete object of kind %q \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
+			continue
 		}
 	}
+
+	return allErrs.ErrorOrNil()
 }
 
 // UnstructuredReader an interface that all manifest readers should implement

@@ -1,4 +1,4 @@
-// Copyright 2019 The Prometheus Authors
+// Copyright 2017 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,27 +11,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package procfs
+// +build !go1.8
+
+package promhttp
 
 import (
-	"strings"
-
-	"github.com/prometheus/procfs/internal/util"
+	"io"
+	"net/http"
 )
 
-// Environ reads process environments from /proc/<pid>/environ
-func (p Proc) Environ() ([]string, error) {
-	environments := make([]string, 0)
-
-	data, err := util.ReadFileNoStat(p.path("environ"))
-	if err != nil {
-		return environments, err
+func newDelegator(w http.ResponseWriter, observeWriteHeaderFunc func(int)) delegator {
+	d := &responseWriterDelegator{
+		ResponseWriter:     w,
+		observeWriteHeader: observeWriteHeaderFunc,
 	}
 
-	environments = strings.Split(string(data), "\000")
-	if len(environments) > 0 {
-		environments = environments[:len(environments)-1]
+	id := 0
+	if _, ok := w.(http.CloseNotifier); ok {
+		id += closeNotifier
+	}
+	if _, ok := w.(http.Flusher); ok {
+		id += flusher
+	}
+	if _, ok := w.(http.Hijacker); ok {
+		id += hijacker
+	}
+	if _, ok := w.(io.ReaderFrom); ok {
+		id += readerFrom
 	}
 
-	return environments, nil
+	return pickDelegator[id](d)
 }

@@ -44,14 +44,6 @@ func NewActuator() infrastructure.Actuator {
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, config *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	return a.reconcile(ctx, config, cluster)
-}
-
-func (a *actuator) Delete(ctx context.Context, config *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	return a.delete(ctx, config, cluster)
-}
-
 // Helper functions
 
 func (a *actuator) updateProviderStatus(

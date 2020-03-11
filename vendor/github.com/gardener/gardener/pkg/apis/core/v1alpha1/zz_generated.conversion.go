@@ -1191,6 +1191,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*core.ProjectMember)(nil), (*ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ProjectMember_To_v1alpha1_ProjectMember(a.(*core.ProjectMember), b.(*ProjectMember), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*core.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(a.(*core.ProjectSpec), b.(*ProjectSpec), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*core.SeedNetworks)(nil), (*SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_SeedNetworks_To_v1alpha1_SeedNetworks(a.(*core.SeedNetworks), b.(*SeedNetworks), scope)
 	}); err != nil {
@@ -1228,6 +1238,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*BackupEntry)(nil), (*core.BackupEntry)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_BackupEntry_To_core_BackupEntry(a.(*BackupEntry), b.(*core.BackupEntry), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*ProjectMember)(nil), (*core.ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectMember_To_core_ProjectMember(a.(*ProjectMember), b.(*core.ProjectMember), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*ProjectSpec)(nil), (*core.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec(a.(*ProjectSpec), b.(*core.ProjectSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -2098,6 +2118,7 @@ func Convert_core_DNSIncludeExclude_To_v1alpha1_DNSIncludeExclude(in *core.DNSIn
 
 func autoConvert_v1alpha1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *core.DNSProvider, s conversion.Scope) error {
 	out.Domains = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Domains))
+	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Zones = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Zones))
@@ -2111,6 +2132,7 @@ func Convert_v1alpha1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *core
 
 func autoConvert_core_DNSProvider_To_v1alpha1_DNSProvider(in *core.DNSProvider, out *DNSProvider, s conversion.Scope) error {
 	out.Domains = (*DNSIncludeExclude)(unsafe.Pointer(in.Domains))
+	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Zones = (*DNSIncludeExclude)(unsafe.Pointer(in.Zones))
@@ -2474,6 +2496,7 @@ func autoConvert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig,
 	out.EvictionSoftGracePeriod = (*core.KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
 	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
+	out.ImagePullProgressDeadline = (*metav1.Duration)(unsafe.Pointer(in.ImagePullProgressDeadline))
 	return nil
 }
 
@@ -2496,6 +2519,7 @@ func autoConvert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in *core.KubeletCo
 	out.EvictionSoftGracePeriod = (*KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
 	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
+	out.ImagePullProgressDeadline = (*metav1.Duration)(unsafe.Pointer(in.ImagePullProgressDeadline))
 	return nil
 }
 
@@ -3198,7 +3222,17 @@ func Convert_core_Project_To_v1alpha1_Project(in *core.Project, out *Project, s 
 
 func autoConvert_v1alpha1_ProjectList_To_core_ProjectList(in *ProjectList, out *core.ProjectList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]core.Project)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]core.Project, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_Project_To_core_Project(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -3209,7 +3243,17 @@ func Convert_v1alpha1_ProjectList_To_core_ProjectList(in *ProjectList, out *core
 
 func autoConvert_core_ProjectList_To_v1alpha1_ProjectList(in *core.ProjectList, out *ProjectList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]Project)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]Project, len(*in))
+		for i := range *in {
+			if err := Convert_core_Project_To_v1alpha1_Project(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -3220,24 +3264,15 @@ func Convert_core_ProjectList_To_v1alpha1_ProjectList(in *core.ProjectList, out 
 
 func autoConvert_v1alpha1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
 	out.Subject = in.Subject
-	out.Role = in.Role
+	// WARNING: in.Role requires manual conversion: does not exist in peer-type
+	out.Roles = *(*[]string)(unsafe.Pointer(&in.Roles))
 	return nil
-}
-
-// Convert_v1alpha1_ProjectMember_To_core_ProjectMember is an autogenerated conversion function.
-func Convert_v1alpha1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ProjectMember_To_core_ProjectMember(in, out, s)
 }
 
 func autoConvert_core_ProjectMember_To_v1alpha1_ProjectMember(in *core.ProjectMember, out *ProjectMember, s conversion.Scope) error {
 	out.Subject = in.Subject
-	out.Role = in.Role
+	out.Roles = *(*[]string)(unsafe.Pointer(&in.Roles))
 	return nil
-}
-
-// Convert_core_ProjectMember_To_v1alpha1_ProjectMember is an autogenerated conversion function.
-func Convert_core_ProjectMember_To_v1alpha1_ProjectMember(in *core.ProjectMember, out *ProjectMember, s conversion.Scope) error {
-	return autoConvert_core_ProjectMember_To_v1alpha1_ProjectMember(in, out, s)
 }
 
 func autoConvert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
@@ -3245,14 +3280,19 @@ func autoConvert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *
 	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	out.Members = *(*[]core.ProjectMember)(unsafe.Pointer(&in.Members))
+	if in.Members != nil {
+		in, out := &in.Members, &out.Members
+		*out = make([]core.ProjectMember, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_ProjectMember_To_core_ProjectMember(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Members = nil
+	}
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
-}
-
-// Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec is an autogenerated conversion function.
-func Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in, out, s)
 }
 
 func autoConvert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
@@ -3260,14 +3300,19 @@ func autoConvert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, 
 	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	out.Members = *(*[]ProjectMember)(unsafe.Pointer(&in.Members))
+	if in.Members != nil {
+		in, out := &in.Members, &out.Members
+		*out = make([]ProjectMember, len(*in))
+		for i := range *in {
+			if err := Convert_core_ProjectMember_To_v1alpha1_ProjectMember(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Members = nil
+	}
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
-}
-
-// Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec is an autogenerated conversion function.
-func Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
-	return autoConvert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in, out, s)
 }
 
 func autoConvert_v1alpha1_ProjectStatus_To_core_ProjectStatus(in *ProjectStatus, out *core.ProjectStatus, s conversion.Scope) error {

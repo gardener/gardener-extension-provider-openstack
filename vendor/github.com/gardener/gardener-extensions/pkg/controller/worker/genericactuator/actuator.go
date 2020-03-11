@@ -159,15 +159,37 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, namespace s
 
 func (a *genericActuator) listMachineClassSecrets(ctx context.Context, namespace string) (*corev1.SecretList, error) {
 	var (
-		secretList = &corev1.SecretList{}
-		labels     = map[string]string{
-			v1beta1constants.GardenPurpose: GardenPurposeMachineClass,
+		secretList            = &corev1.SecretList{}
+		depcrecatedSecretList = &corev1.SecretList{}
+		labels                = map[string]string{
+			v1beta1constants.GardenerPurpose: GardenPurposeMachineClass,
+		}
+		deprecatedLabels = map[string]string{
+			"garden.sapcloud.io/purpose": GardenPurposeMachineClass,
 		}
 	)
 
 	if err := a.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
 	}
+
+	if err := a.client.List(ctx, depcrecatedSecretList, client.InNamespace(namespace), client.MatchingLabels(deprecatedLabels)); err != nil {
+		return nil, err
+	}
+
+	for _, depSecret := range depcrecatedSecretList.Items {
+		exists := false
+		for _, secret := range secretList.Items {
+			if depSecret.Name == secret.Name {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			secretList.Items = append(secretList.Items, depSecret)
+		}
+	}
+
 	return secretList, nil
 }
 

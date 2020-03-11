@@ -17,7 +17,6 @@ package v1beta1
 import (
 	"math"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -45,14 +44,26 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 
 // SetDefaults_Project sets default values for Project objects.
 func SetDefaults_Project(obj *Project) {
-	if obj.Spec.Owner != nil && len(obj.Spec.Owner.APIGroup) == 0 {
-		switch obj.Spec.Owner.Kind {
+	defaultSubject(obj.Spec.Owner)
+
+	for i, member := range obj.Spec.Members {
+		defaultSubject(&obj.Spec.Members[i].Subject)
+
+		if len(member.Role) == 0 && len(member.Roles) == 0 {
+			obj.Spec.Members[i].Role = ProjectMemberViewer
+		}
+	}
+}
+
+func defaultSubject(obj *rbacv1.Subject) {
+	if obj != nil && len(obj.APIGroup) == 0 {
+		switch obj.Kind {
 		case rbacv1.ServiceAccountKind:
-			obj.Spec.Owner.APIGroup = ""
+			obj.APIGroup = ""
 		case rbacv1.UserKind:
-			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+			obj.APIGroup = rbacv1.GroupName
 		case rbacv1.GroupKind:
-			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+			obj.APIGroup = rbacv1.GroupName
 		}
 	}
 }
@@ -130,15 +141,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	if obj.Spec.Purpose == nil {
 		p := ShootPurposeEvaluation
-
-		// backwards compatibility - take purpose from annotation if given. If not, default.
-		// TODO: This code can be removed in a future version
-		if v, ok := obj.Annotations[v1beta1constants.GardenerPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1beta1constants.GardenNamespace)) {
-			p = ShootPurpose(v)
-		} else if v, ok := obj.Annotations[v1beta1constants.GardenPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1beta1constants.GardenNamespace)) {
-			p = ShootPurpose(v)
-		}
-
 		obj.Spec.Purpose = &p
 	}
 }

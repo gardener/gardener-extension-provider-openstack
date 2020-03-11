@@ -447,7 +447,6 @@ var _ = Describe("Machines", func() {
 							namespace,
 							"machineclass",
 							kubernetes.Values(machineClasses),
-							nil,
 						).
 						Return(nil)
 
@@ -494,7 +493,6 @@ var _ = Describe("Machines", func() {
 							namespace,
 							"machineclass",
 							kubernetes.Values(machineClasses),
-							nil,
 						).
 						Return(nil)
 

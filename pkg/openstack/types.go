@@ -44,9 +44,9 @@ const (
 	// TODO In the future, the bucket name should come from a BackupBucket resource (see https://github.com/gardener/gardener/blob/master/docs/proposals/02-backupinfra.md)
 	BucketName = "bucketName"
 
-	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
+	// CloudProviderConfigCloudControllerManagerName is the name of the configmap containing the cloud provider config.
 	CloudProviderConfigCloudControllerManagerName = "cloud-provider-config-cloud-controller-manager"
-	// CloudProviderConfigNameInTree is the name of the original configmap containing the cloud provider config (for compatibility reasons).
+	// CloudProviderConfigKubeControllerManagerName is the name of the original configmap containing the cloud provider config (for compatibility reasons).
 	CloudProviderConfigKubeControllerManagerName = "cloud-provider-config-kube-controller-manager"
 	// CloudProviderConfigMapKey is the key storing the cloud provider config as value in the cloud provider configmap.
 	CloudProviderConfigMapKey = "cloudprovider.conf"

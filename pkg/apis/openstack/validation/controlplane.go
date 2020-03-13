@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,46 +15,58 @@
 package validation
 
 import (
+	"fmt"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateControlPlaneConfig validates a ControlPlaneConfig object.
-func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, region string, regions []gardencorev1beta1.Region, constraints api.Constraints) field.ErrorList {
+func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(controlPlaneConfig.LoadBalancerProvider) == 0 {
-		allErrs = append(allErrs, field.Required(field.NewPath("loadBalancerProvider"), "must provide the name of a load balancer provider"))
-	} else if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(constraints.LoadBalancerProviders, region, controlPlaneConfig.LoadBalancerProvider, ""); !ok {
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("loadBalancerProvider"), controlPlaneConfig.LoadBalancerProvider, validLoadBalancerProviders))
+		allErrs = append(allErrs, field.Required(fldPath.Child("loadBalancerProvider"), "must provide the name of a load balancer provider"))
 	}
 
 	if len(controlPlaneConfig.Zone) == 0 {
-		allErrs = append(allErrs, field.Required(field.NewPath("zone"), "must provide the name of a zone in this region"))
-	} else if ok, validZones := validateZoneConstraints(regions, region, controlPlaneConfig.Zone, ""); !ok {
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("zone"), controlPlaneConfig.Zone, validZones))
+		allErrs = append(allErrs, field.Required(fldPath.Child("zone"), "must provide the name of a zone in this region"))
 	}
 
 	return allErrs
 }
 
 // ValidateControlPlaneConfigUpdate validates a ControlPlaneConfig object.
-func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConfig, region string, regions []gardencorev1beta1.Region, constraints api.Constraints) field.ErrorList {
+func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Zone, oldConfig.Zone, field.NewPath("zone"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Zone, oldConfig.Zone, fldPath.Child("zone"))...)
 
 	return allErrs
 }
 
-func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvider, region, provider, oldProvider string) (bool, []string) {
-	if provider == oldProvider {
-		return true, nil
+// ValidateControlPlaneConfigAgainstCloudProfile validates the given ControlPlaneConfig against constraints in the given CloudProfile.
+func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneConfig, shootRegion string, cloudProfile *gardencorev1beta1.CloudProfile, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(cloudProfileConfig.Constraints.LoadBalancerProviders, shootRegion, cpConfig.LoadBalancerProvider); !ok {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("loadBalancerProvider"), cpConfig.LoadBalancerProvider, validLoadBalancerProviders))
 	}
 
+	allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, shootRegion, fldPath.Child("loadBalancerClasses"))...)
+
+	if ok, validZones := validateZoneConstraints(cloudProfile.Spec.Regions, shootRegion, cpConfig.Zone); !ok {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("zone"), cpConfig.Zone, validZones))
+	}
+
+	return allErrs
+}
+
+func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvider, region, provider string) (bool, []string) {
 	var (
 		validValues = []string{}
 		fallback    *api.LoadBalancerProvider
@@ -74,9 +86,8 @@ func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvide
 			validValues = append(validValues, p.Name)
 			if p.Name == provider {
 				return true, nil
-			} else {
-				return false, validValues
 			}
+			return false, validValues
 		}
 	}
 
@@ -91,12 +102,8 @@ func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvide
 	return false, validValues
 }
 
-func validateZoneConstraints(regions []gardencorev1beta1.Region, region, zone, oldZone string) (bool, []string) {
-	if zone == oldZone {
-		return true, nil
-	}
-
-	validValues := []string{}
+func validateZoneConstraints(regions []gardencorev1beta1.Region, region, zone string) (bool, []string) {
+	var validValues []string
 
 	for _, r := range regions {
 		if r.Name != region {
@@ -112,4 +119,58 @@ func validateZoneConstraints(regions []gardencorev1beta1.Region, region, zone, o
 	}
 
 	return false, validValues
+}
+
+func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, lbClasses []api.LoadBalancerClass, shootRegion string, fldPath *field.Path) field.ErrorList {
+	var (
+		regionalClasses []api.LoadBalancerClass
+		fallback        []api.LoadBalancerClass
+		allErrs         = field.ErrorList{}
+	)
+
+	for _, fp := range floatingPools {
+		if fp.Region == nil && fallback == nil {
+			fallback = fp.LoadBalancerClasses
+			continue
+		}
+
+		if fp.Region != nil && *fp.Region == shootRegion {
+			regionalClasses = fp.LoadBalancerClasses
+		}
+	}
+
+	if len(regionalClasses) == 0 && len(fallback) == 0 && len(lbClasses) > 0 {
+		allErrs = append(allErrs, field.NotSupported(fldPath, lbClasses, nil))
+		return allErrs
+	}
+
+	for i, lbClass := range lbClasses {
+		var (
+			valid       bool
+			validValues []string
+		)
+
+		if len(regionalClasses) == 0 {
+			for _, fallbackClass := range fallback {
+				if equality.Semantic.DeepEqual(lbClass, fallbackClass) {
+					valid = true
+					break
+				}
+				validValues = append(validValues, fmt.Sprint(fallbackClass))
+			}
+		} else {
+			for _, classInFloatingPool := range regionalClasses {
+				if equality.Semantic.DeepEqual(lbClass, classInFloatingPool) {
+					valid = true
+					break
+				}
+				validValues = append(validValues, fmt.Sprint(classInFloatingPool))
+			}
+		}
+		if !valid {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), lbClass, validValues))
+		}
+	}
+
+	return allErrs
 }

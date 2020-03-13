@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,11 @@ import (
 )
 
 // ValidateInfrastructureConfig validates a InfrastructureConfig object.
-func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, constraints api.Constraints, region string, nodesCIDR *string) field.ErrorList {
+func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(infra.FloatingPoolName) == 0 {
-		allErrs = append(allErrs, field.Required(field.NewPath("floatingPoolName"), "must provide the name of a floating pool"))
-	} else if ok, validFloatingPoolNames := validateFloatingPoolNameConstraints(constraints.FloatingPools, region, infra.FloatingPoolName, ""); !ok {
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("floatingPoolName"), infra.FloatingPoolName, validFloatingPoolNames))
+		allErrs = append(allErrs, field.Required(fldPath.Child("floatingPoolName"), "must provide the name of a floating pool"))
 	}
 
 	var nodes cidrvalidation.CIDR
@@ -37,7 +35,7 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, constraints a
 		nodes = cidrvalidation.NewCIDR(*nodesCIDR, nil)
 	}
 
-	networksPath := field.NewPath("networks")
+	networksPath := fldPath.Child("networks")
 	if len(infra.Networks.Worker) == 0 && len(infra.Networks.Workers) == 0 {
 		allErrs = append(allErrs, field.Required(networksPath.Child("workers"), "must specify the network range for the worker network"))
 	}
@@ -66,21 +64,28 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, constraints a
 }
 
 // ValidateInfrastructureConfigUpdate validates a InfrastructureConfig object.
-func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.InfrastructureConfig, constraints api.Constraints, nodesCIDR *string) field.ErrorList {
+func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.InfrastructureConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks, oldConfig.Networks, field.NewPath("networks"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks, oldConfig.Networks, fldPath.Child("networks"))...)
 
 	return allErrs
 }
 
-func validateFloatingPoolNameConstraints(names []api.FloatingPool, region string, name, oldName string) (bool, []string) {
-	if name == oldName {
-		return true, nil
+// ValidateInfrastructureConfigAgainstCloudProfile validates the given InfrastructureConfig against constraints in the given CloudProfile.
+func ValidateInfrastructureConfigAgainstCloudProfile(infra *api.InfrastructureConfig, shootRegion string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if ok, validFloatingPoolNames := validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, shootRegion, infra.FloatingPoolName); !ok {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("floatingPoolName"), infra.FloatingPoolName, validFloatingPoolNames))
 	}
 
+	return allErrs
+}
+
+func validateFloatingPoolNameConstraints(names []api.FloatingPool, region string, name string) (bool, []string) {
 	var (
-		validValues = []string{}
+		validValues []string
 		fallback    *api.FloatingPool
 	)
 
@@ -98,9 +103,8 @@ func validateFloatingPoolNameConstraints(names []api.FloatingPool, region string
 			validValues = append(validValues, n.Name)
 			if n.Name == name {
 				return true, nil
-			} else {
-				return false, validValues
 			}
+			return false, validValues
 		}
 	}
 

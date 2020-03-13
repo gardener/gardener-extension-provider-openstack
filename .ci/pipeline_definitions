@@ -12,6 +12,11 @@ gardener-extension-provider-openstack:
             image: 'eu.gcr.io/gardener-project/gardener/extensions/provider-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-provider-openstack
+          gardener-extension-validator-openstack:
+            registry: 'gcr-readwrite'
+            image: 'eu.gcr.io/gardener-project/gardener/extensions/validator-openstack'
+            dockerfile: 'Dockerfile'
+            target: gardener-extension-validator-openstack
     steps: ~
   jobs:
     head-update:
@@ -44,4 +49,6 @@ gardener-extension-provider-openstack:
         publish:
           dockerimages:
             gardener-extension-provider-openstack:
+              tag_as_latest: true
+            gardener-extension-validator-openstack:
               tag_as_latest: true

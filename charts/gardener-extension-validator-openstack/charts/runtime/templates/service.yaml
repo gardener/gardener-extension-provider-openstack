@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "labels" . | indent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+{{ include "labels" . | indent 4 }}
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: {{ .Values.global.webhookConfig.serverPort }}

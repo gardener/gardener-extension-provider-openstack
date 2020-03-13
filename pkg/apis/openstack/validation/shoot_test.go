@@ -67,7 +67,9 @@ var _ = Describe("Shoot validation", func() {
 						Type: pointer.StringPtr("Volume"),
 						Size: "30G",
 					},
-					Zones: []string{"1", "2"},
+					Minimum: 1,
+					Maximum: 2,
+					Zones:   []string{"1", "2"},
 				},
 				{
 					Name: "worker2",
@@ -75,7 +77,9 @@ var _ = Describe("Shoot validation", func() {
 						Type: pointer.StringPtr("Volume"),
 						Size: "20G",
 					},
-					Zones: []string{"1", "2"},
+					Minimum: 1,
+					Maximum: 2,
+					Zones:   []string{"1", "2"},
 				},
 			}
 		})
@@ -110,6 +114,19 @@ var _ = Describe("Shoot validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("[0].zones[1]"),
+					})),
+				))
+			})
+
+			It("should enforce workers min > 0 if max > 0", func() {
+				workers[0].Minimum = 0
+
+				errorList := ValidateWorkers(workers, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("[0].minimum"),
 					})),
 				))
 			})

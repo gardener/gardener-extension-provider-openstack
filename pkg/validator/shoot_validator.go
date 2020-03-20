@@ -57,9 +57,9 @@ func (v *Shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot) er
 
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(valContext.cpConfig, shoot.Spec.Region, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
-	allErrs = append(allErrs, v.validateShoot(ctx, valContext)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(valContext.cpConfig, valContext.shoot.Spec.Region, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
+	allErrs = append(allErrs, v.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
@@ -81,7 +81,7 @@ func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 	// Only validate against cloud profile when related configuration is updated.
 	// This ensures that already running shoots won't break after constraints were removed from the cloud profile.
 	if oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
-		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
+		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
 	}
 
 	var (
@@ -97,18 +97,18 @@ func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 	if oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider ||
 		oldCpConfig.Zone != cpConfig.Zone ||
 		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) {
-		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(cpConfig, shoot.Spec.Region, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
+		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(cpConfig, valContext.shoot.Spec.Region, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
 	}
 
-	if errList := openstackvalidation.ValidateWorkersUpdate(oldShoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers, workersPath); len(errList) > 0 {
+	if errList := openstackvalidation.ValidateWorkersUpdate(oldValContext.shoot.Spec.Provider.Workers, valContext.shoot.Spec.Provider.Workers, workersPath); len(errList) > 0 {
 		return errList.ToAggregate()
 	}
 
-	allErrs = append(allErrs, v.validateShoot(ctx, valContext)...)
+	allErrs = append(allErrs, v.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (v *Shoot) validateShoot(ctx context.Context, context *validationContext) field.ErrorList {
+func (v *Shoot) validateShoot(context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)

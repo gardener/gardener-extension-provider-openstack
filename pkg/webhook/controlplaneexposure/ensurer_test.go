@@ -19,9 +19,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	mockclient "github.com/gardener/gardener-extensions/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener-extensions/pkg/util"
@@ -29,7 +26,9 @@ import (
 	"github.com/gardener/gardener-extensions/pkg/webhook/controlplane/genericmutator"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -120,7 +119,7 @@ var _ = Describe("Ensurer", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Call EnsureKubeAPIServerDeployment method and check the result
-			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), dummyContext, dep)
+			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), dummyContext, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			checkKubeAPIServerDeployment(dep)
 		})
@@ -155,7 +154,7 @@ var _ = Describe("Ensurer", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Call EnsureKubeAPIServerDeployment method and check the result
-			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), dummyContext, dep)
+			err = ensurer.EnsureKubeAPIServerDeployment(context.TODO(), dummyContext, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			checkKubeAPIServerDeployment(dep)
 		})
@@ -173,7 +172,7 @@ var _ = Describe("Ensurer", func() {
 			ensurer := NewEnsurer(etcdStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
-			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd)
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			checkETCDMain(etcd)
 		})
@@ -193,7 +192,7 @@ var _ = Describe("Ensurer", func() {
 			ensurer := NewEnsurer(etcdStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
-			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd)
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			checkETCDMain(etcd)
 		})
@@ -209,7 +208,7 @@ var _ = Describe("Ensurer", func() {
 			ensurer := NewEnsurer(etcdStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
-			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd)
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			checkETCDEvents(etcd)
 		})
@@ -229,7 +228,7 @@ var _ = Describe("Ensurer", func() {
 			ensurer := NewEnsurer(etcdStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
-			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd)
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			checkETCDEvents(etcd)
 		})

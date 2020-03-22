@@ -71,13 +71,13 @@ func (h *handler) InjectClient(client client.Client) error {
 
 // Handle handles the given admission request.
 func (h *handler) Handle(ctx context.Context, req admission.Request) admission.Response {
-	f := func(ctx context.Context, newObj runtime.Object, r *http.Request) error {
-		return h.mutator.Mutate(ctx, newObj)
+	f := func(ctx context.Context, new, old runtime.Object, r *http.Request) error {
+		return h.mutator.Mutate(ctx, new, old)
 	}
 	return handle(ctx, req, nil, f, h.typesMap, h.decoder, h.logger)
 }
 
-type mutateFunc func(context.Context, runtime.Object, *http.Request) error
+type mutateFunc func(ctx context.Context, new, old runtime.Object, r *http.Request) error
 
 func handle(ctx context.Context, req admission.Request, r *http.Request, f mutateFunc, typesMap map[metav1.GroupVersionKind]runtime.Object, decoder *admission.Decoder, logger logr.Logger) admission.Response {
 	ar := req.AdmissionRequest
@@ -99,9 +99,19 @@ func handle(ctx context.Context, req admission.Request, r *http.Request, f mutat
 		return admission.Errored(http.StatusBadRequest, errors.Wrapf(err, "could not get accessor for %v", obj))
 	}
 
+	var oldObj runtime.Object
+
+	// Only UPDATE and DELETE operations have oldObjects.
+	if len(req.OldObject.Raw) != 0 {
+		oldObj = t.DeepCopyObject()
+		if err := decoder.DecodeRaw(ar.OldObject, oldObj); err != nil {
+			return admission.Errored(http.StatusBadRequest, errors.Wrapf(err, "could not decode old object %v", oldObj))
+		}
+	}
+
 	// Mutate the resource
 	newObj := obj.DeepCopyObject()
-	if err = f(ctx, newObj, r); err != nil {
+	if err = f(ctx, newObj, oldObj, r); err != nil {
 		return admission.Errored(http.StatusInternalServerError,
 			errors.Wrapf(err, "could not mutate %s %s/%s", ar.Kind.Kind, accessor.GetNamespace(), accessor.GetName()))
 	}

@@ -24,11 +24,13 @@ import (
 // Mutator validates and if needed mutates objects.
 type Mutator interface {
 	// Mutate validates and if needed mutates the given object.
-	Mutate(ctx context.Context, obj runtime.Object) error
+	// "old" is optional and it must always be checked for nil.
+	Mutate(ctx context.Context, new, old runtime.Object) error
 }
 
 // MutatorWithShootClient validates and if needed mutates objects. It needs the shoot client.
 type MutatorWithShootClient interface {
 	// Mutate validates and if needed mutates the given object.
-	Mutate(ctx context.Context, obj runtime.Object, shootClient client.Client) error
+	// "old" is optional and it must always be checked for nil.
+	Mutate(ctx context.Context, new, old runtime.Object, shootClient client.Client) error
 }

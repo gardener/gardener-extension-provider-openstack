@@ -115,6 +115,15 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 	}
 
 	data = append(data, additionalData...)
+
+	for _, w := range cluster.Shoot.Spec.Provider.Workers {
+		if pool.Name == w.Name {
+			if w.CRI != nil {
+				data = append(data, string(w.CRI.Name))
+			}
+		}
+	}
+
 	var result string
 	for _, v := range data {
 		result += utils.ComputeSHA256Hex([]byte(v))

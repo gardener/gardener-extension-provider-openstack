@@ -5,9 +5,9 @@ go 1.13
 require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/gardener/etcd-druid v0.1.1-0.20200206100633-e7606e1225d7
-	github.com/gardener/gardener v1.1.1-0.20200306090858-1aa0c7eb14d1
-	github.com/gardener/gardener-extensions v1.4.1-0.20200306095919-e316500c1379
+	github.com/gardener/etcd-druid v0.1.3
+	github.com/gardener/gardener v1.1.1-0.20200311075931-7f7e52b986e7
+	github.com/gardener/gardener-extensions v1.4.1-0.20200322183545-5329339c95e9
 	github.com/gardener/machine-controller-manager v0.26.0
 	github.com/go-logr/logr v0.1.0
 	github.com/gobuffalo/packr/v2 v2.1.0

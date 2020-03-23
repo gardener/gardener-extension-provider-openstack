@@ -145,7 +145,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	if err := a.waitUntilMachineDeploymentsAvailable(timeoutCtx, cluster, worker, wantedMachineDeployments); err != nil {
+	if err := a.waitUntilWantedMachineDeploymentsAvailable(timeoutCtx, cluster, worker, wantedMachineDeployments); err != nil {
 		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
 	}
 
@@ -162,6 +162,14 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	// Delete all old machine class secrets (i.e. those which were not previously computed but exist in the cluster).
 	if err := a.cleanupMachineClassSecrets(ctx, worker.Namespace, wantedMachineDeployments); err != nil {
 		return errors.Wrapf(err, "failed to cleanup the orphaned machine class secrets")
+	}
+
+	// Wait until all unwanted machine deployments are deleted from the system.
+	timeoutCtx2, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	if err := a.waitUntilUnwantedMachineDeploymentsDeleted(timeoutCtx2, worker, wantedMachineDeployments); err != nil {
+		return errors.Wrapf(err, "error while waiting for all undesired machine deployments to be deleted")
 	}
 
 	// Delete MachineSets having number of desired and actual replicas equaling 0
@@ -299,9 +307,9 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 	return nil
 }
 
-// waitUntilMachineDeploymentsAvailable waits for a maximum of 30 minutes until all the desired <machineDeployments>
-// were marked as healthy/available by the machine-controller-manager. It polls the status every 5 seconds.
-func (a *genericActuator) waitUntilMachineDeploymentsAvailable(ctx context.Context, cluster *controller.Cluster, worker *extensionsv1alpha1.Worker, wantedMachineDeployments worker.MachineDeployments) error {
+// waitUntilWantedMachineDeploymentsAvailable waits until all the desired <machineDeployments> were marked as healthy /
+// available by the machine-controller-manager. It polls the status every 5 seconds.
+func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, cluster *controller.Cluster, worker *extensionsv1alpha1.Worker, wantedMachineDeployments worker.MachineDeployments) error {
 	return wait.PollUntil(5*time.Second, func() (bool, error) {
 		var numHealthyDeployments, numUpdated, numDesired, numberOfAwakeMachines int32
 
@@ -313,30 +321,32 @@ func (a *genericActuator) waitUntilMachineDeploymentsAvailable(ctx context.Conte
 
 		// Collect the numbers of ready and desired replicas.
 		for _, existingMachineDeployment := range existingMachineDeployments.Items {
-			// If the shoot get hibernated we want to wait until all machine deployments have been deleted entirely.
+			// Filter out all machine deployments that are not desired (any more).
+			if !wantedMachineDeployments.HasDeployment(existingMachineDeployment.Name) {
+				continue
+			}
+
+			// If the shoot get hibernated we want to wait until all wanted machine deployments have been deleted
+			// entirely.
 			if controller.IsHibernated(cluster) {
 				numberOfAwakeMachines += existingMachineDeployment.Status.Replicas
 				continue
 			}
 
-			// If the Shoot is not hibernated we want to wait until all machine deployments have been as many ready
-			// replicas as desired (specified in the .spec.replicas). However, if we see any error in the status of
-			// the deployment then we return it.
+			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
+			// ready replicas as desired (specified in the .spec.replicas). However, if we see any error in the
+			// status of the deployment then we return it.
 			for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
 				return false, fmt.Errorf("Machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
 			}
 
-			// If the Shoot is not hibernated we want to wait until all machine deployments have been as many ready
-			// replicas as desired (specified in the .spec.replicas).
-			for _, machineDeployment := range wantedMachineDeployments {
-				if machineDeployment.Name == existingMachineDeployment.Name {
-					if workerhealthcheck.CheckMachineDeployment(&existingMachineDeployment) == nil {
-						numHealthyDeployments++
-					}
-					numDesired += existingMachineDeployment.Spec.Replicas
-					numUpdated += existingMachineDeployment.Status.UpdatedReplicas
-				}
+			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
+			// ready replicas as desired (specified in the .spec.replicas).
+			if workerhealthcheck.CheckMachineDeployment(&existingMachineDeployment) == nil {
+				numHealthyDeployments++
 			}
+			numDesired += existingMachineDeployment.Spec.Replicas
+			numUpdated += existingMachineDeployment.Status.UpdatedReplicas
 		}
 
 		switch {
@@ -353,6 +363,27 @@ func (a *genericActuator) waitUntilMachineDeploymentsAvailable(ctx context.Conte
 		}
 
 		return false, nil
+	}, ctx.Done())
+}
+
+// waitUntilUnwantedMachineDeploymentsDeleted waits until all the undesired <machineDeployments> are deleted from the
+// system. It polls the status every 5 seconds.
+func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context.Context, worker *extensionsv1alpha1.Worker, wantedMachineDeployments worker.MachineDeployments) error {
+	return wait.PollUntil(5*time.Second, func() (bool, error) {
+		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
+		if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+			return false, err
+		}
+
+		atLeastOneUnwantedMachineDeploymentExists := false
+		for _, existingMachineDeployment := range existingMachineDeployments.Items {
+			if !wantedMachineDeployments.HasDeployment(existingMachineDeployment.Name) {
+				atLeastOneUnwantedMachineDeploymentExists = true
+				break
+			}
+		}
+
+		return !atLeastOneUnwantedMachineDeploymentExists, nil
 	}, ctx.Done())
 }
 

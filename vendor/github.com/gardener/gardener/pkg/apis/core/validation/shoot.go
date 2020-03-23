@@ -815,9 +815,6 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	if worker.Maximum < worker.Minimum {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("maximum"), "maximum value must not be less or equal than minimum value"))
 	}
-	if worker.Maximum != 0 && worker.Minimum == 0 {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("minimum"), "minimum value must be >= 1 if maximum value > 0 (cluster-autoscaler cannot handle min=0)"))
-	}
 
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxSurge, fldPath.Child("maxSurge"))...)
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
@@ -1035,10 +1032,13 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 
 // ValidateWorkers validates worker objects.
 func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs = field.ErrorList{}
 
-	workerNames := make(map[string]bool)
-	atLeastOneActivePool := false
+		workerNames                        = make(map[string]bool)
+		atLeastOneActivePool               = false
+		atLeastOnePoolWithCompatibleTaints = len(workers) == 0
+	)
 
 	for i, worker := range workers {
 		if worker.Minimum != 0 && worker.Maximum != 0 {
@@ -1049,10 +1049,31 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), worker.Name))
 		}
 		workerNames[worker.Name] = true
+
+		switch {
+		case atLeastOnePoolWithCompatibleTaints:
+		case len(worker.Taints) == 0:
+			atLeastOnePoolWithCompatibleTaints = true
+		case !atLeastOnePoolWithCompatibleTaints:
+			onlyPreferNoScheduleEffectTaints := true
+			for _, taint := range worker.Taints {
+				if taint.Effect != corev1.TaintEffectPreferNoSchedule {
+					onlyPreferNoScheduleEffectTaints = false
+					break
+				}
+			}
+			if onlyPreferNoScheduleEffectTaints {
+				atLeastOnePoolWithCompatibleTaints = true
+			}
+		}
 	}
 
 	if !atLeastOneActivePool {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min>0 and max> 0 needed"))
+	}
+
+	if !atLeastOnePoolWithCompatibleTaints {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("at least one worker pool must exist having either no taints or only the %q taint", corev1.TaintEffectPreferNoSchedule)))
 	}
 
 	return allErrs

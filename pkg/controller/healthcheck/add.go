@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
 	genericcontrolplaneactuator "github.com/gardener/gardener-extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener-extensions/pkg/controller/healthcheck"
 	healthcheckconfig "github.com/gardener/gardener-extensions/pkg/controller/healthcheck/config"
@@ -25,7 +26,6 @@ import (
 	"github.com/gardener/gardener-extensions/pkg/controller/healthcheck/worker"
 	genericworkeractuator "github.com/gardener/gardener-extensions/pkg/controller/worker/genericactuator"
 	extensionspredicate "github.com/gardener/gardener-extensions/pkg/predicate"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,18 +45,26 @@ var (
 // RegisterHealthChecks registers health checks for each extension resource
 // HealthChecks are grouped by extension (e.g worker), extension.type (e.g aws) and  Health Check Type (e.g SystemComponentsHealthy)
 func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) error {
-	normalPredicates := []predicate.Predicate{extensionspredicate.HasPurpose(extensionsv1alpha1.Normal)}
 	if err := healthcheck.DefaultRegistration(
 		openstack.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ControlPlaneResource),
 		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
 		mgr,
 		opts,
-		normalPredicates,
-		map[healthcheck.HealthCheck]string{
-			general.NewSeedDeploymentHealthChecker(openstack.CloudControllerManagerName):                 string(gardencorev1beta1.ShootControlPlaneHealthy),
-			general.CheckManagedResource(genericcontrolplaneactuator.ControlPlaneShootChartResourceName): string(gardencorev1beta1.ShootSystemComponentsHealthy),
-			general.CheckManagedResource(genericcontrolplaneactuator.StorageClassesChartResourceName):    string(gardencorev1beta1.ShootSystemComponentsHealthy),
+		[]predicate.Predicate{extensionspredicate.HasPurpose(extensionsv1alpha1.Normal)},
+		[]healthcheck.ConditionTypeToHealthCheck{
+			{
+				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
+				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CloudControllerManagerName),
+			},
+			{
+				ConditionType: string(gardencorev1beta1.ShootSystemComponentsHealthy),
+				HealthCheck:   general.CheckManagedResource(genericcontrolplaneactuator.ControlPlaneShootChartResourceName),
+			},
+			{
+				ConditionType: string(gardencorev1beta1.ShootSystemComponentsHealthy),
+				HealthCheck:   general.CheckManagedResource(genericcontrolplaneactuator.StorageClassesChartResourceName),
+			},
 		}); err != nil {
 		return err
 	}
@@ -68,10 +76,19 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 		mgr,
 		opts,
 		nil,
-		map[healthcheck.HealthCheck]string{
-			general.CheckManagedResource(genericworkeractuator.McmShootResourceName):       string(gardencorev1beta1.ShootSystemComponentsHealthy),
-			general.NewSeedDeploymentHealthChecker(openstack.MachineControllerManagerName): string(gardencorev1beta1.ShootControlPlaneHealthy),
-			worker.NewSufficientNodesChecker():                                             string(gardencorev1beta1.ShootEveryNodeReady),
+		[]healthcheck.ConditionTypeToHealthCheck{
+			{
+				ConditionType: string(gardencorev1beta1.ShootSystemComponentsHealthy),
+				HealthCheck:   general.CheckManagedResource(genericworkeractuator.McmShootResourceName),
+			},
+			{
+				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
+				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.MachineControllerManagerName),
+			},
+			{
+				ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
+				HealthCheck:   worker.NewSufficientNodesChecker(),
+			},
 		})
 }
 

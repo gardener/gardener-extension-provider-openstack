@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 
+	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
 	"github.com/gardener/gardener-extensions/pkg/util"
 
 	"github.com/go-logr/logr"
@@ -36,19 +37,21 @@ type Actuator struct {
 	logger logr.Logger
 
 	restConfig *rest.Config
+	seedClient client.Client
+	scheme     *runtime.Scheme
+	decoder    runtime.Decoder
 
-	seedClient          client.Client
-	scheme              *runtime.Scheme
-	decoder             runtime.Decoder
 	provider            string
 	extensionKind       string
-	healthCheckMappings map[HealthCheck]string
+	getExtensionObjFunc GetExtensionObjectFunc
+	healthChecks        []ConditionTypeToHealthCheck
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(provider, extensionKind string, healthChecks map[HealthCheck]string) HealthCheckActuator {
+func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck) HealthCheckActuator {
 	return &Actuator{
-		healthCheckMappings: healthChecks,
+		healthChecks:        healthChecks,
+		getExtensionObjFunc: getExtensionObjFunc,
 		provider:            provider,
 		extensionKind:       extensionKind,
 		logger:              log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-actuator", provider, extensionKind)),
@@ -93,28 +96,76 @@ type checkResultForConditionType struct {
 func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request types.NamespacedName) (*[]Result, error) {
 	_, shootClient, err := util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
 	if err != nil {
-		msg := fmt.Sprintf("failed to create shoot client in namespace '%s'", request.Namespace)
-		a.logger.Error(err, msg)
-		return nil, fmt.Errorf(msg)
+		msg := fmt.Errorf("failed to create shoot client in namespace '%s'", request.Namespace)
+		a.logger.Error(err, msg.Error())
+		return nil, msg
 	}
-	channel := make(chan channelResult)
-	var wg sync.WaitGroup
-	wg.Add(len(a.healthCheckMappings))
-	for healthCheck, healthConditionType := range a.healthCheckMappings {
+
+	var (
+		channel = make(chan channelResult)
+		wg      sync.WaitGroup
+	)
+
+	wg.Add(len(a.healthChecks))
+	for _, hc := range a.healthChecks {
 		// clone to avoid problems during parallel execution
-		check := healthCheck.DeepCopy()
+		check := hc.HealthCheck.DeepCopy()
 		check.InjectSeedClient(a.seedClient)
 		check.InjectShootClient(shootClient)
 		check.SetLoggerSuffix(a.provider, a.extensionKind)
-		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, healthConditionType string) {
+
+		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, preCheckFunc PreCheckFunc, healthConditionType string) {
 			defer wg.Done()
+
+			if preCheckFunc != nil {
+				obj := a.getExtensionObjFunc()
+				if err := a.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: request.Name}, obj); err != nil {
+					channel <- channelResult{
+						healthCheckResult: &SingleCheckResult{
+							IsHealthy: false,
+							Detail:    err.Error(),
+							Reason:    "ReadExtensionObjectFailed",
+						},
+						error:               err,
+						healthConditionType: healthConditionType,
+					}
+					return
+				}
+
+				cluster, err := extensionscontroller.GetCluster(ctx, a.seedClient, request.Namespace)
+				if err != nil {
+					channel <- channelResult{
+						healthCheckResult: &SingleCheckResult{
+							IsHealthy: false,
+							Detail:    err.Error(),
+							Reason:    "ReadClusterObjectFailed",
+						},
+						error:               err,
+						healthConditionType: healthConditionType,
+					}
+					return
+				}
+
+				if !preCheckFunc(obj, cluster) {
+					a.logger.Info("Skipping health check for condition type %q as pre check function returned false", healthConditionType)
+					channel <- channelResult{
+						healthCheckResult: &SingleCheckResult{
+							IsHealthy: true,
+						},
+						error:               nil,
+						healthConditionType: healthConditionType,
+					}
+					return
+				}
+			}
+
 			healthCheckResult, err := check.Check(ctx, request)
 			channel <- channelResult{
 				healthCheckResult:   healthCheckResult,
 				error:               err,
 				healthConditionType: healthConditionType,
 			}
-		}(ctx, request, check, healthConditionType)
+		}(ctx, request, check, hc.PreCheckFunc, hc.ConditionType)
 	}
 
 	// close channel when wait group has 0 counter

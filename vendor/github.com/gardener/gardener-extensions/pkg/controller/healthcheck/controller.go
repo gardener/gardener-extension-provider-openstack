@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -72,7 +73,7 @@ type DefaultAddArgs struct {
 // The field groupVersionKind stores the GroupVersionKind of the extension resource
 type RegisteredExtension struct {
 	extension           extensionsv1alpha1.Object
-	register            RegisterExtension
+	getExtensionObjFunc GetExtensionObjectFunc
 	healthConditionType []string
 	groupVersionKind    schema.GroupVersionKind
 }
@@ -87,7 +88,7 @@ type RegisteredExtension struct {
 // custom predicates allow for fine-grained control which resources to watch
 // healthChecks defines the checks to execute mapped to the healthConditionType its contributing to (e.g checkDeployment in Seed -> ControlPlaneHealthy).
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
-func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, register RegisterExtension, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks map[HealthCheck]string) error {
+func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck) error {
 	predicates := DefaultPredicates()
 	predicates = append(predicates, customPredicates...)
 
@@ -98,11 +99,11 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, reg
 		SyncPeriod:        opts.HealthCheckConfig.SyncPeriod,
 	}
 
-	if err := args.RegisterExtension(register, getHealthCheckTypes(healthChecks), kind); err != nil {
+	if err := args.RegisterExtension(getExtensionObjFunc, getHealthCheckTypes(healthChecks), kind); err != nil {
 		return err
 	}
 
-	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, healthChecks)
+	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks)
 	return Register(mgr, args, healthCheckActuator)
 }
 
@@ -111,8 +112,8 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, reg
 // The controller writes the healthCheckTypes as a condition.type into the extension resource.
 // To contribute to the Shoot's health, the Gardener checks each extension for a Health Condition Type of SystemComponentsHealthy, EveryNodeReady, ControlPlaneHealthy.
 // However extensions are free to choose any healthCheckType
-func (a *AddArgs) RegisterExtension(register RegisterExtension, conditionTypes []string, kind schema.GroupVersionKind) error {
-	acc, err := extensions.Accessor(register())
+func (a *AddArgs) RegisterExtension(getExtensionObjFunc GetExtensionObjectFunc, conditionTypes []string, kind schema.GroupVersionKind) error {
+	acc, err := extensions.Accessor(getExtensionObjFunc())
 	if err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func (a *AddArgs) RegisterExtension(register RegisterExtension, conditionTypes [
 		extension:           acc,
 		healthConditionType: conditionTypes,
 		groupVersionKind:    kind,
-		register:            register,
+		getExtensionObjFunc: getExtensionObjFunc,
 	}
 	return nil
 }
@@ -162,19 +163,15 @@ func add(mgr manager.Manager, args AddArgs) error {
 	}
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
-	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "health check type", args.registeredExtension.healthConditionType, "sync period", args.SyncPeriod.Duration.String())
+	log.Log.Info("Registered health check controller", "Kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "health check type", args.registeredExtension.healthConditionType, "sync period", args.SyncPeriod.Duration.String())
 
-	return ctrl.Watch(&source.Kind{Type: args.registeredExtension.register()}, &handler.EnqueueRequestForObject{}, predicates...)
+	return ctrl.Watch(&source.Kind{Type: args.registeredExtension.getExtensionObjFunc()}, &handler.EnqueueRequestForObject{}, predicates...)
 }
 
-func getHealthCheckTypes(healthChecks map[HealthCheck]string) []string {
-	var types []string
-	typeMap := make(map[string]struct{})
-	for _, check := range healthChecks {
-		if _, ok := typeMap[check]; !ok {
-			types = append(types, check)
-		}
-		typeMap[check] = struct{}{}
+func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {
+	types := sets.NewString()
+	for _, healthCheck := range healthChecks {
+		types.Insert(healthCheck.ConditionType)
 	}
-	return types
+	return types.UnsortedList()
 }

@@ -52,7 +52,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener v1.1.1-0.20200323102039-58593d8be86a
+# github.com/gardener/gardener v1.1.1-0.20200330051317-a326f96cf32b
 github.com/gardener/gardener/pkg/api/extensions
 github.com/gardener/gardener/pkg/apis/core
 github.com/gardener/gardener/pkg/apis/core/helper
@@ -119,7 +119,7 @@ github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
 github.com/gardener/gardener/test/integration/framework
 github.com/gardener/gardener/test/integration/shoots
-# github.com/gardener/gardener-extensions v1.5.0
+# github.com/gardener/gardener-extensions v1.5.1-0.20200330101454-c65957bd80b5
 github.com/gardener/gardener-extensions/hack
 github.com/gardener/gardener-extensions/hack/.ci
 github.com/gardener/gardener-extensions/hack/api-reference/template

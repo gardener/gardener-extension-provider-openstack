@@ -1076,6 +1076,8 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("at least one worker pool must exist having either no taints or only the %q taint", corev1.TaintEffectPreferNoSchedule)))
 	}
 
+	allErrs = append(allErrs, ValidateContainerRuntimesConfigurations(workers, fldPath.Child("workers"))...)
+
 	return allErrs
 }
 
@@ -1235,6 +1237,49 @@ func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 
 	if !avaliableWorkerCRINames.Has(string(CRI.Name)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, avaliableWorkerCRINames.List()))
+	}
+
+	if CRI.ContainerRuntimes != nil {
+		allErrs = append(ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes")))
+	}
+
+	return allErrs
+}
+
+func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	crSet := make(map[string]bool)
+
+	for i, cr := range containerRuntime {
+		if len(cr.Type) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "must specify a container runtime type"))
+		}
+		if crSet[cr.Type] {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
+		}
+		crSet[cr.Type] = true
+	}
+
+	return allErrs
+}
+
+// ValidateContainerRuntimesConfigurations checks that all container runtimes with the same type have the same configurations.
+func ValidateContainerRuntimesConfigurations(workers []core.Worker, fldPath *field.Path) field.ErrorList {
+	definedContainerRuntimesMap := map[string]core.ContainerRuntime{}
+	allErrs := field.ErrorList{}
+
+	for i, worker := range workers {
+		if worker.CRI != nil {
+			for j, cr := range worker.CRI.ContainerRuntimes {
+				if val, ok := definedContainerRuntimesMap[cr.Type]; ok {
+					if !apiequality.Semantic.DeepEqual(cr.ProviderConfig, val.ProviderConfig) {
+						allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), &cr.ProviderConfig, fmt.Sprintf("must specify same provider config for all the ContainerRuntimes from type %s", cr.Type)))
+					}
+				} else {
+					definedContainerRuntimesMap[cr.Type] = cr
+				}
+			}
+		}
 	}
 
 	return allErrs

@@ -44,8 +44,8 @@ type MachineDeployment struct {
 	Name           string
 	ClassName      string
 	SecretName     string
-	Minimum        int
-	Maximum        int
+	Minimum        int32
+	Maximum        int32
 	MaxSurge       intstr.IntOrString
 	MaxUnavailable intstr.IntOrString
 	Labels         map[string]string
@@ -139,9 +139,9 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 // of index <zoneIndex>.
 // The distribution happens equally. In case of an uneven number <size>, the last zone will have
 // one more node than the others.
-func DistributeOverZones(zoneIndex, size, zoneSize int) int {
+func DistributeOverZones(zoneIndex, size, zoneSize int32) int32 {
 	first := size / zoneSize
-	second := 0
+	second := int32(0)
 	if zoneIndex < (size % zoneSize) {
 		second = 1
 	}
@@ -153,7 +153,7 @@ func DistributeOverZones(zoneIndex, size, zoneSize int) int {
 // always just returns the initial percentage. Otherwise, the total value is used to determine
 // the weight of a specific zone in relation to the other zones and adapt the given percentage
 // accordingly.
-func DistributePercentOverZones(zoneIndex int, percent string, zoneSize, total int) string {
+func DistributePercentOverZones(zoneIndex int32, percent string, zoneSize, total int32) string {
 	percents, err := strconv.Atoi(percent[:len(percent)-1])
 	if err != nil {
 		panic(fmt.Sprintf("given value %q is not a percent value", percent))
@@ -181,11 +181,11 @@ func DistributePercentOverZones(zoneIndex int, percent string, zoneSize, total i
 // always just returns the initial percentage. Otherwise, the total value is used to determine
 // the weight of a specific zone in relation to the other zones and adapt the given percentage
 // accordingly.
-func DistributePositiveIntOrPercent(zoneIndex int, intOrPercent intstr.IntOrString, zoneSize int, total int) intstr.IntOrString {
+func DistributePositiveIntOrPercent(zoneIndex int32, intOrPercent intstr.IntOrString, zoneSize, total int32) intstr.IntOrString {
 	if intOrPercent.Type == intstr.String {
 		return intstr.FromString(DistributePercentOverZones(zoneIndex, intOrPercent.StrVal, zoneSize, total))
 	}
-	return intstr.FromInt(DistributeOverZones(zoneIndex, int(intOrPercent.IntVal), zoneSize))
+	return intstr.FromInt(int(DistributeOverZones(zoneIndex, intOrPercent.IntVal, zoneSize)))
 }
 
 // DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and

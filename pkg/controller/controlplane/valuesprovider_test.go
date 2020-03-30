@@ -186,6 +186,9 @@ var _ = Describe("ValuesProvider", func() {
 				"checksum/secret-cloudprovider":                                     "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
 				"checksum/configmap-cloud-provider-config-cloud-controller-manager": "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
 			},
+			"podLabels": map[string]interface{}{
+				"maintenance.gardener.cloud/restart": "true",
+			},
 			"featureGates": map[string]bool{
 				"CustomResourceValidation": true,
 			},

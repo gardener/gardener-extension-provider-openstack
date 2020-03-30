@@ -41,7 +41,7 @@ type Shoot struct {
 func (v *Shoot) Handle(ctx context.Context, req admission.Request) admission.Response {
 	shoot := &core.Shoot{}
 	if err := util.Decode(v.decoder, req.Object.Raw, shoot); err != nil {
-		v.Logger.Error(err, "failed to decode shoot", string(req.Object.Raw))
+		v.Logger.Error(err, "failed to decode shoot", "shoot", string(req.Object.Raw))
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -58,7 +58,7 @@ func (v *Shoot) Handle(ctx context.Context, req admission.Request) admission.Res
 	case admissionv1beta1.Update:
 		oldShoot := &core.Shoot{}
 		if err := util.Decode(v.decoder, req.OldObject.Raw, oldShoot); err != nil {
-			v.Logger.Error(err, "failed to decode old shoot", string(req.OldObject.Raw))
+			v.Logger.Error(err, "failed to decode old shoot", "old shoot", string(req.OldObject.Raw))
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
@@ -67,7 +67,7 @@ func (v *Shoot) Handle(ctx context.Context, req admission.Request) admission.Res
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 	default:
-		v.Logger.Info("Webhook not responsible", "Operation", req.Operation)
+		v.Logger.Info("Webhook not responsible", "operation", req.Operation)
 	}
 
 	return admission.Allowed("validations succeeded")

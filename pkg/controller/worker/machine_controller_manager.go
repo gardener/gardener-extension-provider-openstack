@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
@@ -64,6 +65,9 @@ func (w *workerDelegate) GetMachineControllerManagerChartValues(ctx context.Cont
 		"providerName": openstack.Name,
 		"namespace": map[string]interface{}{
 			"uid": namespace.UID,
+		},
+		"podLabels": map[string]interface{}{
+			v1beta1constants.LabelPodMaintenanceRestart: "true",
 		},
 	}, nil
 }

@@ -32,6 +32,9 @@ spec:
         networking.gardener.cloud/to-seed-apiserver: allowed
         networking.gardener.cloud/to-shoot-apiserver: allowed
         networking.gardener.cloud/from-prometheus: allowed
+{{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
+{{- end }}
     spec:
       serviceAccountName: machine-controller-manager
       terminationGracePeriodSeconds: 5

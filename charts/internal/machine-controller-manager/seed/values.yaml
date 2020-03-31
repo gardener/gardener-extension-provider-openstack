@@ -5,6 +5,8 @@ replicas: 1
 
 podAnnotations: {}
 
+podLabels: {}
+
 providerName: provider-foo
 
 namespace:

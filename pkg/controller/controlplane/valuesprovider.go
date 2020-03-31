@@ -317,6 +317,9 @@ func getCCMChartValues(
 			"checksum/secret-cloudprovider":                                     checksums[v1beta1constants.SecretNameCloudProvider],
 			"checksum/configmap-cloud-provider-config-cloud-controller-manager": checksums[openstacktypes.CloudProviderConfigCloudControllerManagerName],
 		},
+		"podLabels": map[string]interface{}{
+			v1beta1constants.LabelPodMaintenanceRestart: "true",
+		},
 	}
 
 	if cpConfig.CloudControllerManager != nil {

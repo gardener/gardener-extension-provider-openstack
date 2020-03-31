@@ -6,8 +6,8 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/gardener/etcd-druid v0.1.3
-	github.com/gardener/gardener v1.1.1-0.20200323102039-58593d8be86a
-	github.com/gardener/gardener-extensions v1.5.0
+	github.com/gardener/gardener v1.1.1-0.20200330051317-a326f96cf32b
+	github.com/gardener/gardener-extensions v1.5.1-0.20200330101454-c65957bd80b5
 	github.com/gardener/machine-controller-manager v0.26.0
 	github.com/go-logr/logr v0.1.0
 	github.com/gobuffalo/packr/v2 v2.1.0

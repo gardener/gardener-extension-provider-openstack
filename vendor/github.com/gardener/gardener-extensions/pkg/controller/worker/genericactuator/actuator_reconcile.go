@@ -146,7 +146,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	defer cancel()
 
 	if err := a.waitUntilWantedMachineDeploymentsAvailable(timeoutCtx, cluster, worker, wantedMachineDeployments); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -213,7 +213,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 		var (
 			labels                    = map[string]string{"name": deployment.Name}
 			existingMachineDeployment = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
-			replicas                  int
+			replicas                  int32
 		)
 
 		switch {
@@ -239,11 +239,11 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 			replicas = deployment.Minimum
 		// If the shoot worker pool minimum was updated and if the current machine deployment replica
 		// count is less than minimum, we update the machine deployment replica count to updated minimum.
-		case int(existingMachineDeployment.Spec.Replicas) < deployment.Minimum:
+		case existingMachineDeployment.Spec.Replicas < deployment.Minimum:
 			replicas = deployment.Minimum
 		// If the shoot worker pool maximum was updated and if the current machine deployment replica
 		// count is greater than maximum, we update the machine deployment replica count to updated maximum.
-		case int(existingMachineDeployment.Spec.Replicas) > deployment.Maximum:
+		case existingMachineDeployment.Spec.Replicas > deployment.Maximum:
 			replicas = deployment.Maximum
 		// In this case the machine deployment must exist (otherwise the above case was already true),
 		// and the cluster autoscaler must be enabled. We do not want to override the machine deployment's
@@ -430,10 +430,10 @@ func shootIsAwake(isHibernated bool, existingMachineDeployments *machinev1alpha1
 	return true
 }
 
-func getDeploymentSpecReplicas(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) int {
+func getDeploymentSpecReplicas(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) int32 {
 	for _, existingMachineDeployment := range existingMachineDeployments.Items {
 		if existingMachineDeployment.Name == name {
-			return int(existingMachineDeployment.Spec.Replicas)
+			return existingMachineDeployment.Spec.Replicas
 		}
 	}
 	return -1

@@ -106,14 +106,14 @@ var _ = Describe("Machines", func() {
 				securityGroupName string
 
 				namePool1           string
-				minPool1            int
-				maxPool1            int
+				minPool1            int32
+				maxPool1            int32
 				maxSurgePool1       intstr.IntOrString
 				maxUnavailablePool1 intstr.IntOrString
 
 				namePool2           string
-				minPool2            int
-				maxPool2            int
+				minPool2            int32
+				maxPool2            int32
 				maxSurgePool2       intstr.IntOrString
 				maxUnavailablePool2 intstr.IntOrString
 

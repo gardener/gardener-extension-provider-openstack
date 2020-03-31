@@ -92,7 +92,7 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	defer cancel()
 
 	if err := a.waitUntilMachineResourcesDeleted(timeoutCtx, worker, workerDelegate); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 
 	// Delete the machine-controller-manager.

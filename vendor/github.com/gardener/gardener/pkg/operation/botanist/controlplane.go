@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"path/filepath"
@@ -30,6 +31,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -289,6 +291,14 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		if err := c.Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
+
+		if err := flow.Parallel(
+			func(ctx context.Context) error { return b.DestroyInternalDomainDNSRecord(ctx) },
+			func(ctx context.Context) error { return b.DestroyExternalDomainDNSRecord(ctx) },
+			func(ctx context.Context) error { return b.DestroyIngressDNSRecord(ctx) },
+		)(ctx); err != nil {
+			return err
+		}
 	}
 
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
@@ -425,7 +435,7 @@ func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) 
 		}
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("failed to create control plane: %v", err))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed to create control plane: %v", err))
 	}
 	return nil
 }
@@ -463,9 +473,9 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete control plane")
 		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 	return nil
 }
@@ -990,6 +1000,9 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
 		},
+		"podLabels": map[string]interface{}{
+			v1beta1constants.LabelPodMaintenanceRestart: "true",
+		},
 	}
 
 	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
@@ -1299,4 +1312,14 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 	creationMinute := shoot.CreationTimestamp.Minute()
 	creationHour := shoot.CreationTimestamp.Hour()
 	return fmt.Sprintf(schedule, creationMinute, creationHour), nil
+}
+
+// RestartControlPlanePods restarts (deletes) pods of the shoot control plane.
+func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
+	return b.K8sSeedClient.Client().DeleteAllOf(
+		ctx,
+		&corev1.Pod{},
+		client.InNamespace(b.Shoot.SeedNamespace),
+		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
+	)
 }

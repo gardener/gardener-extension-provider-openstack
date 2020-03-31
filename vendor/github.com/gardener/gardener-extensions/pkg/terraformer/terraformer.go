@@ -224,7 +224,7 @@ func (t *terraformer) execute(ctx context.Context, scriptName string) error {
 		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
 		}
-		return gardencorev1beta1helper.DetermineError(errorMessage)
+		return gardencorev1beta1helper.DetermineError(errors.New(errorMessage), errorMessage)
 	}
 	return nil
 }

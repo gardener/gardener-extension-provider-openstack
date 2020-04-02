@@ -147,7 +147,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 				}
 
 				if !preCheckFunc(obj, cluster) {
-					a.logger.Info("Skipping health check for condition type %q as pre check function returned false", healthConditionType)
+					a.logger.Info("Skipping health check as pre check function returned false", "conditionType", healthConditionType)
 					channel <- channelResult{
 						healthCheckResult: &SingleCheckResult{
 							IsHealthy: true,

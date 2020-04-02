@@ -130,8 +130,8 @@ github.com/gardener/external-dns-management v0.7.3 h1:SAW9ur2mjZ+x89xbmcplJgqNUm
 github.com/gardener/external-dns-management v0.7.3/go.mod h1:Y3om11E865x4aQ7cmcHjknb8RMgCO153huRb/SvP+9o=
 github.com/gardener/gardener v1.1.1-0.20200330051317-a326f96cf32b h1:MkEDp9PdrZPkIAPGj6oNcKl0fBaOcJ1ddKsAA7bVWnI=
 github.com/gardener/gardener v1.1.1-0.20200330051317-a326f96cf32b/go.mod h1:lGAx5NkFDWoC4hPIL+lHJamafBxmOt5MrHq9hGtp5VI=
-github.com/gardener/gardener-extensions v1.5.1-0.20200330101454-c65957bd80b5 h1:zDXG4369jfXvZlPNQe4YX38VA0h5SDq2xk8dqLg73e4=
-github.com/gardener/gardener-extensions v1.5.1-0.20200330101454-c65957bd80b5/go.mod h1:+0MkNqbRaTvPMfEe/MoS31L5FM8W32WYvhpH4Y53Y5s=
+github.com/gardener/gardener-extensions v1.5.1-0.20200402091828-df061f8dae06 h1:ZMAxjMWvydRD1ndHAFfa/ItQp4JEy9OPsVmNc1gc0og=
+github.com/gardener/gardener-extensions v1.5.1-0.20200402091828-df061f8dae06/go.mod h1:+0MkNqbRaTvPMfEe/MoS31L5FM8W32WYvhpH4Y53Y5s=
 github.com/gardener/gardener-resource-manager v0.10.0 h1:6OUKoWI3oha42F0oJN8OEo3UR+D3onOCel4Th+zgotU=
 github.com/gardener/gardener-resource-manager v0.10.0/go.mod h1:0pKTHOhvU91eQB0EYr/6Ymd7lXc/5Hi8P8tF/gpV0VQ=
 github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25 h1:nOFITmV7vt4fcYPEXgj66Qs83FdDEMvL/LQcR0diRRE=

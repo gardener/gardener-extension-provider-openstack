@@ -251,6 +251,11 @@ func (t *terraformer) createOrUpdateRole(ctx context.Context) error {
 				Resources: []string{"configmaps"},
 				Verbs:     []string{"*"},
 			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"*"},
+			},
 		}
 		return nil
 	})
@@ -320,7 +325,9 @@ func (t *terraformer) env() []corev1.EnvVar {
 	envVars := []corev1.EnvVar{
 		{Name: "MAX_BACKOFF_SEC", Value: "60"},
 		{Name: "MAX_TIME_SEC", Value: "1800"},
+		{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
 		{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
+		{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
 	}
 	for k, v := range t.variablesEnvironment {
 		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
@@ -328,19 +335,8 @@ func (t *terraformer) env() []corev1.EnvVar {
 	return envVars
 }
 
-func (t *terraformer) podSpec(scriptName string) *corev1.PodSpec {
-	const (
-		tfVolume      = "tf"
-		tfVarsVolume  = "tfvars"
-		tfStateVolume = "tfstate"
-
-		tfVolumeMountPath      = tfVolume
-		tfVarsVolumeMountPath  = tfVarsVolume
-		tfStateVolumeMountPath = "tf-state-in"
-	)
-
+func (t *terraformer) podSpec(command string) *corev1.PodSpec {
 	terminationGracePeriodSeconds := t.terminationGracePeriodSeconds
-	shCommand := fmt.Sprintf("sh /terraform.sh %s 2>&1; [[ -f /success ]] && exit 0 || exit 1", scriptName)
 
 	return &corev1.PodSpec{
 		RestartPolicy: corev1.RestartPolicyNever,
@@ -350,9 +346,8 @@ func (t *terraformer) podSpec(scriptName string) *corev1.PodSpec {
 				Image:           t.image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
-					"sh",
-					"-c",
-					shCommand,
+					"/terraformer.sh",
+					command,
 				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
@@ -365,41 +360,10 @@ func (t *terraformer) podSpec(scriptName string) *corev1.PodSpec {
 					},
 				},
 				Env: t.env(),
-				VolumeMounts: []corev1.VolumeMount{
-					{Name: tfVolume, MountPath: fmt.Sprintf("/%s", tfVolumeMountPath)},
-					{Name: tfVarsVolume, MountPath: fmt.Sprintf("/%s", tfVarsVolumeMountPath)},
-					{Name: tfStateVolume, MountPath: fmt.Sprintf("/%s", tfStateVolumeMountPath)},
-				},
 			},
 		},
 		ServiceAccountName:            terraformerName,
 		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-		Volumes: []corev1.Volume{
-			{
-				Name: tfVolume,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: t.configName},
-					},
-				},
-			},
-			{
-				Name: tfVarsVolume,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: t.variablesName,
-					},
-				},
-			},
-			{
-				Name: tfStateVolume,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: t.stateName},
-					},
-				},
-			},
-		},
 	}
 }
 

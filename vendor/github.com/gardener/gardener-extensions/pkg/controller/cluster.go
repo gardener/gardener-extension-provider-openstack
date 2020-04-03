@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,7 @@ func init() {
 
 // Cluster contains the decoded resources of Gardener's extension Cluster resource.
 type Cluster struct {
+	ObjectMeta   metav1.ObjectMeta
 	CloudProfile *gardencorev1beta1.CloudProfile
 	Seed         *gardencorev1beta1.Seed
 	Shoot        *gardencorev1beta1.Shoot
@@ -67,7 +69,7 @@ func GetCluster(ctx context.Context, c client.Client, namespace string) (*Cluste
 		return nil, err
 	}
 
-	return &Cluster{cloudProfile, seed, shoot}, nil
+	return &Cluster{cluster.ObjectMeta, cloudProfile, seed, shoot}, nil
 }
 
 // CloudProfileFromCluster returns the CloudProfile resource inside the Cluster resource.

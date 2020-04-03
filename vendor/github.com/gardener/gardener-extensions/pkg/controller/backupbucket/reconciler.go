@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, bb); err != nil {
-		r.logger.Info("failed to ensure finalizer on backup bucket, %v", err)
+		r.logger.Error(err, "failed to ensure finalizer on backup bucket", "backupbucket", bb.Name)
 		return reconcile.Result{}, err
 	}
 
@@ -106,11 +106,11 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
-		r.logger.Info("failed to get backup bucket secret, %v", err)
+		r.logger.Error(err, "failed to get backup bucket secret", "backupbucket", bb.Name)
 		return reconcile.Result{}, err
 	}
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Info("failed to ensure finalizer on bucket secret, %v", err)
+		r.logger.Error(err, "failed to ensure finalizer on bucket secret", "backupbucket", bb.Name)
 		return reconcile.Result{}, err
 	}
 
@@ -168,11 +168,11 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
-		r.logger.Info("failed to get backup bucket secret, %v", err)
+		r.logger.Error(err, "failed to get backup bucket secret", "backupbucket", bb.Name)
 		return reconcile.Result{}, err
 	}
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Info("failed to remove finalizer on bucket secret, %v", err)
+		r.logger.Error(err, "failed to remove finalizer on bucket secret", "backupbucket", bb.Name)
 		return reconcile.Result{}, err
 	}
 

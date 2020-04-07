@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -46,15 +45,6 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 
 		if worker.Maximum != 0 && worker.Minimum == 0 {
 			allErrs = append(allErrs, field.Forbidden(workerFldPath.Child("minimum"), "minimum value must be >= 1 if maximum value > 0 (auto scaling to 0 is not supported)"))
-		}
-
-		zones := sets.NewString()
-		for j, zone := range worker.Zones {
-			if zones.Has(zone) {
-				allErrs = append(allErrs, field.Invalid(workerFldPath.Child("zones").Index(j), zone, "must only be specified once per worker group"))
-				continue
-			}
-			zones.Insert(zone)
 		}
 	}
 

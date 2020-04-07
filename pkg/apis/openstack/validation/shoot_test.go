@@ -105,19 +105,6 @@ var _ = Describe("Shoot validation", func() {
 				))
 			})
 
-			It("should forbid because worker use zone twice", func() {
-				workers[0].Zones[1] = workers[0].Zones[0]
-
-				errorList := ValidateWorkers(workers, nilPath)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("[0].zones[1]"),
-					})),
-				))
-			})
-
 			It("should enforce workers min > 0 if max > 0", func() {
 				workers[0].Minimum = 0
 

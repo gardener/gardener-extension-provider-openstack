@@ -36,6 +36,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	"github.com/gardener/gardener/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -381,6 +382,26 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		return err
 	}
 
+	// Special handling for gardener-seed-admission-controller because it's a component whose version is controlled by
+	// this project/repository
+
+	gardenerSeedAdmissionControllerImage, err := imageVector.FindImage(common.GardenerSeedAdmissionControllerImageName)
+	if err != nil {
+		return err
+	}
+	var (
+		repository = gardenerSeedAdmissionControllerImage.String()
+		tag        = version.Get().GitVersion
+	)
+	if gardenerSeedAdmissionControllerImage.Tag != nil {
+		repository = gardenerSeedAdmissionControllerImage.Repository
+		tag = *gardenerSeedAdmissionControllerImage.Tag
+	}
+	images[common.GardenerSeedAdmissionControllerImageName] = &imagevector.Image{
+		Repository: repository,
+		Tag:        &tag,
+	}
+
 	// Logging feature gate
 	var (
 		basicAuth             string
@@ -576,10 +597,8 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	}
 
 	imageVectorOverwrites := map[string]interface{}{}
-	if componentImageVectors != nil {
-		for name, data := range componentImageVectors {
-			imageVectorOverwrites[name] = data
-		}
+	for name, data := range componentImageVectors {
+		imageVectorOverwrites[name] = data
 	}
 
 	values := kubernetes.Values(map[string]interface{}{

@@ -20,7 +20,7 @@ import (
 	"net/http"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	"github.com/gardener/gardener-extensions/pkg/util"
+	"github.com/gardener/gardener/extensions/pkg/util"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/go-logr/logr"

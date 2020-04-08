@@ -3,7 +3,6 @@ package store
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"crypto/md5"
 	"fmt"
 	"go/build"
@@ -18,17 +17,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gobuffalo/envy"
-	"github.com/gobuffalo/genny"
-	"github.com/gobuffalo/gogen"
+	"github.com/gobuffalo/packr/v2/internal"
+	"github.com/karrick/godirwalk"
+
 	"github.com/gobuffalo/packr/v2/file/resolver/encoding/hex"
 	"github.com/gobuffalo/packr/v2/plog"
 	"github.com/rogpeppe/go-internal/modfile"
 
-	"github.com/pkg/errors"
-
 	"github.com/gobuffalo/packr/v2/jam/parser"
-	"github.com/karrick/godirwalk"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -124,7 +120,7 @@ func (d *Disk) Pack(box *parser.Box) error {
 func (d *Disk) Clean(box *parser.Box) error {
 	root := box.PackageDir
 	if len(root) == 0 {
-		return errors.New("can't clean an empty box.PackageDir")
+		return fmt.Errorf("can't clean an empty box.PackageDir")
 	}
 	plog.Debug(d, "Clean", "box", box.Name, "root", root)
 	return clean(root)
@@ -142,10 +138,10 @@ type optsBox struct {
 	Path string
 }
 
-func (d *Disk) Generator() (*genny.Generator, error) {
-	g := genny.New()
+// Close ...
+func (d *Disk) Close() error {
 	if len(d.boxes) == 0 {
-		return g, nil
+		return nil
 	}
 
 	xb := &parser.Box{Name: DISK_GLOBAL_KEY}
@@ -180,7 +176,7 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 	}
 
 	if err := wg.Wait(); err != nil {
-		return g, err
+		return err
 	}
 
 	for _, b := range d.boxes {
@@ -194,11 +190,11 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 		return opts.Boxes[a].Name < opts.Boxes[b].Name
 	})
 
-	t := gogen.TemplateTransformer(opts, template.FuncMap{
+	fm := template.FuncMap{
 		"printBox": func(ob optsBox) (template.HTML, error) {
 			box := d.boxes[ob.Name]
 			if box == nil {
-				return "", errors.Errorf("could not find box %s", ob.Name)
+				return "", fmt.Errorf("could not find box %s", ob.Name)
 			}
 			fn, err := d.FileNames(box)
 			if err != nil {
@@ -213,7 +209,11 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 				ForwardPath string
 			}
 
-			gf := genny.NewFile("box.go.tmpl", strings.NewReader(diskGlobalBoxTmpl))
+			tmpl, err := template.New("box.go").Parse(diskGlobalBoxTmpl)
+			if err != nil {
+				return "", err
+			}
+
 			var files []file
 			for _, s := range fn {
 				p := strings.TrimPrefix(s, box.AbsPath)
@@ -227,39 +227,42 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 				"Box":   box,
 				"Files": files,
 			}
-			t := gogen.TemplateTransformer(opts, nil)
-			gf, err = t.Transform(gf)
-			if err != nil {
+
+			bb := &bytes.Buffer{}
+			if err := tmpl.Execute(bb, opts); err != nil {
 				return "", err
 			}
-			return template.HTML(gf.String()), nil
+			return template.HTML(bb.String()), nil
 		},
-	})
-	g.Transformer(t)
-
-	fp := filepath.Join(d.DBPath, "packed-packr.go.tmpl")
-	global := genny.NewFile(fp, strings.NewReader(diskGlobalTmpl))
-	global, err := t.Transform(global)
-	if err != nil {
-		return g, err
 	}
 
-	ft := gogen.FmtTransformer()
-	global, err = ft.Transform(global)
+	os.MkdirAll(d.DBPath, 0755)
+	fp := filepath.Join(d.DBPath, "packed-packr.go")
+	global, err := os.Create(fp)
 	if err != nil {
-		return g, err
+		return err
 	}
-	g.File(global)
+	defer global.Close()
+
+	tmpl := template.New(fp).Funcs(fm)
+	tmpl, err = tmpl.Parse(diskGlobalTmpl)
+	if err != nil {
+		return err
+	}
+
+	if err := tmpl.Execute(global, opts); err != nil {
+		return err
+	}
 
 	var ip string
-	if envy.Mods() {
+	if internal.Mods() {
 		// Starting in 1.12, we can rely on Go's method for
 		// resolving where go.mod resides. Prior versions will
 		// simply return an empty string.
 		cmd := exec.Command("go", "env", "GOMOD")
 		out, err := cmd.Output()
 		if err != nil {
-			return g, errors.New("go.mod cannot be read or does not exist while go module is enabled")
+			return fmt.Errorf("go.mod cannot be read or does not exist while go module is enabled")
 		}
 		mp := strings.TrimSpace(string(out))
 		if mp == "" {
@@ -273,17 +276,17 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 
 		moddata, err := ioutil.ReadFile(mp)
 		if err != nil {
-			return g, errors.New("go.mod cannot be read or does not exist while go module is enabled.")
+			return fmt.Errorf("go.mod cannot be read or does not exist while go module is enabled")
 		}
 		ip = modfile.ModulePath(moddata)
 		if ip == "" {
-			return g, errors.New("go.mod is malformed.")
+			return fmt.Errorf("go.mod is malformed")
 		}
 		ip = filepath.Join(ip, strings.TrimPrefix(filepath.Dir(d.DBPath), filepath.Dir(mp)))
 		ip = strings.Replace(ip, "\\", "/", -1)
 	} else {
 		ip = filepath.Dir(d.DBPath)
-		srcs := envy.GoPaths()
+		srcs := internal.GoPaths()
 		srcs = append(srcs, build.Default.SrcDirs()...)
 		for _, x := range srcs {
 			ip = strings.TrimPrefix(ip, "/private")
@@ -302,8 +305,12 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 		if b == nil {
 			continue
 		}
-		p := filepath.Join(b.PackageDir, b.Package+"-packr.go.tmpl")
-		f := genny.NewFile(p, strings.NewReader(diskImportTmpl))
+		p := filepath.Join(b.PackageDir, b.Package+"-packr.go")
+		f, err := os.Create(p)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
 		o := struct {
 			Package string
@@ -313,25 +320,17 @@ func (d *Disk) Generator() (*genny.Generator, error) {
 			Import:  ip,
 		}
 
-		t := gogen.TemplateTransformer(o, template.FuncMap{})
-		f, err := t.Transform(f)
+		tmpl, err := template.New(p).Parse(diskImportTmpl)
 		if err != nil {
-			return g, nil
+			return err
 		}
-		g.File(f)
+		if err := tmpl.Execute(f, o); err != nil {
+			return err
+		}
+
 	}
 
-	return g, nil
-}
-
-func (d *Disk) Close() error {
-	plog.Debug(d, "Close")
-	run := genny.WetRunner(context.Background())
-	run.Logger = plog.Logger
-	if err := run.WithNew(d.Generator()); err != nil {
-		return err
-	}
-	return run.Run()
+	return nil
 }
 
 // resolve file paths (only) for the boxes

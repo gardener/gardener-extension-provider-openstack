@@ -90,10 +90,18 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 // DestroyInfrastructure deletes the `Infrastructure` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 10m until it is deleted.
 func (b *Botanist) DestroyInfrastructure(ctx context.Context) error {
-	if err := b.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: b.Shoot.Info.Name}}); err != nil && !apierrors.IsNotFound(err) {
+	obj := &extensionsv1alpha1.Infrastructure{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: b.Shoot.SeedNamespace,
+			Name:      b.Shoot.Info.Name,
+		},
+	}
+
+	if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
 		return err
 	}
-	return nil
+
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
 }
 
 // WaitUntilInfrastructureReady waits until the infrastructure resource has been reconciled successfully.
@@ -151,7 +159,7 @@ func (b *Botanist) WaitUntilInfrastructureDeleted(ctx context.Context) error {
 		b.Logger.Infof("Waiting for infrastructure to be deleted...")
 		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("infrastructure is still present"), lastError))
 	}); err != nil {
-		message := fmt.Sprintf("Failed to delete infrastructure")
+		message := "Failed to delete infrastructure"
 		if lastError != nil {
 			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}

@@ -5,6 +5,8 @@
 **/dev
 /bin
 
+*.coverprofile
+*.html
 .vscode
 .idea
 .DS_Store

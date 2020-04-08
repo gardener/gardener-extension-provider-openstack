@@ -843,20 +843,20 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 
 	if worker.Volume != nil {
-		if !volumeSizeRegex.MatchString(worker.Volume.Size) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.Size, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
+		if !volumeSizeRegex.MatchString(worker.Volume.VolumeSize) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
 		}
 	}
 
 	if worker.DataVolumes != nil {
 		var volumeNames = make(map[string]int)
 		if len(worker.DataVolumes) > 0 && worker.Volume == nil {
-			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), fmt.Sprintf("a worker volume must be defined if data volumes are defined")))
+			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), "a worker volume must be defined if data volumes are defined"))
 		}
 		for idx, volume := range worker.DataVolumes {
 			idxPath := fldPath.Child("dataVolumes").Index(idx)
 			if volume.Name == nil {
-				allErrs = append(allErrs, field.Required(idxPath.Child("name"), fmt.Sprintf("data volume name is required")))
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "data volume name is required"))
 			} else {
 				volName := *volume.Name
 				allErrs = append(allErrs, validateDNS1123Label(volName, idxPath.Child("name"))...)
@@ -870,8 +870,8 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 				} else {
 					volumeNames[volName] = 1
 				}
-				if !volumeSizeRegex.MatchString(volume.Size) {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.Size, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
+				if !volumeSizeRegex.MatchString(volume.VolumeSize) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.VolumeSize, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
 				}
 			}
 		}
@@ -1076,8 +1076,6 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("at least one worker pool must exist having either no taints or only the %q taint", corev1.TaintEffectPreferNoSchedule)))
 	}
 
-	allErrs = append(allErrs, ValidateContainerRuntimesConfigurations(workers, fldPath.Child("workers"))...)
-
 	return allErrs
 }
 
@@ -1240,7 +1238,7 @@ func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	}
 
 	if CRI.ContainerRuntimes != nil {
-		allErrs = append(ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes")))
+		allErrs = append(allErrs, ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes"))...)
 	}
 
 	return allErrs
@@ -1258,28 +1256,6 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
 		}
 		crSet[cr.Type] = true
-	}
-
-	return allErrs
-}
-
-// ValidateContainerRuntimesConfigurations checks that all container runtimes with the same type have the same configurations.
-func ValidateContainerRuntimesConfigurations(workers []core.Worker, fldPath *field.Path) field.ErrorList {
-	definedContainerRuntimesMap := map[string]core.ContainerRuntime{}
-	allErrs := field.ErrorList{}
-
-	for i, worker := range workers {
-		if worker.CRI != nil {
-			for j, cr := range worker.CRI.ContainerRuntimes {
-				if val, ok := definedContainerRuntimesMap[cr.Type]; ok {
-					if !apiequality.Semantic.DeepEqual(cr.ProviderConfig, val.ProviderConfig) {
-						allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), &cr.ProviderConfig, fmt.Sprintf("must specify same provider config for all the ContainerRuntimes from type %s", cr.Type)))
-					}
-				} else {
-					definedContainerRuntimesMap[cr.Type] = cr
-				}
-			}
-		}
 	}
 
 	return allErrs

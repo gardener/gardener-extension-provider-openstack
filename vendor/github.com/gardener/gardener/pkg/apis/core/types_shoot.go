@@ -692,6 +692,7 @@ type ShootMachineImage struct {
 	// ProviderConfig is the shoot's individual configuration passed to an extension resource.
 	ProviderConfig *ProviderConfig
 	// Version is the version of the shoot's image.
+	// If version is not provided, it will be defaulted to the latest version.
 	Version string
 }
 
@@ -701,8 +702,8 @@ type Volume struct {
 	Name *string
 	// Type is the type of the volume.
 	Type *string
-	// Size is the size of the volume.
-	Size string
+	// VolumeSize is the size of the volume.
+	VolumeSize string
 	// Encrypted determines if the volume should be encrypted.
 	Encrypted *bool
 }

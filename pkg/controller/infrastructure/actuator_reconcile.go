@@ -21,9 +21,9 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
-	controllererrors "github.com/gardener/gardener-extensions/pkg/controller/error"
-	"github.com/gardener/gardener-extensions/pkg/terraformer"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	controllererrors "github.com/gardener/gardener/extensions/pkg/controller/error"
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )

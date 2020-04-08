@@ -27,8 +27,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener-extensions/test/e2e/framework/executor"
-	networkpolicies "github.com/gardener/gardener-extensions/test/e2e/framework/networkpolicies"
+	"github.com/gardener/gardener/extensions/test/e2e/framework/executor"
+	networkpolicies "github.com/gardener/gardener/extensions/test/e2e/framework/networkpolicies"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"

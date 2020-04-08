@@ -44,9 +44,9 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
-	genericcontrolplaneactuator "github.com/gardener/gardener-extensions/pkg/controller/controlplane/genericactuator"
-	genericworkeractuator "github.com/gardener/gardener-extensions/pkg/controller/worker/genericactuator"
-	healthcheckoperation "github.com/gardener/gardener-extensions/test/integration/healthcheck"
+	genericcontrolplaneactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
+	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
+	healthcheckoperation "github.com/gardener/gardener/extensions/test/integration/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"

@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-"$(dirname $0)"/../vendor/github.com/gardener/gardener-extensions/hack/.ci/prepare_release "$(dirname $0)"/.. github.com/gardener gardener-extension-provider-openstack
+"$(dirname $0)"/../vendor/github.com/gardener/gardener/hack/.ci/prepare_release "$(dirname $0)"/.. github.com/gardener gardener-extension-provider-openstack

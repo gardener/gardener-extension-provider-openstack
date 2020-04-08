@@ -74,8 +74,8 @@ ETCD
 <td>
 <code>healthCheckConfig</code></br>
 <em>
-<a href="https://github.com/gardener/gardener-extensions/pkg/controller/healthcheck/config">
-github.com/gardener/gardener-extensions/pkg/controller/healthcheck/config/v1alpha1.HealthCheckConfig
+<a href="https://github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config">
+github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1.HealthCheckConfig
 </a>
 </em>
 </td>

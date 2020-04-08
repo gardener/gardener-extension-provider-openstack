@@ -19,12 +19,12 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
-	mockclient "github.com/gardener/gardener-extensions/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener-extensions/pkg/util"
-	extensionswebhook "github.com/gardener/gardener-extensions/pkg/webhook"
-	"github.com/gardener/gardener-extensions/pkg/webhook/controlplane/genericmutator"
-	"github.com/gardener/gardener-extensions/pkg/webhook/controlplane/test"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/util"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	"github.com/coreos/go-systemd/unit"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"

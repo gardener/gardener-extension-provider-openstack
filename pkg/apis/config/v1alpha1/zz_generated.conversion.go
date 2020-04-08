@@ -24,8 +24,8 @@ import (
 	unsafe "unsafe"
 
 	config "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-	healthcheckconfig "github.com/gardener/gardener-extensions/pkg/controller/healthcheck/config"
-	healthcheckconfigv1alpha1 "github.com/gardener/gardener-extensions/pkg/controller/healthcheck/config/v1alpha1"
+	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
+	healthcheckconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"

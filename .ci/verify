@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+cd "$(dirname $0)/.."
+
+git config --global user.email "gardener@sap.com"
+git config --global user.name "Gardener CI/CD"
+
+# Required due to https://github.com/kubernetes/kubernetes/issues/86753 - can be removed once the issue is fixed.
+mkdir -p /go/src/github.com/gardener/gardener-extension-provider-openstack
+cp -r . /go/src/github.com/gardener/gardener-extension-provider-openstack
+cd /go/src/github.com/gardener/gardener-extension-provider-openstack
+
+make verify-extended

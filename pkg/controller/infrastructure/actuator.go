@@ -19,10 +19,10 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
-	"github.com/gardener/gardener-extensions/pkg/controller/common"
-	"github.com/gardener/gardener-extensions/pkg/controller/infrastructure"
-	"github.com/gardener/gardener-extensions/pkg/terraformer"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
+	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"

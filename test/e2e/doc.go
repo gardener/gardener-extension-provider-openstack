@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate go run netpol-gen/netpol-gen.go --go-header-file ../../vendor/github.com/gardener/gardener-extensions/hack/LICENSE_BOILERPLATE.txt --input-dirs ./netpol-gen/app --output-base networkpolicies
+//go:generate go run netpol-gen/netpol-gen.go --go-header-file ../../vendor/github.com/gardener/gardener/hack/LICENSE_BOILERPLATE.txt --input-dirs ./netpol-gen/app --output-base networkpolicies
 
 // Package e2e contain all network policies for OpenStack.
 package e2e

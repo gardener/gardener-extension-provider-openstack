@@ -1,13 +1,9 @@
 package cmd
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
-	"github.com/gobuffalo/envy"
-
-	"github.com/gobuffalo/genny"
 	"github.com/gobuffalo/logger"
 	"github.com/gobuffalo/packr/v2/jam"
 	"github.com/gobuffalo/packr/v2/plog"
@@ -26,10 +22,6 @@ var rootCmd = &cobra.Command{
 	Use:   "packr2",
 	Short: "Packr is a simple solution for bundling static assets inside of Go binaries.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if !envy.Mods() && !envy.InGoPath() {
-			return errors.New(outsideGoPath)
-		}
-		genny.DefaultLogLvl = logger.ErrorLevel
 		for _, a := range args {
 			if a == "--legacy" {
 				globalOptions.Legacy = true
@@ -57,11 +49,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		if globalOptions.Verbose {
-			genny.DefaultLogLvl = logger.DebugLevel
 			plog.Logger = logger.New(logger.DebugLevel)
 		}
 		if globalOptions.Silent {
-			genny.DefaultLogLvl = logger.FatalLevel
 			plog.Logger = logger.New(logger.FatalLevel)
 		}
 		return nil
@@ -74,13 +64,6 @@ var rootCmd = &cobra.Command{
 		return jam.Pack(opts)
 	},
 }
-
-const outsideGoPath = `You appear to be working outside of your GOPATH and do not have GO111MODULE set to "on".
-
-Packr, and all of the github.com/gobuffalo projects, require you to opt-in to using Go modules.
-
-Set GO111MODULE=on to enable modules support or work inside of your GOPATH.
-`
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.

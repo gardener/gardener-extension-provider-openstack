@@ -17,7 +17,6 @@ gardener-extension-provider-openstack:
             image: 'eu.gcr.io/gardener-project/gardener/extensions/validator-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-validator-openstack
-    steps: ~
   jobs:
     head-update:
       traits:

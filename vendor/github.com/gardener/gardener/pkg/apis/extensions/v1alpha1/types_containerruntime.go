@@ -21,12 +21,12 @@ import (
 var _ Object = (*ContainerRuntime)(nil)
 
 const (
-// ContainerRuntimeResource is a constant for the name of the Container Runtime Extension resource.
-ContainerRuntimeResource = "ContainerRuntime"
-// CRINameWorkerLabel is the name of the label describing the CRI name used in this node.
-CRINameWorkerLabel = "worker.gardener.cloud/cri-name"
-// ContainerRuntimeNameWorkerLabel is a label describing a Container Runtime which should be supported on the node.
-ContainerRuntimeNameWorkerLabel = "containerruntime.worker.gardener.cloud/%s"
+	// ContainerRuntimeResource is a constant for the name of the Container Runtime Extension resource.
+	ContainerRuntimeResource = "ContainerRuntime"
+	// CRINameWorkerLabel is the name of the label describing the CRI name used in this node.
+	CRINameWorkerLabel = "worker.gardener.cloud/cri-name"
+	// ContainerRuntimeNameWorkerLabel is a label describing a Container Runtime which should be supported on the node.
+	ContainerRuntimeNameWorkerLabel = "containerruntime.worker.gardener.cloud/%s"
 )
 
 // +genclient
@@ -66,8 +66,18 @@ type ContainerRuntimeList struct {
 type ContainerRuntimeSpec struct {
 	// BinaryPath is the Worker's machine path where container runtime extensions should copy the binaries to.
 	BinaryPath string `json:"binaryPath"`
+	// WorkerPool identifies the worker pool of the Shoot.
+	// For each worker pool and type, Gardener deploys a ContainerRuntime CRD.
+	WorkerPool ContainerRuntimeWorkerPool `json:"workerPool"`
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
+}
+
+type ContainerRuntimeWorkerPool struct {
+	// Name specifies the name of the worker pool the container runtime should be available for.
+	Name string `json:"name"`
+	// Selector is the label selector used by the extension to match the nodes belonging to the worker pool.
+	Selector metav1.LabelSelector `json:"selector"`
 }
 
 // ContainerRuntimeStatus is the status for a ContainerRuntime resource.

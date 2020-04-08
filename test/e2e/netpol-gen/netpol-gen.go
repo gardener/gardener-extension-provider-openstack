@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/test/e2e/netpol-gen/app"
 
-	"github.com/gardener/gardener-extensions/test/e2e/framework/networkpolicies/generators"
+	"github.com/gardener/gardener/extensions/test/e2e/framework/networkpolicies/generators"
 	"k8s.io/gengo/args"
 	"k8s.io/klog"
 )

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	extensionscontroller "github.com/gardener/gardener-extensions/pkg/controller"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/chart"

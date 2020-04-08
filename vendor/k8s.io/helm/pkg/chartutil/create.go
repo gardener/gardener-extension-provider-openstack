@@ -42,8 +42,6 @@ const (
 	DeploymentName = "deployment.yaml"
 	// ServiceName is the name of the example service file.
 	ServiceName = "service.yaml"
-	// ServiceAccountName is the name of the example serviceaccount file.
-	ServiceAccountName = "serviceaccount.yaml"
 	// NotesName is the name of the example NOTES.txt file.
 	NotesName = "NOTES.txt"
 	// HelpersName is the name of the example helpers file.
@@ -65,27 +63,8 @@ image:
   tag: stable
   pullPolicy: IfNotPresent
 
-imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name:
-
-podSecurityContext: {}
-  # fsGroup: 2000
-
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
 
 service:
   type: ClusterIP
@@ -150,17 +129,15 @@ const defaultIgnore = `# Patterns to ignore when building packages.
 
 const defaultIngress = `{{- if .Values.ingress.enabled -}}
 {{- $fullName := include "<CHARTNAME>.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
-{{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
-apiVersion: networking.k8s.io/v1beta1
-{{- else -}}
 apiVersion: extensions/v1beta1
-{{- end }}
 kind: Ingress
 metadata:
   name: {{ $fullName }}
   labels:
-{{ include "<CHARTNAME>.labels" . | indent 4 }}
+    app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
+    helm.sh/chart: {{ include "<CHARTNAME>.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -185,7 +162,7 @@ spec:
           - path: {{ . }}
             backend:
               serviceName: {{ $fullName }}
-              servicePort: {{ $svcPort }}
+              servicePort: http
         {{- end }}
   {{- end }}
 {{- end }}
@@ -196,7 +173,10 @@ kind: Deployment
 metadata:
   name: {{ include "<CHARTNAME>.fullname" . }}
   labels:
-{{ include "<CHARTNAME>.labels" . | indent 4 }}
+    app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
+    helm.sh/chart: {{ include "<CHARTNAME>.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -209,17 +189,8 @@ spec:
         app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-    {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
-      serviceAccountName: {{ template "<CHARTNAME>.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -255,7 +226,10 @@ kind: Service
 metadata:
   name: {{ include "<CHARTNAME>.fullname" . }}
   labels:
-{{ include "<CHARTNAME>.labels" . | indent 4 }}
+    app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
+    helm.sh/chart: {{ include "<CHARTNAME>.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -266,15 +240,6 @@ spec:
   selector:
     app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-`
-const defaultServiceAccount = `{{- if .Values.serviceAccount.create -}}
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: {{ template "<CHARTNAME>.serviceAccountName" . }}
-  labels:
-{{ include "<CHARTNAME>.labels" . | indent 4 }}
-{{- end -}}
 `
 
 const defaultNotes = `1. Get the application URL by running these commands:
@@ -291,7 +256,7 @@ const defaultNotes = `1. Get the application URL by running these commands:
 {{- else if contains "LoadBalancer" .Values.service.type }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
            You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "<CHARTNAME>.fullname" . }}'
-  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "<CHARTNAME>.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "<CHARTNAME>.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
   echo http://$SERVICE_IP:{{ .Values.service.port }}
 {{- else if contains "ClusterIP" .Values.service.type }}
   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "<CHARTNAME>.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
@@ -332,30 +297,6 @@ Create chart name and version as used by the chart label.
 {{- define "<CHARTNAME>.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
-
-{{/*
-Common labels
-*/}}
-{{- define "<CHARTNAME>.labels" -}}
-app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
-helm.sh/chart: {{ include "<CHARTNAME>.chart" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end -}}
-
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "<CHARTNAME>.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-    {{ default (include "<CHARTNAME>.fullname" .) .Values.serviceAccount.name }}
-{{- else -}}
-    {{ default "default" .Values.serviceAccount.name }}
-{{- end -}}
-{{- end -}}
 `
 
 const defaultTestConnection = `apiVersion: v1
@@ -363,7 +304,10 @@ kind: Pod
 metadata:
   name: "{{ include "<CHARTNAME>.fullname" . }}-test-connection"
   labels:
-{{ include "<CHARTNAME>.labels" . | indent 4 }}
+    app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
+    helm.sh/chart: {{ include "<CHARTNAME>.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
   annotations:
     "helm.sh/hook": test-success
 spec:
@@ -473,11 +417,6 @@ func Create(chartfile *chart.Metadata, dir string) (string, error) {
 			// service.yaml
 			path:    filepath.Join(cdir, TemplatesDir, ServiceName),
 			content: Transform(defaultService, "<CHARTNAME>", chartfile.Name),
-		},
-		{
-			// serviceaccount.yaml
-			path:    filepath.Join(cdir, TemplatesDir, ServiceAccountName),
-			content: Transform(defaultServiceAccount, "<CHARTNAME>", chartfile.Name),
 		},
 		{
 			// NOTES.txt

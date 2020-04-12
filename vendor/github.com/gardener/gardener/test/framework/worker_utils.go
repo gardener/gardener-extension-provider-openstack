@@ -24,7 +24,7 @@ import (
 )
 
 // AddWorkerForName adds a valid worker to the shoot for the given machine image name. Returns an error if the machine image cannot be found in the CloudProfile.
-func AddWorkerForName(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImageName *string, workerZone *string) error {
+func AddWorkerForName(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImageName *string, workerZone string) error {
 	found, image, err := helper.DetermineMachineImageForName(cloudProfile, *machineImageName)
 	if err != nil {
 		return err
@@ -36,8 +36,43 @@ func AddWorkerForName(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 	return AddWorker(shoot, cloudProfile, image, workerZone)
 }
 
+// setShootWorkerSettings sets the Shoot's worker settings from the given config
+func setShootWorkerSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig, cloudProfile *gardencorev1beta1.CloudProfile) error {
+	if StringSet(cfg.workersConfig) {
+		workers, err := ParseFileAsWorkers(cfg.workersConfig)
+		if err != nil {
+			return err
+		}
+		shoot.Spec.Provider.Workers = workers
+	} else {
+		if err := SetupShootWorker(shoot, cloudProfile, cfg.workerZone); err != nil {
+			return err
+		}
+	}
+
+	if StringSet(cfg.shootMachineType) {
+		for i := range shoot.Spec.Provider.Workers {
+			shoot.Spec.Provider.Workers[i].Machine.Type = cfg.shootMachineType
+		}
+	}
+
+	if StringSet(cfg.shootMachineImageName) {
+		for i := range shoot.Spec.Provider.Workers {
+			shoot.Spec.Provider.Workers[i].Machine.Image.Name = cfg.shootMachineImageName
+		}
+	}
+
+	if StringSet(cfg.shootMachineImageVersion) {
+		for i := range shoot.Spec.Provider.Workers {
+			shoot.Spec.Provider.Workers[i].Machine.Image.Version = &cfg.shootMachineImageVersion
+		}
+	}
+
+	return nil
+}
+
 // SetupShootWorker prepares the Shoot with one worker with provider specific volume. Clears the currently configured workers.
-func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, workerZone *string) error {
+func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, workerZone string) error {
 	if len(cloudProfile.Spec.MachineImages) < 1 {
 		return fmt.Errorf("at least one different machine image has to be defined in the CloudProfile")
 	}
@@ -52,16 +87,20 @@ func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 }
 
 // AddWorker adds a valid default worker to the shoot for the given machineImage and CloudProfile.
-func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImage gardencorev1beta1.MachineImage, workerZone *string) error {
-	_, shootMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
-	if err != nil {
-		return err
-	}
-
+func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImage gardencorev1beta1.MachineImage, workerZone string) error {
 	if len(cloudProfile.Spec.MachineTypes) == 0 {
 		return fmt.Errorf("no MachineTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 	machineType := cloudProfile.Spec.MachineTypes[0]
+
+	qualifyingVersionFound, shootMachineImage, err := helper.GetLatestQualifyingShootMachineImage(machineImage)
+	if err != nil {
+		return err
+	}
+
+	if !qualifyingVersionFound {
+		return fmt.Errorf("could not add worker. No latest qualifying Shoot machine image could be determined for machine image %q. Make sure the machine image in the CloudProfile has at least one version that is not expired and not in preview", machineImage.Name)
+	}
 
 	workerName, err := generateRandomWorkerName(fmt.Sprintf("%s-", shootMachineImage.Name))
 	if err != nil {
@@ -74,7 +113,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		Minimum: 2,
 		Machine: gardencorev1beta1.Machine{
 			Type:  machineType.Name,
-			Image: &shootMachineImage,
+			Image: shootMachineImage,
 		},
 	})
 
@@ -88,9 +127,9 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		}
 	}
 
-	if workerZone != nil && len(*workerZone) > 0 {
+	if StringSet(workerZone) {
 		// using one zone as default
-		shoot.Spec.Provider.Workers[0].Zones = []string{*workerZone}
+		shoot.Spec.Provider.Workers[0].Zones = []string{workerZone}
 	}
 
 	return nil

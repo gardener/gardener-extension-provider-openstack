@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Deprecated: this is the deprecated gardener testframework.
+// Use gardener/test/framework instead
 package framework
 
 import (
@@ -70,11 +72,14 @@ func getLatestShootMachineImagePossible(shootMachineImageName *string, profile g
 	}
 
 	// Determine the latest version of the shoots image.
-	_, latestMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImageFromCloudProfile)
+	qualifyingVersionFound, latestMachineImage, err := helper.GetLatestQualifyingShootMachineImage(machineImageFromCloudProfile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
 	}
-	return &latestMachineImage, nil
+	if !qualifyingVersionFound {
+		return nil, fmt.Errorf("could not get latest version of the shoot's machine image. No latest qualifying Shoot machine image could be determined for machine image %q. Make sure the machine image in the CloudProfile has at least one version that is not expired and not in preview", machineImageFromCloudProfile.Name)
+	}
+	return latestMachineImage, nil
 }
 
 // CreateShoot creates a Shoot Resource
@@ -150,7 +155,9 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 		// in the integration test we only use one worker pool
 		nameVersions := make(map[string]string)
 		for _, worker := range shoot.Spec.Provider.Workers {
-			nameVersions[worker.Machine.Image.Name] = worker.Machine.Image.Version
+			if worker.Machine.Image.Version != nil {
+				nameVersions[worker.Machine.Image.Name] = *worker.Machine.Image.Version
+			}
 			if worker.Machine.Image != nil && apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImage) && imageUpdateRequired {
 				s.ShootGardenerTest.Logger.Infof("shoot maintained properly - received machine image update")
 				return true, nil
@@ -165,7 +172,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - did not receive an machineImage update")
 			return true, nil
 		}
-		s.ShootGardenerTest.Logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", s.ShootGardenerTest.Shoot.Name, nameVersions, targetMachineImage.Name, targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
+		s.ShootGardenerTest.Logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", s.ShootGardenerTest.Shoot.Name, nameVersions, targetMachineImage.Name, *targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }

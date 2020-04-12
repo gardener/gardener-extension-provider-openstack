@@ -45,7 +45,7 @@ var logger = log.Log.WithName("openstack-controlplaneexposure-webhook")
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
-	return controlplane.Add(mgr, controlplane.AddArgs{
+	return controlplane.New(mgr, controlplane.Args{
 		Kind:     controlplane.KindSeed,
 		Provider: openstack.Type,
 		Types:    []runtime.Object{&appsv1.Deployment{}, &corev1.Service{}, &druidv1alpha1.Etcd{}},

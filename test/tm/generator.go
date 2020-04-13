@@ -24,7 +24,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/test/tm/generator"
 	"github.com/pkg/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -50,19 +50,18 @@ func main() {
 	}
 
 	infra := v1alpha1.InfrastructureConfig{
-		TypeMeta: v1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 			Kind:       reflect.TypeOf(v1alpha1.InfrastructureConfig{}).Name(),
 		},
 		FloatingPoolName: *floatingPoolName,
 		Networks: v1alpha1.Networks{
-			// TODO: change this to `Workers` once garden.sapcloud.io API group is removed
-			Worker: *networkWorkerCidr,
+			Workers: *networkWorkerCidr,
 		},
 	}
 
 	cp := v1alpha1.ControlPlaneConfig{
-		TypeMeta: v1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 			Kind:       reflect.TypeOf(v1alpha1.ControlPlaneConfig{}).Name(),
 		},

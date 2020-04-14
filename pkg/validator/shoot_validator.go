@@ -58,7 +58,7 @@ func (v *Shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot) er
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(valContext.cpConfig, valContext.shoot.Spec.Region, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(valContext.cpConfig, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
 	allErrs = append(allErrs, v.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
@@ -96,8 +96,9 @@ func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 	// This ensures that already running shoots won't break after constraints were removed from the cloud profile.
 	if oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider ||
 		oldCpConfig.Zone != cpConfig.Zone ||
-		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) {
-		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(cpConfig, valContext.shoot.Spec.Region, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
+		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) ||
+		oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
+		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(cpConfig, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfile, valContext.cloudProfileConfig, cpConfigPath)...)
 	}
 
 	if errList := openstackvalidation.ValidateWorkersUpdate(oldValContext.shoot.Spec.Provider.Workers, valContext.shoot.Spec.Provider.Workers, workersPath); len(errList) > 0 {

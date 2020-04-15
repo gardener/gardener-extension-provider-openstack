@@ -98,9 +98,11 @@ func ensureKubeControllerManagerCommandLineArgs(c *corev1.Container) {
 }
 
 func ensureKubeControllerManagerAnnotations(t *corev1.PodTemplateSpec) {
+	// make sure to always remove this label
+	delete(t.Labels, v1beta1constants.LabelNetworkPolicyToBlockedCIDRs)
+
 	t.Labels = extensionswebhook.EnsureAnnotationOrLabel(t.Labels, v1beta1constants.LabelNetworkPolicyToPublicNetworks, v1beta1constants.LabelNetworkPolicyAllowed)
 	t.Labels = extensionswebhook.EnsureAnnotationOrLabel(t.Labels, v1beta1constants.LabelNetworkPolicyToPrivateNetworks, v1beta1constants.LabelNetworkPolicyAllowed)
-	t.Labels = extensionswebhook.EnsureAnnotationOrLabel(t.Labels, v1beta1constants.LabelNetworkPolicyToBlockedCIDRs, v1beta1constants.LabelNetworkPolicyAllowed)
 }
 
 var (

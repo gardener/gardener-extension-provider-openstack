@@ -66,7 +66,6 @@ An example `ControlPlaneConfig` for the OpenStack extension looks as follows:
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 kind: ControlPlaneConfig
 loadBalancerProvider: haproxy
-zone: europe-1a
 cloudControllerManager:
   featureGates:
     CustomResourceValidation: true
@@ -74,10 +73,6 @@ cloudControllerManager:
 
 The `loadBalancerProvider` is the provider name you want to use for load balancers in your shoot.
 If you don't know which types are available look it up in the respective `CloudProfile`.
-
-The `zone` field tells the cloud-controller-manager in which zone it should mainly operate.
-You can still create clusters in multiple availability zones, however, the cloud-controller-manager requires one "main" zone.
-:warning: You always have to specify this field!
 
 The `cloudControllerManager.featureGates` contains a map of explicitly enabled or disabled feature gates.
 For production usage it's not recommend to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
@@ -109,7 +104,6 @@ spec:
       apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
       kind: ControlPlaneConfig
       loadBalancerProvider: haproxy
-      zone: europe-1a
     workers:
     - name: worker-xoluy
       machine:

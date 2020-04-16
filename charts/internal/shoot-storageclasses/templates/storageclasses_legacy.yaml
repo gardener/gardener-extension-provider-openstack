@@ -7,8 +7,6 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
 provisioner: kubernetes.io/cinder
-parameters:
-  availability: {{ .Values.availability }}
 ---
 apiVersion: {{ include "storageclassversion" . }}
 kind: StorageClass
@@ -17,6 +15,4 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
 provisioner: kubernetes.io/cinder
-parameters:
-  availability: {{ .Values.availability }}
 {{- end }}

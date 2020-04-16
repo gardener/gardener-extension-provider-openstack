@@ -49,7 +49,6 @@ const (
 var (
 	dhcpDomain     = util.StringPtr("dhcp-domain")
 	requestTimeout = util.StringPtr("2s")
-	zone           = "zone"
 )
 
 func defaultControlPlane() *extensionsv1alpha1.ControlPlane {
@@ -62,7 +61,6 @@ func defaultControlPlane() *extensionsv1alpha1.ControlPlane {
 					"CustomResourceValidation": true,
 				},
 			},
-			Zone: zone,
 		})
 }
 
@@ -457,7 +455,6 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"useLegacyProvisioner": true,
-				"availability":         zone,
 			}))
 		})
 
@@ -466,7 +463,6 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"useLegacyProvisioner": false,
-				"availability":         zone,
 			}))
 		})
 	})

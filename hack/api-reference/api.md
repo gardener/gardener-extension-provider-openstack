@@ -230,7 +230,9 @@ string
 </em>
 </td>
 <td>
-<p>Zone is the OpenStack zone.</p>
+<em>(Optional)</em>
+<p>Zone is the OpenStack zone.
+Deprecated: Don&rsquo;t use anymore. Will be removed in a future version.</p>
 </td>
 </tr>
 </tbody>

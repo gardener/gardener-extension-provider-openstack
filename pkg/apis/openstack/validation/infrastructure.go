@@ -16,6 +16,7 @@ package validation
 
 import (
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -76,45 +77,63 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 func ValidateInfrastructureConfigAgainstCloudProfile(infra *api.InfrastructureConfig, shootRegion string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if ok, validFloatingPoolNames := validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, shootRegion, infra.FloatingPoolName); !ok {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("floatingPoolName"), infra.FloatingPoolName, validFloatingPoolNames))
-	}
+	allErrs = append(allErrs, validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, shootRegion, infra.FloatingPoolName, fldPath)...)
 
 	return allErrs
 }
 
-func validateFloatingPoolNameConstraints(names []api.FloatingPool, region string, name string) (bool, []string) {
+func validateFloatingPoolNameConstraints(fps []api.FloatingPool, region string, name string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	_, errs := findFloatingPool(fps, region, name, fldPath.Child("floatingPoolName"))
+	allErrs = append(allErrs, errs...)
+	return allErrs
+}
+
+func findFloatingPool(floatingPools []api.FloatingPool, shootRegion, floatingPoolName string, fldPath *field.Path) (*api.FloatingPool, field.ErrorList) {
 	var (
-		validValues []string
-		fallback    *api.FloatingPool
+		allErrs                = field.ErrorList{}
+		validValues            []string
+		globalCandidate        *api.FloatingPool
+		globalCandidateScore   int
+		regionalCandidate      *api.FloatingPool
+		regionalCandidateScore int
+		regionalFound          bool
 	)
 
-	for _, n := range names {
+	for _, fp := range floatingPools {
 		// store the first non-regional image for fallback value if no floating pool for the given
 		// region was found
-		if n.Region == nil && fallback == nil {
-			v := n
-			fallback = &v
+		if fp.Region == nil && !regionalFound {
+			if match, score := utils.SimpleMatch(fp.Name, floatingPoolName); match {
+				if globalCandidate == nil || globalCandidateScore < score {
+					f := fp
+					globalCandidate = &f
+					globalCandidateScore = score
+				}
+			}
 			continue
 		}
 
-		// floating pool for the given region found, validate it
-		if n.Region != nil && *n.Region == region {
-			validValues = append(validValues, n.Name)
-			if n.Name == name {
-				return true, nil
+		// floating pool for the given region found
+		if fp.Region != nil && *fp.Region == shootRegion {
+			regionalFound = true
+			validValues = append(validValues, fp.Name)
+			if match, score := utils.SimpleMatch(fp.Name, floatingPoolName); match {
+				if regionalCandidate == nil || regionalCandidateScore < score {
+					f := fp
+					regionalCandidate = &f
+					regionalCandidateScore = score
+				}
 			}
-			return false, validValues
 		}
 	}
 
-	// no floating pool for the given region found yet, check if the non-regional fallback is used
-	if fallback != nil {
-		validValues = append(validValues, fallback.Name)
-		if fallback.Name == name {
-			return true, nil
-		}
+	if regionalCandidate != nil {
+		return regionalCandidate, allErrs
 	}
-
-	return false, validValues
+	if globalCandidate != nil && !regionalFound {
+		return globalCandidate, allErrs
+	}
+	allErrs = append(allErrs, field.NotSupported(fldPath, floatingPoolName, validValues))
+	return nil, allErrs
 }

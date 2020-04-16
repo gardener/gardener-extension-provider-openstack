@@ -171,6 +171,15 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should allow using an arbitrary regional floating pool from the same region (wildcard case)", func() {
+			cloudProfileConfig.Constraints.FloatingPools[0].Name = "*"
+			infrastructureConfig.FloatingPoolName = floatingPoolName1
+
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, region, cloudProfileConfig, nilPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should forbid using a floating pool name for different region", func() {
 			differentRegion := "asia"
 			cloudProfileConfig.Constraints = api.Constraints{
@@ -249,6 +258,28 @@ var _ = Describe("InfrastructureConfig validation", func() {
 				},
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName2
+
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentRegion, cloudProfileConfig, nilPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow using an arbitrary non-regional floating pool name if region not specified (wildcard case)", func() {
+			differentRegion := "asia"
+			someFloatingPool := "fp2"
+
+			cloudProfileConfig.Constraints = api.Constraints{
+				FloatingPools: []api.FloatingPool{
+					{
+						Name: "*",
+					},
+					{
+						Name:   floatingPoolName1,
+						Region: &region,
+					},
+				},
+			}
+			infrastructureConfig.FloatingPoolName = someFloatingPool
 
 			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentRegion, cloudProfileConfig, nilPath)
 

@@ -104,8 +104,8 @@ var ccmChart = &chart.Chart{
 }
 
 var ccmShootChart = &chart.Chart{
-	Name: "cloud-controller-manager-shoot",
-	Path: filepath.Join(openstacktypes.InternalChartsPath, "cloud-controller-manager-shoot"),
+	Name: "cloud-controller-manager",
+	Path: filepath.Join(openstacktypes.InternalChartsPath, "cloud-controller-manager"),
 	Objects: []*chart.Object{
 		{Type: &rbacv1.ClusterRole{}, Name: "system:controller:cloud-node-controller"},
 		{Type: &rbacv1.ClusterRoleBinding{}, Name: "system:controller:cloud-node-controller"},

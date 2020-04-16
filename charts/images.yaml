@@ -3,10 +3,7 @@ images:
   sourceRepository: github.com/gardener/terraformer
   repository: eu.gcr.io/gardener-project/gardener/terraformer
   tag: "v1.0.0"
-- name: machine-controller-manager
-  sourceRepository: github.com/gardener/machine-controller-manager
-  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
-  tag: "v0.29.0"
+
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8s.gcr.io/hyperkube
@@ -21,3 +18,40 @@ images:
   repository: k8scloudprovider/openstack-cloud-controller-manager
   tag: "v1.18.0"
   targetVersion: ">= 1.18"
+- name: machine-controller-manager
+  sourceRepository: github.com/gardener/machine-controller-manager
+  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  tag: "v0.29.0"
+
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: docker.io/k8scloudprovider/cinder-csi-plugin
+  tag: "v1.18.0"
+- name: csi-provisioner
+  sourceRepository: github.com/kubernetes-csi/external-provisioner
+  repository: quay.io/k8scsi/csi-provisioner
+  tag: "v1.6.0"
+- name: csi-attacher
+  sourceRepository: github.com/kubernetes-csi/external-attacher
+  repository: quay.io/k8scsi/csi-attacher
+  tag: "v2.2.0"
+- name: csi-snapshotter
+  sourceRepository: github.com/kubernetes-csi/external-snapshotter
+  repository: quay.io/k8scsi/csi-snapshotter
+  tag: "v2.1.1"
+- name: csi-snapshot-controller
+  sourceRepository: github.com/kubernetes-csi/external-snapshotter
+  repository: quay.io/k8scsi/snapshot-controller
+  tag: "v2.1.1"
+- name: csi-resizer
+  sourceRepository: github.com/kubernetes-csi/external-resizer
+  repository: quay.io/k8scsi/csi-resizer
+  tag: "v0.5.0"
+- name: csi-node-driver-registrar
+  sourceRepository: github.com/kubernetes-csi/node-driver-registrar
+  repository: quay.io/k8scsi/csi-node-driver-registrar
+  tag: "v1.3.0"
+- name: csi-liveness-probe
+  sourceRepository: github.com/kubernetes-csi/livenessprobe
+  repository: quay.io/k8scsi/livenessprobe
+  tag: "v2.0.0"

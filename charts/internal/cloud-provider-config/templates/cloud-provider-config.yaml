@@ -1,0 +1,14 @@
+{{- define "cloud-provider-config" -}}
+[Global]
+{{ include "cloud-provider-config-credentials" . }}
+{{ include "cloud-provider-config-loadbalancer" . }}
+{{- end -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-provider-config
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  cloudprovider.conf: {{ include "cloud-provider-config" . | b64enc }}

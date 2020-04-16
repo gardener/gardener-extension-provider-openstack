@@ -1,4 +1,4 @@
-{{- if not .Values.useLegacyProvisioner }}
+{{- if .Values.useLegacyProvisioner }}
 ---
 apiVersion: {{ include "storageclassversion" . }}
 kind: StorageClass
@@ -6,7 +6,9 @@ metadata:
   name: default-class
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
-provisioner: cinder.csi.openstack.org
+provisioner: kubernetes.io/cinder
+parameters:
+  availability: {{ .Values.availability }}
 ---
 apiVersion: {{ include "storageclassversion" . }}
 kind: StorageClass
@@ -14,5 +16,7 @@ metadata:
   name: default
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: cinder.csi.openstack.org
+provisioner: kubernetes.io/cinder
+parameters:
+  availability: {{ .Values.availability }}
 {{- end }}

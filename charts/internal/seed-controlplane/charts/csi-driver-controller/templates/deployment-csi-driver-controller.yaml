@@ -1,0 +1,208 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csi-driver-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: csi
+    role: controller
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: csi
+      role: controller
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      creationTimestamp: null
+      labels:
+        app: csi
+        role: controller
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/to-private-networks: allowed
+    spec:
+      containers:
+      - name: csi-driver
+        image: {{ index .Values.images "csi-driver-cinder" }}
+        imagePullPolicy: IfNotPresent
+        args :
+        - /bin/cinder-csi-plugin
+        - --nodeid=dummy
+        - --endpoint=$(CSI_ENDPOINT)
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        - --cluster={{ .Release.Namespace }}
+        - --v=5
+        env:
+        - name: CSI_ENDPOINT
+          value: unix://{{ .Values.socketPath }}/csi.sock
+{{- if .Values.resources.driver }}
+        resources:
+{{ toYaml .Values.resources.driver | indent 10 }}
+{{- end }}
+        ports:
+        - name: healthz
+          containerPort: 9808
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          periodSeconds: 10
+          failureThreshold: 5
+        volumeMounts:
+        - name: socket-dir
+          mountPath: {{ .Values.socketPath }}
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+        # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
+        # signed by a CA that is not globally trusted.
+        - mountPath: /usr/share/ca-certificates
+          name: usr-share-ca-certificates
+          readOnly: true
+        - mountPath: /etc/ssl
+          name: etc-ssl
+          readOnly: true
+
+      - name: csi-provisioner
+        image: {{ index .Values.images "csi-provisioner" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --csi-address=$(ADDRESS)
+        - --kubeconfig=/var/lib/csi-provisioner/kubeconfig
+        - --feature-gates=Topology=true
+        - --volume-name-prefix=pv-{{ .Release.Namespace }}
+        - --enable-leader-election
+        - --leader-election-type=leases
+        - --leader-election-namespace=kube-system
+        - --v=5
+        env:
+        - name: ADDRESS
+          value: {{ .Values.socketPath }}/csi.sock
+{{- if .Values.resources.provisioner }}
+        resources:
+{{ toYaml .Values.resources.provisioner | indent 10 }}
+{{- end }}
+        volumeMounts:
+        - name: socket-dir
+          mountPath: {{ .Values.socketPath }}
+        - name: csi-provisioner
+          mountPath: /var/lib/csi-provisioner
+
+      - name: csi-attacher
+        image: {{ index .Values.images "csi-attacher" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --csi-address=$(ADDRESS)
+        - --kubeconfig=/var/lib/csi-attacher/kubeconfig
+        - --leader-election
+        - --leader-election-namespace=kube-system
+        - --v=5
+        env:
+        - name: ADDRESS
+          value: {{ .Values.socketPath }}/csi.sock
+{{- if .Values.resources.attacher }}
+        resources:
+{{ toYaml .Values.resources.attacher | indent 10 }}
+{{- end }}
+        volumeMounts:
+        - name: socket-dir
+          mountPath: {{ .Values.socketPath }}
+        - name: csi-attacher
+          mountPath: /var/lib/csi-attacher
+
+      - name: csi-snapshotter
+        image: {{ index .Values.images "csi-snapshotter" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --csi-address=$(CSI_ENDPOINT)
+        - --kubeconfig=/var/lib/csi-snapshotter/kubeconfig
+        - --leader-election
+        - --leader-election-namespace=kube-system
+        - --snapshot-name-prefix={{ .Release.Namespace }}
+        env:
+        - name: CSI_ENDPOINT
+          value: {{ .Values.socketPath }}/csi.sock
+{{- if .Values.resources.snapshotter }}
+        resources:
+{{ toYaml .Values.resources.snapshotter | indent 10 }}
+{{- end }}
+        volumeMounts:
+        - name: socket-dir
+          mountPath: {{ .Values.socketPath }}
+        - name: csi-snapshotter
+          mountPath: /var/lib/csi-snapshotter
+
+      - name: csi-resizer
+        image: {{ index .Values.images "csi-resizer" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --csi-address=$(ADDRESS)
+        - --kubeconfig=/var/lib/csi-resizer/kubeconfig
+        - --leader-election=true
+        - --leader-election-namespace=kube-system
+        - --v=5
+        env:
+        - name: ADDRESS
+          value: {{ .Values.socketPath }}/csi.sock
+{{- if .Values.resources.resizer }}
+        resources:
+{{ toYaml .Values.resources.resizer | indent 10 }}
+{{- end }}
+        volumeMounts:
+        - name: socket-dir
+          mountPath: {{ .Values.socketPath }}
+        - name: csi-resizer
+          mountPath: /var/lib/csi-resizer
+
+      - name: csi-liveness-probe
+        image: {{ index .Values.images "csi-liveness-probe" }}
+        args:
+        - --csi-address=/csi/csi.sock
+{{- if .Values.resources.livenessProbe }}
+        resources:
+{{ toYaml .Values.resources.livenessProbe | indent 10 }}
+{{- end }}
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+
+      volumes:
+      - name: socket-dir
+        emptyDir: {}
+      - name: csi-provisioner
+        secret:
+          secretName: csi-provisioner
+      - name: csi-attacher
+        secret:
+          secretName: csi-attacher
+      - name: csi-snapshotter
+        secret:
+          secretName: csi-snapshotter
+      - name: csi-resizer
+        secret:
+          secretName: csi-resizer
+      - name: usr-share-ca-certificates
+        hostPath:
+          path: /usr/share/ca-certificates
+      - name: cloud-provider-config
+        secret:
+          secretName: cloud-provider-disk-config
+      # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
+      # signed by a CA that is not globally trusted.
+      - name: etc-ssl
+        hostPath:
+          path: /etc/ssl

@@ -13,7 +13,5 @@ monitor-max-retries=5
 lb-version=v2
 lb-provider="{{ .Values.lbProvider }}"
 floating-network-id="{{ .Values.floatingNetworkID }}"
-{{- if .Values.useOctavia }}
-use-octavia="true"
-{{- end }}
+use-octavia="{{ .Values.useOctavia }}"
 {{- end }}

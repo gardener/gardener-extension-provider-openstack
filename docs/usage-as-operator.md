@@ -17,7 +17,7 @@ Also, you have to specify the keystone URL in the `keystoneURL` field to your en
 Additionally, you can influence the HTTP request timeout when talking to the OpenStack API in the `requestTimeout` field.
 This may help when you have for example a long list of load balancers in your environment.
 
-In case your OpenStack system uses [Octavia](https://docs.openstack.org/octavia/latest/) for network load balancing then you have to set the `useOctavia` field to `true` such that the cloud-controller-manager for OpenStack gets correctly configured.
+In case your OpenStack system uses [Octavia](https://docs.openstack.org/octavia/latest/) for network load balancing then you have to set the `useOctavia` field to `true` such that the cloud-controller-manager for OpenStack gets correctly configured (it defaults to `false`).
 
 The cloud profile config also contains constraints for floating pools and load balancer providers that can be used in shoots.
 

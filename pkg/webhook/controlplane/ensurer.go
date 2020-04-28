@@ -205,7 +205,7 @@ func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, ectx genericmu
 }
 
 // ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
-func (e *ensurer) ShouldProvisionKubeletCloudProviderConfig() bool {
+func (e *ensurer) ShouldProvisionKubeletCloudProviderConfig(context.Context, genericmutator.EnsurerContext) bool {
 	return true
 }
 

@@ -68,6 +68,10 @@ type SeedSpec struct {
 	Volume *SeedVolume
 }
 
+func (s *Seed) GetProviderType() string {
+	return s.Spec.Provider.Type
+}
+
 // SeedStatus is the status of a Seed.
 type SeedStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.
@@ -129,6 +133,8 @@ type ShootNetworks struct {
 type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string
+	// ProviderConfig is the configuration passed to Seed resource.
+	ProviderConfig *ProviderConfig
 	// Region is a name of a region.
 	Region string
 }

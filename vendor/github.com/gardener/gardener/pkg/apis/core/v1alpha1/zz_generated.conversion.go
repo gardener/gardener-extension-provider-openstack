@@ -1875,6 +1875,7 @@ func autoConvert_v1alpha1_Condition_To_core_Condition(in *Condition, out *core.C
 	out.LastUpdateTime = in.LastUpdateTime
 	out.Reason = in.Reason
 	out.Message = in.Message
+	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
 	return nil
 }
 
@@ -1890,6 +1891,7 @@ func autoConvert_core_Condition_To_v1alpha1_Condition(in *core.Condition, out *C
 	out.LastUpdateTime = in.LastUpdateTime
 	out.Reason = in.Reason
 	out.Message = in.Message
+	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
 	return nil
 }
 
@@ -2235,6 +2237,7 @@ func Convert_core_Endpoint_To_v1alpha1_Endpoint(in *core.Endpoint, out *Endpoint
 func autoConvert_v1alpha1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVersion, out *core.ExpirableVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	out.Classification = (*core.VersionClassification)(unsafe.Pointer(in.Classification))
 	return nil
 }
 
@@ -2246,6 +2249,7 @@ func Convert_v1alpha1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVer
 func autoConvert_core_ExpirableVersion_To_v1alpha1_ExpirableVersion(in *core.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	out.Classification = (*VersionClassification)(unsafe.Pointer(in.Classification))
 	return nil
 }
 
@@ -2850,7 +2854,15 @@ func Convert_core_LastOperation_To_v1alpha1_LastOperation(in *core.LastOperation
 
 func autoConvert_v1alpha1_Machine_To_core_Machine(in *Machine, out *core.Machine, s conversion.Scope) error {
 	out.Type = in.Type
-	out.Image = (*core.ShootMachineImage)(unsafe.Pointer(in.Image))
+	if in.Image != nil {
+		in, out := &in.Image, &out.Image
+		*out = new(core.ShootMachineImage)
+		if err := Convert_v1alpha1_ShootMachineImage_To_core_ShootMachineImage(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Image = nil
+	}
 	return nil
 }
 
@@ -2861,7 +2873,15 @@ func Convert_v1alpha1_Machine_To_core_Machine(in *Machine, out *core.Machine, s 
 
 func autoConvert_core_Machine_To_v1alpha1_Machine(in *core.Machine, out *Machine, s conversion.Scope) error {
 	out.Type = in.Type
-	out.Image = (*ShootMachineImage)(unsafe.Pointer(in.Image))
+	if in.Image != nil {
+		in, out := &in.Image, &out.Image
+		*out = new(ShootMachineImage)
+		if err := Convert_core_ShootMachineImage_To_v1alpha1_ShootMachineImage(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Image = nil
+	}
 	return nil
 }
 
@@ -3403,7 +3423,17 @@ func autoConvert_v1alpha1_Provider_To_core_Provider(in *Provider, out *core.Prov
 	out.Type = in.Type
 	out.ControlPlaneConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ControlPlaneConfig))
 	out.InfrastructureConfig = (*core.ProviderConfig)(unsafe.Pointer(in.InfrastructureConfig))
-	out.Workers = *(*[]core.Worker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]core.Worker, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_Worker_To_core_Worker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	return nil
 }
 
@@ -3416,7 +3446,17 @@ func autoConvert_core_Provider_To_v1alpha1_Provider(in *core.Provider, out *Prov
 	out.Type = in.Type
 	out.ControlPlaneConfig = (*ProviderConfig)(unsafe.Pointer(in.ControlPlaneConfig))
 	out.InfrastructureConfig = (*ProviderConfig)(unsafe.Pointer(in.InfrastructureConfig))
-	out.Workers = *(*[]Worker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]Worker, len(*in))
+		for i := range *in {
+			if err := Convert_core_Worker_To_v1alpha1_Worker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	return nil
 }
 
@@ -3714,6 +3754,7 @@ func autoConvert_core_SeedNetworks_To_v1alpha1_SeedNetworks(in *core.SeedNetwork
 
 func autoConvert_v1alpha1_SeedProvider_To_core_SeedProvider(in *SeedProvider, out *core.SeedProvider, s conversion.Scope) error {
 	out.Type = in.Type
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = in.Region
 	return nil
 }
@@ -3725,6 +3766,7 @@ func Convert_v1alpha1_SeedProvider_To_core_SeedProvider(in *SeedProvider, out *c
 
 func autoConvert_core_SeedProvider_To_v1alpha1_SeedProvider(in *core.SeedProvider, out *SeedProvider, s conversion.Scope) error {
 	out.Type = in.Type
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = in.Region
 	return nil
 }
@@ -3960,7 +4002,9 @@ func Convert_core_ShootList_To_v1alpha1_ShootList(in *core.ShootList, out *Shoot
 func autoConvert_v1alpha1_ShootMachineImage_To_core_ShootMachineImage(in *ShootMachineImage, out *core.ShootMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
-	out.Version = in.Version
+	if err := metav1.Convert_Pointer_string_To_string(&in.Version, &out.Version, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -3972,7 +4016,9 @@ func Convert_v1alpha1_ShootMachineImage_To_core_ShootMachineImage(in *ShootMachi
 func autoConvert_core_ShootMachineImage_To_v1alpha1_ShootMachineImage(in *core.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
-	out.Version = in.Version
+	if err := metav1.Convert_string_To_Pointer_string(&in.Version, &out.Version, s); err != nil {
+		return err
+	}
 	return nil
 }
 

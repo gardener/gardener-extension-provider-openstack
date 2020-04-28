@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -336,12 +337,29 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 			return retry.SevereError(err)
 		}
 
+		serviceList := &corev1.ServiceList{}
+		if err := b.K8sShootClient.Client().List(ctx, serviceList); err != nil {
+			return retry.SevereError(err)
+		}
+
+		epsNotReconciledByKCM := sets.NewString()
+		for _, service := range serviceList.Items {
+			// if service.Spec.Selector is empty or nil, kube-controller-manager will not reconcile Endpoints for this Service
+			if len(service.Spec.Selector) == 0 {
+				epsNotReconciledByKCM.Insert(fmt.Sprintf("%s/%s", service.Namespace, service.Name))
+			}
+		}
+
 		for _, endpoints := range endpointsList.Items {
+			if epsNotReconciledByKCM.Has(fmt.Sprintf("%s/%s", endpoints.Namespace, endpoints.Name)) {
+				continue
+			}
+
 			for _, subset := range endpoints.Subsets {
 				for _, address := range subset.Addresses {
 					if podsNetwork.Contains(net.ParseIP(address.IP)) {
-						msg := fmt.Sprintf("waiting until there are no Endpoints containing Pod IPs in the shoot cluster..."+
-							"there is still at least one Endpoints containing a Pod's IP: %s/%s, IP: %s", endpoints.Namespace, endpoints.Name, address.IP)
+						msg := fmt.Sprintf("waiting until there are no Endpoints containing Pod IPs in the shoot cluster... "+
+							"There is still at least one Endpoints object containing a Pod's IP: %s/%s, IP: %s", endpoints.Namespace, endpoints.Name, address.IP)
 						b.Logger.Info(msg)
 						return retry.MinorError(fmt.Errorf(msg))
 					}
@@ -373,5 +391,16 @@ func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) e
 		}
 		b.Logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
 		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
+	})
+}
+
+// WaitUntilRequiredExtensionsReady waits until all the extensions required for a shoot reconciliation are ready
+func (b *Botanist) WaitUntilRequiredExtensionsReady(ctx context.Context) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
+		if err := b.RequiredExtensionsReady(ctx); err != nil {
+			b.Logger.Infof("Waiting until all the required extension controllers are ready (%+v)", err)
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
 	})
 }

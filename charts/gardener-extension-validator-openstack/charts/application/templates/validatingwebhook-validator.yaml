@@ -18,6 +18,7 @@ webhooks:
   failurePolicy: Fail
   objectSelector: {}
   namespaceSelector: {}
+  sideEffects: None
   clientConfig:
     {{- if .Values.global.virtualGarden.enabled }}
     url: {{ printf "https://%s.%s/webhooks/validate" (include "name" .) (.Release.Namespace) }}

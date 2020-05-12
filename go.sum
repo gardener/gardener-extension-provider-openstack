@@ -137,8 +137,8 @@ github.com/gardener/external-dns-management v0.7.3/go.mod h1:Y3om11E865x4aQ7cmcH
 github.com/gardener/external-dns-management v0.7.7 h1:J0CEkjPqGCvDtHxOCDLAvTa/1I/6GPjjavb6028lMOY=
 github.com/gardener/external-dns-management v0.7.7/go.mod h1:egCe/FPOsUbXA4WV0ne3h7nAD/nLT09hNt/FQQXK+ec=
 github.com/gardener/gardener v1.1.2/go.mod h1:CP9I0tCDVXTLPkJv/jUtXVUh948kSNKEGUg0haLz9gk=
-github.com/gardener/gardener v1.3.1-0.20200505064036-175b017d8c5b h1:kglF2cGtc7m/XugexJhrfd9kT1i+3eswq0afEJeUQMw=
-github.com/gardener/gardener v1.3.1-0.20200505064036-175b017d8c5b/go.mod h1:t9oESM37bAMIuezi9I0H0I8+++8jy8BUPitcf4ERRXY=
+github.com/gardener/gardener v1.4.1 h1:suf9sHKQc3FGJLdssOVpuF4G37piXWn92Eo9CVybD5U=
+github.com/gardener/gardener v1.4.1/go.mod h1:t9oESM37bAMIuezi9I0H0I8+++8jy8BUPitcf4ERRXY=
 github.com/gardener/gardener-resource-manager v0.10.0 h1:6OUKoWI3oha42F0oJN8OEo3UR+D3onOCel4Th+zgotU=
 github.com/gardener/gardener-resource-manager v0.10.0/go.mod h1:0pKTHOhvU91eQB0EYr/6Ymd7lXc/5Hi8P8tF/gpV0VQ=
 github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25 h1:nOFITmV7vt4fcYPEXgj66Qs83FdDEMvL/LQcR0diRRE=

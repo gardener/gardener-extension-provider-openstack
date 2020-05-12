@@ -77,7 +77,7 @@ var Now = time.Now
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
 	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
-	staleExtensionHealthCheckThreshold metav1.Duration
+	staleExtensionHealthCheckThreshold *metav1.Duration
 }
 
 func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*appsv1.Deployment) *gardencorev1beta1.Condition {
@@ -606,7 +606,8 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition) *gardencorev1beta1.Condition {
 	for _, cond := range extensionsConditions {
-		if Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
+		// check if the health check condition.lastUpdateTime is older than the configured staleExtensionHealthCheckThreshold
+		if b.staleExtensionHealthCheckThreshold != nil && Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
 			c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%q CRD (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()).Round(time.Minute).String(), cond.Condition.LastUpdateTime.UTC().Round(time.Minute).String()))
 			return &c
 		}
@@ -882,7 +883,7 @@ var (
 )
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold metav1.Duration) *HealthChecker {
+func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration) *HealthChecker {
 	return &HealthChecker{
 		conditionThresholds:                conditionThresholds,
 		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
@@ -900,7 +901,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		seedEtcdLister        = makeEtcdLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 		seedWorkerLister      = makeWorkerLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 
-		checker = NewHealthChecker(thresholdMappings, *healthCheckOutdatedThreshold)
+		checker = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold)
 	)
 
 	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := b.getAllExtensionConditions(context.TODO())
@@ -953,6 +954,10 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	return apiserverAvailability, controlPlane, nodes, systemComponents
 }
 
+func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation) bool {
+	return isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
+}
+
 var unstableOperationTypes = map[gardencorev1beta1.LastOperationType]struct{}{
 	gardencorev1beta1.LastOperationTypeCreate: {},
 	gardencorev1beta1.LastOperationTypeDelete: {},
@@ -963,9 +968,9 @@ func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationTy
 	return ok
 }
 
-// pardonCondition pardons the given condition if the Shoot is either  in create or delete state.
-func (b *Botanist) pardonCondition(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	if lastOp := b.Shoot.Info.Status.LastOperation; (lastOp == nil || (lastOp != nil && isUnstableOperationType(lastOp.Type))) && condition.Status == gardencorev1beta1.ConditionFalse {
+// PardonCondition pardons the given condition if the Shoot is either in create (except successful create) or delete state.
+func PardonCondition(lastOp *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	if (lastOp == nil || (lastOp != nil && isUnstableLastOperation(lastOp))) && condition.Status == gardencorev1beta1.ConditionFalse {
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, condition.Reason, condition.Message, condition.Codes...)
 	}
 	return condition
@@ -974,7 +979,8 @@ func (b *Botanist) pardonCondition(condition gardencorev1beta1.Condition) garden
 // HealthChecks conducts the health checks on all the given conditions.
 func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, apiserverAvailability, controlPlane, nodes, systemComponents gardencorev1beta1.Condition) (gardencorev1beta1.Condition, gardencorev1beta1.Condition, gardencorev1beta1.Condition, gardencorev1beta1.Condition) {
 	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, apiserverAvailability, controlPlane, nodes, systemComponents)
-	return b.pardonCondition(apiServerAvailable), b.pardonCondition(controlPlaneHealthy), b.pardonCondition(everyNodeReady), b.pardonCondition(systemComponentsHealthy)
+	lastOp := b.Shoot.Info.Status.LastOperation
+	return PardonCondition(lastOp, apiServerAvailable), PardonCondition(lastOp, controlPlaneHealthy), PardonCondition(lastOp, everyNodeReady), PardonCondition(lastOp, systemComponentsHealthy)
 }
 
 // MonitoringHealthChecks performs the monitoring related health checks.

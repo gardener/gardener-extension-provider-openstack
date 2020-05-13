@@ -246,7 +246,7 @@ func getConfigChartValues(
 		var fallback *api.FloatingPool
 
 		for _, pool := range cloudProfileConfig.Constraints.FloatingPools {
-			if pool.Region == nil && fallback == nil {
+			if pool.Region == nil && fallback == nil && pool.Name == infraStatus.Networks.FloatingPool.Name {
 				v := pool
 				fallback = &v
 			}
@@ -262,12 +262,10 @@ func getConfigChartValues(
 		}
 	}
 
-	for _, class := range cpConfig.LoadBalancerClasses {
-		if class.Name == api.DefaultLoadBalancerClass {
-			utils.SetStringValue(values, "floatingNetworkID", class.FloatingNetworkID)
+	for i, class := range cpConfig.LoadBalancerClasses {
+		if i == 0 || class.Name == api.DefaultLoadBalancerClass {
 			utils.SetStringValue(values, "floatingSubnetID", class.FloatingSubnetID)
 			utils.SetStringValue(values, "subnetID", class.SubnetID)
-			break
 		}
 	}
 	for _, class := range cpConfig.LoadBalancerClasses {
@@ -281,11 +279,7 @@ func getConfigChartValues(
 
 	for _, class := range cpConfig.LoadBalancerClasses {
 		floatingClass := map[string]interface{}{"name": class.Name}
-		if !utils.IsEmptyString(class.FloatingSubnetID) && utils.IsEmptyString(class.FloatingNetworkID) {
-			floatingClass["floatingNetworkID"] = infraStatus.Networks.FloatingPool.ID
-		} else {
-			utils.SetStringValue(floatingClass, "floatingNetworkID", class.FloatingNetworkID)
-		}
+		floatingClass["floatingNetworkID"] = infraStatus.Networks.FloatingPool.ID
 		utils.SetStringValue(floatingClass, "floatingSubnetID", class.FloatingSubnetID)
 		utils.SetStringValue(floatingClass, "subnetID", class.SubnetID)
 		floatingClasses = append(floatingClasses, floatingClass)

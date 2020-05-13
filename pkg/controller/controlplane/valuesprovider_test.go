@@ -253,7 +253,6 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			floatingNetworkID := "4711"
-			floatingNetworkID2 := "pub"
 			fsid := "0815"
 			floatingSubnetID2 := "pub0815"
 			subnetID := "priv"
@@ -274,10 +273,9 @@ var _ = Describe("ValuesProvider", func() {
 							SubnetID:         nil,
 						},
 						{
-							Name:              "public",
-							FloatingSubnetID:  &floatingSubnetID2,
-							FloatingNetworkID: &floatingNetworkID2,
-							SubnetID:          nil,
+							Name:             "public",
+							FloatingSubnetID: &floatingSubnetID2,
+							SubnetID:         nil,
 						},
 						{
 							Name:     "other",
@@ -315,12 +313,13 @@ var _ = Describe("ValuesProvider", func() {
 					},
 					{
 						"name":              "public",
-						"floatingNetworkID": floatingNetworkID2,
+						"floatingNetworkID": floatingNetworkID,
 						"floatingSubnetID":  floatingSubnetID2,
 					},
 					{
-						"name":     "other",
-						"subnetID": subnetID,
+						"name":              "other",
+						"floatingNetworkID": floatingNetworkID,
+						"subnetID":          subnetID,
 					},
 				},
 				"authUrl":        authURL,

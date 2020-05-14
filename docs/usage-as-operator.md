@@ -58,6 +58,23 @@ constraints:
 #     floatingSubnetID: "1234"
 #     floatingNetworkID: "4567"
 #     subnetID: "7890"
+# - name: "fp-pool-eu-demo"
+#   region: europe
+#   domain: demo
+#   loadBalancerClasses:
+#   - name: lb-class-1
+#     floatingSubnetID: "1234"
+#     floatingNetworkID: "4567"
+#     subnetID: "7890"
+# - name: "fp-pool-eu-dev"
+#   region: europe
+#   domain: dev
+#   nonConstraining: true
+#   loadBalancerClasses:
+#   - name: lb-class-1
+#     floatingSubnetID: "1234"
+#     floatingNetworkID: "4567"
+#     subnetID: "7890"
   loadBalancerProviders:
   - name: haproxy
 #   region: europe
@@ -66,9 +83,13 @@ constraints:
 ```
 
 Please note that it is possible to configure a region mapping for keystone URLs, floating pools, and load balancer providers.
+Additionally, floating pools can be constrainted to a keystone domain by specifying the `domain` field. 
 Floating pool names may also contains simple wildcard expressions, like `*` or `fp-pool-*` or `*-fp-pool`. Please note that the `*` must be either single or at the beginning or at the end. Consequently, `fp-*-pool` is not possible/allowed.
-The default behavior is that, if found, the regional entry is taken.
+The default behavior is that, if found, the regional (and/or domain restricted) entry is taken.
 If no entry for the given region exists then the fallback value is the most matching entry (w.r.t. wildcard matching) in the list without a `region` field (or the `keystoneURL` value for the keystone URLs).
+If an additional floating pool should be selectable for a region and/or domain, you can mark it as non constraining
+with setting the optional field `nonConstraining` to `true`.
+
 Some OpenStack environments don't need these regional mappings, hence, the `region` and `keystoneURLs` fields are optional.
 If your OpenStack environment only has regional values and it doesn't make sense to provide a (non-regional) fallback then simply
 omit `keystoneURL` and always specify `region`.

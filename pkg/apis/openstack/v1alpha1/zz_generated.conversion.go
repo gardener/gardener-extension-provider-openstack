@@ -377,6 +377,8 @@ func Convert_openstack_ControlPlaneConfig_To_v1alpha1_ControlPlaneConfig(in *ope
 func autoConvert_v1alpha1_FloatingPool_To_openstack_FloatingPool(in *FloatingPool, out *openstack.FloatingPool, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Region = (*string)(unsafe.Pointer(in.Region))
+	out.Domain = (*string)(unsafe.Pointer(in.Domain))
+	out.NonConstraining = (*bool)(unsafe.Pointer(in.NonConstraining))
 	out.LoadBalancerClasses = *(*[]openstack.LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	return nil
 }
@@ -389,6 +391,8 @@ func Convert_v1alpha1_FloatingPool_To_openstack_FloatingPool(in *FloatingPool, o
 func autoConvert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.FloatingPool, out *FloatingPool, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Region = (*string)(unsafe.Pointer(in.Region))
+	out.Domain = (*string)(unsafe.Pointer(in.Domain))
+	out.NonConstraining = (*bool)(unsafe.Pointer(in.NonConstraining))
 	out.LoadBalancerClasses = *(*[]LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	return nil
 }

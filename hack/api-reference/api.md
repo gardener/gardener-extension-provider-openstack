@@ -459,6 +459,30 @@ string
 </tr>
 <tr>
 <td>
+<code>domain</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domain is the domain name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nonConstraining</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NonConstraining specifies whether this floating pool is not constraining, that means additionally available independent of other FP constraints.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>loadBalancerClasses</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.LoadBalancerClass">

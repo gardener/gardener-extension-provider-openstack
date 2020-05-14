@@ -74,6 +74,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					{
 						Name:   "",
 						Region: makeStringPointer(""),
+						Domain: makeStringPointer(""),
 					},
 				}
 
@@ -85,27 +86,60 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("constraints.floatingPools[0].region"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("constraints.floatingPools[0].domain"),
 				}))))
 			})
 
-			It("should forbid duplicates regions in pools", func() {
+			It("should forbid duplicates regions and domains in pools", func() {
 				cloudProfileConfig.Constraints.FloatingPools = []api.FloatingPool{
 					{
 						Name:   "foo",
-						Region: makeStringPointer("foo"),
+						Region: makeStringPointer("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Region: makeStringPointer("foo"),
+						Region: makeStringPointer("rfoo"),
+					},
+					{
+						Name:   "foo",
+						Domain: makeStringPointer("dfoo"),
+					},
+					{
+						Name:   "foo",
+						Domain: makeStringPointer("dfoo"),
+					},
+					{
+						Name:   "foo",
+						Domain: makeStringPointer("dfoo"),
+						Region: makeStringPointer("rfoo"),
+					},
+					{
+						Name:   "foo",
+						Domain: makeStringPointer("dfoo"),
+						Region: makeStringPointer("rfoo"),
 					},
 				}
 
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("constraints.floatingPools[1].region"),
-				}))))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeDuplicate),
+						"Field":    Equal("constraints.floatingPools[1].name"),
+						"BadValue": Equal("foo"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeDuplicate),
+						"Field":    Equal("constraints.floatingPools[3].name"),
+						"BadValue": Equal("foo"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeDuplicate),
+						"Field":    Equal("constraints.floatingPools[5].name"),
+						"BadValue": Equal("foo"),
+					}))))
 			})
 		})
 

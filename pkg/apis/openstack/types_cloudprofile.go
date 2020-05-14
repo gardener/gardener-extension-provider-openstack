@@ -60,6 +60,10 @@ type FloatingPool struct {
 	Name string
 	// Region is the region name.
 	Region *string
+	// Domain is the domain name.
+	Domain *string
+	// NonConstraining specifies whether this floating pool is not constraining, that means additionally available independent of other FP constraints.
+	NonConstraining *bool
 	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
 	LoadBalancerClasses []LoadBalancerClass
 }

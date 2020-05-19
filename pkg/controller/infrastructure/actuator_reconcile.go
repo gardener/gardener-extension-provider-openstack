@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
@@ -55,8 +56,7 @@ func (a *actuator) reconcile(ctx context.Context, infra *extensionsv1alpha1.Infr
 		InitializeWith(terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
 		Apply(); err != nil {
 
-		a.logger.Error(err, "failed to apply the terraform config", "infrastructure", infra.Name)
-		return err
+		return fmt.Errorf("failed to apply the terraform config: %+v", err)
 	}
 
 	return a.updateProviderStatus(ctx, tf, infra, config)

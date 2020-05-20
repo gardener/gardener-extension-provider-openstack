@@ -28,9 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -220,6 +220,14 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.DeployInternalDNS(ctx); err != nil {
+		return err
+	}
+
+	if err := b.DeployExternalDNS(ctx); err != nil {
+		return err
+	}
+
 	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
@@ -290,13 +298,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 			return err
 		}
 
-		if err := flow.Parallel(
-			func(ctx context.Context) error { return b.DestroyInternalDomainDNSRecord(ctx) },
-			func(ctx context.Context) error { return b.DestroyExternalDomainDNSRecord(ctx) },
-			func(ctx context.Context) error { return b.DestroyIngressDNSRecord(ctx) },
-		)(ctx); err != nil {
-			return err
-		}
 	}
 
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
@@ -333,6 +334,8 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           string(b.Shoot.Info.Spec.Provider.Type),
@@ -371,6 +374,8 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: b.Seed.Info.Spec.Provider.Type,
@@ -523,6 +528,8 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
 		finalizers.Insert(gardencorev1beta1.GardenerName)
 		backupEntry.SetFinalizers(finalizers.UnsortedList())
@@ -1070,6 +1077,43 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
 }
 
+// SetAPIServerAddress sets the IP address of the API server's LoadBalancer.
+func (b *Botanist) SetAPIServerAddress(address string) {
+	b.Operation.APIServerAddress = address
+
+	if b.NeedsInternalDNS() {
+		b.Shoot.Components.DNS.InternalEntry = dns.NewDNSEntry(
+			&dns.EntryValues{
+				Name:    DNSInternalName,
+				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				Targets: []string{b.APIServerAddress},
+			},
+			b.Shoot.SeedNamespace,
+			b.ChartApplierSeed,
+			b.ChartsRootPath,
+			b.Logger,
+			b.K8sSeedClient.Client(),
+			nil,
+		)
+	}
+
+	if b.NeedsExternalDNS() {
+		b.Shoot.Components.DNS.ExternalEntry = dns.NewDNSEntry(
+			&dns.EntryValues{
+				Name:    DNSExternalName,
+				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				Targets: []string{b.APIServerAddress},
+			},
+			b.Shoot.SeedNamespace,
+			b.ChartApplierSeed,
+			b.ChartsRootPath,
+			b.Logger,
+			b.K8sSeedClient.Client(),
+			nil,
+		)
+	}
+}
+
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
 // data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
@@ -1082,11 +1126,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 	values := map[string]interface{}{
 		"annotations": map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-		},
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
-			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
-			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
+			v1beta1constants.GardenerTimestamp: time.Now().UTC().String(),
 		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
@@ -1130,10 +1170,16 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		hvpaValues["enabled"] = hvpaEnabled
 		hvpaValues["maintenanceWindow"] = b.Shoot.Info.Spec.Maintenance.TimeWindow
 
+		podAnnotations := map[string]interface{}{
+			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
+			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
+			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
+		}
+
 		switch role {
 		case common.EtcdRoleMain:
+			podAnnotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
 			etcdValues["metrics"] = "extensive" // etcd-main emits extensive (histogram) metrics
-
 			hvpaValues["minAllowed"] = map[string]interface{}{
 				"cpu":    "200m",
 				"memory": "700M",
@@ -1215,6 +1261,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		values["etcd"] = etcdValues
 		values["sidecar"] = sidecarValues
 		values["hvpa"] = hvpaValues
+		values["podAnnotations"] = podAnnotations
 
 		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 			return err

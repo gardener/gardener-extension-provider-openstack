@@ -124,6 +124,9 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
 	}
+	if spec.SeedSelector != nil {
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.SeedSelector, fldPath.Child("seedSelector"))...)
+	}
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
 		if meta.Namespace == v1beta1constants.GardenNamespace {
@@ -323,7 +326,7 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *core.KubeProxyConfig, ver
 	if oldConfig != nil {
 		oldMode = *oldConfig.Mode
 	}
-	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
+	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1, < 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
 	return allErrs
@@ -539,12 +542,17 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			}
 		}
 
+		forbiddenAdmissionPlugins := sets.NewString("SecurityContextDeny")
 		admissionPluginsPath := fldPath.Child("kubeAPIServer", "admissionPlugins")
 		for i, plugin := range kubeAPIServer.AdmissionPlugins {
 			idxPath := admissionPluginsPath.Index(i)
 
 			if len(plugin.Name) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
+			}
+
+			if forbiddenAdmissionPlugins.Has(plugin.Name) {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use %+v", forbiddenAdmissionPlugins.UnsortedList())))
 			}
 		}
 

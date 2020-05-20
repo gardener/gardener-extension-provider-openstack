@@ -92,6 +92,9 @@ type ShootSpec struct {
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,14,opt,name=seedName"`
+	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
+	// +optional
+	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty" protobuf:"bytes,15,opt,name=seedSelector"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -253,6 +256,9 @@ type Extension struct {
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
 	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	// +optional
+	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -49,12 +49,12 @@ func (e *errorWithCodes) Error() string {
 }
 
 var (
-	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey)`)
+	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey|query returned no results)`)
 	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
-	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
-	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse)`)
+	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied|OperationNotAllowed)`)
+	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|timeout while waiting for state to become)`)
 	resourcesDepletedRegexp      = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed)`)
-	configurationProblemRegexp   = regexp.MustCompile(`(?i)(AzureBastionSubnet|not supported in your requested Availability Zone|InvalidParameterValue|notFound|NetcfgInvalidSubnet|InvalidSubnet|Invalid value|KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
+	configurationProblemRegexp   = regexp.MustCompile(`(?i)(AzureBastionSubnet|not supported in your requested Availability Zone|InvalidParameterValue|notFound|NetcfgInvalidSubnet|InvalidSubnet|Invalid value|KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID|violates constraint|no attached internet gateway found|Your query returned no results)`)
 )
 
 // DetermineError determines the Garden error code for the given error and creates a new error with the given message.
@@ -68,14 +68,15 @@ func DetermineError(err error, message string) error {
 		errMsg = err.Error()
 	}
 
-	codes := determineErrorCodes(err)
+	codes := DetermineErrorCodes(err)
 	if codes == nil {
 		return errors.New(errMsg)
 	}
 	return &errorWithCodes{errMsg, codes}
 }
 
-func determineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
+// DetermineErrorCodes determines error codes based on the given error.
+func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var (
 		coder   Coder
 		message = err.Error()
@@ -188,4 +189,17 @@ func LastErrorWithTaskID(description string, taskID string, codes ...gardencorev
 			Time: time.Now(),
 		},
 	}
+}
+
+// HasNonRetryableErrorCode returns true if at least one of given list of last errors has at least one error code that
+// indicates that an automatic retry would not help fixing the problem.
+func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
+	for _, lastError := range lastErrors {
+		for _, code := range lastError.Codes {
+			if code == gardencorev1beta1.ErrorInfraUnauthorized || code == gardencorev1beta1.ErrorConfigurationProblem {
+				return true
+			}
+		}
+	}
+	return false
 }

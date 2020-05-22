@@ -473,7 +473,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
 		}
 	} else {
-		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -482,7 +482,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	var hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if !hvpaEnabled {
-		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -538,6 +538,12 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	} else {
 		alertManagerConfig["enabled"] = false
 		if err := common.DeleteAlertmanager(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
+			return err
+		}
+	}
+
+	if !seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled {
+		if err := common.DeleteReserveExcessCapacity(context.TODO(), k8sSeedClient.Client()); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -623,7 +629,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"images":                chart.ImageMapToValues(images),
 			"imageVectorOverwrites": imageVectorOverwrites,
 		},
-		"reserveExcessCapacity": seed.reserveExcessCapacity,
+		"reserveExcessCapacity": seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": DesiredExcessCapacity(),
 		},
@@ -779,11 +785,6 @@ func (s *Seed) CheckMinimumK8SVersion(ctx context.Context, k8sGardenClient clien
 		return "<unknown>", fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
 	}
 	return version, nil
-}
-
-// MustReserveExcessCapacity configures whether we have to reserve excess capacity in the Seed cluster.
-func (s *Seed) MustReserveExcessCapacity(must bool) {
-	s.reserveExcessCapacity = must
 }
 
 // GetValidVolumeSize is to get a valid volume size.

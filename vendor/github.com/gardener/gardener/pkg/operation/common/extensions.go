@@ -68,7 +68,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
 	logger *logrus.Entry,
-	healthFunc func(obj runtime.Object) error,
+	healthFunc func(obj runtime.Object) (bool, error),
 	newObjFunc func() runtime.Object,
 	kind string,
 	namespace string,
@@ -85,10 +85,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 			return retry.SevereError(err)
 		}
 
-		if err := healthFunc(obj); err != nil {
+		if retry, err := healthFunc(obj); err != nil {
 			logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
-			lastObservedError = err
-			return retry.MinorError(err)
+			return retry, err
 		}
 
 		if postReadyFunc != nil {
@@ -126,7 +125,11 @@ func DeleteExtensionCR(
 		return err
 	}
 
-	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
+	if err := client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DeleteExtensionCRs lists all extension resources and loops over them. It executes the given <predicateFunc> for each

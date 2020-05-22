@@ -1,5 +1,3 @@
-// +build tools
-
 // Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,5 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package imports CI related scripts - it is to force `go mod` to see them as dependencies.
-package ci
+package v1beta1
+
+const (
+	// GardenerSeedLeaseNamespace is the namespace in which Gardenlet will report Seeds'
+	// status using Lease resources for each Seed
+	GardenerSeedLeaseNamespace = "gardener-system-seed-lease"
+)

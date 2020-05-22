@@ -49,7 +49,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 		openstack.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ControlPlaneResource),
 		func() runtime.Object { return &extensionsv1alpha1.ControlPlaneList{} },
-		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
 		mgr,
 		opts,
 		[]predicate.Predicate{extensionspredicate.HasPurpose(extensionsv1alpha1.Normal)},
@@ -74,7 +74,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 		openstack.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource),
 		func() runtime.Object { return &extensionsv1alpha1.WorkerList{} },
-		func() runtime.Object { return &extensionsv1alpha1.Worker{} },
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
 		mgr,
 		opts,
 		nil,
@@ -89,7 +89,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 			},
 			{
 				ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
-				HealthCheck:   worker.NewSufficientNodesChecker(),
+				HealthCheck:   worker.NewNodesChecker(),
 			},
 		})
 }

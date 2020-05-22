@@ -85,7 +85,6 @@ func (a *openStackNetworkPolicy) Rules() []np.Rule {
 		a.newSource(ag.EtcdEvents()).AllowHost(ag.External()).Build(),
 		a.newSource(a.cloudControllerManagerNotSecured).AllowPod(ag.KubeAPIServer()).AllowHost(ag.External()).Build(),
 		a.newSource(a.cloudControllerManagerSecured).AllowPod(ag.KubeAPIServer()).AllowHost(ag.External()).Build(),
-		a.newSource(ag.DependencyWatchdog()).AllowHost(ag.SeedKubeAPIServer(), ag.External()).Build(),
 		a.newSource(ag.ElasticSearch()).Build(),
 		a.newSource(ag.Grafana()).AllowPod(ag.Prometheus()).Build(),
 		a.newSource(ag.Kibana()).AllowTargetPod(ag.ElasticSearch().FromPort("http")).Build(),
@@ -128,7 +127,6 @@ func (a *openStackNetworkPolicy) Sources() []*np.SourcePod {
 	ag := a.Agnostic
 	return []*np.SourcePod{
 		ag.AddonManager(),
-		ag.DependencyWatchdog(),
 		a.cloudControllerManagerNotSecured,
 		a.cloudControllerManagerSecured,
 		ag.ElasticSearch(),

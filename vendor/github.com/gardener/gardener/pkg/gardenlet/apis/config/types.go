@@ -166,12 +166,6 @@ type SeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
-	// ReserveExcessCapacity indicates whether the Seed controller should reserve
-	// excess capacity for Shoot control planes in the Seeds. This is done via
-	// PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or
-	// the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API
-	// group enabled. It defaults to true.
-	ReserveExcessCapacity *bool
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
 }
@@ -280,8 +274,9 @@ type Server struct {
 type HTTPSServer struct {
 	// Server is the configuration for the bind address and the port.
 	Server
-	// TLSServer contains information about the TLS configuration for a HTTPS server.
-	TLS TLSServer
+	// TLSServer contains information about the TLS configuration for a HTTPS server. If empty then a proper server
+	// certificate will be self-generated during startup.
+	TLS *TLSServer
 }
 
 // TLSServer contains information about the TLS configuration for a HTTPS server.

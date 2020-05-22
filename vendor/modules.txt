@@ -57,7 +57,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener v1.4.1-0.20200522134108-4f4a1db77d90
+# github.com/gardener/gardener v1.4.1-0.20200522153953-4949b41172cc
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -151,6 +151,7 @@ github.com/gardener/gardener/pkg/operation/common
 github.com/gardener/gardener/pkg/operation/etcdencryption
 github.com/gardener/gardener/pkg/operation/garden
 github.com/gardener/gardener/pkg/operation/seed
+github.com/gardener/gardener/pkg/operation/seed/istio
 github.com/gardener/gardener/pkg/operation/shoot
 github.com/gardener/gardener/pkg/scheduler
 github.com/gardener/gardener/pkg/scheduler/apis/config

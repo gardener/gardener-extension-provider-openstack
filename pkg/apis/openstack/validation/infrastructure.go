@@ -15,11 +15,15 @@
 package validation
 
 import (
+	"reflect"
+	"sort"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -74,66 +78,103 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 }
 
 // ValidateInfrastructureConfigAgainstCloudProfile validates the given InfrastructureConfig against constraints in the given CloudProfile.
-func ValidateInfrastructureConfigAgainstCloudProfile(infra *api.InfrastructureConfig, shootRegion string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateInfrastructureConfigAgainstCloudProfile(infra *api.InfrastructureConfig, domain, shootRegion string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, shootRegion, infra.FloatingPoolName, fldPath)...)
+	allErrs = append(allErrs, validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, domain, shootRegion, infra.FloatingPoolName, fldPath)...)
 
 	return allErrs
 }
 
-func validateFloatingPoolNameConstraints(fps []api.FloatingPool, region string, name string, fldPath *field.Path) field.ErrorList {
+func validateFloatingPoolNameConstraints(fps []api.FloatingPool, domain, region string, name string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	_, errs := findFloatingPool(fps, region, name, fldPath.Child("floatingPoolName"))
+	_, errs := FindFloatingPool(fps, domain, region, name, fldPath.Child("floatingPoolName"))
 	allErrs = append(allErrs, errs...)
 	return allErrs
 }
 
-func findFloatingPool(floatingPools []api.FloatingPool, shootRegion, floatingPoolName string, fldPath *field.Path) (*api.FloatingPool, field.ErrorList) {
+// FindFloatingPool finds best match for given domain, region, and name
+func FindFloatingPool(floatingPools []api.FloatingPool, domain, shootRegion, floatingPoolName string, fldPath *field.Path) (*api.FloatingPool, field.ErrorList) {
 	var (
-		allErrs                = field.ErrorList{}
-		validValues            []string
-		globalCandidate        *api.FloatingPool
-		globalCandidateScore   int
-		regionalCandidate      *api.FloatingPool
-		regionalCandidateScore int
-		regionalFound          bool
+		allErrs               = field.ErrorList{}
+		validValues           = sets.NewString()
+		additionalValidValues = sets.NewString()
+	)
+
+	found := findFloatingPoolCandidate(floatingPools, &domain, &shootRegion, floatingPoolName, false, validValues, additionalValidValues)
+	if found != nil {
+		return found, allErrs
+	}
+
+	// region and domain constraint must be checked together, as constraints of both must be fulfilled
+	nonConstrainingOnly := len(validValues) > 0
+	validValuesRegion := sets.NewString()
+	validValuesDomain := sets.NewString()
+	foundRegion := findFloatingPoolCandidate(floatingPools, nil, &shootRegion, floatingPoolName, nonConstrainingOnly, validValuesRegion, additionalValidValues)
+	foundDomain := findFloatingPoolCandidate(floatingPools, &domain, nil, floatingPoolName, nonConstrainingOnly, validValuesDomain, additionalValidValues)
+	if foundRegion != nil && foundDomain != nil {
+		return foundRegion, allErrs
+	}
+	if foundRegion != nil && len(validValuesDomain) == 0 {
+		return foundRegion, allErrs
+	}
+	if foundDomain != nil && len(validValuesRegion) == 0 {
+		return foundDomain, allErrs
+	}
+	if len(validValuesRegion) != 0 && len(validValuesDomain) != 0 {
+		// if region and domain are constrainted separately, only values are valid which are valid for both
+		validValues = validValuesRegion.Intersection(validValuesDomain)
+	} else if len(validValuesRegion) != 0 {
+		validValues = validValuesRegion
+	} else if len(validValuesDomain) != 0 {
+		validValues = validValuesDomain
+	}
+
+	nonConstrainingOnly = len(validValues) > 0
+	found = findFloatingPoolCandidate(floatingPools, nil, nil, floatingPoolName, nonConstrainingOnly, validValues, additionalValidValues)
+	if found != nil {
+		return found, allErrs
+	}
+
+	validValuesList := []string{}
+	for key := range validValues {
+		validValuesList = append(validValuesList, key)
+	}
+	for key := range additionalValidValues {
+		validValuesList = append(validValuesList, key)
+	}
+	sort.Strings(validValuesList)
+	allErrs = append(allErrs, field.NotSupported(fldPath, floatingPoolName, validValuesList))
+	return nil, allErrs
+}
+
+// findFloatingPoolCandidate finds floating pool candidate with optional domain and/or region constraints
+func findFloatingPoolCandidate(floatingPools []api.FloatingPool, domain, shootRegion *string, floatingPoolName string,
+	nonConstrainingOnly bool, validValues, additionalValidValues sets.String) *api.FloatingPool {
+	var (
+		candidate      *api.FloatingPool
+		candidateScore int
 	)
 
 	for _, fp := range floatingPools {
-		// store the first non-regional image for fallback value if no floating pool for the given
-		// region was found
-		if fp.Region == nil && !regionalFound {
-			if match, score := utils.SimpleMatch(fp.Name, floatingPoolName); match {
-				if globalCandidate == nil || globalCandidateScore < score {
-					f := fp
-					globalCandidate = &f
-					globalCandidateScore = score
+		if reflect.DeepEqual(domain, fp.Domain) && reflect.DeepEqual(shootRegion, fp.Region) {
+			if fp.NonConstraining != nil && *fp.NonConstraining {
+				additionalValidValues.Insert(fp.Name)
+			} else {
+				if nonConstrainingOnly {
+					continue
 				}
+				validValues.Insert(fp.Name)
 			}
-			continue
-		}
-
-		// floating pool for the given region found
-		if fp.Region != nil && *fp.Region == shootRegion {
-			regionalFound = true
-			validValues = append(validValues, fp.Name)
 			if match, score := utils.SimpleMatch(fp.Name, floatingPoolName); match {
-				if regionalCandidate == nil || regionalCandidateScore < score {
+				if candidate == nil || candidateScore < score {
 					f := fp
-					regionalCandidate = &f
-					regionalCandidateScore = score
+					candidate = &f
+					candidateScore = score
 				}
 			}
 		}
 	}
 
-	if regionalCandidate != nil {
-		return regionalCandidate, allErrs
-	}
-	if globalCandidate != nil && !regionalFound {
-		return globalCandidate, allErrs
-	}
-	allErrs = append(allErrs, field.NotSupported(fldPath, floatingPoolName, validValues))
-	return nil, allErrs
+	return candidate
 }

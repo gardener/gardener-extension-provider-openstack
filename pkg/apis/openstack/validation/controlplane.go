@@ -50,14 +50,14 @@ func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConf
 }
 
 // ValidateControlPlaneConfigAgainstCloudProfile validates the given ControlPlaneConfig against constraints in the given CloudProfile.
-func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneConfig, shootRegion, floatingPoolName string, cloudProfile *gardencorev1beta1.CloudProfile, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, cloudProfile *gardencorev1beta1.CloudProfile, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(cloudProfileConfig.Constraints.LoadBalancerProviders, shootRegion, cpConfig.LoadBalancerProvider); !ok {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("loadBalancerProvider"), cpConfig.LoadBalancerProvider, validLoadBalancerProviders))
 	}
 
-	allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, shootRegion, floatingPoolName, fldPath.Child("loadBalancerClasses"))...)
+	allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, domain, shootRegion, floatingPoolName, fldPath.Child("loadBalancerClasses"))...)
 
 	if ok, validZones := validateZoneConstraints(cloudProfile.Spec.Regions, shootRegion, cpConfig.Zone); !ok {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("zone"), cpConfig.Zone, validZones))
@@ -121,13 +121,13 @@ func validateZoneConstraints(regions []gardencorev1beta1.Region, region, zone st
 	return false, validValues
 }
 
-func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, shootLBClasses []api.LoadBalancerClass, shootRegion, floatingPoolName string, fldPath *field.Path) field.ErrorList {
+func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, shootLBClasses []api.LoadBalancerClass, domain, shootRegion, floatingPoolName string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(shootLBClasses) == 0 {
 		return allErrs
 	}
 
-	fp, errs := findFloatingPool(floatingPools, shootRegion, floatingPoolName, fldPath)
+	fp, errs := FindFloatingPool(floatingPools, domain, shootRegion, floatingPoolName, fldPath)
 	if len(errs) > 0 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("floatingPoolName"), floatingPoolName, errs.ToAggregate().Error()))
 		return allErrs

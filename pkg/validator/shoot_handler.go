@@ -19,9 +19,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener/extensions/pkg/util"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/go-logr/logr"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -29,6 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // Shoot validates shoots
@@ -50,9 +51,16 @@ func (v *Shoot) Handle(ctx context.Context, req admission.Request) admission.Res
 		return admission.Allowed("webhook not responsible for this provider")
 	}
 
+	// Get credentials
+	credentials, err := internal.GetCredentialsBySecretBinding(ctx, v.client, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Spec.SecretBindingName})
+	if err != nil {
+		v.Logger.Error(err, "could not get credentials from SecretBindingName %s", shoot.Spec.SecretBindingName)
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
 	switch req.Operation {
 	case admissionv1beta1.Create:
-		if err := v.validateShootCreation(ctx, shoot); err != nil {
+		if err := v.validateShootCreation(ctx, shoot, credentials.DomainName); err != nil {
 			v.Logger.Error(err, "denied request", "operation", req.Operation, "shoot", fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			return admission.Errored(http.StatusBadRequest, err)
 		}
@@ -63,7 +71,7 @@ func (v *Shoot) Handle(ctx context.Context, req admission.Request) admission.Res
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
-		if err := v.validateShootUpdate(ctx, oldShoot, shoot); err != nil {
+		if err := v.validateShootUpdate(ctx, oldShoot, shoot, credentials.DomainName); err != nil {
 			v.Logger.Error(err, "denied request", "operation", req.Operation, "shoot", fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			return admission.Errored(http.StatusBadRequest, err)
 		}

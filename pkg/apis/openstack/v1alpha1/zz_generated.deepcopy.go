@@ -180,6 +180,16 @@ func (in *FloatingPool) DeepCopyInto(out *FloatingPool) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Domain != nil {
+		in, out := &in.Domain, &out.Domain
+		*out = new(string)
+		**out = **in
+	}
+	if in.NonConstraining != nil {
+		in, out := &in.NonConstraining, &out.NonConstraining
+		*out = new(bool)
+		**out = **in
+	}
 	if in.LoadBalancerClasses != nil {
 		in, out := &in.LoadBalancerClasses, &out.LoadBalancerClasses
 		*out = make([]LoadBalancerClass, len(*in))

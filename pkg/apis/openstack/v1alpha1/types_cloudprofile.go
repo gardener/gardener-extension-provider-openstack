@@ -66,6 +66,12 @@ type FloatingPool struct {
 	// Region is the region name.
 	// +optional
 	Region *string `json:"region,omitempty"`
+	// Domain is the domain name.
+	// +optional
+	Domain *string `json:"domain,omitempty"`
+	// NonConstraining specifies whether this floating pool is not constraining, that means additionally available independent of other FP constraints.
+	// +optional
+	NonConstraining *bool `json:"nonConstraining,omitempty"`
 	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
 	// +optional
 	LoadBalancerClasses []LoadBalancerClass `json:"loadBalancerClasses,omitempty"`

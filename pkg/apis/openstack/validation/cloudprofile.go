@@ -19,6 +19,8 @@ import (
 	"net"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -33,21 +35,34 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 		allErrs = append(allErrs, field.Required(floatingPoolPath, "must provide at least one floating pool"))
 	}
 
-	regionsFound := map[string]struct{}{}
+	combinationFound := sets.NewString()
 	for i, pool := range cloudProfile.Constraints.FloatingPools {
 		idxPath := floatingPoolPath.Index(i)
 		if len(pool.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
 		}
 
-		if pool.Region != nil {
-			if len(*pool.Region) == 0 {
-				allErrs = append(allErrs, field.Required(idxPath.Child("region"), "must provide a region if key is present"))
+		if pool.Region != nil || pool.Domain != nil {
+			region := "*"
+			domain := "*"
+			if pool.Region != nil {
+				if len(*pool.Region) == 0 {
+					allErrs = append(allErrs, field.Required(idxPath.Child("region"), "must provide a region if key is present"))
+				}
+				region = *pool.Region
 			}
-			if _, ok := regionsFound[*pool.Region]; ok {
-				allErrs = append(allErrs, field.Duplicate(idxPath.Child("region"), *pool.Region))
+			if pool.Domain != nil {
+				if len(*pool.Domain) == 0 {
+					allErrs = append(allErrs, field.Required(idxPath.Child("domain"), "must provide a domain if key is present"))
+				}
+				domain = *pool.Domain
 			}
-			regionsFound[*pool.Region] = struct{}{}
+			key := fmt.Sprintf("%s,%s,%s", pool.Name, domain, region)
+			if combinationFound.Has(key) {
+				// duplicate for given name/domain/region combination
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), pool.Name))
+			}
+			combinationFound.Insert(key)
 		}
 	}
 
@@ -56,7 +71,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 		allErrs = append(allErrs, field.Required(loadBalancerProviderPath, "must provide at least one load balancer provider"))
 	}
 
-	regionsFound = map[string]struct{}{}
+	regionsFound := sets.NewString()
 	for i, pool := range cloudProfile.Constraints.LoadBalancerProviders {
 		idxPath := loadBalancerProviderPath.Index(i)
 
@@ -68,10 +83,10 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 			if len(*pool.Region) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("region"), "must provide a region if key is present"))
 			}
-			if _, ok := regionsFound[*pool.Region]; ok {
+			if regionsFound.Has(*pool.Region) {
 				allErrs = append(allErrs, field.Duplicate(idxPath.Child("region"), *pool.Region))
 			}
-			regionsFound[*pool.Region] = struct{}{}
+			regionsFound.Insert(*pool.Region)
 		}
 	}
 
@@ -105,7 +120,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 		allErrs = append(allErrs, field.Required(field.NewPath("keyStoneURL"), "must provide the URL to KeyStone"))
 	}
 
-	regionsFound = map[string]struct{}{}
+	regionsFound = sets.NewString()
 	for i, val := range cloudProfile.KeyStoneURLs {
 		idxPath := field.NewPath("keyStoneURLs").Index(i)
 
@@ -117,10 +132,10 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 			allErrs = append(allErrs, field.Required(idxPath.Child("url"), "must provide an url"))
 		}
 
-		if _, ok := regionsFound[val.Region]; ok {
+		if regionsFound.Has(val.Region) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("region"), val.Region))
 		}
-		regionsFound[val.Region] = struct{}{}
+		regionsFound.Insert(val.Region)
 	}
 
 	for i, ip := range cloudProfile.DNSServers {

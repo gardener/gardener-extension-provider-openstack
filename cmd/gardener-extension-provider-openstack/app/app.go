@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackcmd "github.com/gardener/gardener-extension-provider-openstack/pkg/cmd"
 	openstackbackupbucket "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
@@ -31,15 +30,17 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -141,21 +142,18 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err := controller.AddToScheme(scheme); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
 			}
-
 			if err := druidv1alpha1.AddToScheme(scheme); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
 			}
-
 			if err := openstackinstall.AddToScheme(scheme); err != nil {
+				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
+			}
+			if err := machinev1alpha1.AddToScheme(scheme); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
 			}
 
 			// add common meta types to schema for controller-runtime to use v1.ListOptions
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
-			// add types required for Health check
-			scheme.AddKnownTypes(machinev1alpha1.SchemeGroupVersion,
-				&machinev1alpha1.MachineDeploymentList{},
-			)
 
 			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
@@ -175,6 +173,17 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			if err := controllerSwitches.Completed().AddToManager(mgr); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not add controllers to manager")
+			}
+
+			// Cleanup leaked ClusterRoles from worker controller.
+			// See https://github.com/gardener-attic/gardener-extensions/pull/378/files and https://github.com/gardener/gardener/issues/2144.
+			// TODO: This code can be removed in a future version.
+			c, err := client.New(restOpts.Completed().Config, client.Options{})
+			if err != nil {
+				controllercmd.LogErrAndExit(err, "Error creating client for orphaned ClusterRole cleanup")
+			}
+			if err := genericactuator.CleanupLeakedClusterRoles(ctx, c, openstack.Name); err != nil {
+				controllercmd.LogErrAndExit(err, "Error cleaning up leaked worker controller ClusterRoles")
 			}
 
 			if err := mgr.Start(ctx.Done()); err != nil {

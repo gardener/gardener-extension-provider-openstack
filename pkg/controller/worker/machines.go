@@ -21,7 +21,6 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -64,7 +63,7 @@ func (w *workerDelegate) GenerateMachineDeployments(ctx context.Context) (worker
 }
 
 func (w *workerDelegate) generateMachineClassSecretData(ctx context.Context) (map[string][]byte, error) {
-	credentials, err := internal.GetCredentials(ctx, w.Client(), w.worker.Spec.SecretRef)
+	credentials, err := openstack.GetCredentials(ctx, w.Client(), w.worker.Spec.SecretRef)
 	if err != nil {
 		return nil, err
 	}

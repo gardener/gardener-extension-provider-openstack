@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package openstack
 
 import (
 	"context"
@@ -20,9 +20,6 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -60,23 +57,23 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 	if secret.Data == nil {
 		return nil, fmt.Errorf("secret does not contain any data")
 	}
-	domainName, err := getRequired(secret.Data, openstack.DomainName)
+	domainName, err := getRequired(secret.Data, DomainName)
 	if err != nil {
 		return nil, err
 	}
-	tenantName, err := getRequired(secret.Data, openstack.TenantName)
+	tenantName, err := getRequired(secret.Data, TenantName)
 	if err != nil {
 		return nil, err
 	}
-	userName, err := getRequired(secret.Data, openstack.UserName)
+	userName, err := getRequired(secret.Data, UserName)
 	if err != nil {
 		return nil, err
 	}
-	password, err := getRequired(secret.Data, openstack.Password)
+	password, err := getRequired(secret.Data, Password)
 	if err != nil {
 		return nil, err
 	}
-	authURL := secret.Data[openstack.AuthURL]
+	authURL := secret.Data[AuthURL]
 
 	return &Credentials{
 		DomainName: domainName,

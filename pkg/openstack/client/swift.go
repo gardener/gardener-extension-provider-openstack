@@ -17,7 +17,7 @@ package client
 import (
 	"context"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
+	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -31,7 +31,7 @@ import (
 
 // NewStorageClientFromSecretRef retrieves the openstack client from specified by the secret reference.
 func NewStorageClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, region string) (*StorageClient, error) {
-	credentials, err := internal.GetCredentials(ctx, c, secretRef)
+	credentials, err := os.GetCredentials(ctx, c, secretRef)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func NewStorageClientFromSecretRef(ctx context.Context, c client.Client, secretR
 }
 
 // newStorageClientFromCredentials create the storage client from credentials.
-func newStorageClientFromCredentials(credentials *internal.Credentials, region string) (*StorageClient, error) {
+func newStorageClientFromCredentials(credentials *os.Credentials, region string) (*StorageClient, error) {
 	opts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
 			AuthURL:     credentials.AuthURL,

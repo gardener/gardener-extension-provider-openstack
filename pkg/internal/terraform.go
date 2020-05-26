@@ -18,8 +18,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
-	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/client-go/rest"
 )
@@ -33,7 +34,7 @@ const (
 
 // TerraformerVariablesEnvironmentFromCredentials computes the Terraformer variables environment from the
 // given Credentials.
-func TerraformerVariablesEnvironmentFromCredentials(creds *Credentials) map[string]string {
+func TerraformerVariablesEnvironmentFromCredentials(creds *openstack.Credentials) map[string]string {
 	return map[string]string{
 		TerraformVarNameUserName: creds.Username,
 		TerraformVarNamePassword: creds.Password,
@@ -64,7 +65,7 @@ func NewTerraformerWithAuth(
 	purpose,
 	namespace,
 	name string,
-	creds *Credentials,
+	creds *openstack.Credentials,
 ) (terraformer.Terraformer, error) {
 	tf, err := NewTerraformer(restConfig, purpose, namespace, name)
 	if err != nil {

@@ -20,7 +20,7 @@ import (
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstacktypes "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
@@ -60,7 +60,7 @@ var StatusTypeMeta = metav1.TypeMeta{
 // ComputeTerraformerChartValues computes the values for the OpenStack Terraformer chart.
 func ComputeTerraformerChartValues(
 	infra *extensionsv1alpha1.Infrastructure,
-	credentials *internal.Credentials,
+	credentials *openstack.Credentials,
 	config *api.InfrastructureConfig,
 	cluster *controller.Cluster,
 ) (map[string]interface{}, error) {
@@ -126,7 +126,7 @@ func ComputeTerraformerChartValues(
 func RenderTerraformerChart(
 	renderer chartrenderer.Interface,
 	infra *extensionsv1alpha1.Infrastructure,
-	credentials *internal.Credentials,
+	credentials *openstack.Credentials,
 	config *api.InfrastructureConfig,
 	cluster *controller.Cluster,
 ) (*TerraformFiles, error) {

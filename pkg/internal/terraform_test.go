@@ -15,6 +15,8 @@
 package internal
 
 import (
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -23,12 +25,13 @@ var _ = Describe("Terraform", func() {
 	var (
 		username    string
 		password    string
-		credentials *Credentials
+		credentials *openstack.Credentials
 	)
+
 	BeforeEach(func() {
 		username = "user"
 		password = "password"
-		credentials = &Credentials{Username: username, Password: password}
+		credentials = &openstack.Credentials{Username: username, Password: password}
 	})
 
 	Describe("#TerraformerVariablesEnvironmentFromCredentials", func() {

@@ -21,7 +21,7 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstacktypes "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -154,7 +154,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	}
 
 	// Get credentials
-	credentials, err := internal.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef)
+	credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get service account from secret '%s/%s'", cp.Spec.SecretRef.Namespace, cp.Spec.SecretRef.Name)
 	}
@@ -208,7 +208,7 @@ func getConfigChartValues(
 	infraStatus *api.InfrastructureStatus,
 	cloudProfileConfig *api.CloudProfileConfig,
 	cp *extensionsv1alpha1.ControlPlane,
-	c *internal.Credentials,
+	c *openstack.Credentials,
 	cluster *extensionscontroller.Cluster,
 ) (map[string]interface{}, error) {
 	// Get the first subnet with purpose "nodes"

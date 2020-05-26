@@ -19,7 +19,7 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -38,7 +38,7 @@ var _ = Describe("Terraform", func() {
 		cloudProfileConfigJSON []byte
 		config                 *api.InfrastructureConfig
 		cluster                *controller.Cluster
-		credentials            *internal.Credentials
+		credentials            *openstack.Credentials
 
 		keystoneURL = "foo-bar.com"
 		dnsServers  = []string{"a", "b"}
@@ -106,7 +106,7 @@ var _ = Describe("Terraform", func() {
 			},
 		}
 
-		credentials = &internal.Credentials{Username: "user", Password: "secret"}
+		credentials = &openstack.Credentials{Username: "user", Password: "secret"}
 	})
 
 	Describe("#ComputeTerraformerChartValues", func() {

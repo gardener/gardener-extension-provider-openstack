@@ -4,7 +4,7 @@ The [`core.gardener.cloud/v1beta1.Shoot` resource](https://github.com/gardener/g
 
 In this document we are describing how this configuration looks like for OpenStack and provide an example `Shoot` manifest with minimal configuration that you can use to create an OpenStack cluster (modulo the landscape-specific information like cloud profile names, secret binding names, etc.).
 
-## Provider secret data
+## Provider Secret Data
 
 Every shoot cluster references a `SecretBinding` which itself references a `Secret`, and this `Secret` contains the provider credentials of your OpenStack tenant.
 This `Secret` must look as follows:
@@ -66,7 +66,6 @@ An example `ControlPlaneConfig` for the OpenStack extension looks as follows:
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 kind: ControlPlaneConfig
 loadBalancerProvider: haproxy
-zone: europe-1a
 cloudControllerManager:
   featureGates:
     CustomResourceValidation: true
@@ -74,10 +73,6 @@ cloudControllerManager:
 
 The `loadBalancerProvider` is the provider name you want to use for load balancers in your shoot.
 If you don't know which types are available look it up in the respective `CloudProfile`.
-
-The `zone` field tells the cloud-controller-manager in which zone it should mainly operate.
-You can still create clusters in multiple availability zones, however, the cloud-controller-manager requires one "main" zone.
-:warning: You always have to specify this field!
 
 The `cloudControllerManager.featureGates` contains a map of explicitly enabled or disabled feature gates.
 For production usage it's not recommend to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
@@ -109,7 +104,6 @@ spec:
       apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
       kind: ControlPlaneConfig
       loadBalancerProvider: haproxy
-      zone: europe-1a
     workers:
     - name: worker-xoluy
       machine:
@@ -133,3 +127,10 @@ spec:
     nginx-ingress:
       enabled: true
 ```
+
+## CSI volume provisioners
+
+Every OpenStack shoot cluster that has at least Kubernetes v1.19 will be deployed with the OpenStack Cinder CSI driver.
+It is compatible with the legacy in-tree volume provisioner that was deprecated by the Kubernetes community and will be removed in future versions of Kubernetes.
+End-users might want to update their custom `StorageClass`es to the new `cinder.csi.openstack.org` provisioner.
+Shoot clusters with Kubernetes v1.18 or less will use the in-tree `kubernetes.io/cinder` volume provisioner in the kube-controller-manager and the kubelet.

@@ -1,0 +1,9 @@
+dependencies:
+- name: cloud-controller-manager
+  repository: http://localhost:10191
+  version: 0.1.0
+  condition: cloud-controller-manager.enabled
+- name: csi-driver-node
+  repository: http://locwalhost:10191
+  version: 0.1.0
+  condition: csi-driver-node.enabled

@@ -37,7 +37,6 @@ var (
 	networkWorkerCidr = flag.String("network-worker-cidr", "10.250.0.0/19", "worker network cidr")
 
 	loadBalancerProvider = flag.String("loadbalancer-provider", "", "loadbalancer provider for the shoot's loadbalancers")
-	zone                 = flag.String("zone", "", "cloudprovider zone fo the shoot")
 )
 
 func main() {
@@ -66,7 +65,6 @@ func main() {
 			Kind:       reflect.TypeOf(v1alpha1.ControlPlaneConfig{}).Name(),
 		},
 		LoadBalancerProvider: *loadBalancerProvider,
-		Zone:                 *zone,
 	}
 
 	if err := generator.MarshalAndWriteConfig(*infrastructureProviderConfigPath, infra); err != nil {
@@ -95,9 +93,6 @@ func validate() error {
 	}
 	if err := generator.ValidateString(loadBalancerProvider); err != nil {
 		return errors.Wrap(err, "error loadbalancer provider")
-	}
-	if err := generator.ValidateString(zone); err != nil {
-		return errors.Wrap(err, "error validating zone")
 	}
 	return nil
 }

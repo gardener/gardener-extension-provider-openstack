@@ -1,0 +1,136 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: csi-driver-node
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: csi
+    role: disk-driver
+spec:
+  selector:
+    matchLabels:
+      app: csi
+      role: disk-driver
+  template:
+    metadata:
+      labels:
+        app: csi
+        role: disk-driver
+    spec:
+      hostNetwork: true
+      priorityClassName: system-node-critical
+      serviceAccount: csi-driver-node
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      containers:
+      - name: csi-driver
+        image: {{ index .Values.images "csi-driver-cinder" }}
+        args:
+        - /bin/cinder-csi-plugin
+        - --endpoint=$(CSI_ENDPOINT)
+        - --nodeid=$(NODE_ID)
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        - --v=5
+        env:
+        - name: CSI_ENDPOINT
+          value: unix://{{ .Values.socketPath }}
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+{{- if .Values.resources.driver }}
+        resources:
+{{ toYaml .Values.resources.driver | indent 10 }}
+{{- end }}
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN"]
+          allowPrivilegeEscalation: true
+        ports:
+        - name: healthz
+          containerPort: 9808
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          periodSeconds: 10
+          failureThreshold: 5
+        volumeMounts:
+        - name: kubelet-dir
+          mountPath: /var/lib/kubelet
+          mountPropagation: "Bidirectional"
+        - name: plugin-dir
+          mountPath: /csi
+        - name: device-dir
+          mountPath: /dev
+          mountPropagation: "HostToContainer"
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+          readOnly: true
+
+      - name: csi-node-driver-registrar
+        image: {{ index .Values.images "csi-node-driver-registrar" }}
+        args:
+        - --csi-address=$(ADDRESS)
+        - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+        - --v=5
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - "rm -rf /registration/{{ include "csi-driver-node.provisioner" . }}-reg.sock {{ .Values.socketPath }}"
+        env:
+        - name: ADDRESS
+          value: {{ .Values.socketPath }}
+        - name: DRIVER_REG_SOCK_PATH
+          value: /var/lib/kubelet/plugins/{{ include "csi-driver-node.provisioner" . }}/csi.sock
+        volumeMounts:
+        - name: plugin-dir
+          mountPath: /csi
+        - name: registration-dir
+          mountPath: /registration
+
+      - name: csi-liveness-probe
+        image: {{ index .Values.images "csi-liveness-probe" }}
+        args:
+        - --csi-address={{ .Values.socketPath }}
+{{- if .Values.resources.livenessProbe }}
+        resources:
+{{ toYaml .Values.resources.livenessProbe | indent 10 }}
+{{- end }}
+        volumeMounts:
+        - name: plugin-dir
+          mountPath: /csi
+
+      volumes:
+      - name: kubelet-dir
+        hostPath:
+          path: /var/lib/kubelet
+          type: Directory
+      - name: plugin-dir
+        hostPath:
+          path: /var/lib/kubelet/plugins/{{ include "csi-driver-node.provisioner" . }}/
+          type: DirectoryOrCreate
+      - name: registration-dir
+        hostPath:
+          path: /var/lib/kubelet/plugins_registry/
+          type: Directory
+      - name: device-dir
+        hostPath:
+          path: /dev
+          type: Directory
+      - name: cloud-provider-config
+        secret:
+          secretName: cloud-provider-config

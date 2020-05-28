@@ -17,16 +17,19 @@ package cmd
 import (
 	backupbucketcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupentry"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
+	controlplanecontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
+	csimigrationcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/csimigration"
 	healthcheckcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	workercontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	controlplanewebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplane"
 	controlplaneexposurewebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
+
 	extensionsbackupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsbackupentrycontroller "github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionscontrolplanecontroller "github.com/gardener/gardener/extensions/pkg/controller/controlplane"
+	extensionscsimigrationcontroller "github.com/gardener/gardener/extensions/pkg/controller/csimigration"
 	extensionshealthcheckcontroller "github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	extensionsinfrastructurecontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -39,7 +42,8 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 	return controllercmd.NewSwitchOptions(
 		controllercmd.Switch(extensionsbackupbucketcontroller.ControllerName, backupbucketcontroller.AddToManager),
 		controllercmd.Switch(extensionsbackupentrycontroller.ControllerName, backupentrycontroller.AddToManager),
-		controllercmd.Switch(extensionscontrolplanecontroller.ControllerName, controlplane.AddToManager),
+		controllercmd.Switch(extensionscontrolplanecontroller.ControllerName, controlplanecontroller.AddToManager),
+		controllercmd.Switch(extensionscsimigrationcontroller.ControllerName, csimigrationcontroller.AddToManager),
 		controllercmd.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
 		controllercmd.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
 		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),

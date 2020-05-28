@@ -352,7 +352,7 @@ func autoConvert_v1alpha1_ControlPlaneConfig_To_openstack_ControlPlaneConfig(in 
 	out.CloudControllerManager = (*openstack.CloudControllerManagerConfig)(unsafe.Pointer(in.CloudControllerManager))
 	out.LoadBalancerClasses = *(*[]openstack.LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.LoadBalancerProvider = in.LoadBalancerProvider
-	out.Zone = in.Zone
+	out.Zone = (*string)(unsafe.Pointer(in.Zone))
 	return nil
 }
 
@@ -362,10 +362,10 @@ func Convert_v1alpha1_ControlPlaneConfig_To_openstack_ControlPlaneConfig(in *Con
 }
 
 func autoConvert_openstack_ControlPlaneConfig_To_v1alpha1_ControlPlaneConfig(in *openstack.ControlPlaneConfig, out *ControlPlaneConfig, s conversion.Scope) error {
-	out.LoadBalancerProvider = in.LoadBalancerProvider
-	out.Zone = in.Zone
-	out.LoadBalancerClasses = *(*[]LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.CloudControllerManager = (*CloudControllerManagerConfig)(unsafe.Pointer(in.CloudControllerManager))
+	out.LoadBalancerClasses = *(*[]LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
+	out.LoadBalancerProvider = in.LoadBalancerProvider
+	out.Zone = (*string)(unsafe.Pointer(in.Zone))
 	return nil
 }
 

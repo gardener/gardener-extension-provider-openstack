@@ -19,9 +19,7 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -33,10 +31,6 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, fldP
 		allErrs = append(allErrs, field.Required(fldPath.Child("loadBalancerProvider"), "must provide the name of a load balancer provider"))
 	}
 
-	if len(controlPlaneConfig.Zone) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("zone"), "must provide the name of a zone in this region"))
-	}
-
 	return allErrs
 }
 
@@ -44,13 +38,11 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, fldP
 func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Zone, oldConfig.Zone, fldPath.Child("zone"))...)
-
 	return allErrs
 }
 
 // ValidateControlPlaneConfigAgainstCloudProfile validates the given ControlPlaneConfig against constraints in the given CloudProfile.
-func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, cloudProfile *gardencorev1beta1.CloudProfile, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(cloudProfileConfig.Constraints.LoadBalancerProviders, shootRegion, cpConfig.LoadBalancerProvider); !ok {
@@ -58,10 +50,6 @@ func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneCon
 	}
 
 	allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, domain, shootRegion, floatingPoolName, fldPath.Child("loadBalancerClasses"))...)
-
-	if ok, validZones := validateZoneConstraints(cloudProfile.Spec.Regions, shootRegion, cpConfig.Zone); !ok {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("zone"), cpConfig.Zone, validZones))
-	}
 
 	return allErrs
 }
@@ -96,25 +84,6 @@ func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvide
 		validValues = append(validValues, fallback.Name)
 		if fallback.Name == provider {
 			return true, nil
-		}
-	}
-
-	return false, validValues
-}
-
-func validateZoneConstraints(regions []gardencorev1beta1.Region, region, zone string) (bool, []string) {
-	var validValues []string
-
-	for _, r := range regions {
-		if r.Name != region {
-			continue
-		}
-
-		for _, z := range r.Zones {
-			validValues = append(validValues, z.Name)
-			if z.Name == zone {
-				return true, nil
-			}
 		}
 	}
 

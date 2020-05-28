@@ -5,6 +5,6 @@ metadata:
   name: {{ .Values.config.etcd.storage.className }}
   labels:
 {{ include "labels" . | indent 4 }}
-provisioner: kubernetes.io/cinder
+provisioner: {{ .Values.config.etcd.storage.provisioner }}
 allowVolumeExpansion: true
 {{- end }}

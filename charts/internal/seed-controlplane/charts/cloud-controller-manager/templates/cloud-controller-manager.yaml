@@ -101,8 +101,8 @@ spec:
           mountPath: /var/lib/cloud-controller-manager-server
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
-      # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
-      # signed by a CA that is not globally trusted.
+        # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
+        # signed by a CA that is not globally trusted.
         - name: usr-share-ca-certificates
           mountPath: /usr/share/ca-certificates
           readOnly: true
@@ -121,12 +121,8 @@ spec:
         secret:
           secretName: cloud-controller-manager-server
       - name: cloud-provider-config
-        configMap:
-          {{- if semverCompare ">= 1.15" .Values.kubernetesVersion }}
-          name: cloud-provider-config-cloud-controller-manager
-          {{- else }}
-          name: cloud-provider-config-kube-controller-manager
-          {{- end }}
+        secret:
+          secretName: cloud-provider-config
       # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
       # signed by a CA that is not globally trusted.
       - name: usr-share-ca-certificates

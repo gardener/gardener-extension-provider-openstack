@@ -1136,7 +1136,20 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ID is the router id of an existing OpenStack router.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>floatingPoolSubnetId</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FloatingPoolSubnetID contains the id of a subnet in the Floating IP Pool where the router should be attached to.</p>
 </td>
 </tr>
 </tbody>

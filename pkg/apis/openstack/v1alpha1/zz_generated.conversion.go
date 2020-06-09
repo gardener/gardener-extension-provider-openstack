@@ -725,7 +725,8 @@ func Convert_openstack_RegionIDMapping_To_v1alpha1_RegionIDMapping(in *openstack
 }
 
 func autoConvert_v1alpha1_Router_To_openstack_Router(in *Router, out *openstack.Router, s conversion.Scope) error {
-	out.ID = in.ID
+	out.ID = (*string)(unsafe.Pointer(in.ID))
+	out.FloatingPoolSubnetID = (*string)(unsafe.Pointer(in.FloatingPoolSubnetID))
 	return nil
 }
 
@@ -735,7 +736,8 @@ func Convert_v1alpha1_Router_To_openstack_Router(in *Router, out *openstack.Rout
 }
 
 func autoConvert_openstack_Router_To_v1alpha1_Router(in *openstack.Router, out *Router, s conversion.Scope) error {
-	out.ID = in.ID
+	out.ID = (*string)(unsafe.Pointer(in.ID))
+	out.FloatingPoolSubnetID = (*string)(unsafe.Pointer(in.FloatingPoolSubnetID))
 	return nil
 }
 

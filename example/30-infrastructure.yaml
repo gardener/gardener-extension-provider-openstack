@@ -62,5 +62,6 @@ spec:
     networks:
     # router:
     #   id: 1234
+    #   floatingPoolSubnetId: my-floating-pool-subnet-id
       workers: 10.250.0.0/19
   sshPublicKey: AAAA

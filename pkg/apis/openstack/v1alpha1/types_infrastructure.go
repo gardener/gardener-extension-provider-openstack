@@ -45,7 +45,11 @@ type Networks struct {
 // Router indicates whether to use an existing router or create a new one.
 type Router struct {
 	// ID is the router id of an existing OpenStack router.
-	ID string `json:"id"`
+	// +optional
+	ID *string `json:"id,omitempty"`
+	// FloatingPoolSubnetID contains the id of a subnet in the Floating IP Pool where the router should be attached to.
+	// +optional
+	FloatingPoolSubnetID *string `json:"floatingPoolSubnetId,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

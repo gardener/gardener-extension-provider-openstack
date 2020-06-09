@@ -66,12 +66,19 @@ func ComputeTerraformerChartValues(
 ) (map[string]interface{}, error) {
 	var (
 		createRouter = true
-		routerID     = DefaultRouterID
+		routerConfig = map[string]interface{}{
+			"id": DefaultRouterID,
+		}
 	)
 
-	if router := config.Networks.Router; router != nil {
-		createRouter = false
-		routerID = router.ID
+	if config.Networks.Router != nil {
+		if config.Networks.Router.ID != nil {
+			createRouter = false
+			routerConfig["id"] = *config.Networks.Router.ID
+		}
+		if createRouter && config.Networks.Router.FloatingPoolSubnetID != nil {
+			routerConfig["floatingPoolSubnetID"] = *config.Networks.Router.FloatingPoolSubnetID
+		}
 	}
 
 	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
@@ -103,10 +110,8 @@ func ComputeTerraformerChartValues(
 		},
 		"dnsServers":   cloudProfileConfig.DNSServers,
 		"sshPublicKey": string(infra.Spec.SSHPublicKey),
-		"router": map[string]interface{}{
-			"id": routerID,
-		},
-		"clusterName": infra.Namespace,
+		"router":       routerConfig,
+		"clusterName":  infra.Namespace,
 		"networks": map[string]interface{}{
 			"workers": workersCIDR,
 		},

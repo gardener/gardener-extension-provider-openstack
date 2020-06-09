@@ -16,11 +16,22 @@ data "openstack_networking_network_v2" "fip" {
   name = "{{ required "openstack.floatingPoolName is required" .Values.openstack.floatingPoolName }}"
 }
 
+{{ if .Values.router.floatingPoolSubnetName -}}
+data "openstack_networking_subnet_v2" "fip_subnet" {
+  name = "{{ .Values.router.floatingPoolSubnetName }}"
+}
+{{- end }}
+
 {{ if .Values.create.router -}}
 resource "openstack_networking_router_v2" "router" {
   name                = "{{ required "clusterName is required" .Values.clusterName }}"
   region              = "{{ required "openstack.region is required" .Values.openstack.region }}"
   external_network_id = "${data.openstack_networking_network_v2.fip.id}"
+  {{ if .Values.router.floatingPoolSubnetName -}}
+  external_fixed_ip {
+    subnet_id = "${data.openstack_networking_subnet_v2.fip_subnet.id}"
+  }
+  {{- end }}
 }
 {{- end}}
 
@@ -121,6 +132,12 @@ output "{{ .Values.outputKeys.securityGroupName }}" {
 output "{{ .Values.outputKeys.floatingNetworkID }}" {
   value = "${data.openstack_networking_network_v2.fip.id}"
 }
+
+{{ if .Values.router.floatingPoolSubnetName -}}
+output "{{ .Values.outputKeys.floatingSubnetID }}" {
+  value = "${data.openstack_networking_subnet_v2.fip_subnet.id}"
+}
+{{- end }}
 
 output "{{ .Values.outputKeys.subnetID }}" {
   value = "${openstack_networking_subnet_v2.cluster.id}"

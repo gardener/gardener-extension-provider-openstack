@@ -280,6 +280,18 @@ string
 </tr>
 <tr>
 <td>
+<code>floatingPoolSubnetName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FloatingPoolSubnetName contains the name of a subnet in the Floating IP Pool where the router should be attached to.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>networks</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">
@@ -536,6 +548,18 @@ string
 </td>
 <td>
 <p>Name is the floating pool name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>subnetID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubnetID is the id of floating pool subnet.</p>
 </td>
 </tr>
 </tbody>

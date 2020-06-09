@@ -405,6 +405,7 @@ func Convert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.Float
 func autoConvert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *FloatingPoolStatus, out *openstack.FloatingPoolStatus, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
+	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
 	return nil
 }
 
@@ -416,6 +417,7 @@ func Convert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *Flo
 func autoConvert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *openstack.FloatingPoolStatus, out *FloatingPoolStatus, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
+	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
 	return nil
 }
 
@@ -426,6 +428,7 @@ func Convert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *ope
 
 func autoConvert_v1alpha1_InfrastructureConfig_To_openstack_InfrastructureConfig(in *InfrastructureConfig, out *openstack.InfrastructureConfig, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
+	out.FloatingPoolSubnetName = (*string)(unsafe.Pointer(in.FloatingPoolSubnetName))
 	if err := Convert_v1alpha1_Networks_To_openstack_Networks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -439,6 +442,7 @@ func Convert_v1alpha1_InfrastructureConfig_To_openstack_InfrastructureConfig(in 
 
 func autoConvert_openstack_InfrastructureConfig_To_v1alpha1_InfrastructureConfig(in *openstack.InfrastructureConfig, out *InfrastructureConfig, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
+	out.FloatingPoolSubnetName = (*string)(unsafe.Pointer(in.FloatingPoolSubnetName))
 	if err := Convert_openstack_Networks_To_v1alpha1_Networks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}

@@ -110,77 +110,99 @@ var _ = Describe("Terraform", func() {
 	})
 
 	Describe("#ComputeTerraformerChartValues", func() {
+		var (
+			expectedOpenStackValues  map[string]interface{}
+			expectedCreateValues     map[string]interface{}
+			expectedRouterValues     map[string]interface{}
+			expectedNetworkValues    map[string]interface{}
+			expectedOutputKeysValues map[string]interface{}
+		)
+
+		BeforeEach(func() {
+			expectedOpenStackValues = map[string]interface{}{
+				"authURL":          keystoneURL,
+				"domainName":       credentials.DomainName,
+				"tenantName":       credentials.TenantName,
+				"region":           infra.Spec.Region,
+				"floatingPoolName": config.FloatingPoolName,
+			}
+			expectedCreateValues = map[string]interface{}{
+				"router": false,
+			}
+			expectedRouterValues = map[string]interface{}{
+				"id": "1",
+			}
+			expectedNetworkValues = map[string]interface{}{
+				"workers": config.Networks.Workers,
+			}
+			expectedOutputKeysValues = map[string]interface{}{
+				"routerID":          TerraformOutputKeyRouterID,
+				"networkID":         TerraformOutputKeyNetworkID,
+				"keyName":           TerraformOutputKeySSHKeyName,
+				"securityGroupID":   TerraformOutputKeySecurityGroupID,
+				"securityGroupName": TerraformOutputKeySecurityGroupName,
+				"floatingNetworkID": TerraformOutputKeyFloatingNetworkID,
+				"subnetID":          TerraformOutputKeySubnetID,
+			}
+		})
+
 		It("should correctly compute the terraformer chart values", func() {
 			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
 			Expect(err).To(BeNil())
 
 			Expect(values).To(Equal(map[string]interface{}{
-				"openstack": map[string]interface{}{
-					"authURL":          keystoneURL,
-					"domainName":       credentials.DomainName,
-					"tenantName":       credentials.TenantName,
-					"region":           infra.Spec.Region,
-					"floatingPoolName": config.FloatingPoolName,
-				},
-				"create": map[string]interface{}{
-					"router": false,
-				},
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
 				"dnsServers":   dnsServers,
 				"sshPublicKey": string(infra.Spec.SSHPublicKey),
-				"router": map[string]interface{}{
-					"id": "1",
-				},
-				"clusterName": infra.Namespace,
-				"networks": map[string]interface{}{
-					"workers": config.Networks.Workers,
-				},
-				"outputKeys": map[string]interface{}{
-					"routerID":          TerraformOutputKeyRouterID,
-					"networkID":         TerraformOutputKeyNetworkID,
-					"keyName":           TerraformOutputKeySSHKeyName,
-					"securityGroupID":   TerraformOutputKeySecurityGroupID,
-					"securityGroupName": TerraformOutputKeySecurityGroupName,
-					"floatingNetworkID": TerraformOutputKeyFloatingNetworkID,
-					"subnetID":          TerraformOutputKeySubnetID,
-				},
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
 			}))
 		})
 
 		It("should correctly compute the terraformer chart values with vpc creation", func() {
 			config.Networks.Router = nil
+			expectedCreateValues["router"] = true
+			expectedRouterValues["id"] = DefaultRouterID
 
 			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
 			Expect(err).To(BeNil())
-
 			Expect(values).To(Equal(map[string]interface{}{
-				"openstack": map[string]interface{}{
-					"authURL":          keystoneURL,
-					"domainName":       credentials.DomainName,
-					"tenantName":       credentials.TenantName,
-					"region":           infra.Spec.Region,
-					"floatingPoolName": config.FloatingPoolName,
-				},
-				"create": map[string]interface{}{
-					"router": true,
-				},
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
 				"dnsServers":   dnsServers,
 				"sshPublicKey": string(infra.Spec.SSHPublicKey),
-				"router": map[string]interface{}{
-					"id": DefaultRouterID,
-				},
-				"clusterName": infra.Namespace,
-				"networks": map[string]interface{}{
-					"workers": config.Networks.Workers,
-				},
-				"outputKeys": map[string]interface{}{
-					"routerID":          TerraformOutputKeyRouterID,
-					"networkID":         TerraformOutputKeyNetworkID,
-					"keyName":           TerraformOutputKeySSHKeyName,
-					"securityGroupID":   TerraformOutputKeySecurityGroupID,
-					"securityGroupName": TerraformOutputKeySecurityGroupName,
-					"floatingNetworkID": TerraformOutputKeyFloatingNetworkID,
-					"subnetID":          TerraformOutputKeySubnetID,
-				},
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
+			}))
+		})
+
+		It("should correctly compute the terraformer chart values with floating pool subnet", func() {
+			fipSubnetID := "sample-fip-subnet-id"
+
+			config.Networks.Router = nil
+			config.FloatingPoolSubnetName = &fipSubnetID
+
+			expectedCreateValues["router"] = true
+			expectedRouterValues["id"] = DefaultRouterID
+			expectedRouterValues["floatingPoolSubnetName"] = fipSubnetID
+			expectedOutputKeysValues["floatingSubnetID"] = TerraformOutputKeyFloatingSubnetID
+
+			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
+			Expect(err).To(BeNil())
+			Expect(values).To(Equal(map[string]interface{}{
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
+				"dnsServers":   dnsServers,
+				"sshPublicKey": string(infra.Spec.SSHPublicKey),
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
 			}))
 		})
 	})
@@ -195,7 +217,8 @@ var _ = Describe("Terraform", func() {
 			SecurityGroupID   string
 			SecurityGroupName string
 
-			state *TerraformState
+			state               TerraformState
+			expectedInfraStatus apiv1alpha1.InfrastructureStatus
 		)
 
 		BeforeEach(func() {
@@ -207,7 +230,7 @@ var _ = Describe("Terraform", func() {
 			SecurityGroupID = "555"
 			SecurityGroupName = "my-sec-group"
 
-			state = &TerraformState{
+			state = TerraformState{
 				SSHKeyName:        SSHKeyName,
 				RouterID:          RouterID,
 				NetworkID:         NetworkID,
@@ -216,12 +239,8 @@ var _ = Describe("Terraform", func() {
 				SecurityGroupID:   SecurityGroupID,
 				SecurityGroupName: SecurityGroupName,
 			}
-		})
 
-		It("should correctly compute the status", func() {
-			status := StatusFromTerraformState(state)
-
-			Expect(status).To(Equal(&apiv1alpha1.InfrastructureStatus{
+			expectedInfraStatus = apiv1alpha1.InfrastructureStatus{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "InfrastructureStatus",
@@ -251,7 +270,22 @@ var _ = Describe("Terraform", func() {
 				Node: apiv1alpha1.NodeStatus{
 					KeyName: state.SSHKeyName,
 				},
-			}))
+			}
+		})
+
+		It("should correctly compute the status", func() {
+			status := StatusFromTerraformState(&state)
+
+			Expect(status).To(Equal(&expectedInfraStatus))
+		})
+
+		It("should compute status which contain floating pool subnet", func() {
+			fipSubnetID := "sample-fip-subnet-id"
+			state.FloatingPoolSubnetID = fipSubnetID
+			expectedInfraStatus.Networks.FloatingPool.SubnetID = &fipSubnetID
+
+			status := StatusFromTerraformState(&state)
+			Expect(status).To(Equal(&expectedInfraStatus))
 		})
 	})
 })

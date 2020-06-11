@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -32,6 +33,7 @@ import (
 	componentbaseconfig "k8s.io/component-base/config"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // KubeConfig is the key to the kubeconfig
@@ -74,6 +76,19 @@ func NewRuntimeClientForConfig(fns ...ConfigFunc) (client.Client, error) {
 		}
 	}
 	return client.New(conf.restConfig, conf.clientOptions)
+}
+
+// NewDirectClient creates a new client.Client which can be used to talk to the API directly (without a cache).
+func NewDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
+	if err := setClientOptionsDefaults(config, &options); err != nil {
+		return nil, err
+	}
+
+	return newDirectClient(config, options)
+}
+
+func newDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
+	return client.New(config, options)
 }
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
@@ -259,12 +274,11 @@ func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
 }
 
 func new(conf *config) (Interface, error) {
-	c, err := client.New(conf.restConfig, conf.clientOptions)
-	if err != nil {
+	if err := setConfigDefaults(conf); err != nil {
 		return nil, err
 	}
 
-	applier, err := NewApplierForConfig(conf.restConfig)
+	c, err := newDirectClient(conf.restConfig, conf.clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -289,22 +303,7 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	clientSet := &Clientset{
-		config:     conf.restConfig,
-		restMapper: conf.clientOptions.Mapper,
-		restClient: kubernetes.Discovery().RESTClient(),
-
-		applier: applier,
-
-		client: c,
-
-		kubernetes:      kubernetes,
-		gardenCore:      gardenCore,
-		apiregistration: apiRegistration,
-		apiextension:    apiExtension,
-	}
-
-	serverVersion, err := clientSet.kubernetes.Discovery().ServerVersion()
+	serverVersion, err := kubernetes.Discovery().ServerVersion()
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +311,46 @@ func new(conf *config) (Interface, error) {
 	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
 		return nil, err
 	}
-	clientSet.version = serverVersion.GitVersion
+
+	applier := NewApplier(c, conf.clientOptions.Mapper)
+	chartRenderer := chartrenderer.NewWithServerVersion(serverVersion)
+	chartApplier := NewChartApplier(chartRenderer, applier)
+
+	clientSet := &Clientset{
+		config:     conf.restConfig,
+		restMapper: conf.clientOptions.Mapper,
+		restClient: kubernetes.Discovery().RESTClient(),
+
+		applier:       applier,
+		chartRenderer: chartRenderer,
+		chartApplier:  chartApplier,
+
+		client: c,
+
+		kubernetes:      kubernetes,
+		gardenCore:      gardenCore,
+		apiregistration: apiRegistration,
+		apiextension:    apiExtension,
+
+		version: serverVersion.GitVersion,
+	}
 
 	return clientSet, nil
+}
+
+func setConfigDefaults(conf *config) error {
+	return setClientOptionsDefaults(conf.restConfig, &conf.clientOptions)
+}
+
+func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
+	if options.Mapper == nil {
+		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
+		mapper, err := apiutil.NewDynamicRESTMapper(config, apiutil.WithLazyDiscovery)
+		if err != nil {
+			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
+		}
+		options.Mapper = mapper
+	}
+
+	return nil
 }

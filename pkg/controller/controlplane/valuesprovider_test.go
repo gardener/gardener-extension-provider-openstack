@@ -127,10 +127,8 @@ var _ = Describe("ValuesProvider", func() {
 		clusterK8sLessThan119 = &extensionscontroller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{
-					ProviderConfig: &gardencorev1beta1.ProviderConfig{
-						RawExtension: runtime.RawExtension{
-							Raw: cloudProfileConfigJSON,
-						},
+					ProviderConfig: &runtime.RawExtension{
+						Raw: cloudProfileConfigJSON,
 					},
 				},
 			},
@@ -148,10 +146,8 @@ var _ = Describe("ValuesProvider", func() {
 		clusterK8sAtLeast119 = &extensionscontroller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{
-					ProviderConfig: &gardencorev1beta1.ProviderConfig{
-						RawExtension: runtime.RawExtension{
-							Raw: cloudProfileConfigJSON,
-						},
+					ProviderConfig: &runtime.RawExtension{
+						Raw: cloudProfileConfigJSON,
 					},
 				},
 			},

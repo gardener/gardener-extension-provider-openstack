@@ -27,13 +27,17 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -180,6 +184,13 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 	shoot.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 
+	kubernetesVersionGeq118, err := versionutils.CheckVersionMeetsConstraint(shoot.KubernetesMajorMinorVersion, ">= 1.18")
+	if err != nil {
+		return nil, err
+	}
+
+	shoot.KonnectivityTunnelEnabled = gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) && kubernetesVersionGeq118
+
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {
 		return nil, err
@@ -191,6 +202,8 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		return nil, err
 	}
 	shoot.Networks = networks
+
+	shoot.ResourceRefs = getResourceRefs(shootObject)
 
 	return shoot, nil
 }
@@ -465,11 +478,7 @@ func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 				continue
 			}
 
-			if extension.ProviderConfig != nil {
-				providerConfig := extension.ProviderConfig.RawExtension
-				obj.Spec.ProviderConfig = &providerConfig
-			}
-
+			obj.Spec.ProviderConfig = extension.ProviderConfig
 			requiredExtensions[extension.Type] = obj
 			continue
 		}
@@ -586,4 +595,13 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	}
 
 	return requiredExtensions
+}
+
+// getResourceRefs returns resource references from the Shoot spec as map[string]autoscalingv1.CrossVersionObjectReference.
+func getResourceRefs(shoot *gardencorev1beta1.Shoot) map[string]autoscalingv1.CrossVersionObjectReference {
+	resourceRefs := make(map[string]autoscalingv1.CrossVersionObjectReference)
+	for _, r := range shoot.Spec.Resources {
+		resourceRefs[r.Name] = r.ResourceRef
+	}
+	return resourceRefs
 }

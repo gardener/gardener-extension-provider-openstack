@@ -89,10 +89,8 @@ var _ = Describe("Terraform", func() {
 		cluster = &controller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{
-					ProviderConfig: &gardencorev1beta1.ProviderConfig{
-						RawExtension: runtime.RawExtension{
-							Raw: cloudProfileConfigJSON,
-						},
+					ProviderConfig: &runtime.RawExtension{
+						Raw: cloudProfileConfigJSON,
 					},
 				},
 			},

@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -54,12 +55,12 @@ type Shoot struct {
 	ExternalClusterDomain *string
 	ExternalDomain        *garden.Domain
 
-	WantsClusterAutoscaler bool
-	WantsAlertmanager      bool
-	IgnoreAlerts           bool
-	HibernationEnabled     bool
-
-	Networks *Networks
+	WantsClusterAutoscaler    bool
+	WantsAlertmanager         bool
+	IgnoreAlerts              bool
+	HibernationEnabled        bool
+	KonnectivityTunnelEnabled bool
+	Networks                  *Networks
 
 	Components *Components
 
@@ -70,6 +71,8 @@ type Shoot struct {
 	MachineDeployments        []extensionsv1alpha1.MachineDeployment
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
+
+	ResourceRefs map[string]autoscalingv1.CrossVersionObjectReference
 }
 
 // Components contains different components deployed

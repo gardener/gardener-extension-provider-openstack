@@ -57,7 +57,7 @@ message AdmissionPlugin {
 
   // Config is the configuration of the plugin.
   // +optional
-  optional ProviderConfig config = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).
@@ -134,7 +134,7 @@ message BackupBucketSpec {
 
   // ProviderConfig is the configuration passed to BackupBucket resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // SecretRef is a reference to a secret that contains the credentials to access object store.
   optional k8s.io.api.core.v1.SecretReference secretRef = 3;
@@ -148,7 +148,7 @@ message BackupBucketSpec {
 message BackupBucketStatus {
   // ProviderStatus is the configuration passed to BackupBucket resource.
   // +optional
-  optional ProviderConfig providerStatus = 1;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerStatus = 1;
 
   // LastOperation holds information about the last operation on the BackupBucket.
   // +optional
@@ -281,7 +281,7 @@ message CloudProfileSpec {
 
   // ProviderConfig contains provider-specific configuration for the profile.
   // +optional
-  optional ProviderConfig providerConfig = 5;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 5;
 
   // Regions contains constraints regarding allowed values for regions and zones.
   // +patchMergeKey=name
@@ -372,7 +372,7 @@ message ContainerRuntime {
 
   // ProviderConfig is the configuration passed to the ContainerRuntime resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
 // ControllerDeployment contains information for how this controller is deployed.
@@ -382,7 +382,7 @@ message ControllerDeployment {
 
   // ProviderConfig contains type-specific configuration.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // Policy controls how the controller is deployed. It defaults to 'OnDemand'.
   // +optional
@@ -436,7 +436,7 @@ message ControllerInstallationStatus {
 
   // ProviderStatus contains type-specific status.
   // +optional
-  optional ProviderConfig providerStatus = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerStatus = 2;
 }
 
 // ControllerRegistration represents a registration of an external controller.
@@ -578,7 +578,7 @@ message Extension {
 
   // ProviderConfig is the configuration passed to extension resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
   // +optional
@@ -758,6 +758,13 @@ message KubeProxyConfig {
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 message KubeSchedulerConfig {
   optional KubernetesConfig kubernetesConfig = 1;
+
+  // KubeMaxPDVols allows to configure the `KUBE_MAX_PD_VOLS` environment variable for the kube-scheduler.
+  // Please find more information here: https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
+  // Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
+  // of all the side-effects and consequences when changing it.
+  // +optional
+  optional string kubeMaxPDVols = 2;
 }
 
 // KubeletConfig contains configuration settings for the kubelet.
@@ -830,6 +837,10 @@ message KubeletConfig {
   // +optional
   // Default: 1m
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration imagePullProgressDeadline = 12;
+
+  // FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
+  // +optional
+  optional bool failSwapOn = 13;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1121,7 +1132,7 @@ message Networking {
 
   // ProviderConfig is the configuration passed to network resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // Pods is the CIDR of the pod network.
   // +optional
@@ -1339,6 +1350,10 @@ message ProjectSpec {
   // A nil value means that Gardener will determine the name of the namespace.
   // +optional
   optional string namespace = 6;
+
+  // Tolerations contains the default tolerations and a whitelist for taints on seed clusters.
+  // +optional
+  optional ProjectTolerations tolerations = 7;
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -1351,6 +1366,22 @@ message ProjectStatus {
   optional string phase = 2;
 }
 
+// ProjectTolerations contains the tolerations for taints on seed clusters.
+message ProjectTolerations {
+  // Defaults contains a list of tolerations that are added to the shoots in this project by default.
+  // +patchMergeKey=key
+  // +patchStrategy=merge
+  // +optional
+  repeated Toleration defaults = 1;
+
+  // Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note
+  // that this list may only be added by users having the `spec-tolerations-whitelist` verb for project resources.
+  // +patchMergeKey=key
+  // +patchStrategy=merge
+  // +optional
+  repeated Toleration whitelist = 2;
+}
+
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
 message Provider {
@@ -1360,24 +1391,17 @@ message Provider {
   // ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
   // definition in the documentation of your provider extension.
   // +optional
-  optional ProviderConfig controlPlaneConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension controlPlaneConfig = 2;
 
   // InfrastructureConfig contains the provider-specific infrastructure config blob. Please look up the concrete
   // definition in the documentation of your provider extension.
   // +optional
-  optional ProviderConfig infrastructureConfig = 3;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension infrastructureConfig = 3;
 
   // Workers is a list of worker groups.
   // +patchMergeKey=name
   // +patchStrategy=merge
   repeated Worker workers = 4;
-}
-
-// ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct.
-// https://github.com/kubernetes/kubernetes/issues/55890
-// https://github.com/kubernetes-sigs/cluster-api/issues/137
-message ProviderConfig {
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension rawExtension = 1;
 }
 
 message Quota {
@@ -1481,7 +1505,7 @@ message SeedBackup {
 
   // ProviderConfig is the configuration passed to BackupBucket resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // Region is a region name.
   // +optional
@@ -1534,7 +1558,7 @@ message SeedProvider {
 
   // ProviderConfig is the configuration passed to Seed resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // Region is a name of a region.
   optional string region = 3;
@@ -1733,7 +1757,7 @@ message ShootMachineImage {
 
   // ProviderConfig is the shoot's individual configuration passed to an extension resource.
   // +optional
-  optional ProviderConfig providerConfig = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
   // Version is the version of the shoot's image.
   // If version is not provided, it will be defaulted to the latest version from the CloudProfile.
@@ -1813,6 +1837,12 @@ message ShootSpec {
   // Resources holds a list of named resource references that can be referred to in extension configs by their names.
   // +optional
   repeated NamedResourceReference resources = 16;
+
+  // Tolerations contains the tolerations for taints on seed clusters.
+  // +patchMergeKey=key
+  // +patchStrategy=merge
+  // +optional
+  repeated Toleration tolerations = 17;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
@@ -1909,6 +1939,16 @@ message ShootStatus {
   optional string uid = 12;
 }
 
+// Toleration is a toleration for a seed taint.
+message Toleration {
+  // Key is the toleration key to be applied to a project or shoot.
+  optional string key = 1;
+
+  // Value is the toleration value corresponding to the toleration key.
+  // +optional
+  optional string value = 2;
+}
+
 // Volume contains information about the volume type and size.
 message Volume {
   // Name of the volume to make it referencable.
@@ -1984,7 +2024,7 @@ message Worker {
 
   // ProviderConfig is the provider-specific configuration for this worker pool.
   // +optional
-  optional ProviderConfig providerConfig = 12;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 12;
 
   // Taints is a list of taints for all the `Node` objects in this worker pool.
   // +optional

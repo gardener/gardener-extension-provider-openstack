@@ -23,6 +23,12 @@ import (
 )
 
 const (
+	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
+	VPNTunnel string = "vpn-shoot"
+
+	// KonnectivityTunnel dictates that a konnectivity proxy is used as a tunnel between seed and shoot networks.
+	KonnectivityTunnel string = "konnectivity-agent"
+
 	// BackupBucketName is a constant for the name of bucket of object storage.
 	BackupBucketName = "bucketName"
 
@@ -204,6 +210,9 @@ const (
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
+	// KonnectivityServerCertName is the name of the api-proxy konnectivity-server
+	KonnectivityServerCertName = "konnectivity-server"
+
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
 
@@ -371,6 +380,18 @@ const (
 	// Deprecated: Use `ShootIgnore` instead.
 	ShootIgnoreDeprecated = "shoot.garden.sapcloud.io/ignore"
 
+	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
+	ManagedResourceShootCoreName = "shoot-core"
+
+	// ManagedResourceCoreNamespaceName is the name of the core namespace managed resource.
+	ManagedResourceCoreNamespaceName = "shoot-core-namespaces"
+
+	// ManagedResourceAddonsName is the name of the addons managed resource.
+	ManagedResourceAddonsName = "addons"
+
+	// ManagedResourceKymaName is the name of the Kyma managed resource.
+	ManagedResourceKymaName = "addons-kyma"
+
 	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
 	GardenerResourceManagerImageName = "gardener-resource-manager"
 
@@ -406,6 +427,18 @@ const (
 
 	// VPNSeedImageName is the name of the VPNSeed image.
 	VPNSeedImageName = "vpn-seed"
+
+	// KonnectivityServerImageName is the name of the konnectivity server image.
+	KonnectivityServerImageName = "konnectivity-server"
+
+	// KonnectivityServerUserName is the user name of the konnectivity server used for the token
+	KonnectivityServerUserName = "system:konnectivity-server"
+
+	// KonnectivityServerKubeconfig is the name of the konnectivity-server kubeconfig
+	KonnectivityServerKubeconfig = "konnectivity-server-kubeconfig"
+
+	// KonnectivityAgentImageName is the name of the konnectivity agent image.
+	KonnectivityAgentImageName = "konnectivity-agent"
 
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"
@@ -562,35 +595,12 @@ var (
 		v1beta1constants.ETCDEvents,
 	)
 
-	// RequiredSystemComponentDeployments is a set of the required system components.
-	RequiredSystemComponentDeployments = sets.NewString(
-		CoreDNSDeploymentName,
-		VPNShootDeploymentName,
-		MetricsServerDeploymentName,
-	)
-
-	// RequiredSystemComponentDaemonSets is a set of the required shoot control plane daemon sets.
-	RequiredSystemComponentDaemonSets = sets.NewString(
-		KubeProxyDaemonSetName,
-		NodeProblemDetectorDaemonSetName,
-	)
-
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
 		v1beta1constants.DeploymentNameGrafanaOperators,
 		v1beta1constants.DeploymentNameGrafanaUsers,
 		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
 		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
-	)
-
-	// RequiredMonitoringShootDeployments is a set of the required shoot monitoring deployments.
-	RequiredMonitoringShootDeployments = sets.NewString(
-		BlackboxExporterDeploymentName,
-	)
-
-	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
-	RequiredMonitoringShootDaemonSets = sets.NewString(
-		NodeExporterDaemonSetName,
 	)
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
@@ -601,5 +611,13 @@ var (
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
 		v1beta1constants.DeploymentNameKibana,
+	)
+
+	// ManagedResourcesShoot is a set of managed resource names which contain resources deployed to the shoot.
+	ManagedResourcesShoot = sets.NewString(
+		ManagedResourceCoreNamespaceName,
+		ManagedResourceShootCoreName,
+		ManagedResourceAddonsName,
+		ManagedResourceKymaName,
 	)
 )

@@ -192,10 +192,8 @@ var _ = Describe("Machines", func() {
 							Name: cloudProfileName,
 						},
 						Spec: gardencorev1beta1.CloudProfileSpec{
-							ProviderConfig: &gardencorev1beta1.ProviderConfig{
-								RawExtension: runtime.RawExtension{
-									Raw: cloudProfileConfigJSON,
-								},
+							ProviderConfig: &runtime.RawExtension{
+								Raw: cloudProfileConfigJSON,
 							},
 						},
 					},
@@ -235,10 +233,8 @@ var _ = Describe("Machines", func() {
 							Name: cloudProfileName,
 						},
 						Spec: gardencorev1beta1.CloudProfileSpec{
-							ProviderConfig: &gardencorev1beta1.ProviderConfig{
-								RawExtension: runtime.RawExtension{
-									Raw: cloudProfileConfigJSON,
-								},
+							ProviderConfig: &runtime.RawExtension{
+								Raw: cloudProfileConfigJSON,
 							},
 						},
 					},

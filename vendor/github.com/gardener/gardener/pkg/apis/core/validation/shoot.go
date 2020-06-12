@@ -138,6 +138,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *purpose, allowedShootPurposes.List()))
 		}
 	}
+	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
 
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
 	if metav1.HasAnnotation(meta, common.ShootExperimentalAddonKyma) {
@@ -477,9 +478,14 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 
 func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	names := make(map[string]bool)
 	for i, resource := range resources {
 		if resource.Name == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
+		} else if names[resource.Name] {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), resource.Name))
+		} else {
+			names[resource.Name] = true
 		}
 		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
 	}

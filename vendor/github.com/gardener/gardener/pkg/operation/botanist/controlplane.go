@@ -247,6 +247,24 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	return nil
 }
 
+// WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
+func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
+	if err := b.DeployKubeAPIServerService(ctx); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerServiceIsReady(ctx); err != nil {
+		return err
+	}
+	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	c := b.K8sSeedClient.Client()
@@ -276,8 +294,15 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := b.scaleControlPlaneDeploymentsToZero(ctx, c); err != nil {
-		return err
+	deployments := []string{
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+	}
+	for _, deployment := range deployments {
+		if err := kubernetes.ScaleDeployment(ctx, c, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 
 	if err := c.Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
@@ -321,12 +346,13 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
-// PrepareControlPlaneDeploymentsForMigration scales the kube-apiserver, kube-controller-manager and gardener-resource-manager to zero and deletes the hvpa for the kube-apiserver
-func (b *Botanist) PrepareControlPlaneDeploymentsForMigration(ctx context.Context) error {
+// PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
+func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
-	return b.scaleControlPlaneDeploymentsToZero(ctx, b.K8sSeedClient.Client())
+
+	return b.DeleteKubeAPIServer(ctx)
 }
 
 func (b *Botanist) scaleControlPlaneDeploymentsToZero(ctx context.Context, c client.Client) error {
@@ -398,7 +424,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, &cp.ObjectMeta, &cp.Status.DefaultStatus, extensionsv1alpha1.ControlPlaneResource, cp.Name, cp.Spec.DefaultSpec.GetExtensionPurpose())
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, extensionsv1alpha1.ControlPlaneResource)
 	}
 
 	return nil
@@ -448,7 +474,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, &cp.ObjectMeta, &cp.Status.DefaultStatus, extensionsv1alpha1.ControlPlaneResource, cp.Name, cp.Spec.DefaultSpec.GetExtensionPurpose())
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, extensionsv1alpha1.ControlPlaneResource)
 	}
 	return nil
 }
@@ -745,6 +771,9 @@ func (b *Botanist) DeployKubeAPIServerService(ctx context.Context) error {
 		name   = "kube-apiserver-service"
 		values = map[string]interface{}{
 			"annotations": b.Seed.LoadBalancerServiceAnnotations,
+			"konnectivityTunnel": map[string]interface{}{
+				"enabled": b.Shoot.KonnectivityTunnelEnabled,
+			},
 		}
 	)
 	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
@@ -752,8 +781,10 @@ func (b *Botanist) DeployKubeAPIServerService(ctx context.Context) error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
-	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	memoryMetricForHpaEnabled := false
+	var (
+		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		memoryMetricForHpaEnabled = false
+	)
 
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds
@@ -762,6 +793,34 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	var (
+		podAnnotations = map[string]interface{}{
+			"checksum/secret-ca":                     b.CheckSums[v1beta1constants.SecretNameCACluster],
+			"checksum/secret-ca-front-proxy":         b.CheckSums[v1beta1constants.SecretNameCAFrontProxy],
+			"checksum/secret-kube-apiserver":         b.CheckSums[v1beta1constants.DeploymentNameKubeAPIServer],
+			"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
+			"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
+			"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
+			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
+			"checksum/secret-etcd-ca":                b.CheckSums[v1beta1constants.SecretNameCAETCD],
+			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
+		}
+		defaultValues = map[string]interface{}{
+			"etcdServicePort":           2379,
+			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
+			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
+			"probeCredentials":          b.APIServerHealthCheckToken,
+			"securePort":                443,
+			"podAnnotations":            podAnnotations,
+			"hvpa": map[string]interface{}{
+				"enabled": hvpaEnabled,
+			},
+			"konnectivityTunnel": map[string]interface{}{
+				"enabled": b.Shoot.KonnectivityTunnelEnabled,
+			},
+			"hpa": map[string]interface{}{
+				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
+			},
+		}
 		minReplicas int32 = 1
 		maxReplicas int32 = 4
 
@@ -769,34 +828,14 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"services": b.Shoot.Networks.Services.String(),
 			"pods":     b.Shoot.Networks.Pods.String(),
 		}
-
-		defaultValues = map[string]interface{}{
-			"etcdServicePort":           2379,
-			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
-			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
-			"probeCredentials":          b.APIServerHealthCheckToken,
-			"securePort":                443,
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-ca":                     b.CheckSums[v1beta1constants.SecretNameCACluster],
-				"checksum/secret-ca-front-proxy":         b.CheckSums[v1beta1constants.SecretNameCAFrontProxy],
-				"checksum/secret-kube-apiserver":         b.CheckSums[v1beta1constants.DeploymentNameKubeAPIServer],
-				"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
-				"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
-				"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
-				"checksum/secret-vpn-seed":               b.CheckSums["vpn-seed"],
-				"checksum/secret-vpn-seed-tlsauth":       b.CheckSums["vpn-seed-tlsauth"],
-				"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
-				"checksum/secret-etcd-ca":                b.CheckSums[v1beta1constants.SecretNameCAETCD],
-				"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
-			},
-			"hvpa": map[string]interface{}{
-				"enabled": hvpaEnabled,
-			},
-			"hpa": map[string]interface{}{
-				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
-			},
-		}
 	)
+
+	if b.Shoot.KonnectivityTunnelEnabled {
+		podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums["konnectivity-server"]
+	} else {
+		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
+		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.CheckSums["vpn-seed-tlsauth"]
+	}
 
 	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		shootNetworks["nodes"] = *v
@@ -954,12 +993,16 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
-
 	defaultValues["admissionPlugins"] = admissionPlugins
 
+	tunnelComponentImageName := common.VPNSeedImageName
+	if b.Shoot.KonnectivityTunnelEnabled {
+		tunnelComponentImageName = common.KonnectivityServerImageName
+	}
+
 	values, err := b.InjectSeedShootImages(defaultValues,
+		tunnelComponentImageName,
 		common.KubeAPIServerImageName,
-		common.VPNSeedImageName,
 		common.AlpineIptablesImageName,
 	)
 	if err != nil {
@@ -1134,9 +1177,12 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 		}
 	}
 
-	schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler
-	if schedulerConfig != nil {
+	if schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler; schedulerConfig != nil {
 		defaultValues["featureGates"] = schedulerConfig.FeatureGates
+
+		if schedulerConfig.KubeMaxPDVols != nil {
+			defaultValues["kubeMaxPDVols"] = *schedulerConfig.KubeMaxPDVols
+		}
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.KubeSchedulerImageName)
@@ -1341,33 +1387,32 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 	return nil
 }
 
-// CheckVPNConnection checks whether the VPN connection between the control plane and the shoot networks
+// CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
-func (b *Botanist) CheckVPNConnection(ctx context.Context, logger *logrus.Entry) (bool, error) {
+func (b *Botanist) CheckTunnelConnection(ctx context.Context, logger *logrus.Entry, tunnelName string) (bool, error) {
 	podList := &corev1.PodList{}
-	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": "vpn-shoot"}); err != nil {
+	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}); err != nil {
 		return retry.SevereError(err)
 	}
 
-	var vpnPod *corev1.Pod
+	var tunnelPod *corev1.Pod
 	for _, pod := range podList.Items {
 		if pod.Status.Phase == corev1.PodRunning {
-			vpnPod = &pod
+			tunnelPod = &pod
 			break
 		}
 	}
 
-	if vpnPod == nil {
-		logger.Info("Waiting until a running vpn-shoot pod exists in the Shoot cluster...")
-		return retry.MinorError(fmt.Errorf("no running vpn-shoot pod found yet in the shoot cluster"))
+	if tunnelPod == nil {
+		logger.Infof("Waiting until a running %s pod exists in the Shoot cluster...", tunnelName)
+		return retry.MinorError(fmt.Errorf("no running %s pod found yet in the shoot cluster", tunnelName))
+	}
+	if err := b.K8sShootClient.CheckForwardPodPort(tunnelPod.Namespace, tunnelPod.Name, 0, 22); err != nil {
+		logger.Info("Waiting until the tunnel connection has been established...")
+		return retry.MinorError(fmt.Errorf("could not forward to %s pod: %v", tunnelName, err))
 	}
 
-	if err := b.K8sShootClient.CheckForwardPodPort(vpnPod.Namespace, vpnPod.Name, 0, 22); err != nil {
-		logger.Info("Waiting until the VPN connection has been established...")
-		return retry.MinorError(fmt.Errorf("could not forward to vpn-shoot pod: %v", err))
-	}
-
-	logger.Info("VPN connection has been established.")
+	logger.Info("Tunnel connection has been established.")
 	return retry.Ok()
 }
 

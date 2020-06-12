@@ -45,7 +45,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			FloatingPoolName: floatingPoolName1,
 			Networks: api.Networks{
 				Router: &api.Router{
-					ID: "hugo",
+					ID: makeStringPointer("hugo"),
 				},
 				Workers: "10.250.0.0/16",
 			},
@@ -65,7 +65,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 
 		It("should forbid invalid router id configuration", func() {
-			infrastructureConfig.Networks.Router = &api.Router{ID: ""}
+			infrastructureConfig.Networks.Router = &api.Router{ID: makeStringPointer("")}
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
@@ -136,7 +136,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 
 		It("should forbid changing the network section", func() {
 			newInfrastructureConfig := infrastructureConfig.DeepCopy()
-			newInfrastructureConfig.Networks.Router = &api.Router{ID: "name"}
+			newInfrastructureConfig.Networks.Router = &api.Router{ID: makeStringPointer("name")}
 
 			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
 

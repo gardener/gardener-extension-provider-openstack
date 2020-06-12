@@ -48,7 +48,7 @@ var _ = Describe("Terraform", func() {
 		config = &api.InfrastructureConfig{
 			Networks: api.Networks{
 				Router: &api.Router{
-					ID: "1",
+					ID: sp("1"),
 				},
 				Workers: "10.1.0.0/16",
 			},
@@ -255,3 +255,7 @@ var _ = Describe("Terraform", func() {
 		})
 	})
 })
+
+func sp(s string) *string {
+	return &s
+}

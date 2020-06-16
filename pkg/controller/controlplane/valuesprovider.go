@@ -411,6 +411,7 @@ func getConfigChartValues(
 		"tenantName":        c.TenantName,
 		"username":          c.Username,
 		"password":          c.Password,
+		"region":            cp.Spec.Region,
 		"lbProvider":        cpConfig.LoadBalancerProvider,
 		"floatingNetworkID": infraStatus.Networks.FloatingPool.ID,
 		"subnetID":          subnet.ID,

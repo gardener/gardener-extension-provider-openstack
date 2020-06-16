@@ -4,4 +4,5 @@ domain-name="{{ .Values.domainName }}"
 tenant-name="{{ .Values.tenantName }}"
 username="{{ .Values.username }}"
 password="{{ .Values.password }}"
+region="{{ .Values.region }}"
 {{- end -}}

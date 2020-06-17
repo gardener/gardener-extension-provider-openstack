@@ -5,6 +5,7 @@ domainName: fooDomain
 tenantName: fooTenant
 username: barUser
 password: barPass
+region: eu
 # [LoadBalancer]
 lbProvider: foobar
 # floatingNetworkID: foo-bar-123

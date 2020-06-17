@@ -44,6 +44,7 @@ import (
 const (
 	namespace = "test"
 	authURL   = "someurl"
+	region    = "europe"
 )
 
 var (
@@ -80,6 +81,7 @@ func controlPlane(floatingPoolID string, cfg *api.ControlPlaneConfig) *extension
 					Raw: encode(cfg),
 				},
 			},
+			Region: region,
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: encode(&api.InfrastructureStatus{
 					Networks: api.NetworkStatus{
@@ -244,6 +246,7 @@ var _ = Describe("ValuesProvider", func() {
 			"tenantName":        "tenant-name",
 			"username":          "username",
 			"password":          "password",
+			"region":            region,
 			"subnetID":          "subnet-acbd1234",
 			"lbProvider":        "load-balancer-provider",
 			"floatingNetworkID": "floating-network-id",
@@ -303,14 +306,7 @@ var _ = Describe("ValuesProvider", func() {
 					},
 				)
 
-				configChartValues = map[string]interface{}{
-					"kubernetesVersion": "1.13.4",
-					"domainName":        "domain-name",
-					"tenantName":        "tenant-name",
-					"username":          "username",
-					"password":          "password",
-					"subnetID":          "subnet-acbd1234",
-					"lbProvider":        "load-balancer-provider",
+				configValues = utils.MergeMaps(configChartValues, map[string]interface{}{
 					"floatingNetworkID": floatingNetworkID,
 					"floatingSubnetID":  floatingSubnetID,
 					"floatingClasses": []map[string]interface{}{
@@ -334,16 +330,12 @@ var _ = Describe("ValuesProvider", func() {
 							"subnetID": subnetID,
 						},
 					},
-					"authUrl":        authURL,
-					"dhcpDomain":     dhcpDomain,
-					"requestTimeout": requestTimeout,
-					"useOctavia":     useOctavia,
-				}
+				})
 			)
 
 			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sLessThan119)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(values).To(Equal(configChartValues))
+			Expect(values).To(Equal(configValues))
 		})
 	})
 

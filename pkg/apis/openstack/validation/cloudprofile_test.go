@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("CloudProfileConfig validation", func() {
@@ -73,8 +74,8 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.FloatingPools = []api.FloatingPool{
 					{
 						Name:   "",
-						Region: makeStringPointer(""),
-						Domain: makeStringPointer(""),
+						Region: pointer.StringPtr(""),
+						Domain: pointer.StringPtr(""),
 					},
 				}
 
@@ -96,29 +97,29 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.FloatingPools = []api.FloatingPool{
 					{
 						Name:   "foo",
-						Region: makeStringPointer("rfoo"),
+						Region: pointer.StringPtr("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Region: makeStringPointer("rfoo"),
+						Region: pointer.StringPtr("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: makeStringPointer("dfoo"),
+						Domain: pointer.StringPtr("dfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: makeStringPointer("dfoo"),
+						Domain: pointer.StringPtr("dfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: makeStringPointer("dfoo"),
-						Region: makeStringPointer("rfoo"),
+						Domain: pointer.StringPtr("dfoo"),
+						Region: pointer.StringPtr("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: makeStringPointer("dfoo"),
-						Region: makeStringPointer("rfoo"),
+						Domain: pointer.StringPtr("dfoo"),
+						Region: pointer.StringPtr("rfoo"),
 					},
 				}
 
@@ -159,7 +160,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
 					{
 						Name:   "",
-						Region: makeStringPointer(""),
+						Region: pointer.StringPtr(""),
 					},
 				}
 
@@ -178,11 +179,11 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
 					{
 						Name:   "foo",
-						Region: makeStringPointer("foo"),
+						Region: pointer.StringPtr("foo"),
 					},
 					{
 						Name:   "foo",
-						Region: makeStringPointer("foo"),
+						Region: pointer.StringPtr("foo"),
 					},
 				}
 
@@ -260,7 +261,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 		Context("dhcp domain validation", func() {
 			It("should forbid not specifying a value when the key is present", func() {
-				cloudProfileConfig.DHCPDomain = makeStringPointer("")
+				cloudProfileConfig.DHCPDomain = pointer.StringPtr("")
 
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig)
 
@@ -273,7 +274,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 		Context("requestTimeout validation", func() {
 			It("should reject invalid durations", func() {
-				cloudProfileConfig.RequestTimeout = makeStringPointer("1GiB")
+				cloudProfileConfig.RequestTimeout = pointer.StringPtr("1GiB")
 
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig)
 
@@ -331,8 +332,3 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		})
 	})
 })
-
-func makeStringPointer(s string) *string {
-	ptr := s
-	return &ptr
-}

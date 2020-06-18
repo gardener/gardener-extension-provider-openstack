@@ -326,11 +326,11 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	}
 	checksums[openstack.CloudProviderConfigName] = util.ComputeChecksum(cpConfigSecret.Data)
 
-	cpDiskConfnigSecret := &corev1.Secret{}
-	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderDiskConfigName), cpDiskConfnigSecret); err != nil {
+	cpDiskConfigSecret := &corev1.Secret{}
+	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderDiskConfigName), cpDiskConfigSecret); err != nil {
 		return nil, err
 	}
-	checksums[openstack.CloudProviderDiskConfigName] = util.ComputeChecksum(cpDiskConfnigSecret.Data)
+	checksums[openstack.CloudProviderDiskConfigName] = util.ComputeChecksum(cpDiskConfigSecret.Data)
 
 	// TODO: Remove this code in a future version again.
 	if err := vp.deleteLegacyCloudProviderConfigMaps(ctx, cp.Namespace); err != nil {

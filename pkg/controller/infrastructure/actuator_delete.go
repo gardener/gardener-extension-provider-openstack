@@ -31,6 +31,11 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 		return fmt.Errorf("could not create the Terraformer: %+v", err)
 	}
 
+	// terraform pod from previous reconciliation might still be running, ensure they are gone before doing any operations
+	if err := tf.WaitForCleanEnvironment(ctx); err != nil {
+		return err
+	}
+
 	// If the Terraform state is empty then we can exit early as we didn't create anything. Though, we clean up potentially
 	// created configmaps/secrets related to the Terraformer.
 	stateIsEmpty := tf.IsStateEmpty()

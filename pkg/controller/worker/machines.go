@@ -26,10 +26,13 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MachineClassKind yields the name of the OpenStack machine class.
@@ -42,8 +45,34 @@ func (w *workerDelegate) MachineClassList() runtime.Object {
 	return &machinev1alpha1.OpenStackMachineClassList{}
 }
 
+// NewClientForShoot is exposed for testing.
+var NewClientForShoot = util.NewClientForShoot
+
 // DeployMachineClasses generates and creates the OpenStack specific machine classes.
 func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
+	// TODO: Remove this in a future version. This is a hacky workaround for a problem introduced with
+	// https://github.com/gardener/gardener-extension-provider-openstack/commit/3bf9f686ea6838aef2d87cbe1ff75f459037594b:
+	// The StorageClasses are immutable, hence, for existing clusters the `availability` field cannot be removed. The
+	// only way is to delete the StorageClass and recreate it. The ControlPlane controller is generating the new StorageClass
+	// without the `availability` field. Hence, we have to check if there is an existing StorageClass with the field and
+	// delete it. We cannot do it in the ControlPlane controller itself as the shoot API server might not be up at this
+	// point in time, ref https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/shoot_control_reconcile.go#L213.
+	_, shootClient, err := NewClientForShoot(ctx, w.Client(), w.cluster.ObjectMeta.Name, client.Options{})
+	if err != nil {
+		return err
+	}
+	storageClasses := &storagev1beta1.StorageClassList{}
+	if err := shootClient.List(ctx, storageClasses); err != nil {
+		return err
+	}
+	for _, storageClass := range storageClasses.Items {
+		if (storageClass.Name == "default" || storageClass.Name == "default-class") && storageClass.Parameters != nil && storageClass.Parameters["availability"] != "" {
+			if err := shootClient.Delete(ctx, storageClass.DeepCopy()); err != nil {
+				return err
+			}
+		}
+	}
+
 	if w.machineClasses == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
 			return err

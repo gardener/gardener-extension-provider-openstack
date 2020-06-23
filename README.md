@@ -33,7 +33,7 @@ This extension controller supports the following Kubernetes versions:
 | Kubernetes 1.11 | 1.11.0+     | [1] |
 | Kubernetes 1.10 | 1.10.1+     | [1] |
 
-[1] Version is technically supported but not activly tested. Therefore, the usage of this version is at your own risk.
+[1] Version is technically supported but no longer actively tested. Regressions will go unnoticed.
 
 Please take a look [here](https://github.com/gardener/gardener/blob/master/docs/usage/supported_k8s_versions.md) to see which versions are supported by Gardener in general.
 

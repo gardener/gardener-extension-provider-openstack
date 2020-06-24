@@ -59,6 +59,7 @@ spec:
     apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
     kind: InfrastructureConfig
     floatingPoolName: MY-FLOATING-POOL
+    # floatingPoolSubnetName: my-floating-pool-subnet-name
     networks:
     # router:
     #   id: 1234

@@ -35,6 +35,7 @@ An example `InfrastructureConfig` for the OpenStack extension looks as follows:
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 kind: InfrastructureConfig
 floatingPoolName: MY-FLOATING-POOL
+# floatingPoolSubnetName: my-floating-pool-subnet-name
 networks:
 # router:
 #   id: 1234
@@ -43,6 +44,8 @@ networks:
 
 The `floatingPoolName` is the name of the floating pool you want to use for your shoot.
 If you don't know which floating pools are available look it up in the respective `CloudProfile`.
+
+With `floatingPoolSubnetName` you can explicitly define to which subnet in the floating pool network (defined via `floatingPoolName`) the router should be attached to.
 
 The `networks.router` section describes whether you want to create the shoot cluster in an already existing router or whether to create a new one:
 

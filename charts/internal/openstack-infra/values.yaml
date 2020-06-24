@@ -12,6 +12,7 @@ sshPublicKey: sshkey-12345
 
 router:
   id: ${openstack_networking_router_v2.router.id}
+  # floatingPoolSubnetName: my-fip-subnet-name
 
 dnsServers:
 - 8.8.8.8
@@ -28,4 +29,5 @@ outputKeys:
   securityGroupID: security_group_id
   securityGroupName: security_group_name
   floatingNetworkID: floating_network_id
+  # floatingSubnetID: floating_subnet_id
   subnetID: subnet_id

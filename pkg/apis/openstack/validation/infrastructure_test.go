@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("InfrastructureConfig validation", func() {
@@ -72,6 +73,18 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("networks.router.id"),
+			}))
+		})
+
+		It("should forbid floating ip subnet when router is specified", func() {
+			infrastructureConfig.Networks.Router = &api.Router{ID: "sample-router-id"}
+			infrastructureConfig.FloatingPoolSubnetName = pointer.StringPtr("sample-floating-pool-subnet-id")
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("floatingPoolSubnetName"),
 			}))
 		})
 	})

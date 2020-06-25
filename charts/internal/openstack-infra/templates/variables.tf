@@ -1,9 +1,9 @@
 variable "USER_NAME" {
   description = "OpenStack user name"
-  type        = "string"
+  type        = string
 }
 
 variable "PASSWORD" {
   description = "OpenStack password"
-  type        = "string"
+  type        = string
 }

@@ -49,7 +49,7 @@ With `floatingPoolSubnetName` you can explicitly define to which subnet in the f
 
 The `networks.router` section describes whether you want to create the shoot cluster in an already existing router or whether to create a new one:
 
-* If `networks.router.name` is given then you have to specify the router name of the existing router that was created by other means (manually, other tooling, ...).
+* If `networks.router.id` is given then you have to specify the router id of the existing router that was created by other means (manually, other tooling, ...).
 If you want to get a fresh router for the shoot then just omit the `networks.router` field.
 
 The `networks.workers` section describes the CIDR for a subnet that is used for all shoot worker nodes, i.e., VMs which later run your applications.

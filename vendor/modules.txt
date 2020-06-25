@@ -57,7 +57,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener v1.6.3
+# github.com/gardener/gardener v1.7.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -133,6 +133,9 @@ github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1
 github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1
 github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme
 github.com/gardener/gardener/pkg/client/kubernetes
+github.com/gardener/gardener/pkg/client/kubernetes/clientmap
+github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal
+github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys
 github.com/gardener/gardener/pkg/controllerutils
 github.com/gardener/gardener/pkg/controllerutils/metrics
 github.com/gardener/gardener/pkg/features
@@ -146,7 +149,9 @@ github.com/gardener/gardener/pkg/operation
 github.com/gardener/gardener/pkg/operation/botanist
 github.com/gardener/gardener/pkg/operation/botanist/component
 github.com/gardener/gardener/pkg/operation/botanist/constants
-github.com/gardener/gardener/pkg/operation/botanist/dns
+github.com/gardener/gardener/pkg/operation/botanist/controlplane
+github.com/gardener/gardener/pkg/operation/botanist/extensions/dns
+github.com/gardener/gardener/pkg/operation/botanist/extensions/network
 github.com/gardener/gardener/pkg/operation/botanist/matchers
 github.com/gardener/gardener/pkg/operation/common
 github.com/gardener/gardener/pkg/operation/etcdencryption
@@ -154,6 +159,7 @@ github.com/gardener/gardener/pkg/operation/garden
 github.com/gardener/gardener/pkg/operation/seed
 github.com/gardener/gardener/pkg/operation/seed/istio
 github.com/gardener/gardener/pkg/operation/shoot
+github.com/gardener/gardener/pkg/operation/shootsecrets
 github.com/gardener/gardener/pkg/scheduler
 github.com/gardener/gardener/pkg/scheduler/apis/config
 github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1
@@ -180,12 +186,12 @@ github.com/gardener/gardener/pkg/version
 github.com/gardener/gardener/test/framework
 github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
-# github.com/gardener/gardener-resource-manager v0.10.0
+# github.com/gardener/gardener-resource-manager v0.13.1
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper
 github.com/gardener/gardener-resource-manager/pkg/manager
-# github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
+# github.com/gardener/hvpa-controller v0.2.5
 github.com/gardener/hvpa-controller/api/v1alpha1
 # github.com/gardener/machine-controller-manager v0.27.0
 ## explicit
@@ -1062,7 +1068,7 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# sigs.k8s.io/controller-runtime v0.5.4
+# sigs.k8s.io/controller-runtime v0.5.5
 ## explicit
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder

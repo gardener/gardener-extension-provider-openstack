@@ -183,6 +183,9 @@ const (
 	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's
 	// Kubernetes API Server.
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
+	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
+	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
+	LabelNetworkPolicyFromShootAPIServer = "networking.gardener.cloud/from-shoot-apiserver"
 	// LabelNetworkPolicyToAll disables all Ingress and Egress traffic into/from this namespace when set to "disallowed".
 	LabelNetworkPolicyToAll = "networking.gardener.cloud/to-all"
 	// LabelNetworkPolicyToElasticSearch allows Ingress to the ElasticSearch API pods labeled with 'networking.gardener.cloud/to-elasticsearch=allowed',
@@ -281,6 +284,9 @@ const (
 	LabelWorkerPool = "worker.gardener.cloud/pool"
 	// LabelWorkerPool is a deprecated constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
+
+	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
+	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
 
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.

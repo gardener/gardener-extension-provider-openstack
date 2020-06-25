@@ -26,7 +26,6 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -46,9 +45,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
-	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -129,46 +128,6 @@ var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretCon
 		CommonName: "kubernetes",
 		CertType:   secretsutils.CACert,
 	},
-}
-
-// GetSeedClient returns the Kubernetes client for the seed cluster. If `inCluster` is set to true then
-// the in-cluster client is returned, otherwise the secret reference of the given `seedName` is read
-// and a client with the stored kubeconfig is created.
-func GetSeedClient(ctx context.Context, gardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool, seedName string) (kubernetes.Interface, error) {
-	if inCluster {
-		return kubernetes.NewClientFromFile(
-			"",
-			clientConnection.Kubeconfig,
-			kubernetes.WithClientConnectionOptions(clientConnection),
-			kubernetes.WithClientOptions(
-				client.Options{
-					Scheme: kubernetes.SeedScheme,
-				},
-			),
-		)
-	}
-
-	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Get(ctx, kutil.Key(seedName), seed); err != nil {
-		return nil, err
-	}
-
-	if seed.Spec.SecretRef == nil {
-		return nil, fmt.Errorf("seed has no secret reference pointing to a kubeconfig - cannot create client")
-	}
-
-	seedSecret, err := common.GetSecretFromSecretRef(ctx, gardenClient, seed.Spec.SecretRef)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewClientFromSecretObject(
-		seedSecret,
-		kubernetes.WithClientConnectionOptions(clientConnection),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
-	)
 }
 
 const (
@@ -322,20 +281,15 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
+func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
 	const chartName = "seed-bootstrap"
-
-	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
-	if err != nil {
-		return err
-	}
 
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1beta1constants.GardenNamespace,
 		},
 	}
-	if err = k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -484,10 +438,16 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	}
 
 	// HVPA feature gate
-	var hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if !hvpaEnabled {
 		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
+	if !vpaEnabled {
+		if err := common.DeleteVpa(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -509,10 +469,6 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	jsonString, err := json.Marshal(deployedSecretsMap["vpa-tls-certs"].Data)
 	if err != nil {
 		return err
-	}
-
-	vpaPodAnnotations := map[string]interface{}{
-		"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
 	}
 
 	// AlertManager configuration
@@ -631,6 +587,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			return err
 		}
 
+		chartApplier := k8sSeedClient.ChartApplier()
 		istioCRDs := istio.NewIstioCRD(chartApplier, "charts", k8sSeedClient.Client())
 		istiod := istio.NewIstiod(
 			&istio.IstiodValues{
@@ -642,13 +599,29 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"charts",
 			k8sSeedClient.Client(),
 		)
+
+		igwConfig := &istio.IngressValues{
+			TrustDomain:     "cluster.local",
+			Image:           igwImage.String(),
+			IstiodNamespace: common.IstioNamespace,
+			Annotations:     seed.LoadBalancerServiceAnnotations,
+		}
+
+		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+			ports := []corev1.ServicePort{
+				{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
+				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(443)},
+			}
+
+			if gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) {
+				ports = append(ports, corev1.ServicePort{Name: "tls-tunnel", Port: 8132, TargetPort: intstr.FromInt(8132)})
+			}
+
+			igwConfig.Ports = ports
+		}
+
 		igw := istio.NewIngressGateway(
-			&istio.IngressValues{
-				TrustDomain:     "cluster.local",
-				Image:           igwImage.String(),
-				IstiodNamespace: common.IstioNamespace,
-				Annotations:     seed.LoadBalancerServiceAnnotations,
-			},
+			igwConfig,
 			common.IstioIngressGatewayNamespace,
 			chartApplier,
 			"charts",
@@ -656,6 +629,18 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		)
 
 		if err := component.OpWaiter(istioCRDs, istiod, igw).Deploy(context.TODO()); err != nil {
+			return err
+		}
+	}
+
+	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, "charts")
+
+	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+		if err := proxy.Deploy(context.TODO()); err != nil {
+			return err
+		}
+	} else {
+		if err := proxy.Destroy(context.TODO()); err != nil {
 			return err
 		}
 	}
@@ -729,7 +714,12 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
-			"podAnnotations": vpaPodAnnotations,
+			"enabled": vpaEnabled,
+			"admissionController": map[string]interface{}{
+				"podAnnotations": map[string]interface{}{
+					"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+				},
+			},
 		},
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
@@ -737,6 +727,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		"global-network-policies": map[string]interface{}{
 			"denyAll":         false,
 			"privateNetworks": privateNetworks,
+			"sniEnabled":      gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
 		},
 		"gardenerResourceManager": map[string]interface{}{
 			"resourceClass": v1beta1constants.SeedResourceManagerClass,
@@ -803,16 +794,11 @@ func (s *Seed) GetIngressFQDN(subDomain string) string {
 }
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-func (s *Seed) CheckMinimumK8SVersion(ctx context.Context, k8sGardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool) (string, error) {
+func (s *Seed) CheckMinimumK8SVersion(seedClient kubernetes.Interface) (string, error) {
 	// We require CRD status subresources for the extension controllers that we install into the seeds.
 	minSeedVersion := "1.11"
 
-	k8sSeedClient, err := GetSeedClient(ctx, k8sGardenClient, clientConnection, inCluster, s.Info.Name)
-	if err != nil {
-		return "<unknown>", err
-	}
-
-	version := k8sSeedClient.Version()
+	version := seedClient.Version()
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minSeedVersion)
 	if err != nil {
@@ -856,7 +842,7 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 		ctx,
 		wildcardCerts,
 		client.InNamespace(v1beta1constants.GardenNamespace),
-		client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert}),
+		client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert},
 	); err != nil {
 		return nil, err
 	}

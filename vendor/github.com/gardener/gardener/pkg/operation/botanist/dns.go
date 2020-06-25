@@ -20,13 +20,15 @@ import (
 	"strings"
 	"time"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -117,7 +119,7 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 				},
 			},
 			b.Shoot.SeedNamespace,
-			b.ChartApplierSeed,
+			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
 			seedClient,
@@ -131,7 +133,7 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 			Purpose: DNSExternalName,
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
 		seedClient,
@@ -146,7 +148,7 @@ func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.D
 			Name: DNSExternalName,
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
 		seedClient,
@@ -173,7 +175,7 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 				},
 			},
 			b.Shoot.SeedNamespace,
-			b.ChartApplierSeed,
+			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
 			seedClient,
@@ -187,7 +189,7 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 			Purpose: DNSInternalName,
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
 		seedClient,
@@ -202,7 +204,7 @@ func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.D
 			Name: DNSInternalName,
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
 		seedClient,
@@ -276,7 +278,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 					},
 				},
 				b.Shoot.SeedNamespace,
-				b.ChartApplierSeed,
+				b.K8sSeedClient.ChartApplier(),
 				b.ChartsRootPath,
 				b.Logger,
 				seedClient,
@@ -305,7 +307,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 					Labels:  map[string]string{v1beta1constants.GardenRole: DNSProviderRoleAdditional},
 				},
 				b.Shoot.SeedNamespace,
-				b.ChartApplierSeed,
+				b.K8sSeedClient.ChartApplier(),
 				b.ChartsRootPath,
 				b.Logger,
 				seedClient,
@@ -341,6 +343,12 @@ func (b *Botanist) NeedsAdditionalDNSProviders() bool {
 	return !b.Shoot.DisableDNS &&
 		b.Shoot.Info.Spec.DNS != nil &&
 		len(b.Shoot.Info.Spec.DNS.Providers) > 0
+}
+
+// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and
+// the shoot uses internal and external DNS.
+func (b *Botanist) APIServerSNIEnabled() bool {
+	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // DeleteDNSProviders deletes all DNS providers in the shoot namespace of the seed.

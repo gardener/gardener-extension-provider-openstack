@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -62,7 +61,7 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 					toApply.Spec.Type = cr.Type
 					toApply.Spec.ProviderConfig = cr.ProviderConfig
 					toApply.Spec.WorkerPool.Name = workerName
-					toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{gardencorev1beta1constants.LabelWorkerPool: workerName, gardencorev1beta1constants.LabelWorkerPoolDeprecated: workerName}
+					toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{v1beta1constants.LabelWorkerPool: workerName, v1beta1constants.LabelWorkerPoolDeprecated: workerName}
 					return nil
 				})
 				return err
@@ -91,7 +90,7 @@ func (b *Botanist) WaitUntilContainerRuntimeResourcesReady(ctx context.Context) 
 			fns = append(fns, func(ctx context.Context) error {
 				return common.WaitUntilExtensionCRReady(
 					ctx,
-					b.K8sSeedClient.Client(),
+					b.K8sSeedClient.DirectClient(),
 					b.Logger,
 					func() runtime.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 					"ContainerRuntime",
@@ -149,7 +148,7 @@ func (b *Botanist) deleteContainerRuntimeResources(ctx context.Context, wantedCo
 func (b *Botanist) WaitUntilContainerRuntimeResourcesDeleted(ctx context.Context) error {
 	return common.WaitUntilExtensionCRsDeleted(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },

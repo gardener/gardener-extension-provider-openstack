@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -220,6 +221,7 @@ var (
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
 					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSIDriverName, ":", ".", -1)},
+					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSINodeName},
 					// csi-provisioner
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIProvisionerName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIProvisionerName},
@@ -363,7 +365,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 		checksums[openstack.CloudProviderDiskConfigName] = util.ComputeChecksum(cm.Data)
 	}
 
-	return getControlPlaneShootChartValues(checksums, k8sVersionLessThan119, cloudProviderDiskConfig)
+	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig)
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
@@ -570,6 +572,7 @@ func getCSIControllerChartValues(
 
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.
 func getControlPlaneShootChartValues(
+	cluster *extensionscontroller.Cluster,
 	checksums map[string]string,
 	k8sVersionLessThan119 bool,
 	cloudProviderDiskConfig []byte,
@@ -577,7 +580,8 @@ func getControlPlaneShootChartValues(
 	return map[string]interface{}{
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName: map[string]interface{}{
-			"enabled": !k8sVersionLessThan119,
+			"enabled":    !k8sVersionLessThan119,
+			"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-" + openstack.CloudProviderDiskConfigName: checksums[openstack.CloudProviderDiskConfigName],
 			},

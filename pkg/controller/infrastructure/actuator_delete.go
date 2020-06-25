@@ -32,7 +32,7 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 	}
 
 	// terraform pod from previous reconciliation might still be running, ensure they are gone before doing any operations
-	if err := tf.WaitForCleanEnvironment(ctx); err != nil {
+	if err := tf.EnsureCleanedUp(ctx); err != nil {
 		return err
 	}
 

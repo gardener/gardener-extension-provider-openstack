@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"encoding/json"
+	"strconv"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -128,7 +129,7 @@ var _ = Describe("Terraform", func() {
 				"router": false,
 			}
 			expectedRouterValues = map[string]interface{}{
-				"id": "1",
+				"id": strconv.Quote("1"),
 			}
 			expectedNetworkValues = map[string]interface{}{
 				"workers": config.Networks.Workers,

@@ -15,6 +15,10 @@ spec:
   selector:
     matchLabels:
 {{ include "labels" . | indent 6 }}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: {{ .Values.maxUnavailable }}
+      maxSurge: {{ .Values.maxSurge }}
   template:
     metadata:
       annotations:

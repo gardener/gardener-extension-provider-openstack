@@ -1,4 +1,4 @@
-provider "openstack" {
+provider openstack {
   auth_url    = "{{ required "openstack.authURL is required" .Values.openstack.authURL }}"
   domain_name = "{{ required "openstack.domainName is required" .Values.openstack.domainName }}"
   tenant_name = "{{ required "openstack.tenantName is required" .Values.openstack.tenantName }}"
@@ -12,18 +12,18 @@ provider "openstack" {
 //= Networking: Router/Interfaces/Net/SubNet/SecGroup/SecRules
 //=====================================================================
 
-data "openstack_networking_network_v2" "fip" {
+data openstack_networking_network_v2 fip {
   name = "{{ required "openstack.floatingPoolName is required" .Values.openstack.floatingPoolName }}"
 }
 
 {{ if .Values.router.floatingPoolSubnetName -}}
-data "openstack_networking_subnet_v2" "fip_subnet" {
+data openstack_networking_subnet_v2 fip_subnet {
   name = "{{ .Values.router.floatingPoolSubnetName }}"
 }
 {{- end }}
 
 {{ if .Values.create.router -}}
-resource "openstack_networking_router_v2" "router" {
+resource openstack_networking_router_v2 router {
   name                = "{{ required "clusterName is required" .Values.clusterName }}"
   region              = "{{ required "openstack.region is required" .Values.openstack.region }}"
   external_network_id = data.openstack_networking_network_v2.fip.id
@@ -36,23 +36,23 @@ resource "openstack_networking_router_v2" "router" {
 {{- end }}
 
 {{ if .Values.create.network -}}
-resource "openstack_networking_network_v2" "cluster" {
+resource openstack_networking_network_v2 cluster {
   name           = "{{ required "clusterName is required" .Values.clusterName }}"
   admin_state_up = "true"
 }
 {{ else -}}
-data "openstack_networking_network_v2" "cluster" {
+data openstack_networking_network_v2 cluster {
   name = "{{ .Values.networks.name }}"
 }
 {{- end }}
 
-resource "openstack_networking_subnet_v2" "cluster" {
+resource openstack_networking_subnet_v2 cluster {
   name            = "{{ required "clusterName is required" .Values.clusterName }}"
   cidr            = "{{ required "networks.workers is required" .Values.networks.workers }}"
 {{ if .Values.create.network -}}
-  network_id      = "${openstack_networking_network_v2.cluster.id}"
+  network_id      = openstack_networking_network_v2.cluster.id
 {{ else -}}
-  network_id      = "${data.openstack_networking_network_v2.cluster.id}"
+  network_id      = data.openstack_networking_network_v2.cluster.id
 {{- end }}
   ip_version      = 4
   {{- if .Values.dnsServers }}
@@ -62,31 +62,31 @@ resource "openstack_networking_subnet_v2" "cluster" {
   {{- end }}
 }
 
-resource "openstack_networking_router_interface_v2" "router_nodes" {
+resource openstack_networking_router_interface_v2 router_nodes {
   router_id = {{ required "router.id is required" $.Values.router.id }}
   subnet_id = openstack_networking_subnet_v2.cluster.id
 }
 
-resource "openstack_networking_secgroup_v2" "cluster" {
+resource openstack_networking_secgroup_v2 cluster {
   name                 = "{{ required "clusterName is required" .Values.clusterName }}"
   description          = "Cluster Nodes"
   delete_default_rules = true
 }
 
-resource "openstack_networking_secgroup_rule_v2" "cluster_self" {
+resource openstack_networking_secgroup_rule_v2 cluster_self {
   direction         = "ingress"
   ethertype         = "IPv4"
   security_group_id = openstack_networking_secgroup_v2.cluster.id
   remote_group_id   = openstack_networking_secgroup_v2.cluster.id
 }
 
-resource "openstack_networking_secgroup_rule_v2" "cluster_egress" {
+resource openstack_networking_secgroup_rule_v2 cluster_egress {
   direction         = "egress"
   ethertype         = "IPv4"
   security_group_id = openstack_networking_secgroup_v2.cluster.id
 }
 
-resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
+resource openstack_networking_secgroup_rule_v2 cluster_tcp_all {
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
@@ -100,7 +100,7 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
 //= SSH Key for Nodes (Bastion and Worker)
 //=====================================================================
 
-resource "openstack_compute_keypair_v2" "ssh_key" {
+resource openstack_compute_keypair_v2 ssh_key {
   name       = "{{ required "clusterName is required" .Values.clusterName }}"
   public_key = "{{ required "sshPublicKey is required" .Values.sshPublicKey }}"
 }
@@ -109,7 +109,7 @@ resource "openstack_compute_keypair_v2" "ssh_key" {
 // existing clusters as Terraform won't detect a diff when we run `terraform plan`.
 // Workaround: Providing a null-resource for letting Terraform think that there are
 // differences, enabling the Gardener to start an actual `terraform apply` job.
-resource "null_resource" "outputs" {
+resource null_resource outputs {
   triggers = {
     recompute = "outputs"
   }
@@ -119,40 +119,40 @@ resource "null_resource" "outputs" {
 //= Output Variables
 //=====================================================================
 
-output "{{ .Values.outputKeys.routerID }}" {
+output {{ .Values.outputKeys.routerID }} {
   value = {{ required "router.id is required" .Values.router.id }}
 }
 
-output "{{ .Values.outputKeys.networkID }}" {
+output {{ .Values.outputKeys.networkID }} {
 {{- if .Values.create.network }}
-  value = "${openstack_networking_network_v2.cluster.id}"
+  value = openstack_networking_network_v2.cluster.id
 {{- else }}
-  value = "${data.openstack_networking_network_v2.cluster.id}"
+  value = data.openstack_networking_network_v2.cluster.id
 {{- end }}
 }
 
-output "{{ .Values.outputKeys.keyName }}" {
+output {{ .Values.outputKeys.keyName }} {
   value = openstack_compute_keypair_v2.ssh_key.name
 }
 
-output "{{ .Values.outputKeys.securityGroupID }}" {
+output {{ .Values.outputKeys.securityGroupID }} {
   value = openstack_networking_secgroup_v2.cluster.id
 }
 
-output "{{ .Values.outputKeys.securityGroupName }}" {
+output {{ .Values.outputKeys.securityGroupName }} {
   value = openstack_networking_secgroup_v2.cluster.name
 }
 
-output "{{ .Values.outputKeys.floatingNetworkID }}" {
+output {{ .Values.outputKeys.floatingNetworkID }} {
   value = data.openstack_networking_network_v2.fip.id
 }
 
 {{ if .Values.router.floatingPoolSubnetName -}}
-output "{{ .Values.outputKeys.floatingSubnetID }}" {
+output {{ .Values.outputKeys.floatingSubnetID }} {
   value = data.openstack_networking_subnet_v2.fip_subnet.id
 }
 {{- end }}
 
-output "{{ .Values.outputKeys.subnetID }}" {
+output {{ .Values.outputKeys.subnetID }} {
   value = openstack_networking_subnet_v2.cluster.id
 }

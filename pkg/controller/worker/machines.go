@@ -57,18 +57,20 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	// without the `availability` field. Hence, we have to check if there is an existing StorageClass with the field and
 	// delete it. We cannot do it in the ControlPlane controller itself as the shoot API server might not be up at this
 	// point in time, ref https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/shoot_control_reconcile.go#L213.
-	_, shootClient, err := NewClientForShoot(ctx, w.Client(), w.cluster.ObjectMeta.Name, client.Options{})
-	if err != nil {
-		return err
-	}
-	storageClasses := &storagev1beta1.StorageClassList{}
-	if err := shootClient.List(ctx, storageClasses); err != nil {
-		return err
-	}
-	for _, storageClass := range storageClasses.Items {
-		if (storageClass.Name == "default" || storageClass.Name == "default-class") && storageClass.Parameters != nil && storageClass.Parameters["availability"] != "" {
-			if err := shootClient.Delete(ctx, storageClass.DeepCopy()); err != nil {
-				return err
+	if !extensionscontroller.IsHibernated(w.cluster) {
+		_, shootClient, err := NewClientForShoot(ctx, w.Client(), w.cluster.ObjectMeta.Name, client.Options{})
+		if err != nil {
+			return err
+		}
+		storageClasses := &storagev1beta1.StorageClassList{}
+		if err := shootClient.List(ctx, storageClasses); err != nil {
+			return err
+		}
+		for _, storageClass := range storageClasses.Items {
+			if (storageClass.Name == "default" || storageClass.Name == "default-class") && storageClass.Parameters != nil && storageClass.Parameters["availability"] != "" {
+				if err := shootClient.Delete(ctx, storageClass.DeepCopy()); err != nil {
+					return err
+				}
 			}
 		}
 	}

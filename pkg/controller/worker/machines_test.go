@@ -46,6 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -490,12 +491,7 @@ var _ = Describe("Machines", func() {
 					setup(regionWithImages, "", machineImageID)
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithRegion, clusterWithRegion)
 
-					oldNewClientForShoot := NewClientForShoot
-					defer func() { NewClientForShoot = oldNewClientForShoot }()
-					NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options) (*rest.Config, client.Client, error) {
-						return nil, shootClient, nil
-					}
-					expectStorageClassDeletionToWork(shootClient)
+					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.BoolPtr(true)}
 
 					expectGetSecretCallToWork(c, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword)
 

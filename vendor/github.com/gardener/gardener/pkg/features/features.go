@@ -53,4 +53,18 @@ const (
 	// owner @zanetworker
 	// alpha: v1.6.0
 	KonnectivityTunnel featuregate.Feature = "KonnectivityTunnel"
+
+	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
+	// for all Shoot clusters. Requires Istio to be installed in the cluster or
+	// ManagedIstio feature gate to be enabled.
+	// See https://github.com/gardener/gardener/blob/masster/docs/proposals/08-shoot-apiserver-via-sni.md
+	// owner @mvladev
+	// alpha: v1.7.0
+	APIServerSNI featuregate.Feature = "APIServerSNI"
+
+	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
+	// If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache.
+	// owner @tim-ebert
+	// alpha: v1.7.0
+	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 )

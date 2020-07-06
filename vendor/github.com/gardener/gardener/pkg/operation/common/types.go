@@ -283,6 +283,11 @@ const (
 	// Deprecated: Use `NamespaceProject` instead.
 	NamespaceProjectDeprecated = "namespace.garden.sapcloud.io/project"
 
+	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
+	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
+	// from the namespace will be removed when the project is being deleted.
+	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+
 	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
 	// It influences the size of the initial resource requests/limits.
 	// Possible values are [small, medium, large, xlarge, 2xlarge].
@@ -523,15 +528,20 @@ const (
 
 	// VpaAdmissionControllerImageName is the name of the vpa-admission-controller image
 	VpaAdmissionControllerImageName = "vpa-admission-controller"
-
 	// VpaRecommenderImageName is the name of the vpa-recommender image
 	VpaRecommenderImageName = "vpa-recommender"
-
 	// VpaUpdaterImageName is the name of the vpa-updater image
 	VpaUpdaterImageName = "vpa-updater"
-
 	// VpaExporterImageName is the name of the vpa-exporter image
 	VpaExporterImageName = "vpa-exporter"
+	// VpaAdmissionControllerName is the name of the vpa-admission-controller name.
+	VpaAdmissionControllerName = "gardener.cloud:vpa:admission-controller"
+	// VpaRecommenderName is the name of the vpa-recommender name.
+	VpaRecommenderName = "gardener.cloud:vpa:recommender"
+	// VpaUpdaterName is the name of the vpa-updater name.
+	VpaUpdaterName = "gardener.cloud:vpa:updater"
+	// VpaExporterName is the name of the vpa-exporter name.
+	VpaExporterName = "gardener.cloud:vpa:exporter"
 
 	// HvpaControllerImageName is the name of the hvpa-controller image
 	HvpaControllerImageName = "hvpa-controller"
@@ -553,6 +563,12 @@ const (
 
 	// IstioIngressGatewayServiceName is the name of the Service used for SNI to the Shoot API Servers.
 	IstioIngressGatewayServiceName = "istio-ingressgateway"
+
+	// APIServerProxyImageName is the image of apiserver-proxy
+	APIServerProxyImageName = "apiserver-proxy"
+
+	// APIServerPorxySidecarImageName is the image of apiserver-proxy sidecar
+	APIServerPorxySidecarImageName = "apiserver-proxy-sidecar"
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"

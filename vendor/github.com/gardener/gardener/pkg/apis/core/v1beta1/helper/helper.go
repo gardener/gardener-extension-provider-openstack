@@ -606,6 +606,11 @@ func ShootWantsClusterAutoscaler(shoot *gardencorev1beta1.Shoot) (bool, error) {
 	return false, nil
 }
 
+// ShootWantsVerticalPodAutoscaler checks if the given Shoot needs a VPA.
+func ShootWantsVerticalPodAutoscaler(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Kubernetes.VerticalPodAutoscaler != nil && shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled
+}
+
 // ShootIgnoresAlerts checks if the alerts for the annotated shoot cluster should be ignored.
 func ShootIgnoresAlerts(shoot *gardencorev1beta1.Shoot) bool {
 	ignore := false
@@ -672,6 +677,11 @@ func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, 
 		return false, nil, nil
 	}
 	return true, &gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: &latestImageVersion.Version}, nil
+}
+
+// SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
+func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
+	return worker.SystemComponents == nil || worker.SystemComponents.Allow
 }
 
 // UpdateMachineImages updates the machine images in place.
@@ -952,4 +962,30 @@ func DeleteLastErrorByTaskID(lastErrors []gardencorev1beta1.LastError, taskID st
 		}
 	}
 	return out
+}
+
+// ShootItems provides helper functions with ShootLists
+type ShootItems gardencorev1beta1.ShootList
+
+// Union returns a set of Shoots that presents either in s or shootList
+func (s *ShootItems) Union(shootItems *ShootItems) []gardencorev1beta1.Shoot {
+	unionedShoots := make(map[string]gardencorev1beta1.Shoot)
+	for _, s := range s.Items {
+		unionedShoots[objectKey(s.Namespace, s.Name)] = s
+	}
+
+	for _, s := range shootItems.Items {
+		unionedShoots[objectKey(s.Namespace, s.Name)] = s
+	}
+
+	shoots := make([]gardencorev1beta1.Shoot, 0, len(unionedShoots))
+	for _, v := range unionedShoots {
+		shoots = append(shoots, v)
+	}
+
+	return shoots
+}
+
+func objectKey(namesapce, name string) string {
+	return fmt.Sprintf("%s/%s", namesapce, name)
 }

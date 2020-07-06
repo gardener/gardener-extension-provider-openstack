@@ -40,24 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// WaitUntilKubeAPIServerServiceIsReady waits until the external load balancer of the kube-apiserver has
-// been created (i.e., its ingress information has been updated in the service status).
-func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
-
-	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
-		if err != nil {
-			b.Logger.Info("Waiting until the kube-apiserver service deployed in the Seed cluster is ready...")
-			// TODO(AC): This is a quite optimistic check / we should differentiate here
-			return retry.MinorError(fmt.Errorf("kube-apiserver service deployed in the Seed cluster is not ready: %v", err))
-		}
-		b.SetAPIServerAddress(loadBalancerIngress)
-		return retry.Ok()
-	})
-}
-
 // WaitUntilNginxIngressServiceIsReady waits until the external load balancer of the nginx ingress controller has
 // been created (i.e., its ingress information has been updated in the service status).
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
@@ -71,7 +53,7 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
 			return retry.MinorError(fmt.Errorf("addons-nginx-ingress-controller service deployed in the Shoot cluster is not ready: %v", err))
 		}
-		b.SetNginxIngressAddress(loadBalancerIngress, b.K8sSeedClient.Client())
+		b.SetNginxIngressAddress(loadBalancerIngress, b.K8sSeedClient.DirectClient())
 		return retry.Ok()
 	})
 }
@@ -89,7 +71,7 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 		retryCountUntilSevere++
 
 		etcdList := &druidv1alpha1.EtcdList{}
-		if err := b.K8sSeedClient.Client().List(ctx, etcdList,
+		if err := b.K8sSeedClient.DirectClient().List(ctx, etcdList,
 			client.InNamespace(b.Shoot.SeedNamespace),
 			client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"},
 		); err != nil {
@@ -148,7 +130,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
 
 		deploy := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy); err != nil {
+		if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy); err != nil {
 			return retry.SevereError(err)
 		}
 		if deploy.Generation != deploy.Status.ObservedGeneration {
@@ -424,7 +406,7 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
 		be := &gardencorev1beta1.BackupEntry{}
-		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupEntryName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), be); err != nil {
+		if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupEntryName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), be); err != nil {
 			return retry.SevereError(err)
 		}
 		if be.Status.LastOperation != nil {

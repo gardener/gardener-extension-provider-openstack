@@ -17,9 +17,11 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -67,10 +69,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			}
 		}
 
-		var dataVolumes []extensionsv1alpha1.Volume
+		var dataVolumes []extensionsv1alpha1.DataVolume
 		if len(workerPool.DataVolumes) > 0 {
 			for _, dataVolume := range workerPool.DataVolumes {
-				dataVolumes = append(dataVolumes, extensionsv1alpha1.Volume{
+				dataVolumes = append(dataVolumes, extensionsv1alpha1.DataVolume{
 					Name:      dataVolume.Name,
 					Type:      dataVolume.Type,
 					Size:      dataVolume.VolumeSize,
@@ -89,6 +91,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			workerPool.Labels["node-role.kubernetes.io/node"] = ""
 		} else {
 			workerPool.Labels["node.kubernetes.io/role"] = "node"
+		}
+
+		if v1beta1helper.SystemComponentsAllowed(&workerPool) {
+			workerPool.Labels[v1beta1constants.LabelWorkerPoolSystemComponents] = strconv.FormatBool(workerPool.SystemComponents.Allow)
 		}
 
 		// worker pool name labels
@@ -187,7 +193,7 @@ func (b *Botanist) DestroyWorker(ctx context.Context) error {
 func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 	return common.WaitUntilExtensionCRReady(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() runtime.Object { return &extensionsv1alpha1.Worker{} },
 		"Worker",

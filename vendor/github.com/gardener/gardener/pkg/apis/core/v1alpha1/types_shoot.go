@@ -322,7 +322,7 @@ type Kubernetes struct {
 	// AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot (default: true).
 	// +optional
 	AllowPrivilegedContainers *bool `json:"allowPrivilegedContainers,omitempty" protobuf:"varint,1,opt,name=allowPrivilegedContainers"`
-	// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+	// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscaler `json:"clusterAutoscaler,omitempty" protobuf:"bytes,2,opt,name=clusterAutoscaler"`
 	// KubeAPIServer contains configuration settings for the kube-apiserver.
@@ -342,9 +342,12 @@ type Kubernetes struct {
 	Kubelet *KubeletConfig `json:"kubelet,omitempty" protobuf:"bytes,7,opt,name=kubelet"`
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	Version string `json:"version" protobuf:"bytes,8,opt,name=version"`
+	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
+	// +optional
+	VerticalPodAutoscaler *VerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,9,opt,name=verticalPodAutoscaler"`
 }
 
-// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
 	// +optional
@@ -365,6 +368,57 @@ type ClusterAutoscaler struct {
 	// +optional
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty" protobuf:"bytes,6,opt,name=scanInterval"`
 }
+
+// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
+type VerticalPodAutoscaler struct {
+	// Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
+	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
+	// EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given
+	// threshold since its start and if it has only one container (default: 10m0s).
+	// +optional
+	EvictAfterOOMThreshold *metav1.Duration `json:"evictAfterOOMThreshold,omitempty" protobuf:"bytes,2,opt,name=evictAfterOOMThreshold"`
+	// EvictionRateBurst defines the burst of pods that can be evicted (default: 1)
+	// +optional
+	EvictionRateBurst *int32 `json:"evictionRateBurst,omitempty" protobuf:"varint,3,opt,name=evictionRateBurst"`
+	// EvictionRateLimit defines the number of pods that can be evicted per second. A rate limit set to 0 or -1 will
+	// disable the rate limiter (default: -1).
+	// +optional
+	EvictionRateLimit *float64 `json:"evictionRateLimit,omitempty" protobuf:"fixed64,4,opt,name=evictionRateLimit"`
+	// EvictionTolerance defines the fraction of replica count that can be evicted for update in case more than one
+	// pod can be evicted (default: 0.5).
+	// +optional
+	EvictionTolerance *float64 `json:"evictionTolerance,omitempty" protobuf:"fixed64,5,opt,name=evictionTolerance"`
+	// RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request
+	// (default: 0.15).
+	// +optional
+	RecommendationMarginFraction *float64 `json:"recommendationMarginFraction,omitempty" protobuf:"fixed64,6,opt,name=recommendationMarginFraction"`
+	// UpdaterInterval is the interval how often the updater should run (default: 1m0s).
+	// +optional
+	UpdaterInterval *metav1.Duration `json:"updaterInterval,omitempty" protobuf:"bytes,7,opt,name=updaterInterval"`
+	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
+	// +optional
+	RecommenderInterval *metav1.Duration `json:"recommenderInterval,omitempty" protobuf:"bytes,8,opt,name=recommenderInterval"`
+}
+
+const (
+	// DefaultEvictionRateBurst is the default value for the EvictionRateBurst field in the VPA configuration.
+	DefaultEvictionRateBurst int32 = 1
+	// DefaultEvictionRateLimit is the default value for the EvictionRateLimit field in the VPA configuration.
+	DefaultEvictionRateLimit float64 = -1
+	// DefaultEvictionTolerance is the default value for the EvictionTolerance field in the VPA configuration.
+	DefaultEvictionTolerance = 0.5
+	// DefaultRecommendationMarginFraction is the default value for the RecommendationMarginFraction field in the VPA configuration.
+	DefaultRecommendationMarginFraction = 0.15
+)
+
+var (
+	// DefaultEvictAfterOOMThreshold is the default value for the EvictAfterOOMThreshold field in the VPA configuration.
+	DefaultEvictAfterOOMThreshold = metav1.Duration{Duration: 10 * time.Minute}
+	// DefaultUpdaterInterval is the default value for the UpdaterInterval field in the VPA configuration.
+	DefaultUpdaterInterval = metav1.Duration{Duration: time.Minute}
+	// DefaultRecommenderInterval is the default value for the RecommenderInterval field in the VPA configuration.
+	DefaultRecommenderInterval = metav1.Duration{Duration: time.Minute}
+)
 
 // KubernetesConfig contains common configuration fields for the control plane components.
 type KubernetesConfig struct {
@@ -850,7 +904,7 @@ type Worker struct {
 	Volume *Volume `json:"volume,omitempty" protobuf:"bytes,14,opt,name=volume"`
 	// DataVolumes contains a list of additional worker volumes.
 	// +optional
-	DataVolumes []Volume `json:"dataVolumes,omitempty" protobuf:"bytes,15,rep,name=dataVolumes"`
+	DataVolumes []DataVolume `json:"dataVolumes,omitempty" protobuf:"bytes,15,rep,name=dataVolumes"`
 	// KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.
 	// +optional
 	KubeletDataVolumeName *string `json:"kubeletDataVolumeName,omitempty" protobuf:"bytes,16,opt,name=kubeletDataVolumeName"`
@@ -858,6 +912,15 @@ type Worker struct {
 	// as not every provider may support availability zones.
 	// +optional
 	Zones []string `json:"zones,omitempty" protobuf:"bytes,17,rep,name=zones"`
+	// SystemComponents contains configuration for system components related to this worker pool
+	// +optional
+	SystemComponents *WorkerSystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,18,opt,name=systemComponents"`
+}
+
+// WorkerSystemComponents contains configuration for system components related to this worker pool
+type WorkerSystemComponents struct {
+	// Allow determines whether the pool should be allowed to host system components or not (defaults to true)
+	Allow bool `json:"allow" protobuf:"bytes,1,name=allow"`
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
@@ -906,6 +969,20 @@ type Volume struct {
 	Encrypted *bool `json:"encrypted,omitempty" protobuf:"varint,4,opt,name=primary"`
 }
 
+// DataVolume contains information about a data volume.
+type DataVolume struct {
+	// Name of the volume to make it referencable.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Type is the type of the volume.
+	// +optional
+	Type *string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
+	// VolumeSize is the size of the volume.
+	VolumeSize string `json:"size" protobuf:"bytes,3,opt,name=size"`
+	// Encrypted determines if the volume should be encrypted.
+	// +optional
+	Encrypted *bool `json:"encrypted,omitempty" protobuf:"varint,4,opt,name=encrypted"`
+}
+
 // CRI contains information about the Container Runtimes.
 type CRI struct {
 	// The name of the CRI library
@@ -936,6 +1013,8 @@ var (
 	DefaultWorkerMaxSurge = intstr.FromInt(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
+	DefaultWorkerSystemComponentsAllow = true
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

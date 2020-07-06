@@ -99,7 +99,8 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 			f.Logger.Fatalf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
 		}
 
-		if f.ShootClient != nil {
+		isRunning, err := f.IsAPIServerRunning(ctx)
+		if f.ShootClient != nil && isRunning && err == nil {
 			ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
 			f.Logger.Info(ctxIdentifier)
 			if err := f.DumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
@@ -108,6 +109,12 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 			if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {
 				f.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", f.Shoot.Name, err.Error())
 			}
+		} else {
+			errMsg := ""
+			if err != nil {
+				errMsg = ": " + err.Error()
+			}
+			f.Logger.Errorf("unable to dump resources from shoot %s: API server is currently not running%s", f.Shoot.Name, errMsg)
 		}
 	}
 
@@ -130,7 +137,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		// dump seed status if seed is available
 		if f.Shoot.Spec.SeedName != nil {
 			seed := &gardencorev1beta1.Seed{}
-			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
+			if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
 				f.Logger.Errorf("unable to get seed %s: %s", *f.Shoot.Spec.SeedName, err.Error())
 				return
 			}
@@ -167,6 +174,27 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 	return shoot.Name, shoot, nil
 }
 
+func parseAnnotationCfg(cfg string) (map[string]string, error) {
+	if !StringSet(cfg) {
+		return nil, nil
+	}
+	result := make(map[string]string)
+	annotations := strings.Split(cfg, ",")
+	for _, annotation := range annotations {
+		annotation = strings.TrimSpace(annotation)
+		if !StringSet(annotation) {
+			continue
+		}
+		keyValue := strings.Split(annotation, "=")
+		if len(keyValue) != 2 {
+			return nil, fmt.Errorf("annotation %s could not be parsed into key and value", annotation)
+		}
+		result[keyValue[0]] = keyValue[1]
+	}
+
+	return result, nil
+}
+
 // setShootMetadata sets the Shoot's metadata from the given config and project namespace
 func setShootMetadata(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig, projectNamespace string) error {
 	if StringSet(cfg.testShootName) {
@@ -183,8 +211,24 @@ func setShootMetadata(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig, 
 		shoot.Namespace = projectNamespace
 	}
 
+	if err := setConfiguredShootAnnotations(shoot, cfg); err != nil {
+		return err
+	}
+
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
 
+	return nil
+}
+
+// setConfiguredShootAnnotations sets annotations from the given config on the given shoot
+func setConfiguredShootAnnotations(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig) error {
+	annotations, err := parseAnnotationCfg(cfg.shootAnnotations)
+	if err != nil {
+		return err
+	}
+	for k, v := range annotations {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, k, v)
+	}
 	return nil
 }
 

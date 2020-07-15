@@ -6,6 +6,7 @@ metadata:
   name: default-class
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
+allowVolumeExpansion: true
 provisioner: kubernetes.io/cinder
 ---
 apiVersion: {{ include "storageclassversion" . }}
@@ -14,5 +15,6 @@ metadata:
   name: default
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
+allowVolumeExpansion: true
 provisioner: kubernetes.io/cinder
 {{- end }}

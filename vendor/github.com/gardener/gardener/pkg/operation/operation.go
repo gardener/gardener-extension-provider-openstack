@@ -16,7 +16,6 @@ package operation
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"strings"
 
@@ -35,15 +34,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	prometheusapi "github.com/prometheus/client_golang/api"
-	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,6 +60,9 @@ func NewBuilder() *Builder {
 		},
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
 			return nil, fmt.Errorf("gardener info is required but not set")
+		},
+		gardenClusterIdentityFunc: func() (string, error) {
+			return "", fmt.Errorf("garden cluster identity is required but not set")
 		},
 		imageVectorFunc: func() (imagevector.ImageVector, error) {
 			return nil, fmt.Errorf("image vector is required but not set")
@@ -115,6 +113,12 @@ func (b *Builder) WithGardenFrom(k8sGardenCoreInformers gardencoreinformers.Inte
 // WithGardenerInfo sets the gardenerInfoFunc attribute at the Builder.
 func (b *Builder) WithGardenerInfo(gardenerInfo *gardencorev1beta1.Gardener) *Builder {
 	b.gardenerInfoFunc = func() (*gardencorev1beta1.Gardener, error) { return gardenerInfo, nil }
+	return b
+}
+
+// WithGardenClusterIdentity sets the identity of the Garden cluster as attribute at the Builder.
+func (b *Builder) WithGardenClusterIdentity(gardenClusterIdentity string) *Builder {
+	b.gardenClusterIdentityFunc = func() (string, error) { return gardenClusterIdentity, nil }
 	return b
 }
 
@@ -227,6 +231,12 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.GardenerInfo = gardenerInfo
 
+	gardenClusterIdentity, err := b.gardenClusterIdentityFunc()
+	if err != nil {
+		return nil, err
+	}
+	operation.GardenClusterIdentity = gardenClusterIdentity
+
 	imageVector, err := b.imageVectorFunc()
 	if err != nil {
 		return nil, err
@@ -284,14 +294,14 @@ func (o *Operation) InitializeSeedClients() error {
 // cluster which contains a Kubeconfig that can be used to authenticate against the Shoot cluster. With it,
 // a Kubernetes client as well as a Chart renderer for the Shoot cluster will be initialized and attached to
 // the already existing Operation object.
-func (o *Operation) InitializeShootClients() error {
+func (o *Operation) InitializeShootClients(ctx context.Context) error {
 	if o.K8sShootClient != nil {
 		return nil
 	}
 
 	if o.Shoot.HibernationEnabled {
 		// Don't initialize clients for Shoots, that are currently hibernated and their API server is not running
-		apiServerRunning, err := o.IsAPIServerRunning()
+		apiServerRunning, err := o.IsAPIServerRunning(ctx)
 		if err != nil {
 			return err
 		}
@@ -300,7 +310,7 @@ func (o *Operation) InitializeShootClients() error {
 		}
 	}
 
-	shootClient, err := o.ClientMap.GetClient(context.TODO(), keys.ForShoot(o.Shoot.Info))
+	shootClient, err := o.ClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.Info))
 	if err != nil {
 		return err
 	}
@@ -310,10 +320,10 @@ func (o *Operation) InitializeShootClients() error {
 }
 
 // IsAPIServerRunning checks if the API server of the Shoot currently running (not scaled-down/deleted).
-func (o *Operation) IsAPIServerRunning() (bool, error) {
+func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	// use direct client here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
-	if err := o.K8sSeedClient.DirectClient().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+	if err := o.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -328,46 +338,6 @@ func (o *Operation) IsAPIServerRunning() (bool, error) {
 		return false, nil
 	}
 	return *deployment.Spec.Replicas > 0, nil
-}
-
-// InitializeMonitoringClient will read the Prometheus ingress auth and tls
-// secrets from the Seed cluster, which are containing the cert to secure
-// the connection and the credentials authenticate against the Shoot Prometheus.
-// With those certs and credentials, a Prometheus client API will be created
-// and attached to the existing Operation object.
-func (o *Operation) InitializeMonitoringClient() error {
-	if o.MonitoringClient != nil {
-		return nil
-	}
-
-	// Read the CA.
-	tlsSecret := &corev1.Secret{}
-	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, common.PrometheusTLS), tlsSecret); err != nil {
-		return err
-	}
-
-	ca := x509.NewCertPool()
-	ca.AppendCertsFromPEM(tlsSecret.Data[secrets.DataKeyCertificateCA])
-
-	// Read the basic auth credentials.
-	credentials := &corev1.Secret{}
-	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, "monitoring-ingress-credentials"), credentials); err != nil {
-		return err
-	}
-
-	config := prometheusapi.Config{
-		Address: fmt.Sprintf("https://%s", o.ComputeIngressHost("p")),
-		RoundTripper: &prometheusRoundTripper{
-			authHeader: fmt.Sprintf("Basic %s", utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])))),
-			ca:         ca,
-		},
-	}
-	client, err := prometheusapi.NewClient(config)
-	if err != nil {
-		return err
-	}
-	o.MonitoringClient = prometheusclient.NewAPI(client)
-	return nil
 }
 
 // GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
@@ -518,14 +488,6 @@ func (o *Operation) ComputeGrafanaHosts() []string {
 	}
 }
 
-// ComputeKibanaHosts computes the hosts for kibana.
-func (o *Operation) ComputeKibanaHosts() []string {
-	return []string{
-		o.ComputeKibanaHostDeprecated(),
-		o.ComputeKibanaHost(),
-	}
-}
-
 // ComputePrometheusHosts computes the hosts for prometheus.
 func (o *Operation) ComputePrometheusHosts() []string {
 	return []string{
@@ -584,17 +546,6 @@ func (o *Operation) ComputePrometheusHostDeprecated() string {
 // ComputePrometheusHost computes the host for prometheus.
 func (o *Operation) ComputePrometheusHost() string {
 	return o.ComputeIngressHost(common.PrometheusPrefix)
-}
-
-// ComputeKibanaHostDeprecated computes the host for kibana.
-// TODO: timuthy - remove in the future. Old Kibana host is retained for migration reasons.
-func (o *Operation) ComputeKibanaHostDeprecated() string {
-	return o.ComputeIngressHostDeprecated(common.KibanaPrefix)
-}
-
-// ComputeKibanaHost computes the host for kibana.
-func (o *Operation) ComputeKibanaHost() string {
-	return o.ComputeIngressHost(common.KibanaPrefix)
 }
 
 // ComputeIngressHostDeprecated computes the host for a given prefix.

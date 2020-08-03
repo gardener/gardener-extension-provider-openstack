@@ -24,18 +24,17 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gutil "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -78,7 +77,7 @@ var (
 					CertificateSecretConfig: &secrets.CertificateSecretConfig{
 						Name:       openstack.CloudControllerManagerName + "-server",
 						CommonName: openstack.CloudControllerManagerName,
-						DNSNames:   controlplane.DNSNamesForService(openstack.CloudControllerManagerName, clusterName),
+						DNSNames:   kutil.DNSNamesForService(openstack.CloudControllerManagerName, clusterName),
 						CertType:   secrets.ServerCert,
 						SigningCA:  cas[v1beta1constants.SecretNameCACluster],
 					},
@@ -283,13 +282,13 @@ func (vp *valuesProvider) GetConfigChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", util.ObjectName(cp))
+			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", kutil.ObjectName(cp))
 		}
 	}
 
 	infraStatus := &api.InfrastructureStatus{}
 	if _, _, err := vp.Decoder().Decode(cp.Spec.InfrastructureProviderStatus.Raw, nil, infraStatus); err != nil {
-		return nil, errors.Wrapf(err, "could not decode infrastructureProviderStatus of controlplane '%s'", util.ObjectName(cp))
+		return nil, errors.Wrapf(err, "could not decode infrastructureProviderStatus of controlplane '%s'", kutil.ObjectName(cp))
 	}
 
 	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
@@ -318,7 +317,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", util.ObjectName(cp))
+			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", kutil.ObjectName(cp))
 		}
 	}
 
@@ -326,13 +325,13 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderConfigName), cpConfigSecret); err != nil {
 		return nil, err
 	}
-	checksums[openstack.CloudProviderConfigName] = util.ComputeChecksum(cpConfigSecret.Data)
+	checksums[openstack.CloudProviderConfigName] = gutil.ComputeChecksum(cpConfigSecret.Data)
 
 	cpDiskConfigSecret := &corev1.Secret{}
 	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderDiskConfigName), cpDiskConfigSecret); err != nil {
 		return nil, err
 	}
-	checksums[openstack.CloudProviderDiskConfigName] = util.ComputeChecksum(cpDiskConfigSecret.Data)
+	checksums[openstack.CloudProviderDiskConfigName] = gutil.ComputeChecksum(cpDiskConfigSecret.Data)
 
 	// TODO: Remove this code in a future version again.
 	if err := vp.deleteLegacyCloudProviderConfigMaps(ctx, cp.Namespace); err != nil {
@@ -362,7 +361,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 		}
 
 		cloudProviderDiskConfig = cm.Data[openstack.CloudProviderConfigDataKey]
-		checksums[openstack.CloudProviderDiskConfigName] = util.ComputeChecksum(cm.Data)
+		checksums[openstack.CloudProviderDiskConfigName] = gutil.ComputeChecksum(cm.Data)
 	}
 
 	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig)
@@ -395,7 +394,7 @@ func getConfigChartValues(
 ) (map[string]interface{}, error) {
 	subnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not determine subnet from infrastructureProviderStatus of controlplane '%s'", util.ObjectName(cp))
+		return nil, errors.Wrapf(err, "could not determine subnet from infrastructureProviderStatus of controlplane '%s'", kutil.ObjectName(cp))
 	}
 
 	if cloudProfileConfig == nil {

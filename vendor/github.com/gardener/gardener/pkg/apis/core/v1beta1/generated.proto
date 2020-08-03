@@ -822,6 +822,17 @@ message KubeletConfig {
   // FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
   // +optional
   optional bool failSwapOn = 13;
+
+  // KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+  // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+  // +optional
+  // Default: cpu=80m,memory=1Gi
+  optional KubeletConfigReserved kubeReserved = 14;
+
+  // SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+  // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+  // +optional
+  optional KubeletConfigReserved systemReserved = 15;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -891,6 +902,26 @@ message KubeletConfigEvictionSoftGracePeriod {
   // NodeFSInodesFree is the grace period for the NodeFSInodesFree eviction threshold.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeFSInodesFree = 5;
+}
+
+// KubeletConfigReserved contains reserved resources for daemons
+message KubeletConfigReserved {
+  // CPU is the reserved cpu.
+  // +optional
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity cpu = 1;
+
+  // Memory is the reserved memory.
+  // +optional
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity memory = 2;
+
+  // EphemeralStorage is the reserved ephemeral-storage.
+  // +optional
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity ephemeralStorage = 3;
+
+  // PID is the reserved process-ids.
+  // To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
+  // +optional
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity pid = 4;
 }
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
@@ -1008,6 +1039,29 @@ message Machine {
   // latest version of the first image stated in the referenced CloudProfile if no value has been provided.
   // +optional
   optional ShootMachineImage image = 2;
+}
+
+// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+message MachineControllerManagerSettings {
+  // MachineDrainTimeout is the period after which machine is forcefully deleted.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineDrainTimeout = 1;
+
+  // MachineHealthTimeout is the period after which machine is declared failed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineHealthTimeout = 2;
+
+  // MachineCreationTimeout is the period after which creation of the machine is declared failed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineCreationTimeout = 3;
+
+  // MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
+  // +optional
+  optional int32 maxEvictRetries = 4;
+
+  // NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
+  // +optional
+  repeated string nodeConditions = 5;
 }
 
 // MachineImage defines the name and multiple versions of the machine image in any environment.
@@ -1675,6 +1729,10 @@ message SeedStatus {
   // Seed's generation, which is updated on mutation by the API Server.
   // +optional
   optional int64 observedGeneration = 4;
+
+  // ClusterIdentity is the identity of the Seed cluster
+  // +optional
+  optional string clusterIdentity = 5;
 }
 
 // SeedTaint describes a taint on a seed.
@@ -1894,6 +1952,10 @@ message ShootStatus {
   // UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
   // It is used to compute unique hashes.
   optional string uid = 11;
+
+  // ClusterIdentity is the identity of the Shoot cluster
+  // +optional
+  optional string clusterIdentity = 12;
 }
 
 // Toleration is a toleration for a seed taint.
@@ -2045,6 +2107,10 @@ message Worker {
   // SystemComponents contains configuration for system components related to this worker pool
   // +optional
   optional WorkerSystemComponents systemComponents = 18;
+
+  // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+  // +optional
+  optional MachineControllerManagerSettings machineControllerManager = 19;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

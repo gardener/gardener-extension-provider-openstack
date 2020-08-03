@@ -126,7 +126,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
-					"elasticsearch": map[string]interface{}{
+					"loki": map[string]interface{}{
 						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
 					},
 					"hvpa": map[string]interface{}{
@@ -386,6 +386,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"extensions": map[string]interface{}{
 			"dashboards": dashboards,
 		},
+		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 		"konnectivityTunnel": map[string]interface{}{
 			"enabled": b.Shoot.KonnectivityTunnelEnabled,
 		},

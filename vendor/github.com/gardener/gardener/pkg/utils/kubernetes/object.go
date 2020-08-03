@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,20 @@ package kubernetes
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Object is wrapper interface combining runtime.Object and metav1.Object interfaces together.
 type Object interface {
 	runtime.Object
 	metav1.Object
+}
+
+// ObjectName returns the name of the given object in the format <namespace>/<name>
+func ObjectName(obj runtime.Object) string {
+	k, err := client.ObjectKeyFromObject(obj)
+	if err != nil {
+		return "/"
+	}
+	return k.String()
 }

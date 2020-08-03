@@ -16,13 +16,12 @@ package worker
 
 import (
 	"context"
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-
-	"github.com/gardener/gardener/extensions/pkg/util"
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +70,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 	if providerStatus := w.worker.Status.ProviderStatus; providerStatus != nil {
 		workerStatus := &api.WorkerStatus{}
 		if _, _, err := w.Decoder().Decode(providerStatus.Raw, nil, workerStatus); err != nil {
-			return nil, errors.Wrapf(err, "could not decode worker status of worker '%s'", util.ObjectName(w.worker))
+			return nil, errors.Wrapf(err, "could not decode worker status of worker '%s'", kutil.ObjectName(w.worker))
 		}
 
 		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version)

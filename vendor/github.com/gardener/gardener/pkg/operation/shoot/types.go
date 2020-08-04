@@ -27,6 +27,7 @@ import (
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -61,6 +62,7 @@ type Shoot struct {
 	IgnoreAlerts               bool
 	HibernationEnabled         bool
 	KonnectivityTunnelEnabled  bool
+	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 
 	Components *Components
@@ -78,9 +80,22 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	DNS          *DNS
-	Network      component.DeployWaiter
-	ControlPlane *ControlPlane
+	Extensions      *Extensions
+	ControlPlane    *ControlPlane
+	ClusterIdentity component.Deployer
+}
+
+// ControlPlane contains references to K8S control plane components.
+type ControlPlane struct {
+	KubeAPIServerService component.DeployWaiter
+	KubeAPIServerSNI     component.DeployWaiter
+}
+
+// Extensions contains references to extension resources.
+type Extensions struct {
+	DNS            *DNS
+	Infrastructure Infrastructure
+	Network        component.DeployMigrateWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.
@@ -93,10 +108,13 @@ type DNS struct {
 	NginxEntry          component.DeployWaiter
 }
 
-// ControlPlane contains references to K8S control plane components.
-type ControlPlane struct {
-	KubeAPIServerService component.DeployWaiter
-	KubeAPIServerSNI     component.DeployWaiter
+// Infrastructure contains references to an Infrastructure extension deployer and its generated
+// provider status.
+type Infrastructure interface {
+	component.DeployWaiter
+	SetSSHPublicKey([]byte)
+	ProviderStatus() *runtime.RawExtension
+	NodesCIDR() *string
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

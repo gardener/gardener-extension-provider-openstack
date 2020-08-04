@@ -133,12 +133,13 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			ProviderConfig:        pConfig,
-			UserData:              []byte(b.Shoot.OperatingSystemConfigsMap[workerPool.Name].Downloader.Data.Content),
-			Volume:                volume,
-			DataVolumes:           dataVolumes,
-			KubeletDataVolumeName: workerPool.KubeletDataVolumeName,
-			Zones:                 workerPool.Zones,
+			ProviderConfig:                   pConfig,
+			UserData:                         []byte(b.Shoot.OperatingSystemConfigsMap[workerPool.Name].Downloader.Data.Content),
+			Volume:                           volume,
+			DataVolumes:                      dataVolumes,
+			KubeletDataVolumeName:            workerPool.KubeletDataVolumeName,
+			Zones:                            workerPool.Zones,
+			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 		})
 	}
 
@@ -171,7 +172,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), worker, extensionsv1alpha1.WorkerResource)
+		return b.restoreExtensionObject(ctx, worker, extensionsv1alpha1.WorkerResource)
 	}
 
 	return nil
@@ -218,7 +219,7 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
 	return common.WaitUntilExtensionCRDeleted(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
 		"Worker",

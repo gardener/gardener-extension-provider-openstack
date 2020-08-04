@@ -19,11 +19,8 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
-	"github.com/coreos/go-systemd/unit"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/csimigration"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test"
@@ -31,6 +28,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/version"
+
+	"github.com/coreos/go-systemd/unit"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -41,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
@@ -456,8 +456,8 @@ var _ = Describe("Ensurer", func() {
 
 	Describe("#EnsureKubeletCloudProviderConfig", func() {
 		var (
-			existingData = util.StringPtr("[LoadBalancer]\nlb-version=v2\nlb-provider:\n")
-			emptydata    = util.StringPtr("")
+			existingData = pointer.StringPtr("[LoadBalancer]\nlb-version=v2\nlb-provider:\n")
+			emptydata    = pointer.StringPtr("")
 		)
 
 		It("cloud provider config secret does not exist", func() {

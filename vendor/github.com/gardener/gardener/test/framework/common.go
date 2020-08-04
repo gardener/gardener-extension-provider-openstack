@@ -24,11 +24,9 @@ const (
 	// KubeconfigSecretKeyName ist the name of the key in a secret that holds the kubeconfig of a shoot
 	KubeconfigSecretKeyName = "kubeconfig"
 
-	// LoggingUserName is the admin user name for the elasticserach logging instance of a shoot
-	LoggingUserName           = "admin"
-	loggingIngressCredentials = "logging-ingress-credentials"
-	elasticsearchLogging      = "elasticsearch-logging"
-	elasticsearchPort         = 9200
+	// LoggingUserName is the admin user name for the loki instance of a shoot
+	lokiLogging = "loki"
+	lokiPort    = 3100
 
 	// IntegrationTestPrefix is the default prefix that will be used for test shoots if none other is specified
 	IntegrationTestPrefix = "itest-"
@@ -37,9 +35,13 @@ const (
 	WorkerNamePrefix = "worker-"
 )
 
-// SearchResponse represents the response from a search query to elasticsearch
+// SearchResponse represents the response from a search query to loki
 type SearchResponse struct {
-	Hits struct {
-		Total uint64 `json:"total"`
-	} `json:"hits"`
+	Data struct {
+		Stats struct {
+			Summary struct {
+				TotalLinesProcessed int `json:"totalLinesProcessed"`
+			} `json:"summary"`
+		} `json:"stats"`
+	} `json:"data"`
 }

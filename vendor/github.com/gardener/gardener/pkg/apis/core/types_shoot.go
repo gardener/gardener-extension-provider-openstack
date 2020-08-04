@@ -123,6 +123,8 @@ type ShootStatus struct {
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes.
 	UID types.UID
+	// ClusterIdentity is the identity of the Shoot cluster
+	ClusterIdentity *string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -554,6 +556,13 @@ type KubeletConfig struct {
 	ImagePullProgressDeadline *metav1.Duration
 	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
 	FailSwapOn *bool
+	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	// Default: cpu=80m,memory=1Gi
+	KubeReserved *KubeletConfigReserved
+	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	SystemReserved *KubeletConfigReserved
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -596,6 +605,19 @@ type KubeletConfigEvictionSoftGracePeriod struct {
 	NodeFSAvailable *metav1.Duration
 	// NodeFSInodesFree is the grace period for the NodeFSInodesFree eviction threshold.
 	NodeFSInodesFree *metav1.Duration
+}
+
+// KubeletConfigReserved contains reserved resources for daemons
+type KubeletConfigReserved struct {
+	// CPU is the reserved cpu.
+	CPU *resource.Quantity
+	// Memory is the reserved memory.
+	Memory *resource.Quantity
+	// EphemeralStorage is the reserved ephemeral-storage.
+	EphemeralStorage *resource.Quantity
+	// PID is the reserved process-ids.
+	// To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
+	PID *resource.Quantity
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -732,6 +754,22 @@ type Worker struct {
 	// Zones is a list of availability zones that are used to evenly distribute this worker pool. Optional
 	// as not every provider may support availability zones.
 	Zones []string
+	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	MachineControllerManagerSettings *MachineControllerManagerSettings
+}
+
+// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+type MachineControllerManagerSettings struct {
+	// MachineDrainTimeout is the period after which machine is forcefully deleted.
+	MachineDrainTimeout *metav1.Duration
+	// MachineHealthTimeout is the period after which machine is declared failed.
+	MachineHealthTimeout *metav1.Duration
+	// MachineCreationTimeout is the period after which creation of the machine is declared failed.
+	MachineCreationTimeout *metav1.Duration
+	// MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
+	MaxEvictRetries *int32
+	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
+	NodeConditions []string
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

@@ -22,7 +22,6 @@ import (
 	"net"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +40,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -64,7 +64,7 @@ var (
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
 func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
-	result := []string{}
+	var result []string
 	for key := range m {
 		if strings.HasPrefix(key, kind) {
 			result = append(result, key)
@@ -279,25 +279,6 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }
 
-// ComputeSecretCheckSum computes the sha256 checksum of secret data.
-func ComputeSecretCheckSum(m map[string][]byte) string {
-	var (
-		hash string
-		keys []string
-	)
-
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		hash += utils.ComputeSHA256Hex(m[k])
-	}
-
-	return utils.ComputeSHA256Hex([]byte(hash))
-}
-
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
 func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 	if k8sClient == nil {
@@ -366,6 +347,8 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
 		)
 	} else {
+		// TODO: remove in a future release
+		// Clean up the stale RBAC resources
 		resources = append(resources,
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-actor"}},
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-admission-controller"}},
@@ -381,6 +364,23 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:metrics-reader"}},
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-target-reader-binding"}},
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-evictionter-binding"}},
+		)
+
+		resources = append(resources,
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-exporter", Namespace: namespace}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
@@ -402,7 +402,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
 	}
 
-	// Delete the resources below that match "garden.sapcloud.io/role=logging"
+	// Delete the resources below that match "gardener.cloud/role=logging"
 	lists := []runtime.Object{
 		&corev1.ConfigMapList{},
 		&batchv1beta1.CronJobList{},
@@ -423,7 +423,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	for _, list := range lists {
 		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),
-			client.MatchingLabels{v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleLogging}); err != nil {
+			client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging}); err != nil {
 			return err
 		}
 
@@ -436,7 +436,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "elasticsearch-logging-elasticsearch-logging-0",
+			Name:      "loki-loki-0",
 			Namespace: namespace,
 		},
 	}
@@ -469,6 +469,83 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 		},
 	}
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, priorityClass))
+}
+
+// DeleteOldLoggingStack deletes all resource of the old EFK logging stack in the given namespace.
+// TODO: Should be removed with one of the next minor release of gardener
+func DeleteOldLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
+	if k8sClient == nil {
+		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
+	}
+
+	resources := []runtime.Object{
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-logging-ingress-credentials", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "logging-ingress-credentials", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "logging-ingress-credentials-users", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging-sg-credentials", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-server", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es-config", Namespace: "garden"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "es-configmap", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "searchguard-config", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "curator-daily-config", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "curator-hourly-config", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-configmap", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-object-registration", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-saved-objects", Namespace: namespace}},
+		&batchv1beta1.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "daily-curator", Namespace: namespace}},
+		&batchv1beta1.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "hourly-curator", Namespace: namespace}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging", Namespace: namespace}},
+		&autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
+		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "kibana", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kibana-basic-auth", Namespace: namespace}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-elasticsearch-logging-0", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-0", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-1", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-2", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-3", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-4", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-5", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-6", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-7", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-8", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-9", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-elasticsearch", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-elasticsearch", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-fluentd", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kibana", Namespace: namespace}},
+		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-vpa", Namespace: namespace}},
+	}
+
+	for _, resource := range resources {
+		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	ds := &appsv1.DaemonSet{}
+	if err := k8sClient.Get(ctx, kutil.Key(namespace, "fluent-bit"), ds); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if _, ok := ds.Spec.Selector.MatchLabels["garden.sapcloud.io/role"]; ok {
+		if err := k8sClient.Delete(ctx, ds); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
@@ -579,16 +656,10 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 		return "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
 	}
 
-	if providerAnnotation, ok := annotations[DNSProviderDeprecated]; ok {
-		provider = providerAnnotation
-	}
 	if providerAnnotation, ok := annotations[DNSProvider]; ok {
 		provider = providerAnnotation
 	}
 
-	if domainAnnotation, ok := annotations[DNSDomainDeprecated]; ok {
-		domain = domainAnnotation
-	}
 	if domainAnnotation, ok := annotations[DNSDomain]; ok {
 		domain = domainAnnotation
 	}
@@ -633,7 +704,7 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1
 		return false
 	}
 
-	value, ok := GetShootIgnoreAnnotation(shoot.Annotations)
+	value, ok := shoot.Annotations[ShootIgnore]
 	if !ok {
 		return false
 	}
@@ -675,7 +746,7 @@ func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod tim
 		return defaultMinSyncPeriod
 	}
 
-	syncPeriodOverwrite, ok := GetShootSyncPeriodAnnotation(shoot.Annotations)
+	syncPeriodOverwrite, ok := shoot.Annotations[ShootSyncPeriod]
 	if !ok {
 		return defaultMinSyncPeriod
 	}
@@ -761,34 +832,10 @@ func GetConfirmationDeletionAnnotation(annotations map[string]string) (string, b
 	return getDeprecatedAnnotation(annotations, ConfirmationDeletion, ConfirmationDeletionDeprecated)
 }
 
-// GetShootExpirationTimestampAnnotation fetches the value for ShootExpirationTimestamp annotation.
-// If not present, it fallbacks to ShootExpirationTimestampDeprecated.
-func GetShootExpirationTimestampAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootExpirationTimestamp, ShootExpirationTimestampDeprecated)
-}
-
 // GetShootOperationAnnotation fetches the value for v1beta1constants.GardenerOperation annotation.
 // If not present, it fallbacks to ShootOperationDeprecated.
 func GetShootOperationAnnotation(annotations map[string]string) (string, bool) {
 	return getDeprecatedAnnotation(annotations, v1beta1constants.GardenerOperation, ShootOperationDeprecated)
-}
-
-// GetShootSyncPeriodAnnotation fetches the value for ShootSyncPeriod annotation.
-// If not present, it fallbacks to ShootSyncPeriodDeprecated.
-func GetShootSyncPeriodAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootSyncPeriod, ShootSyncPeriodDeprecated)
-}
-
-// GetShootIgnoreAnnotation fetches the value for ShootIgnore annotation.
-// If not present, it fallbacks to ShootIgnoreDeprecated.
-func GetShootIgnoreAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootIgnore, ShootIgnoreDeprecated)
-}
-
-// GetTasksAnnotation fetches the value for ShootTasks annotation.
-// If not present, it falls back to ShootTasksDeprecated.
-func GetTasksAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootTasks, ShootTasksDeprecated)
 }
 
 func getDeprecatedAnnotation(annotations map[string]string, annotationKey, deprecatedAnnotationKey string) (string, bool) {

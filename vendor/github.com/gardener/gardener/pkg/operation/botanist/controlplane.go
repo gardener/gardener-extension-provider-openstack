@@ -120,6 +120,22 @@ func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
 	return err
 }
 
+// EnsureClusterIdentity ensures that Shoot cluster-identity ConfigMap exists and stores its data
+// in the operation. Updates shoot.status.clusterIdentity if it doesn't exist already.
+func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
+	if err := b.Shoot.Components.ClusterIdentity.Deploy(ctx); err != nil {
+		return err
+	}
+
+	latestShoot := &gardencorev1beta1.Shoot{}
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
+		return err
+	}
+
+	b.Shoot.Info = latestShoot
+	return nil
+}
+
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	// invalidate shoot client here before deleting API server
@@ -207,6 +223,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: "allowed",
 		}
 		admissionController = map[string]interface{}{
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpa-tls-certs":            b.CheckSums["vpa-tls-certs"],
 				"checksum/secret-vpa-admission-controller": b.CheckSums["vpa-admission-controller"],
@@ -218,9 +235,11 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"registerByURL":        true,
 		}
 		exporter = map[string]interface{}{
-			"enabled": false,
+			"enabled":  false,
+			"replicas": 0,
 		}
 		recommender = map[string]interface{}{
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpa-recommender": b.CheckSums["vpa-recommender"],
 			},
@@ -230,6 +249,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
 		}
 		updater = map[string]interface{}{
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpa-updater": b.CheckSums["vpa-updater"],
 			},
@@ -525,7 +545,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, extensionsv1alpha1.ControlPlaneResource)
+		return b.restoreExtensionObject(ctx, cp, extensionsv1alpha1.ControlPlaneResource)
 	}
 
 	return nil
@@ -575,7 +595,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, extensionsv1alpha1.ControlPlaneResource)
+		return b.restoreExtensionObject(ctx, cp, extensionsv1alpha1.ControlPlaneResource)
 	}
 	return nil
 }
@@ -654,7 +674,7 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
 	return common.WaitUntilExtensionCRDeleted(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
 		"ControlPlane",
@@ -1323,7 +1343,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		nil,
 		b.setAPIServerServiceClusterIP,
 		b.setAPIServerAddress,
@@ -1379,7 +1399,7 @@ func (b *Botanist) setAPIServerAddress(address string) {
 	b.Operation.APIServerAddress = address
 
 	if b.NeedsInternalDNS() {
-		b.Shoot.Components.DNS.InternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSInternalName,
 				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
@@ -1395,7 +1415,7 @@ func (b *Botanist) setAPIServerAddress(address string) {
 	}
 
 	if b.NeedsExternalDNS() {
-		b.Shoot.Components.DNS.ExternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSExternalName,
 				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),

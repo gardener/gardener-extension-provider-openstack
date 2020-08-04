@@ -70,7 +70,7 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 
 // EnsureIngressDNSRecord ensures the nginx DNSEntry and waits for completion.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	return component.OpWaiter(b.Shoot.Components.DNS.NginxEntry).Deploy(ctx)
+	return component.OpWaiter(b.Shoot.Components.Extensions.DNS.NginxEntry).Deploy(ctx)
 }
 
 // DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
@@ -91,7 +91,7 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
-		b.Shoot.Components.DNS.NginxEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),
@@ -315,6 +315,10 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				},
 			},
 		}
+		nodeLocalDNSConfig = map[string]interface{}{
+			"domain": gardencorev1beta1.DefaultDomain,
+		}
+
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
 		}
@@ -335,6 +339,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			},
 		}
 		verticalPodAutoscaler = map[string]interface{}{
+			"clusterType":         "shoot",
 			"admissionController": map[string]interface{}{"enableServiceAccount": false},
 			"exporter":            map[string]interface{}{"enableServiceAccount": false},
 			"recommender":         map[string]interface{}{"enableServiceAccount": false},
@@ -375,6 +380,19 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	shootInfo["extensions"] = strings.Join(extensions, ",")
 
 	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, common.CoreDNSImageName)
+	if err != nil {
+		return nil, err
+	}
+
+	// The node-local-dns interface cannot bind the kube-dns cluster IP since the interface
+	// used for IPVS load-balancing already uses this address.
+	if b.Shoot.IPVSEnabled() {
+		nodeLocalDNSConfig["clusterDNS"] = b.Shoot.Networks.CoreDNS.String()
+	} else {
+		nodeLocalDNSConfig["dnsServer"] = b.Shoot.Networks.CoreDNS.String()
+	}
+
+	nodelocalDNS, err := b.InjectShootShootImages(nodeLocalDNSConfig, common.NodeLocalDNSImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -421,6 +439,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"global":                  global,
 		"cluster-autoscaler":      common.GenerateAddonConfig(nil, b.Shoot.WantsClusterAutoscaler),
 		"coredns":                 coreDNS,
+		"node-local-dns":          common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet":  common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":         common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"kube-controller-manager": common.GenerateAddonConfig(nil, true),
@@ -436,6 +455,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
+		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.Info.Status.ClusterIdentity},
 	}
 
 	var shootClient = b.K8sShootClient.Client()

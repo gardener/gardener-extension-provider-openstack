@@ -26,10 +26,10 @@ if [[ -d "$1" ]]; then
     echo "$BROKEN_SYMLINKS"
     exit 1
   fi
-
   echo "Checking whether all charts can be rendered"
-  for chart_file in $1/*/Chart.yaml; do
-    helm template "$(dirname "$chart_file")" 1> /dev/null
+  for chart_dir in $(find charts -type d -exec test -f '{}'/Chart.yaml \;  -print -prune | sort); do
+    [ -f "$chart_dir/values-test.yaml" ] && values_files="-f $chart_dir/values-test.yaml" || unset values_files
+    helm template $values_files "$chart_dir" 1> /dev/null
   done
 fi
 

@@ -22,7 +22,10 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	managedresources "github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -33,11 +36,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-// McmShootResourceName is the name of the managed resource that contains the Machine Controller Manager
-const McmShootResourceName = "extension-worker-mcm-shoot"
+const (
+	// McmShootResourceName is the name of the managed resource that contains the Machine Controller Manager
+	McmShootResourceName = "extension-worker-mcm-shoot"
 
-// McmDeploymentName is the name of the deployment that spawn machine-cotroll-manager pods
-const McmDeploymentName = "machine-controller-manager"
+	// McmDeploymentName is the name of the deployment that spawn machine-cotroll-manager pods
+	McmDeploymentName = "machine-controller-manager"
+)
 
 // ReplicaCount determines the number of replicas.
 type ReplicaCount func() (int32, error)
@@ -53,7 +58,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 	if err != nil {
 		return err
 	}
-	injectPodAnnotation(mcmValues, "checksum/secret-machine-controller-manager", util.ComputeChecksum(mcmKubeconfigSecret.Data))
+	injectPodAnnotation(mcmValues, "checksum/secret-machine-controller-manager", utils.ComputeChecksum(mcmKubeconfigSecret.Data))
 
 	replicaCount, err := replicas()
 	if err != nil {
@@ -63,11 +68,15 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 
 	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, workerObj.Namespace,
 		a.imageVector, a.gardenerClientset.Version(), cluster.Shoot.Spec.Kubernetes.Version, mcmValues); err != nil {
-		return errors.Wrapf(err, "could not apply MCM chart in seed for worker '%s'", util.ObjectName(workerObj))
+		return errors.Wrapf(err, "could not apply MCM chart in seed for worker '%s'", kutil.ObjectName(workerObj))
 	}
 
 	if err := a.applyMachineControllerManagerShootChart(ctx, workerDelegate, workerObj, cluster); err != nil {
 		return errors.Wrapf(err, "could not apply machine-controller-manager shoot chart")
+	}
+
+	if err := kubernetes.WaitUntilDeploymentRolloutIsComplete(ctx, a.client, workerObj.Namespace, McmDeploymentName, 5*time.Second, 300*time.Second); err != nil {
+		return errors.Wrapf(err, "waiting until deployment/%s is updated", McmDeploymentName)
 	}
 
 	return nil
@@ -77,13 +86,13 @@ func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, wo
 	a.logger.Info("Deleting the machine-controller-manager", "worker", fmt.Sprintf("%s/%s", workerObj.Namespace, workerObj.Name))
 
 	if err := managedresources.DeleteManagedResource(ctx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
-		return errors.Wrapf(err, "could not delete managed resource containing mcm chart for worker '%s'", util.ObjectName(workerObj))
+		return errors.Wrapf(err, "could not delete managed resource containing mcm chart for worker '%s'", kutil.ObjectName(workerObj))
 	}
 
 	timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx3, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
-		return errors.Wrapf(err, "error while waiting for managed resource containing mcm for '%s' to be deleted", util.ObjectName(workerObj))
+		return errors.Wrapf(err, "error while waiting for managed resource containing mcm for '%s' to be deleted", kutil.ObjectName(workerObj))
 	}
 
 	if err := a.mcmSeedChart.Delete(ctx, a.client, workerObj.Namespace); err != nil {
@@ -107,7 +116,7 @@ func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Co
 	}
 
 	if err := extensionscontroller.RenderChartAndCreateManagedResource(ctx, workerObj.Namespace, McmShootResourceName, a.client, chartRenderer, a.mcmShootChart, values, a.imageVector, metav1.NamespaceSystem, cluster.Shoot.Spec.Kubernetes.Version, true, false); err != nil {
-		return errors.Wrapf(err, "could not apply control plane shoot chart for worker '%s'", util.ObjectName(workerObj))
+		return errors.Wrapf(err, "could not apply control plane shoot chart for worker '%s'", kutil.ObjectName(workerObj))
 	}
 
 	return nil

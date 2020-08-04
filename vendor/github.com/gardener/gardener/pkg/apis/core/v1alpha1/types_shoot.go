@@ -150,6 +150,9 @@ type ShootStatus struct {
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes.
 	UID types.UID `json:"uid" protobuf:"bytes,12,opt,name=uid"`
+	// ClusterIdentity is the identity of the Shoot cluster
+	// +optional
+	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,13,opt,name=clusterIdentity"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -695,6 +698,15 @@ type KubeletConfig struct {
 	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
 	// +optional
 	FailSwapOn *bool `json:"failSwapOn,omitempty" protobuf:"varint,13,opt,name=failSwapOn"`
+	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	// +optional
+	// Default: cpu=80m,memory=1Gi
+	KubeReserved *KubeletConfigReserved `json:"kubeReserved,omitempty" protobuf:"bytes,14,opt,name=kubeReserved"`
+	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	// +optional
+	SystemReserved *KubeletConfigReserved `json:"systemReserved,omitempty" protobuf:"bytes,15,opt,name=systemReserved"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -752,6 +764,23 @@ type KubeletConfigEvictionSoftGracePeriod struct {
 	// NodeFSInodesFree is the grace period for the NodeFSInodesFree eviction threshold.
 	// +optional
 	NodeFSInodesFree *metav1.Duration `json:"nodeFSInodesFree,omitempty" protobuf:"bytes,5,opt,name=nodeFSInodesFree"`
+}
+
+// KubeletConfigReserved contains reserved resources for daemons
+type KubeletConfigReserved struct {
+	// CPU is the reserved cpu.
+	// +optional
+	CPU *resource.Quantity `json:"cpu,omitempty" protobuf:"bytes,1,opt,name=cpu"`
+	// Memory is the reserved memory.
+	// +optional
+	Memory *resource.Quantity `json:"memory,omitempty" protobuf:"bytes,2,opt,name=memory"`
+	// EphemeralStorage is the reserved ephemeral-storage.
+	// +optional
+	EphemeralStorage *resource.Quantity `json:"ephemeralStorage,omitempty" protobuf:"bytes,3,opt,name=ephemeralStorage"`
+	// PID is the reserved process-ids.
+	// To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
+	// +optional
+	PID *resource.Quantity `json:"pid,omitempty" protobuf:"bytes,4,opt,name=pid"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -915,6 +944,28 @@ type Worker struct {
 	// SystemComponents contains configuration for system components related to this worker pool
 	// +optional
 	SystemComponents *WorkerSystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,18,opt,name=systemComponents"`
+	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	// +optional
+	MachineControllerManagerSettings *MachineControllerManagerSettings `json:"machineControllerManager,omitempty" protobuf:"bytes,19,opt,name=machineControllerManager"`
+}
+
+// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+type MachineControllerManagerSettings struct {
+	// MachineDrainTimeout is the period after which machine is forcefully deleted.
+	// +optional
+	MachineDrainTimeout *metav1.Duration `json:"machineDrainTimeout,omitempty" protobuf:"bytes,1,name=machineDrainTimeout"`
+	// MachineHealthTimeout is the period after which machine is declared failed.
+	// +optional
+	MachineHealthTimeout *metav1.Duration `json:"machineHealthTimeout,omitempty" protobuf:"bytes,2,name=machineHealthTimeout"`
+	// MachineCreationTimeout is the period after which creation of the machine is declared failed.
+	// +optional
+	MachineCreationTimeout *metav1.Duration `json:"machineCreationTimeout,omitempty" protobuf:"bytes,3,name=machineCreationTimeout"`
+	// MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
+	// +optional
+	MaxEvictRetries *int32 `json:"maxEvictRetries,omitempty" protobuf:"bytes,4,name=maxEvictRetries"`
+	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
+	// +optional
+	NodeConditions []string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

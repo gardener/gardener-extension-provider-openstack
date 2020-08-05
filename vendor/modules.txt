@@ -57,7 +57,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener v1.7.1-0.20200803051903-729a1cce46be
+# github.com/gardener/gardener v1.8.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -272,7 +272,7 @@ github.com/gogo/protobuf/vanity
 github.com/gogo/protobuf/vanity/command
 # github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7
 github.com/golang/groupcache/lru
-# github.com/golang/mock v1.4.3
+# github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
 ## explicit
 github.com/golang/mock/gomock
 github.com/golang/mock/mockgen
@@ -477,6 +477,8 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
+# github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
+github.com/texttheater/golang-levenshtein/levenshtein
 # github.com/ulikunitz/xz v0.5.7
 ## explicit
 github.com/ulikunitz/xz
@@ -523,7 +525,9 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/mod v0.2.0
+# golang.org/x/mod v0.3.0
+golang.org/x/mod/internal/lazyregexp
+golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20200301022130-244492dfa37a

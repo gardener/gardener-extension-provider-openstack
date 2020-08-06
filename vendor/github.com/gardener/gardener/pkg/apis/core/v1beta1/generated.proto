@@ -290,8 +290,10 @@ message CloudProfileSpec {
   // SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
   // An empty list means that all seeds of the same provider type are supported.
   // This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
+  // Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+  // type of the seed must match the shoot's provider.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 7;
+  optional SeedSelector seedSelector = 7;
 
   // Type is the name of the provider.
   optional string type = 8;
@@ -711,6 +713,16 @@ message KubeAPIServerConfig {
   // of the kube-apiserver.
   // +optional
   optional ServiceAccountConfig serviceAccountConfig = 8;
+
+  // WatchCacheSizes contains configuration of the API server's watch cache sizes.
+  // Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+  // and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's
+  // capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+  // might happen that controller watches are permanently stopped with `too old resource version` errors.
+  // Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
+  // cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
+  // +optional
+  optional WatchCacheSizes watchCacheSizes = 9;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -1503,6 +1515,21 @@ message Region {
   map<string, string> labels = 3;
 }
 
+// ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.
+message ResourceWatchCacheSize {
+  // APIGroup is the API group of the resource for which the watch cache size should be configured.
+  // An unset value is used to specify the legacy core API (e.g. for `secrets`).
+  // +optional
+  optional string apiGroup = 1;
+
+  // Resource is the name of the resource for which the watch cache size should be configured
+  // (in lowercase plural form, e.g. `secrets`).
+  optional string resource = 2;
+
+  // CacheSize specifies the watch cache size that should be configured for the specified resource.
+  optional int32 size = 3;
+}
+
 message SecretBinding {
   // Standard object metadata.
   // +optional
@@ -1607,6 +1634,17 @@ message SeedProvider {
 
   // Region is a name of a region.
   optional string region = 3;
+}
+
+// SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
+message SeedSelector {
+  // LabelSelector is optional and can be used to select seeds by their label settings
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 1;
+
+  // Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
+  // +optional
+  repeated string providerTypes = 2;
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -1889,7 +1927,7 @@ message ShootSpec {
 
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 15;
+  optional SeedSelector seedSelector = 15;
 
   // Resources holds a list of named resource references that can be referred to in extension configs by their names.
   // +optional
@@ -2035,6 +2073,21 @@ message VolumeType {
   // Usable defines if the volume type can be used for shoot clusters.
   // +optional
   optional bool usable = 3;
+}
+
+// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+message WatchCacheSizes {
+  // Default configures the default watch cache size of the kube-apiserver
+  // (flag `--default-watch-cache-size`, defaults to 100).
+  // See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+  // +optional
+  optional int32 default = 1;
+
+  // Resources configures the watch cache size of the kube-apiserver per resource
+  // (flag `--watch-cache-sizes`).
+  // See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+  // +optional
+  repeated ResourceWatchCacheSize resources = 2;
 }
 
 // Worker is the base definition of a worker group.

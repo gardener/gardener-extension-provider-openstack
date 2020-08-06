@@ -47,6 +47,7 @@ ignoreResources: false
 #   ...
 
 webhookConfig:
+  servicePort: 443
   serverPort: 10250
 
 config:

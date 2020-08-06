@@ -24,8 +24,9 @@ LD_FLAGS                    := "-w -X github.com/gardener/$(EXTENSION_PREFIX)-$(
 LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
 
+WEBHOOK_CONFIG_PORT	:= 8443
 WEBHOOK_CONFIG_MODE	:= url
-WEBHOOK_CONFIG_URL	:= docker.for.mac.localhost
+WEBHOOK_CONFIG_URL	:= host.docker.internal:$(WEBHOOK_CONFIG_PORT)
 EXTENSION_NAMESPACE	:=
 
 WEBHOOK_PARAM := --webhook-config-url=$(WEBHOOK_CONFIG_URL)
@@ -47,7 +48,7 @@ start:
 		--ignore-operation-annotation=$(IGNORE_OPERATION_ANNOTATION) \
 		--leader-election=$(LEADER_ELECTION) \
 		--webhook-config-server-host=0.0.0.0 \
-		--webhook-config-server-port=8443 \
+		--webhook-config-server-port=$(WEBHOOK_CONFIG_PORT) \
 		--webhook-config-mode=$(WEBHOOK_CONFIG_MODE) \
 		$(WEBHOOK_PARAM)
 

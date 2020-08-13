@@ -6,6 +6,7 @@ metadata:
   name: default-class
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 allowVolumeExpansion: true
 provisioner: cinder.csi.openstack.org
 ---
@@ -15,6 +16,7 @@ metadata:
   name: default
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 allowVolumeExpansion: true
 provisioner: cinder.csi.openstack.org
 {{- end }}

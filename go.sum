@@ -155,8 +155,8 @@ github.com/gardener/external-dns-management v0.7.7/go.mod h1:egCe/FPOsUbXA4WV0ne
 github.com/gardener/gardener v1.1.2/go.mod h1:CP9I0tCDVXTLPkJv/jUtXVUh948kSNKEGUg0haLz9gk=
 github.com/gardener/gardener v1.3.1/go.mod h1:936P5tQbg6ViiW8BVC9ELM95sFrk4DgobKrxMNtn/LU=
 github.com/gardener/gardener v1.4.1-0.20200519155656-a8ccc6cc779a/go.mod h1:t9oESM37bAMIuezi9I0H0I8+++8jy8BUPitcf4ERRXY=
-github.com/gardener/gardener v1.8.0 h1:gbN9iJjIA8+Vgn3//JZJAJgri0bq7IMTHe3EnZ8JYTk=
-github.com/gardener/gardener v1.8.0/go.mod h1:i+bPtN66GuX+cND7OMPeeHH4X+WLD+NKPvg7CT38r70=
+github.com/gardener/gardener v1.9.0 h1:2KaUa6NOQJifhA1csxdslZM4q3ZZsbNh0p9VsSoDfP8=
+github.com/gardener/gardener v1.9.0/go.mod h1:IXSJvkz5yW+lobUMZmtd9E2zyKmO/fZwVRlv7safS4k=
 github.com/gardener/gardener-resource-manager v0.10.0 h1:6OUKoWI3oha42F0oJN8OEo3UR+D3onOCel4Th+zgotU=
 github.com/gardener/gardener-resource-manager v0.10.0/go.mod h1:0pKTHOhvU91eQB0EYr/6Ymd7lXc/5Hi8P8tF/gpV0VQ=
 github.com/gardener/gardener-resource-manager v0.13.1 h1:BiQ0EMO58663UN7lkOXRKV4gt5bEBIk80nxxokAboxc=
@@ -912,12 +912,12 @@ k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a/go.mod h1:1TqjTSzOxsLGIKf
 k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 h1:NeQXVJ2XFSkRoPzRo8AId01ZER+j8oV4SZADT4iBOXQ=
 k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29/go.mod h1:F+5wygcW0wmRTnM3cOgIqGivxkwSWIWT5YdsDbeAOaU=
 k8s.io/kubelet v0.16.8/go.mod h1:mzDpnryQg2dlB6V3/WAgb1baIamiICtWpXMFrPOFh6I=
-k8s.io/kubelet v0.17.9 h1:SXaWYMxAByoTSBZAusUXC8meGL6igM5pe/wC+/vY8Vc=
-k8s.io/kubelet v0.17.9/go.mod h1:M+RGkEUbPvgB1/veEztlnyuDtoqv3bh5ohb/2yMp7n4=
+k8s.io/kubelet v0.17.11 h1:OrdICroApShJt3svhCo+WrdbttgNq7lc89yUnLlmmkk=
+k8s.io/kubelet v0.17.11/go.mod h1:t7iF7NuEHmv0sypxekgB1aVPVrQpNQquAPMiCIennyc=
 k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c/go.mod h1:a25VAbm3QT3xiVl1jtoF1ueAKQM149UdZ+L93ePfV3M=
 k8s.io/metrics v0.16.8/go.mod h1:uBIJKJKdga8vL76a1dl+eRlUqOAdCbBpvFHC28SbUIY=
-k8s.io/metrics v0.17.9 h1:9hKn9cFCH192o8ra3qod6VUgOGzxIeISVnX/89Qq7ec=
-k8s.io/metrics v0.17.9/go.mod h1:0mY5LOi2MiwxmEbEgMpeWWs1Fqw+1XxUd8vxshmEMYo=
+k8s.io/metrics v0.17.11 h1:HTJFFY6gnjOS62UF/qBC/bJ1Q/ezQRWPkIsUtTDIcSk=
+k8s.io/metrics v0.17.11/go.mod h1:+II420J8TcFnEvKMc8LmL5w36RWXRIosDc1OjjCkYTk=
 k8s.io/utils v0.0.0-20190506122338-8fab8cb257d5/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20190801114015-581e00157fb1 h1:+ySTxfHnfzZb9ys375PXNlLhkJPLKgHajBU0N62BDvE=
 k8s.io/utils v0.0.0-20190801114015-581e00157fb1/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=

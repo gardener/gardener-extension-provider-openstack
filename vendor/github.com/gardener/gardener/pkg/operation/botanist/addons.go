@@ -208,8 +208,6 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			common.ManagedResourceShootCoreName:     {false, b.generateCoreAddonsChart},
 			common.ManagedResourceCoreNamespaceName: {true, b.generateCoreNamespacesChart},
 			common.ManagedResourceAddonsName:        {false, b.generateOptionalAddonsChart},
-			// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-			common.ManagedResourceKymaName: {false, b.generateTemporaryKymaAddonsChart},
 		}
 	)
 
@@ -291,12 +289,19 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		}
 		data := renderedChart.AsSecretData()
 		secretName := "managedresource-" + name
+
+		// Copy labels into a new map to avoid concurrent map writes.
+		secretLabelsCopy := make(map[string]string)
+		for k, v := range secretLabels {
+			secretLabelsCopy[k] = v
+		}
+
 		fns = append(fns, func(ctx context.Context) error {
 			return manager.
 				NewSecret(b.K8sSeedClient.Client()).
 				WithNamespacedName(b.Shoot.SeedNamespace, secretName).
 				WithKeyValues(data).
-				WithLabels(secretLabels).
+				WithLabels(secretLabelsCopy).
 				Reconcile(ctx)
 		})
 		cloudConfigManagedResource.WithSecretRef(secretName)
@@ -635,14 +640,5 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		"global":               global,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
-	})
-}
-
-// generateTemporaryKymaAddonsChart renders the gardener-resource-manager chart for the kyma addon. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-func (b *Botanist) generateTemporaryKymaAddonsChart() (*chartrenderer.RenderedChart, error) {
-	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-addons-kyma"), "kyma", "kyma-installer", map[string]interface{}{
-		"kyma": common.GenerateAddonConfig(nil, metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, common.ShootExperimentalAddonKyma)),
 	})
 }

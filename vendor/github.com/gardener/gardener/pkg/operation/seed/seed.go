@@ -39,6 +39,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/pkg/version"
 
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -340,6 +341,11 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		Repository: repository,
 		Tag:        &tag,
 	}
+	// TODO: Remove in future release
+	// Delete the mutatingwebhookconfigoration
+	if err := deleteMutatingWebHookConfiguration(context.TODO(), k8sSeedClient.Client()); err != nil {
+		return err
+	}
 
 	// Logging feature gate
 	var (
@@ -627,9 +633,11 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
 			"enabled": vpaEnabled,
-			"admissionController": map[string]interface{}{
-				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+			"runtime": map[string]interface{}{
+				"admissionController": map[string]interface{}{
+					"podAnnotations": map[string]interface{}{
+						"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+					},
 				},
 			},
 		},
@@ -766,4 +774,15 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 		return string(gardenNamespace.UID), nil
 	}
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
+}
+
+func deleteMutatingWebHookConfiguration(ctx context.Context, k8sSeedClient client.Client) error {
+	a := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener-seed-admission-controller",
+		},
+	}
+
+	err := k8sSeedClient.Delete(ctx, a)
+	return client.IgnoreNotFound(err)
 }

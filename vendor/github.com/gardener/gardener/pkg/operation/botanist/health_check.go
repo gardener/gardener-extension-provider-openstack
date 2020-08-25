@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -40,6 +41,7 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -265,6 +267,12 @@ func computeRequiredControlPlaneDeployments(
 		}
 	}
 
+	if gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+		for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
+			requiredControlPlaneDeployments.Insert(vpaDeployment)
+		}
+	}
+
 	return requiredControlPlaneDeployments, nil
 }
 
@@ -277,6 +285,10 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 	}
 	return requiredMonitoringStatefulSets
 }
+
+// deprecatedGardenRoleVPA is the role name for VPA deployments used by older Gardener versions.
+// TODO: remove in a future version
+const deprecatedGardenRoleVPA = "vpa"
 
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
@@ -296,6 +308,15 @@ func (b *HealthChecker) CheckControlPlane(
 	if err != nil {
 		return nil, err
 	}
+
+	// Required for backwards compatibility
+	// TODO: remove in a future version
+	vpaDeployments, err := deploymentLister.Deployments(namespace).List(mustGardenRoleLabelSelector(deprecatedGardenRoleVPA))
+	if err != nil {
+		return nil, err
+	}
+	deployments = append(deployments, vpaDeployments...)
+
 	if exitCondition := b.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deployments); exitCondition != nil {
 		return exitCondition, nil
 	}
@@ -475,6 +496,7 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 
 // checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
 func (b *Botanist) checkControlPlane(
+	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	seedDeploymentLister kutil.DeploymentLister,
@@ -483,7 +505,23 @@ func (b *Botanist) checkControlPlane(
 	seedWorkerLister kutil.WorkerLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
+	cluster, err := gardenerextensions.GetCluster(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			c := checker.FailedCondition(condition, "ControlPlaneNotReady", "Control plane is not yet ready because of missing cluster resource.")
+			return &c, nil
+		}
+		b.Logger.Errorf("Failed to execute control plane health checks: %v", err)
+		return nil, err
+	}
+	// Use shoot from cluster resource here because it reflects the actual or "active" spec to determine which health checks are required.
+	// With the "confineSpecUpdateRollout" feature enabled, shoot resources have a spec which is not yet active.
+	shoot := cluster.Shoot
+	if shoot == nil {
+		return nil, errors.New("failed to execute control plane health checks because shoot is missing in cluster resource")
+	}
+
+	if exitCondition, err := checker.CheckControlPlane(shoot, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
@@ -708,6 +746,8 @@ var (
 		v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.GardenRoleMonitoring,
 		v1beta1constants.GardenRoleLogging,
+		// TODO: remove in a future version
+		deprecatedGardenRoleVPA,
 	)
 )
 
@@ -755,7 +795,7 @@ func (b *Botanist) healthChecks(
 		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
@@ -764,7 +804,7 @@ func (b *Botanist) healthChecks(
 		apiserverAvailability = b.checkAPIServerAvailability(checker, apiserverAvailability)
 		return nil
 	}, func(ctx context.Context) error {
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return nil
 	}, func(ctx context.Context) error {

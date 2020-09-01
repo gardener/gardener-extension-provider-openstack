@@ -34,6 +34,14 @@ ifeq ($(WEBHOOK_CONFIG_MODE), service)
   WEBHOOK_PARAM := --webhook-config-namespace=$(EXTENSION_NAMESPACE)
 endif
 
+REGION             := eu-nl-1
+AUTH_URL           := .kube-secrets/openstack/auth_url.secret
+DOMAIN_NAME        := .kube-secrets/openstack/domain_name.secret
+FLOATING_POOL_NAME := .kube-secrets/openstack/floating_pool_name.secret
+PASSWORD           := .kube-secrets/openstack/password.secret
+TENANT_NAME        := .kube-secrets/openstack/tenant_name.secret
+USER_NAME          := .kube-secrets/openstack/user_name.secret
+
 #########################################
 # Rules for local development scenarios #
 #########################################
@@ -139,3 +147,16 @@ verify: check format test
 
 .PHONY: verify-extended
 verify-extended: install-requirements check-generate check format test-cov test-clean
+
+.PHONY: integration-test-infra
+integration-test-infra:
+	@go test -timeout=0 -mod=vendor ./test/integration/infrastructure \
+		--v -ginkgo.v -ginkgo.progress \
+		--kubeconfig=${KUBECONFIG} \
+		--auth-url='$(shell cat $(AUTH_URL))' \
+		--domain-name='$(shell cat $(DOMAIN_NAME))' \
+		--floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
+		--password='$(shell cat $(PASSWORD))' \
+		--tenant-name='$(shell cat $(TENANT_NAME))' \
+		--user-name='$(shell cat $(USER_NAME))' \
+		--region=$(REGION)

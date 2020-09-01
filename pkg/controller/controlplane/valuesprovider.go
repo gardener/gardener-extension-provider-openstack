@@ -407,19 +407,20 @@ func getConfigChartValues(
 	}
 
 	values := map[string]interface{}{
-		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"domainName":        c.DomainName,
-		"tenantName":        c.TenantName,
-		"username":          c.Username,
-		"password":          c.Password,
-		"region":            cp.Spec.Region,
-		"lbProvider":        cpConfig.LoadBalancerProvider,
-		"floatingNetworkID": infraStatus.Networks.FloatingPool.ID,
-		"subnetID":          subnet.ID,
-		"authUrl":           keyStoneURL,
-		"dhcpDomain":        cloudProfileConfig.DHCPDomain,
-		"requestTimeout":    cloudProfileConfig.RequestTimeout,
-		"useOctavia":        cloudProfileConfig.UseOctavia != nil && *cloudProfileConfig.UseOctavia,
+		"kubernetesVersion":          cluster.Shoot.Spec.Kubernetes.Version,
+		"domainName":                 c.DomainName,
+		"tenantName":                 c.TenantName,
+		"username":                   c.Username,
+		"password":                   c.Password,
+		"region":                     cp.Spec.Region,
+		"lbProvider":                 cpConfig.LoadBalancerProvider,
+		"floatingNetworkID":          infraStatus.Networks.FloatingPool.ID,
+		"subnetID":                   subnet.ID,
+		"authUrl":                    keyStoneURL,
+		"dhcpDomain":                 cloudProfileConfig.DHCPDomain,
+		"requestTimeout":             cloudProfileConfig.RequestTimeout,
+		"useOctavia":                 cloudProfileConfig.UseOctavia != nil && *cloudProfileConfig.UseOctavia,
+		"rescanBlockStorageOnResize": cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
 	}
 
 	if cpConfig.LoadBalancerClasses == nil {

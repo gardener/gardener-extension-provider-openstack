@@ -19,6 +19,9 @@ This may help when you have for example a long list of load balancers in your en
 
 In case your OpenStack system uses [Octavia](https://docs.openstack.org/octavia/latest/) for network load balancing then you have to set the `useOctavia` field to `true` such that the cloud-controller-manager for OpenStack gets correctly configured (it defaults to `false`).
 
+Some hypervisors (especially those which are VMware-based) don't automatically send a new volume size to a Linux kernel when a volume is resized and in-use.
+For those hypervisors you can enable the storage plugin interacting with Cinder to telling the SCSI block device to refresh its information to provide information about it's updated size to the kernel. You might need to enable this behavior depending on the underlying hypervisor of your OpenStack installation. The `rescanBlockStorageOnResize` field controls this. Please note that it only applies for Kubernetes versions where CSI is used.
+
 The cloud profile config also contains constraints for floating pools and load balancer providers that can be used in shoots.
 
 An example `CloudProfileConfig` for the OpenStack extension looks as follows:
@@ -42,6 +45,7 @@ machineImages:
 # - 10.10.10.12
 # requestTimeout: 60s
 # useOctavia: true
+# rescanBlockStorageOnResize: true
 constraints:
   floatingPools:
   - name: fp-pool-1
@@ -83,7 +87,7 @@ constraints:
 ```
 
 Please note that it is possible to configure a region mapping for keystone URLs, floating pools, and load balancer providers.
-Additionally, floating pools can be constrainted to a keystone domain by specifying the `domain` field. 
+Additionally, floating pools can be constrainted to a keystone domain by specifying the `domain` field.
 Floating pool names may also contains simple wildcard expressions, like `*` or `fp-pool-*` or `*-fp-pool`. Please note that the `*` must be either single or at the beginning or at the end. Consequently, `fp-*-pool` is not possible/allowed.
 The default behavior is that, if found, the regional (and/or domain restricted) entry is taken.
 If no entry for the given region exists then the fallback value is the most matching entry (w.r.t. wildcard matching) in the list without a `region` field (or the `keystoneURL` value for the keystone URLs).

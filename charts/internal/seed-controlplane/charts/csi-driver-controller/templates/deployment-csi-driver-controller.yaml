@@ -85,8 +85,7 @@ spec:
         - --kubeconfig=/var/lib/csi-provisioner/kubeconfig
         - --feature-gates=Topology=true
         - --volume-name-prefix=pv-{{ .Release.Namespace }}
-        - --enable-leader-election
-        - --leader-election-type=leases
+        - --leader-election
         - --leader-election-namespace=kube-system
         - --v=5
         env:

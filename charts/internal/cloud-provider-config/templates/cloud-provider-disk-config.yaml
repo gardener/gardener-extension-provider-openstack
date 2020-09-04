@@ -2,6 +2,10 @@
 [Global]
 {{ include "cloud-provider-config-credentials" . }}
 {{ include "cloud-provider-config-meta" . }}
+{{- if semverCompare ">= 1.19-0" .Values.kubernetesVersion }}
+[BlockStorage]
+rescan-on-resize={{ .Values.rescanBlockStorageOnResize }}
+{{- end }}
 {{- end -}}
 ---
 apiVersion: v1

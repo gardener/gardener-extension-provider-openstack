@@ -114,14 +114,16 @@ var _ = Describe("ValuesProvider", func() {
 
 		cp = defaultControlPlane()
 
-		cidr       = "10.250.0.0/19"
-		useOctavia = true
+		cidr                       = "10.250.0.0/19"
+		useOctavia                 = true
+		rescanBlockStorageOnResize = true
 
 		cloudProfileConfig = &api.CloudProfileConfig{
-			KeyStoneURL:    authURL,
-			DHCPDomain:     dhcpDomain,
-			RequestTimeout: requestTimeout,
-			UseOctavia:     pointer.BoolPtr(useOctavia),
+			KeyStoneURL:                authURL,
+			DHCPDomain:                 dhcpDomain,
+			RequestTimeout:             requestTimeout,
+			UseOctavia:                 pointer.BoolPtr(useOctavia),
+			RescanBlockStorageOnResize: pointer.BoolPtr(rescanBlockStorageOnResize),
 		}
 		cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
 
@@ -243,19 +245,20 @@ var _ = Describe("ValuesProvider", func() {
 
 	Describe("#GetConfigChartValues", func() {
 		configChartValues := map[string]interface{}{
-			"kubernetesVersion": "1.13.4",
-			"domainName":        "domain-name",
-			"tenantName":        "tenant-name",
-			"username":          "username",
-			"password":          "password",
-			"region":            region,
-			"subnetID":          "subnet-acbd1234",
-			"lbProvider":        "load-balancer-provider",
-			"floatingNetworkID": "floating-network-id",
-			"authUrl":           authURL,
-			"dhcpDomain":        dhcpDomain,
-			"requestTimeout":    requestTimeout,
-			"useOctavia":        useOctavia,
+			"kubernetesVersion":          "1.13.4",
+			"domainName":                 "domain-name",
+			"tenantName":                 "tenant-name",
+			"username":                   "username",
+			"password":                   "password",
+			"region":                     region,
+			"subnetID":                   "subnet-acbd1234",
+			"lbProvider":                 "load-balancer-provider",
+			"floatingNetworkID":          "floating-network-id",
+			"authUrl":                    authURL,
+			"dhcpDomain":                 dhcpDomain,
+			"requestTimeout":             requestTimeout,
+			"useOctavia":                 useOctavia,
+			"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 		}
 
 		It("should return correct config chart values", func() {

@@ -42,6 +42,9 @@ type CloudProfileConfig struct {
 	MachineImages []MachineImages
 	// RequestTimeout specifies the HTTP timeout against the OpenStack API.
 	RequestTimeout *string
+	// RescanBlockStorageOnResize specifies whether the storage plugin scans and checks new block device size before it resizes
+	// the filesystem.
+	RescanBlockStorageOnResize *bool
 	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
 	UseOctavia *bool
 }

@@ -141,6 +141,19 @@ string
 </tr>
 <tr>
 <td>
+<code>rescanBlockStorageOnResize</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RescanBlockStorageOnResize specifies whether the storage plugin scans and checks new block device size before it resizes
+the filesystem.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>useOctavia</code></br>
 <em>
 bool

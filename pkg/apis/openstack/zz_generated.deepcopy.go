@@ -79,6 +79,11 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.RescanBlockStorageOnResize != nil {
+		in, out := &in.RescanBlockStorageOnResize, &out.RescanBlockStorageOnResize
+		*out = new(bool)
+		**out = **in
+	}
 	if in.UseOctavia != nil {
 		in, out := &in.UseOctavia, &out.UseOctavia
 		*out = new(bool)

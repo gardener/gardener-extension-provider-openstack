@@ -9,6 +9,11 @@ metadata:
     resources.gardener.cloud/delete-on-invalid-update: "true"
 allowVolumeExpansion: true
 provisioner: kubernetes.io/cinder
+{{- if semverCompare ">= 1.12-0" .Capabilities.KubeVersion.GitVersion }}
+volumeBindingMode: WaitForFirstConsumer
+{{- else }}
+volumeBindingMode: Immediate
+{{- end }}
 ---
 apiVersion: {{ include "storageclassversion" . }}
 kind: StorageClass
@@ -19,4 +24,9 @@ metadata:
     resources.gardener.cloud/delete-on-invalid-update: "true"
 allowVolumeExpansion: true
 provisioner: kubernetes.io/cinder
+{{- if semverCompare ">= 1.12-0" .Capabilities.KubeVersion.GitVersion }}
+volumeBindingMode: WaitForFirstConsumer
+{{- else }}
+volumeBindingMode: Immediate
+{{- end }}
 {{- end }}

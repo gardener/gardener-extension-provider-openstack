@@ -85,6 +85,7 @@ spec:
         - --kubeconfig=/var/lib/csi-provisioner/kubeconfig
         - --feature-gates=Topology=true
         - --volume-name-prefix=pv-{{ .Release.Namespace }}
+        - --default-fstype=ext4
         - --leader-election
         - --leader-election-namespace=kube-system
         - --v=5

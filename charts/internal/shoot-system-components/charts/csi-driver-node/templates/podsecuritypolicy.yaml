@@ -6,6 +6,8 @@ metadata:
 spec:
   privileged: true
   allowPrivilegeEscalation: true
+  allowedCapabilities:
+  - SYS_ADMIN
   volumes:
   - hostPath
   - secret

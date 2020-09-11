@@ -9,6 +9,7 @@ metadata:
     resources.gardener.cloud/delete-on-invalid-update: "true"
 allowVolumeExpansion: true
 provisioner: cinder.csi.openstack.org
+volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: {{ include "storageclassversion" . }}
 kind: StorageClass
@@ -19,4 +20,5 @@ metadata:
     resources.gardener.cloud/delete-on-invalid-update: "true"
 allowVolumeExpansion: true
 provisioner: cinder.csi.openstack.org
+volumeBindingMode: WaitForFirstConsumer
 {{- end }}

@@ -73,10 +73,10 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, ectx generi
 
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-apiserver"); c != nil {
 		ensureKubeAPIServerCommandLineArgs(c, csiEnabled, csiMigrationComplete)
-		ensureVolumeMounts(c, csiEnabled, csiMigrationComplete)
+		ensureKubeAPIServerVolumeMounts(c, csiEnabled, csiMigrationComplete)
 	}
 
-	ensureVolumes(ps, csiEnabled, csiMigrationComplete)
+	ensureKubeAPIServerVolumes(ps, csiEnabled, csiMigrationComplete)
 	return e.ensureChecksumAnnotations(ctx, &new.Spec.Template, new.Namespace, csiEnabled, csiMigrationComplete)
 }
 
@@ -97,11 +97,11 @@ func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, ect
 
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-controller-manager"); c != nil {
 		ensureKubeControllerManagerCommandLineArgs(c, csiEnabled, csiMigrationComplete)
-		ensureVolumeMounts(c, csiEnabled, csiMigrationComplete)
+		ensureKubeControllerManagerVolumeMounts(c, csiEnabled, csiMigrationComplete)
 	}
 
 	ensureKubeControllerManagerLabels(template, csiEnabled, csiMigrationComplete)
-	ensureVolumes(ps, csiEnabled, csiMigrationComplete)
+	ensureKubeControllerManagerVolumes(ps, csiEnabled, csiMigrationComplete)
 	return e.ensureChecksumAnnotations(ctx, &new.Spec.Template, new.Namespace, csiEnabled, csiMigrationComplete)
 }
 
@@ -214,11 +214,13 @@ var (
 		MountPath: "/etc/ssl",
 		ReadOnly:  true,
 	}
-	etcSSLVolume = corev1.Volume{
+	directoryOrCreate = corev1.HostPathDirectoryOrCreate
+	etcSSLVolume      = corev1.Volume{
 		Name: etcSSLName,
 		VolumeSource: corev1.VolumeSource{
 			HostPath: &corev1.HostPathVolumeSource{
 				Path: "/etc/ssl",
+				Type: &directoryOrCreate,
 			},
 		},
 	}
@@ -252,7 +254,16 @@ var (
 	}
 )
 
-func ensureVolumeMounts(c *corev1.Container, csiEnabled, csiMigrationComplete bool) {
+func ensureKubeAPIServerVolumeMounts(c *corev1.Container, csiEnabled, csiMigrationComplete bool) {
+	if csiEnabled && csiMigrationComplete {
+		c.VolumeMounts = extensionswebhook.EnsureNoVolumeMountWithName(c.VolumeMounts, cloudProviderDiskConfigVolumeMount.Name)
+		return
+	}
+
+	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, cloudProviderDiskConfigVolumeMount)
+}
+
+func ensureKubeControllerManagerVolumeMounts(c *corev1.Container, csiEnabled, csiMigrationComplete bool) {
 	if csiEnabled && csiMigrationComplete {
 		c.VolumeMounts = extensionswebhook.EnsureNoVolumeMountWithName(c.VolumeMounts, cloudProviderDiskConfigVolumeMount.Name)
 		c.VolumeMounts = extensionswebhook.EnsureNoVolumeMountWithName(c.VolumeMounts, etcSSLVolumeMount.Name)
@@ -267,9 +278,18 @@ func ensureVolumeMounts(c *corev1.Container, csiEnabled, csiMigrationComplete bo
 	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, usrShareCACertificatesVolumeMount)
 }
 
-func ensureVolumes(ps *corev1.PodSpec, csiEnabled, csiMigrationComplete bool) {
+func ensureKubeAPIServerVolumes(ps *corev1.PodSpec, csiEnabled, csiMigrationComplete bool) {
 	if csiEnabled && csiMigrationComplete {
-		ps.Volumes = extensionswebhook.EnsureNoVolumeWithName(ps.Volumes, cloudProviderDiskConfigVolumeMount.Name)
+		ps.Volumes = extensionswebhook.EnsureNoVolumeWithName(ps.Volumes, cloudProviderDiskConfigVolume.Name)
+		return
+	}
+
+	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, cloudProviderDiskConfigVolume)
+}
+
+func ensureKubeControllerManagerVolumes(ps *corev1.PodSpec, csiEnabled, csiMigrationComplete bool) {
+	if csiEnabled && csiMigrationComplete {
+		ps.Volumes = extensionswebhook.EnsureNoVolumeWithName(ps.Volumes, cloudProviderDiskConfigVolume.Name)
 		ps.Volumes = extensionswebhook.EnsureNoVolumeWithName(ps.Volumes, etcSSLVolume.Name)
 		ps.Volumes = extensionswebhook.EnsureNoVolumeWithName(ps.Volumes, usrShareCACertificatesVolume.Name)
 		return

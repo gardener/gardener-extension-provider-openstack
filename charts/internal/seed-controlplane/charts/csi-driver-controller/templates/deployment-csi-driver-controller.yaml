@@ -200,7 +200,7 @@ spec:
           path: /usr/share/ca-certificates
       - name: cloud-provider-config
         secret:
-          secretName: cloud-provider-disk-config
+          secretName: cloud-provider-disk-config-csi
       # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
       # signed by a CA that is not globally trusted.
       - name: etc-ssl

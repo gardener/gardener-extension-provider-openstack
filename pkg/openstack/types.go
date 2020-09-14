@@ -58,11 +58,13 @@ const (
 	// Region is a constant for the key in a backup secret that holds the Openstack region.
 	Region = "region"
 
-	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
+	// CloudProviderConfigName is the name of the secret containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"
-	// CloudProviderDiskConfigName is the name of the configmap containing the cloud provider config for disk/volume handling.
+	// CloudProviderDiskConfigName is the name of the secret containing the cloud provider config for disk/volume handling. It is used by kube-controller-manager.
 	CloudProviderDiskConfigName = "cloud-provider-disk-config"
-	// CloudProviderConfigDataKey is the key storing the cloud provider config as value in the cloud provider configmap.
+	// CloudProviderCSIDiskConfigName is the name of the secret containing the cloud provider config for disk/volume handling. It is used by csi-driver-controller.
+	CloudProviderCSIDiskConfigName = "cloud-provider-disk-config-csi"
+	// CloudProviderConfigDataKey is the key storing the cloud provider config as value in the cloud provider secret.
 	CloudProviderConfigDataKey = "cloudprovider.conf"
 	// CloudControllerManagerName is a constant for the name of the CloudController deployed by the worker controller.
 	CloudControllerManagerName = "cloud-controller-manager"

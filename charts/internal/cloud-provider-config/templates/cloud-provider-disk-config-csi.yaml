@@ -1,0 +1,19 @@
+{{- define "cloud-provider-disk-config-csi" -}}
+[Global]
+{{ include "cloud-provider-config-credentials" . }}
+{{ include "cloud-provider-config-meta" . }}
+
+[BlockStorage]
+rescan-on-resize={{ .Values.rescanBlockStorageOnResize }}
+{{- end -}}
+{{- if semverCompare ">= 1.19-0" .Values.kubernetesVersion }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-provider-disk-config-csi
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  cloudprovider.conf: {{ include "cloud-provider-disk-config-csi" . | b64enc }}
+{{- end }}

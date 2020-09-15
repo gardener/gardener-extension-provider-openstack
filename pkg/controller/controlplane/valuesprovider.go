@@ -43,10 +43,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -340,11 +338,6 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		checksums[openstack.CloudProviderCSIDiskConfigName] = gutil.ComputeChecksum(cpDiskConfigSecret.Data)
 	}
 
-	// TODO: Remove this code in a future version again.
-	if err := vp.deleteLegacyCloudProviderConfigMaps(ctx, cp.Namespace); err != nil {
-		return nil, err
-	}
-
 	return getControlPlaneChartValues(cpConfig, cp, cluster, checksums, scaledDown)
 }
 
@@ -595,25 +588,4 @@ func getControlPlaneShootChartValues(
 			"cloudProviderConfig": cloudProviderDiskConfig,
 		},
 	}, nil
-}
-
-// TODO: Remove this in a future version again.
-func (vp *valuesProvider) deleteLegacyCloudProviderConfigMaps(ctx context.Context, namespace string) error {
-	for _, name := range []string{
-		"cloud-provider-config-cloud-controller-manager",
-		"cloud-provider-config-kube-controller-manager",
-	} {
-		cm := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-
-		if err := vp.Client().Delete(ctx, cm); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
 }

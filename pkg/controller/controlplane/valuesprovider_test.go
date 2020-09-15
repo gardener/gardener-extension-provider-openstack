@@ -366,8 +366,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		BeforeEach(func() {
 			c.EXPECT().Get(ctx, cpConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfig))
-			c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cloud-provider-config-cloud-controller-manager", Namespace: namespace}})
-			c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cloud-provider-config-kube-controller-manager", Namespace: namespace}})
 		})
 
 		It("should return correct control plane chart values (k8s < 1.19)", func() {

@@ -197,10 +197,10 @@ var _ = Describe("ValuesProvider", func() {
 		}
 
 		cloudProviderDiskConfig = []byte("foo")
-		cpDiskConfigKey         = client.ObjectKey{Namespace: namespace, Name: openstack.CloudProviderDiskConfigName}
-		cpDiskConfig            = &corev1.Secret{
+		cpCSIDiskConfigKey      = client.ObjectKey{Namespace: namespace, Name: openstack.CloudProviderCSIDiskConfigName}
+		cpCSIDiskConfig         = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      openstack.CloudProviderDiskConfigName,
+				Name:      openstack.CloudProviderCSIDiskConfigName,
 				Namespace: namespace,
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -366,7 +366,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		BeforeEach(func() {
 			c.EXPECT().Get(ctx, cpConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfig))
-			c.EXPECT().Get(ctx, cpDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpDiskConfig))
 			c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cloud-provider-config-cloud-controller-manager", Namespace: namespace}})
 			c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cloud-provider-config-kube-controller-manager", Namespace: namespace}})
 		})
@@ -383,6 +382,8 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct control plane chart values (k8s >= 1.19)", func() {
+			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
+
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sAtLeast119, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
@@ -392,11 +393,11 @@ var _ = Describe("ValuesProvider", func() {
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 					"replicas": 1,
 					"podAnnotations": map[string]interface{}{
-						"checksum/secret-" + openstack.CSIProvisionerName:          checksums[openstack.CSIProvisionerName],
-						"checksum/secret-" + openstack.CSIAttacherName:             checksums[openstack.CSIAttacherName],
-						"checksum/secret-" + openstack.CSISnapshotterName:          checksums[openstack.CSISnapshotterName],
-						"checksum/secret-" + openstack.CSIResizerName:              checksums[openstack.CSIResizerName],
-						"checksum/secret-" + openstack.CloudProviderDiskConfigName: checksums[openstack.CloudProviderDiskConfigName],
+						"checksum/secret-" + openstack.CSIProvisionerName:             checksums[openstack.CSIProvisionerName],
+						"checksum/secret-" + openstack.CSIAttacherName:                checksums[openstack.CSIAttacherName],
+						"checksum/secret-" + openstack.CSISnapshotterName:             checksums[openstack.CSISnapshotterName],
+						"checksum/secret-" + openstack.CSIResizerName:                 checksums[openstack.CSIResizerName],
+						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,
@@ -419,7 +420,7 @@ var _ = Describe("ValuesProvider", func() {
 				openstack.CSINodeName: utils.MergeMaps(enabledFalse, map[string]interface{}{
 					"vpaEnabled": false,
 					"podAnnotations": map[string]interface{}{
-						"checksum/secret-" + openstack.CloudProviderDiskConfigName: "",
+						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: "",
 					},
 					"cloudProviderConfig": b,
 				}),
@@ -427,7 +428,7 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct shoot control plane chart values (k8s >= 1.19)", func() {
-			c.EXPECT().Get(ctx, cpDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpDiskConfig))
+			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 
 			values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
@@ -436,7 +437,7 @@ var _ = Describe("ValuesProvider", func() {
 				openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 					"vpaEnabled": true,
 					"podAnnotations": map[string]interface{}{
-						"checksum/secret-" + openstack.CloudProviderDiskConfigName: checksums[openstack.CloudProviderDiskConfigName],
+						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
 					"cloudProviderConfig": cloudProviderDiskConfig,
 				}),

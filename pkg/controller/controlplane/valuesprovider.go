@@ -327,11 +327,18 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	}
 	checksums[openstack.CloudProviderConfigName] = gutil.ComputeChecksum(cpConfigSecret.Data)
 
-	cpDiskConfigSecret := &corev1.Secret{}
-	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderDiskConfigName), cpDiskConfigSecret); err != nil {
+	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", "1.19")
+	if err != nil {
 		return nil, err
 	}
-	checksums[openstack.CloudProviderDiskConfigName] = gutil.ComputeChecksum(cpDiskConfigSecret.Data)
+
+	if !k8sVersionLessThan119 {
+		cpDiskConfigSecret := &corev1.Secret{}
+		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
+			return nil, err
+		}
+		checksums[openstack.CloudProviderCSIDiskConfigName] = gutil.ComputeChecksum(cpDiskConfigSecret.Data)
+	}
 
 	// TODO: Remove this code in a future version again.
 	if err := vp.deleteLegacyCloudProviderConfigMaps(ctx, cp.Namespace); err != nil {
@@ -355,13 +362,13 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 
 	var cloudProviderDiskConfig []byte
 	if !k8sVersionLessThan119 {
-		cm := &corev1.Secret{}
-		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderDiskConfigName), cm); err != nil {
+		secret := &corev1.Secret{}
+		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
 			return nil, err
 		}
 
-		cloudProviderDiskConfig = cm.Data[openstack.CloudProviderConfigDataKey]
-		checksums[openstack.CloudProviderDiskConfigName] = gutil.ComputeChecksum(cm.Data)
+		cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
+		checksums[openstack.CloudProviderCSIDiskConfigName] = gutil.ComputeChecksum(secret.Data)
 	}
 
 	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig)
@@ -555,11 +562,11 @@ func getCSIControllerChartValues(
 		"enabled":  true,
 		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CSIProvisionerName:          checksums[openstack.CSIProvisionerName],
-			"checksum/secret-" + openstack.CSIAttacherName:             checksums[openstack.CSIAttacherName],
-			"checksum/secret-" + openstack.CSISnapshotterName:          checksums[openstack.CSISnapshotterName],
-			"checksum/secret-" + openstack.CSIResizerName:              checksums[openstack.CSIResizerName],
-			"checksum/secret-" + openstack.CloudProviderDiskConfigName: checksums[openstack.CloudProviderDiskConfigName],
+			"checksum/secret-" + openstack.CSIProvisionerName:             checksums[openstack.CSIProvisionerName],
+			"checksum/secret-" + openstack.CSIAttacherName:                checksums[openstack.CSIAttacherName],
+			"checksum/secret-" + openstack.CSISnapshotterName:             checksums[openstack.CSISnapshotterName],
+			"checksum/secret-" + openstack.CSIResizerName:                 checksums[openstack.CSIResizerName],
+			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
 		"csiSnapshotController": map[string]interface{}{
 			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
@@ -583,7 +590,7 @@ func getControlPlaneShootChartValues(
 			"enabled":    !k8sVersionLessThan119,
 			"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CloudProviderDiskConfigName: checksums[openstack.CloudProviderDiskConfigName],
+				"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 			},
 			"cloudProviderConfig": cloudProviderDiskConfig,
 		},

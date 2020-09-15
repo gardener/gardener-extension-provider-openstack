@@ -395,7 +395,7 @@ func (e *ensurer) EnsureKubeletCloudProviderConfig(ctx context.Context, ectx gen
 	secret := corev1.Secret{}
 	if err := e.client.Get(ctx, kutil.Key(namespace, openstack.CloudProviderDiskConfigName), &secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			e.logger.Info("configmap not found", "name", openstack.CloudProviderDiskConfigName, "namespace", namespace)
+			e.logger.Info("secret not found", "name", openstack.CloudProviderDiskConfigName, "namespace", namespace)
 			return nil
 		}
 		return errors.Wrapf(err, "could not get secret '%s/%s'", namespace, openstack.CloudProviderDiskConfigName)

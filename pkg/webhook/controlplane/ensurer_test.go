@@ -500,7 +500,9 @@ func checkKubeAPIServerDeployment(dep *appsv1.Deployment, annotations map[string
 		Expect(c.Command).To(test.ContainElementWithPrefixContaining("--enable-admission-plugins=", "PersistentVolumeLabel", ","))
 		Expect(c.Command).To(Not(test.ContainElementWithPrefixContaining("--disable-admission-plugins=", "PersistentVolumeLabel", ",")))
 		Expect(c.VolumeMounts).To(ContainElement(cloudProviderDiskConfigVolumeMount))
+		Expect(c.VolumeMounts).NotTo(ContainElement(usrShareCACertificatesVolumeMount))
 		Expect(dep.Spec.Template.Spec.Volumes).To(ContainElement(cloudProviderDiskConfigVolume))
+		Expect(dep.Spec.Template.Spec.Volumes).NotTo(ContainElement(usrShareCACertificatesVolume))
 		Expect(dep.Spec.Template.Annotations).To(Equal(annotations))
 		if k8sVersionAtLeast119 {
 			Expect(c.Command).To(ContainElement("--feature-gates=CSIMigration=true,CSIMigrationOpenStack=true"))

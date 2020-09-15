@@ -261,6 +261,12 @@ func ensureKubeAPIServerVolumeMounts(c *corev1.Container, csiEnabled, csiMigrati
 	}
 
 	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, cloudProviderDiskConfigVolumeMount)
+
+	// TODO: remove this in a future version.
+	// previous openstack versions (no CSI) ensure a volume mount with name `usr-share-ca-certificates` with path `/usr/share/ca-certificates`
+	// however Gardener version > 1.10.0 adds (if feature flag `MountHostCADirectories` is enabled) an API Server volume with name `usr-share-cacerts` also with path `/usr/share/ca-certificates`
+	// volume mount `usr-share-ca-certificates` needs to be removed to not have a duplicate `/usr/share/ca-certificates` mount
+	c.VolumeMounts = extensionswebhook.EnsureNoVolumeMountWithName(c.VolumeMounts, usrShareCACertificatesVolumeMount.Name)
 }
 
 func ensureKubeControllerManagerVolumeMounts(c *corev1.Container, csiEnabled, csiMigrationComplete bool) {
@@ -285,6 +291,12 @@ func ensureKubeAPIServerVolumes(ps *corev1.PodSpec, csiEnabled, csiMigrationComp
 	}
 
 	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, cloudProviderDiskConfigVolume)
+
+	// TODO: remove this in a future version.
+	// previous openstack versions (no CSI) ensure a volume with name `usr-share-ca-certificates` with path `/usr/share/ca-certificates`
+	// however Gardener version > 1.10.0 adds (if feature flag `MountHostCADirectories` is enabled) an API Server volume with name `usr-share-cacerts` also with path `/usr/share/ca-certificates`
+	// volume `usr-share-ca-certificates` needs to be removed to not have a duplicate `/usr/share/ca-certificates` mount
+	ps.Volumes = extensionswebhook.EnsureNoVolumeWithName(ps.Volumes, usrShareCACertificatesVolume.Name)
 }
 
 func ensureKubeControllerManagerVolumes(ps *corev1.PodSpec, csiEnabled, csiMigrationComplete bool) {

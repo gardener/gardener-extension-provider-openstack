@@ -40,6 +40,14 @@ Please take a look [here](https://github.com/gardener/gardener/blob/master/docs/
 
 ----
 
+## Compatibility 
+
+The following lists known compatibility issues of this extension controller with other Gardener components.
+
+| OpenStack Extension | Gardener | Action | Notes |
+| ----- | ----- | --- |  --------------- |
+| `< v1.12.0` | `> v1.10.0` |  Please update the provider version to `>= v1.12.0` or disable the feature gate `MountHostCADirectories` in the Gardenlet. | Applies if feature flag `MountHostCADirectories` in the Gardenlet is enabled. This is to prevent duplicate volume mounts to `/usr/share/ca-certificates` in the Shoot API Server. |
+
 ## How to start using or developing this extension controller locally
 
 You can run the controller locally on your machine by executing `make start`.

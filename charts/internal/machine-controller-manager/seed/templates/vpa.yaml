@@ -11,4 +11,10 @@ spec:
     name: machine-controller-manager
   updatePolicy:
     updateMode: {{ .Values.vpa.updatePolicy.updateMode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 30m
+        memory: 40M
 {{- end }}

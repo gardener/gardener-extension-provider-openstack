@@ -22,7 +22,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -x
 
 # Turn colors in this script off by setting the NO_COLOR variable in your
 # environment to any value:

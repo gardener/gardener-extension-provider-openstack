@@ -26,7 +26,6 @@ import (
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -56,6 +55,7 @@ var _ = Describe("Machines", func() {
 	var (
 		ctrl         *gomock.Controller
 		c            *mockclient.MockClient
+		statusWriter *mockclient.MockStatusWriter
 		chartApplier *mockkubernetes.MockChartApplier
 	)
 
@@ -63,6 +63,7 @@ var _ = Describe("Machines", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		c = mockclient.NewMockClient(ctrl)
+		statusWriter = mockclient.NewMockStatusWriter(ctrl)
 		chartApplier = mockkubernetes.NewMockChartApplier(ctrl)
 	})
 
@@ -473,9 +474,9 @@ var _ = Describe("Machines", func() {
 					err := workerDelegate.DeployMachineClasses(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
-					// Test workerDelegate.GetMachineImages()
-					machineImages, err := workerDelegate.GetMachineImages(context.TODO())
-					Expect(machineImages).To(Equal(&apiv1alpha1.WorkerStatus{
+					// Test workerDelegate.UpdateMachineDeployments()
+
+					expectedImages := &apiv1alpha1.WorkerStatus{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "WorkerStatus",
@@ -487,7 +488,22 @@ var _ = Describe("Machines", func() {
 								Image:   machineImage,
 							},
 						},
-					}))
+					}
+
+					workerWithExpectedImages := w.DeepCopy()
+					workerWithExpectedImages.Status.ProviderStatus = &runtime.RawExtension{
+						Object: expectedImages,
+					}
+
+					ctx := context.TODO()
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
+						DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
+							return nil
+						})
+					c.EXPECT().Status().Return(statusWriter)
+					statusWriter.EXPECT().Update(ctx, workerWithExpectedImages).Return(nil)
+
+					err = workerDelegate.UpdateMachineImagesStatus(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.GenerateMachineDeployments()
@@ -522,8 +538,7 @@ var _ = Describe("Machines", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.GetMachineImages()
-					machineImages, err := workerDelegate.GetMachineImages(context.TODO())
-					Expect(machineImages).To(Equal(&apiv1alpha1.WorkerStatus{
+					expectedImages := &apiv1alpha1.WorkerStatus{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "WorkerStatus",
@@ -535,7 +550,22 @@ var _ = Describe("Machines", func() {
 								ID:      machineImageID,
 							},
 						},
-					}))
+					}
+
+					workerWithExpectedImages := workerWithRegion.DeepCopy()
+					workerWithExpectedImages.Status.ProviderStatus = &runtime.RawExtension{
+						Object: expectedImages,
+					}
+
+					ctx := context.TODO()
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
+						DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
+							return nil
+						})
+					c.EXPECT().Status().Return(statusWriter)
+					statusWriter.EXPECT().Update(ctx, workerWithExpectedImages).Return(nil)
+
+					err = workerDelegate.UpdateMachineImagesStatus(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.GenerateMachineDeployments()

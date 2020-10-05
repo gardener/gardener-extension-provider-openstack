@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
@@ -94,7 +93,7 @@ func NewClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (Interface, error)
 // be used.
 func NewClientFromSecret(ctx context.Context, c client.Client, namespace, secretName string, fns ...ConfigFunc) (Interface, error) {
 	secret := &corev1.Secret{}
-	if err := c.Get(ctx, kutil.Key(namespace, secretName), secret); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, secret); err != nil {
 		return nil, err
 	}
 	return NewClientFromSecretObject(secret, fns...)
@@ -230,7 +229,7 @@ func checkIfSupportedKubernetesVersion(gitVersion string) error {
 
 // NewWithConfig returns a new Kubernetes base client.
 func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
-	conf := &config{}
+	conf := &Config{}
 
 	for _, f := range fns {
 		if err := f(conf); err != nil {
@@ -241,7 +240,7 @@ func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
 	return newClientSet(conf)
 }
 
-func newClientSet(conf *config) (Interface, error) {
+func newClientSet(conf *Config) (Interface, error) {
 	if err := setConfigDefaults(conf); err != nil {
 		return nil, err
 	}
@@ -314,6 +313,6 @@ func newClientSet(conf *config) (Interface, error) {
 	return cs, nil
 }
 
-func setConfigDefaults(conf *config) error {
+func setConfigDefaults(conf *Config) error {
 	return setClientOptionsDefaults(conf.restConfig, &conf.clientOptions)
 }

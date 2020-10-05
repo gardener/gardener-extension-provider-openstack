@@ -32,6 +32,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -157,61 +158,35 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
-// DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
-// for automatically scaling the worker pools of the Shoot.
-func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
-	if !b.Shoot.WantsClusterAutoscaler {
-		return b.DeleteClusterAutoscaler(ctx)
-	}
-
-	var workerPools []map[string]interface{}
-	for _, worker := range b.Shoot.MachineDeployments {
-
-		workerPools = append(workerPools, map[string]interface{}{
-			"name": worker.Name,
-			"min":  worker.Minimum,
-			"max":  worker.Maximum,
-		})
-	}
-
-	defaultValues := map[string]interface{}{
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cluster-autoscaler": b.CheckSums[v1beta1constants.DeploymentNameClusterAutoscaler],
-		},
-		"namespace": map[string]interface{}{
-			"uid": b.SeedNamespaceObject.UID,
-		},
-		"replicas":    b.Shoot.GetReplicas(1),
-		"workerPools": workerPools,
-	}
-
-	if clusterAutoscalerConfig := b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler; clusterAutoscalerConfig != nil {
-		if val := clusterAutoscalerConfig.ScaleDownUtilizationThreshold; val != nil {
-			defaultValues["scaleDownUtilizationThreshold"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownUnneededTime; val != nil {
-			defaultValues["scaleDownUnneededTime"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownDelayAfterAdd; val != nil {
-			defaultValues["scaleDownDelayAfterAdd"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownDelayAfterFailure; val != nil {
-			defaultValues["scaleDownDelayAfterFailure"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownDelayAfterDelete; val != nil {
-			defaultValues["scaleDownDelayAfterDelete"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScanInterval; val != nil {
-			defaultValues["scanInterval"] = *val
-		}
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.ClusterAutoscalerImageName)
+// DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
+func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.ClusterAutoscaler, error) {
+	image, err := b.ImageVector.FindImage(common.ClusterAutoscalerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, kubernetes.Values(values))
+	return clusterautoscaler.New(
+		b.K8sSeedClient.Client(),
+		b.Shoot.SeedNamespace,
+		image.String(),
+		b.Shoot.GetReplicas(1),
+		b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler,
+	), nil
+}
+
+// DeployClusterAutoscaler deploys the Kubernetes cluster-autoscaler.
+func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
+	if b.Shoot.WantsClusterAutoscaler {
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetSecrets(clusterautoscaler.Secrets{
+			Kubeconfig: component.Secret{Name: clusterautoscaler.SecretName, Checksum: b.CheckSums[clusterautoscaler.SecretName]},
+		})
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.MachineDeployments)
+
+		return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Deploy(ctx)
+	}
+
+	return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Destroy(ctx)
 }
 
 // DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
@@ -228,14 +203,13 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		admissionController = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-tls-certs":            b.CheckSums["vpa-tls-certs"],
+				"checksum/secret-vpa-tls-certs":            b.CheckSums[common.VPASecretName],
 				"checksum/secret-vpa-admission-controller": b.CheckSums["vpa-admission-controller"],
 			},
 			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
 				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
 			}),
 			"enableServiceAccount": false,
-			"registerByURL":        true,
 		}
 		exporter = map[string]interface{}{
 			"enabled":  false,
@@ -345,6 +319,10 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	if b.APIServerSNIEnabled() {
+		if err := b.DestroyControlPlaneExposure(ctx); err != nil {
+			return err
+		}
+
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}
@@ -355,6 +333,10 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	if err := b.DeployExternalDNS(ctx); err != nil {
+		return err
+	}
+
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
 
@@ -379,13 +361,20 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
 func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
-	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy(ctx); err != nil {
-		return err
-	}
-	if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
+
+	if err := b.DeployKubeAPIService(ctx, sniPhase); err != nil {
 		return err
 	}
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
+		return err
+	}
+	if b.APIServerSNIEnabled() {
+		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+			return err
+		}
+	}
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
 	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
@@ -452,7 +441,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if !b.Shoot.DisableDNS {
+	if !b.Shoot.DisableDNS && !b.APIServerSNIEnabled() {
 		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy(ctx); err != nil {
 			return err
 		}
@@ -855,12 +844,20 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		globalNetworkPoliciesValues = map[string]interface{}{
 			"blockedAddresses": b.Seed.Info.Spec.Networks.BlockCIDRs,
 			"denyAll":          denyAll,
-			"sniEnabled":       b.APIServerSNIEnabled(),
 		}
 		excludeNets = []string{}
-
-		values = map[string]interface{}{}
+		values      = map[string]interface{}{}
 	)
+
+	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { //nolint:exhaustive
+	case component.PhaseEnabled, component.PhaseEnabling, component.PhaseDisabling:
+		// Enable network policies for SNI
+		// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
+		// it needs to be ensured that the traffic from old clients can still reach the API server.
+		globalNetworkPoliciesValues["sniEnabled"] = true
+	default:
+		globalNetworkPoliciesValues["sniEnabled"] = false
+	}
 
 	excludeNets = append(excludeNets, b.Seed.Info.Spec.Networks.BlockCIDRs...)
 
@@ -909,6 +906,7 @@ func (b *Botanist) DeployNetworkPolicies(ctx context.Context) error {
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	var (
 		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		mountHostCADirectories    = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
 		memoryMetricForHpaEnabled = false
 	)
 
@@ -997,15 +995,19 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		foundDeployment = false
 	}
 
-	if b.ShootedSeed != nil && !hvpaEnabled {
+	if b.ShootedSeed != nil {
 		var (
 			apiServer  = b.ShootedSeed.APIServer
 			autoscaler = apiServer.Autoscaler
 		)
-		defaultValues["replicas"] = *apiServer.Replicas
 		minReplicas = *autoscaler.MinReplicas
 		maxReplicas = autoscaler.MaxReplicas
+	}
 
+	if b.ShootedSeed != nil && !hvpaEnabled {
+		apiServer := b.ShootedSeed.APIServer
+
+		defaultValues["replicas"] = *apiServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",
@@ -1133,6 +1135,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
 	defaultValues["admissionPlugins"] = admissionPlugins
 
+	defaultValues["mountHostCADirectories"] = map[string]interface{}{
+		"enabled": mountHostCADirectories,
+	}
+
 	tunnelComponentImageName := common.VPNSeedImageName
 	if b.Shoot.KonnectivityTunnelEnabled {
 		tunnelComponentImageName = common.KonnectivityServerImageName
@@ -1150,7 +1156,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
-		for _, obj := range []runtime.Object{
+		objects := []runtime.Object{
 			// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
 			&autoscalingv2beta1.HorizontalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1164,10 +1170,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
 				},
 			},
-		} {
-			if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
-				return err
-			}
+		}
+
+		if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...); err != nil {
+			return err
 		}
 	} else {
 		// If HVPA is disabled, delete any HVPA that was already deployed
@@ -1322,31 +1328,30 @@ func (b *Botanist) DefaultKubeScheduler() (kubescheduler.KubeScheduler, error) {
 	), nil
 }
 
-// DeployKubeScheduler deploys the Kubernetes scehduler.
+// DeployKubeScheduler deploys the Kubernetes scheduler.
 func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeScheduler.SetSecrets(kubescheduler.Secrets{
-		Kubeconfig: kubescheduler.Secret{Name: kubescheduler.SecretName, Checksum: b.CheckSums[kubescheduler.SecretName]},
-		Server:     kubescheduler.Secret{Name: kubescheduler.SecretNameServer, Checksum: b.CheckSums[kubescheduler.SecretNameServer]},
+		Kubeconfig: component.Secret{Name: kubescheduler.SecretName, Checksum: b.CheckSums[kubescheduler.SecretName]},
+		Server:     component.Secret{Name: kubescheduler.SecretNameServer, Checksum: b.CheckSums[kubescheduler.SecretNameServer]},
 	})
 
 	return b.Shoot.Components.ControlPlane.KubeScheduler.Deploy(ctx)
 }
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
-func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
-	var sniService *client.ObjectKey
+func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
+	return b.kubeAPIServiceService(sniPhase)
+}
 
-	if b.APIServerSNIEnabled() {
-		sniService = &client.ObjectKey{Name: common.IstioIngressGatewayServiceName, Namespace: common.IstioIngressGatewayNamespace}
-	}
-
+func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
 	return controlplane.NewKubeAPIService(
 		&controlplane.KubeAPIServiceValues{
 			Annotations:               b.Seed.LoadBalancerServiceAnnotations,
 			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
+			SNIPhase:                  sniPhase,
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		sniService,
+		client.ObjectKey{Name: common.IstioIngressGatewayServiceName, Namespace: common.IstioIngressGatewayNamespace},
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
@@ -1355,6 +1360,43 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.setAPIServerServiceClusterIP,
 		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },
 	)
+}
+
+// SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
+func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
+	var (
+		svc        = &corev1.Service{}
+		sniEnabled = b.APIServerSNIEnabled()
+	)
+
+	if err := b.K8sSeedClient.DirectClient().Get(
+		ctx,
+		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
+		svc,
+	); client.IgnoreNotFound(err) != nil {
+		return component.PhaseUnknown, err
+	}
+
+	switch {
+	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
+		return component.PhaseEnabling, nil
+	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
+		return component.PhaseEnabled, nil
+	case svc.Spec.Type == corev1.ServiceTypeClusterIP && !sniEnabled:
+		return component.PhaseDisabling, nil
+	default:
+		if sniEnabled {
+			// initial cluster creation with SNI enabled (enabling only relevant for migration).
+			return component.PhaseEnabled, nil
+		}
+		// initial cluster creation with SNI disabled.
+		return component.PhaseDisabled, nil
+	}
+}
+
+// DeployKubeAPIService deploys for kube-apiserver service.
+func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
+	return b.kubeAPIServiceService(sniPhase).Deploy(ctx)
 }
 
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
@@ -1376,7 +1418,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if !b.APIServerSNIEnabled() {
+	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
 		return
 	}
 
@@ -1511,7 +1553,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			foundStatefulset = false
 		}
 
-		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd)
+		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd, b.ShootedSeed, role)
 		if err != nil {
 			return err
 		}
@@ -1667,12 +1709,16 @@ func DetermineBackupSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1
 }
 
 // DetermineDefragmentSchedule determines the defragment schedule based on the shoot creation and maintenance time window.
-func DetermineDefragmentSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1.Etcd) (string, error) {
+func DetermineDefragmentSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1.Etcd, shootedSeed *gardencorev1beta1helper.ShootedSeed, role string) (string, error) {
 	if etcd.Spec.Etcd.DefragmentationSchedule != nil {
 		return *etcd.Spec.Etcd.DefragmentationSchedule, nil
 	}
 
 	schedule := "%d %d */3 * *"
+	if shootedSeed != nil && role == common.EtcdRoleMain {
+		// defrag etcd-main of shooted seeds daily in the maintenance window
+		schedule = "%d %d * * *"
+	}
 
 	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *utils.MaintenanceTimeWindow, shootUID types.UID) string {
 		// Randomize the defragment timing but within the maintainence window.

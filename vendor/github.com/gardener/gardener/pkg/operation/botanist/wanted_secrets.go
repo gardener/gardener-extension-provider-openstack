@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -122,7 +123,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		}, kubernetes.DNSNamesForService("kubernetes", "default")...)
 
 		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
-		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
+		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
 
 		konnectivityServerDNSNames = append([]string{
 			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
@@ -262,9 +263,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for cluster-autoscaler
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: v1beta1constants.DeploymentNameClusterAutoscaler,
+				Name: clusterautoscaler.SecretName,
 
-				CommonName:   "system:cluster-autoscaler",
+				CommonName:   clusterautoscaler.UserName,
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
@@ -680,7 +681,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		)
 
 		secretList = append(secretList, &secrets.CertificateSecretConfig{
-			Name:       "vpa-tls-certs",
+			Name:       common.VPASecretName,
 			CommonName: commonName,
 			DNSNames:   dnsNames,
 			CertType:   secrets.ServerCert,

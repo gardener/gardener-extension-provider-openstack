@@ -240,6 +240,9 @@ const (
 	// StaticTokenSecretName is the name of the secret containing static tokens for the kube-apiserver.
 	StaticTokenSecretName = "static-token"
 
+	// VPASecretName is the name of the secret used by VPA
+	VPASecretName = "vpa-tls-certs"
+
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
 
@@ -545,7 +548,6 @@ var (
 	RequiredMonitoringSeedDeployments = sets.NewString(
 		v1beta1constants.DeploymentNameGrafanaOperators,
 		v1beta1constants.DeploymentNameGrafanaUsers,
-		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
 		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
 	)
 

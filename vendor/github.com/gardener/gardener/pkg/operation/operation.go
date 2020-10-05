@@ -73,7 +73,7 @@ func NewBuilder() *Builder {
 		secretsFunc: func() (map[string]*corev1.Secret, error) {
 			return nil, fmt.Errorf("secrets map is required but not set")
 		},
-		seedFunc: func(context.Context, client.Client) (*seed.Seed, error) {
+		seedFunc: func(context.Context) (*seed.Seed, error) {
 			return nil, fmt.Errorf("seed object is required but not set")
 		},
 		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error) {
@@ -142,17 +142,16 @@ func (b *Builder) WithSecrets(secrets map[string]*corev1.Secret) *Builder {
 
 // WithSeed sets the seedFunc attribute at the Builder.
 func (b *Builder) WithSeed(s *seed.Seed) *Builder {
-	b.seedFunc = func(_ context.Context, _ client.Client) (*seed.Seed, error) { return s, nil }
+	b.seedFunc = func(_ context.Context) (*seed.Seed, error) { return s, nil }
 	return b
 }
 
 // WithSeedFrom sets the seedFunc attribute at the Builder which will build a new Seed object.
 func (b *Builder) WithSeedFrom(k8sGardenCoreInformers gardencoreinformers.Interface, seedName string) *Builder {
-	b.seedFunc = func(ctx context.Context, c client.Client) (*seed.Seed, error) {
+	b.seedFunc = func(ctx context.Context) (*seed.Seed, error) {
 		return seed.
 			NewBuilder().
 			WithSeedObjectFromLister(k8sGardenCoreInformers.Seeds().Lister(), seedName).
-			WithSeedSecretFromClient(ctx, c).
 			Build()
 	}
 	return b
@@ -249,7 +248,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Logger = logger
 
-	seed, err := b.seedFunc(ctx, gardenClient.Client())
+	seed, err := b.seedFunc(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -347,8 +346,11 @@ func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 }
 
 func makeDescription(stats *flow.Stats) string {
+	if stats.ProgressPercent() == 0 {
+		return "Starting " + stats.FlowName
+	}
 	if stats.ProgressPercent() == 100 {
-		return "Execution finished"
+		return stats.FlowName + " finished"
 	}
 	return strings.Join(stats.Running.StringList(), ", ")
 }
@@ -362,7 +364,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		lastUpdateTime = metav1.Now()
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if shoot.Status.LastOperation == nil {
 				return nil, fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
@@ -370,7 +372,9 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 			if shoot.Status.LastOperation.LastUpdateTime.After(lastUpdateTime.Time) {
 				return nil, fmt.Errorf("last operation of Shoot %s/%s was updated mid-air", shoot.Namespace, shoot.Name)
 			}
-			shoot.Status.LastOperation.Description = description
+			if description != "" {
+				shoot.Status.LastOperation.Description = description
+			}
 			shoot.Status.LastOperation.Progress = progress
 			shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
 			return shoot, nil
@@ -385,8 +389,8 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 
 // CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastError is also removed.
-func (o *Operation) CleanShootTaskError(_ context.Context, taskID string) {
-	newShoot, err := kutil.TryUpdateShootStatus(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
+	newShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(o.Shoot.Info.Status.LastErrors, taskID)
 			return shoot, nil
@@ -436,7 +440,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	blockOwnerDeletion := false
 	ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
 
-	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sGardenClient.DirectClient(), shootState, func() error {
 		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		return nil
 	})
@@ -448,6 +452,17 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
 	return err
+}
+
+// SaveGardenerResourcesInShootState saves the provided GardenerResourcesDataList in the ShootState's `gardener` field
+func (o *Operation) SaveGardenerResourcesInShootState(ctx context.Context, resourceList gardencorev1alpha1helper.GardenerResourceDataList) error {
+	shootState := o.ShootState.DeepCopy()
+	shootState.Spec.Gardener = resourceList
+	if err := o.K8sGardenClient.Client().Patch(ctx, shootState, client.MergeFrom(o.ShootState)); err != nil {
+		return err
+	}
+	o.ShootState = shootState
+	return nil
 }
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.

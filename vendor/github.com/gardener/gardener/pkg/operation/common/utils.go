@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 
 	jsoniter "github.com/json-iterator/go"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -227,7 +228,7 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 }
 
 // ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.
-func ReadLeaderElectionRecord(k8sClient kubernetes.Interface, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
+func ReadLeaderElectionRecord(ctx context.Context, k8sClient kubernetes.Interface, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
 	var (
 		leaderElectionRecord resourcelock.LeaderElectionRecord
 		annotations          map[string]string
@@ -235,13 +236,13 @@ func ReadLeaderElectionRecord(k8sClient kubernetes.Interface, lock, namespace, n
 
 	switch lock {
 	case resourcelock.EndpointsResourceLock:
-		endpoint, err := k8sClient.Kubernetes().CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+		endpoint, err := k8sClient.Kubernetes().CoreV1().Endpoints(namespace).Get(ctx, name, kubernetes.DefaultGetOptions())
 		if err != nil {
 			return nil, err
 		}
 		annotations = endpoint.Annotations
 	case resourcelock.ConfigMapsResourceLock:
-		configmap, err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+		configmap, err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).Get(ctx, name, kubernetes.DefaultGetOptions())
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +281,7 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
-func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
+func DeleteHvpa(ctx context.Context, k8sClient kubernetes.Interface, namespace string) error {
 	if k8sClient == nil {
 		return fmt.Errorf("require kubernetes client")
 	}
@@ -292,34 +293,34 @@ func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 	// Delete all CRDs with label "gardener.cloud/role=hvpa"
 	// Workaround: Due to https://github.com/gardener/gardener/issues/2257, we first list the HVPA CRDs and then remove
 	// them one by one.
-	crdList, err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().List(listOptions)
+	crdList, err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().List(ctx, listOptions)
 	if err != nil {
 		return err
 	}
 	for _, crd := range crdList.Items {
-		if err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().Delete(crd.Name, &metav1.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
+		if err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().Delete(ctx, crd.Name, metav1.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
 	// Delete all Deployments with label "gardener.cloud/role=hvpa"
 	deletePropagation := metav1.DeletePropagationForeground
-	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(&metav1.DeleteOptions{PropagationPolicy: &deletePropagation}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(ctx, metav1.DeleteOptions{PropagationPolicy: &deletePropagation}, listOptions); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
 	// Delete all ClusterRoles with label "gardener.cloud/role=hvpa"
-	if err := k8sClient.Kubernetes().RbacV1().ClusterRoles().DeleteCollection(&metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := k8sClient.Kubernetes().RbacV1().ClusterRoles().DeleteCollection(ctx, metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
 	// Delete all ClusterRoleBindings with label "gardener.cloud/role=hvpa"
-	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(&metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(ctx, metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
 	// Delete all ServiceAccounts with label "gardener.cloud/role=hvpa"
-	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(&metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -346,30 +347,11 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-exporter", Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: namespace}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
 		)
 	} else {
-		// TODO: remove in a future release
-		// Clean up the stale RBAC resources
-		resources = append(resources,
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-actor"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-admission-controller"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-checkpoint-actor"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-exporter-role"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:metrics-reader"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-target-reader"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "system:evictioner"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-actor"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-admission-controller"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-checkpoint-actor"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-exporter-role-binding"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:metrics-reader"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-target-reader-binding"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "system:vpa-evictionter-binding"}},
-		)
-
 		resources = append(resources,
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
@@ -389,6 +371,7 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-exporter", Namespace: namespace}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
+			&admissionregistrationv1beta1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}},
 		)
 	}
 
@@ -476,83 +459,6 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, priorityClass))
 }
 
-// DeleteOldLoggingStack deletes all resource of the old EFK logging stack in the given namespace.
-// TODO: Should be removed with one of the next minor release of gardener
-func DeleteOldLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
-	if k8sClient == nil {
-		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
-	}
-
-	resources := []runtime.Object{
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-logging-ingress-credentials", Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "logging-ingress-credentials", Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "logging-ingress-credentials-users", Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging-sg-credentials", Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-server", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es-config", Namespace: "garden"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "es-configmap", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "searchguard-config", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "curator-daily-config", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "curator-hourly-config", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-configmap", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-object-registration", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-saved-objects", Namespace: namespace}},
-		&batchv1beta1.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "daily-curator", Namespace: namespace}},
-		&batchv1beta1.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "hourly-curator", Namespace: namespace}},
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging", Namespace: namespace}},
-		&autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
-		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "kibana", Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kibana-basic-auth", Namespace: namespace}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging", Namespace: namespace}},
-		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
-		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-elasticsearch-logging-0", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-0", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-1", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-2", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-3", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-4", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-5", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-6", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-7", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-8", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-9", Namespace: namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-elasticsearch", Namespace: namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-elasticsearch", Namespace: namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-fluentd", Namespace: namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kibana", Namespace: namespace}},
-		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-vpa", Namespace: namespace}},
-	}
-
-	for _, resource := range resources {
-		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-			return err
-		}
-	}
-
-	ds := &appsv1.DaemonSet{}
-	if err := k8sClient.Get(ctx, kutil.Key(namespace, "fluent-bit"), ds); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	if _, ok := ds.Spec.Selector.MatchLabels["garden.sapcloud.io/role"]; ok {
-		if err := k8sClient.Delete(ctx, ds); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
 func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace string) error {
 	objs := []runtime.Object{
@@ -606,17 +512,11 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		},
 	}
 
-	for _, obj := range objs {
-		if err := k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
+	return kutil.DeleteObjects(ctx, k8sClient, objs...)
 }
 
 // DeleteGrafanaByRole deletes the monitoring stack for the shoot owner.
-func DeleteGrafanaByRole(k8sClient kubernetes.Interface, namespace, role string) error {
+func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, namespace, role string) error {
 	if k8sClient == nil {
 		return fmt.Errorf("require kubernetes client")
 	}
@@ -627,29 +527,30 @@ func DeleteGrafanaByRole(k8sClient kubernetes.Interface, namespace, role string)
 
 	deletePropagation := metav1.DeletePropagationForeground
 	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
-		&metav1.DeleteOptions{
+		ctx,
+		metav1.DeleteOptions{
 			PropagationPolicy: &deletePropagation,
 		}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	if err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).DeleteCollection(
-		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	if err := k8sClient.Kubernetes().ExtensionsV1beta1().Ingresses(namespace).DeleteCollection(
-		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	if err := k8sClient.Kubernetes().CoreV1().Secrets(namespace).DeleteCollection(
-		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete(fmt.Sprintf("grafana-%s", role),
-		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete(
+		ctx, fmt.Sprintf("grafana-%s", role), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	return nil

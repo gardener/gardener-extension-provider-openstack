@@ -74,9 +74,6 @@ const (
 	// DeploymentNameKubeStateMetricsShoot is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetricsShoot = "kube-state-metrics"
-	// DeploymentNameKubeStateMetricsSeed is a constant for the name of a Kubernetes deployment object that contains
-	// the kube-state-metrics-seed pod.
-	DeploymentNameKubeStateMetricsSeed = "kube-state-metrics-seed"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
@@ -146,6 +143,10 @@ const (
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
+	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
+	GardenRoleKubeconfig = "kubeconfig"
+	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
+	GardenRoleSSHKeyPair = "ssh-keypair"
 
 	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`

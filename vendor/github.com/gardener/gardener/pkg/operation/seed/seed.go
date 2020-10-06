@@ -29,6 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
 	"github.com/gardener/gardener/pkg/utils"
@@ -78,28 +80,6 @@ func (b *Builder) WithSeedObjectFromLister(seedLister gardencorelisters.SeedList
 	return b
 }
 
-// WithSeedSecret sets the seedSecretFunc attribute at the Builder.
-func (b *Builder) WithSeedSecret(seedSecret *corev1.Secret) *Builder {
-	b.seedSecretFunc = func(*corev1.SecretReference) (*corev1.Secret, error) { return seedSecret, nil }
-	return b
-}
-
-// WithSeedSecretFromClient sets the seedSecretFunc attribute at the Builder after reading it with the client.
-func (b *Builder) WithSeedSecretFromClient(ctx context.Context, c client.Client) *Builder {
-	b.seedSecretFunc = func(secretRef *corev1.SecretReference) (*corev1.Secret, error) {
-		if secretRef == nil {
-			return nil, fmt.Errorf("cannot fetch secret because spec.secretRef is nil")
-		}
-
-		secret := &corev1.Secret{}
-		if err := c.Get(ctx, kutil.Key(secretRef.Namespace, secretRef.Name), secret); err != nil {
-			return nil, err
-		}
-		return secret, nil
-	}
-	return b
-}
-
 // Build initializes a new Seed object.
 func (b *Builder) Build() (*Seed, error) {
 	seed := &Seed{}
@@ -109,14 +89,6 @@ func (b *Builder) Build() (*Seed, error) {
 		return nil, err
 	}
 	seed.Info = seedObject
-
-	if b.seedSecretFunc != nil && seedObject.Spec.SecretRef != nil {
-		seedSecret, err := b.seedSecretFunc(seedObject.Spec.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-		seed.Secret = seedSecret
-	}
 
 	if seedObject.Spec.Settings != nil && seedObject.Spec.Settings.LoadBalancerServices != nil {
 		seed.LoadBalancerServiceAnnotations = seedObject.Spec.Settings.LoadBalancerServices.Annotations
@@ -157,7 +129,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 
 	secretList := []secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{
-			Name: "vpa-tls-certs",
+			Name: common.VPASecretName,
 
 			CommonName:   "vpa-webhook.garden.svc",
 			Organization: nil,
@@ -250,7 +222,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
+func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
 	const chartName = "seed-bootstrap"
 
 	gardenNamespace := &corev1.Namespace{
@@ -258,17 +230,17 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			Name: v1beta1constants.GardenNamespace,
 		},
 	}
-	if err := k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := k8sSeedClient.Client().Create(ctx, gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
-	if _, err := kutil.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+	if _, err := kutil.TryUpdateNamespace(ctx, k8sSeedClient.Kubernetes(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
 		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", v1beta1constants.GardenNamespace)
 		return ns, nil
 	}); err != nil {
 		return err
 	}
-	if _, err := kutil.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: metav1.NamespaceSystem}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+	if _, err := kutil.TryUpdateNamespace(ctx, k8sSeedClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: metav1.NamespaceSystem}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
 		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", metav1.NamespaceSystem)
 		return ns, nil
 	}); err != nil {
@@ -285,7 +257,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 				},
 			}
 
-			if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), secretObj, func() error {
+			if _, err := controllerutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), secretObj, func() error {
 				secretObj.Type = corev1.SecretTypeOpaque
 				secretObj.Data = secret.Data
 				return nil
@@ -343,7 +315,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	}
 	// TODO: Remove in future release
 	// Delete the mutatingwebhookconfigoration
-	if err := deleteMutatingWebHookConfiguration(context.TODO(), k8sSeedClient.Client()); err != nil {
+	if err := deleteMutatingWebHookConfiguration(ctx, k8sSeedClient.Client()); err != nil {
 		return err
 	}
 
@@ -356,17 +328,27 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	)
 
 	if loggingEnabled {
-		if err := common.DeleteOldLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
-			return err
+		// Fetch component specific logging configurations
+		for _, componentFn := range []component.LoggingConfiguration{
+			clusterautoscaler.LoggingConfiguration,
+			kubescheduler.LoggingConfiguration,
+		} {
+			parser, filter, err := componentFn()
+			if err != nil {
+				return err
+			}
+
+			filters.WriteString(fmt.Sprintln(filter))
+			parsers.WriteString(fmt.Sprintln(parser))
 		}
-		// Read extension provider specific configuration
+
+		// Read extension provider specific logging configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
-		if err = k8sSeedClient.Client().List(context.TODO(), existingConfigMaps,
+		if err = k8sSeedClient.Client().List(ctx, existingConfigMaps,
 			client.InNamespace(v1beta1constants.GardenNamespace),
 			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelLogging}); err != nil {
 			return err
 		}
-
 		sort.Sort(byName(existingConfigMaps.Items))
 
 		// Read all filters and parsers coming from the extension provider configurations
@@ -375,7 +357,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
 		}
 	} else {
-		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+		if err := common.DeleteLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -383,20 +365,20 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	// HVPA feature gate
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if !hvpaEnabled {
-		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+		if err := common.DeleteHvpa(ctx, k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
 	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
 	if !vpaEnabled {
-		if err := common.DeleteVpa(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
+		if err := common.DeleteVpa(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
 	existingSecrets := &corev1.SecretList{}
-	if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+	if err = k8sSeedClient.Client().List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
 		return err
 	}
 
@@ -409,7 +391,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	if err != nil {
 		return err
 	}
-	jsonString, err := json.Marshal(deployedSecretsMap["vpa-tls-certs"].Data)
+	jsonString, err := json.Marshal(deployedSecretsMap[common.VPASecretName].Data)
 	if err != nil {
 		return err
 	}
@@ -441,19 +423,19 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		}
 	} else {
 		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
+		if err := common.DeleteAlertmanager(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
 	}
 
 	if !seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled {
-		if err := common.DeleteReserveExcessCapacity(context.TODO(), k8sSeedClient.Client()); client.IgnoreNotFound(err) != nil {
+		if err := common.DeleteReserveExcessCapacity(ctx, k8sSeedClient.Client()); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
 	nodes := &corev1.NodeList{}
-	if err = k8sSeedClient.Client().List(context.TODO(), nodes); err != nil {
+	if err = k8sSeedClient.Client().List(ctx, nodes); err != nil {
 		return err
 	}
 
@@ -501,7 +483,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		prometheusTLSOverride = prometheusTLS
 	)
 
-	wildcardCert, err := GetWildcardCertificate(context.TODO(), k8sSeedClient.Client())
+	wildcardCert, err := GetWildcardCertificate(ctx, k8sSeedClient.Client())
 	if err != nil {
 		return err
 	}
@@ -528,7 +510,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		}
 
 		chartApplier := k8sSeedClient.ChartApplier()
-		istioCRDs := istio.NewIstioCRD(chartApplier, "charts", k8sSeedClient.Client())
+		istioCRDs := istio.NewIstioCRD(chartApplier, common.ChartPath, k8sSeedClient.Client())
 		istiod := istio.NewIstiod(
 			&istio.IstiodValues{
 				TrustDomain: "cluster.local",
@@ -536,7 +518,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			},
 			common.IstioNamespace,
 			chartApplier,
-			"charts",
+			common.ChartPath,
 			k8sSeedClient.Client(),
 		)
 
@@ -550,7 +532,7 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 			ports := []corev1.ServicePort{
 				{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(443)},
+				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
 			}
 
 			if gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) {
@@ -564,35 +546,35 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			igwConfig,
 			common.IstioIngressGatewayNamespace,
 			chartApplier,
-			"charts",
+			common.ChartPath,
 			k8sSeedClient.Client(),
 		)
 
-		if err := component.OpWaiter(istioCRDs, istiod, igw).Deploy(context.TODO()); err != nil {
+		if err := component.OpWaiter(istioCRDs, istiod, igw).Deploy(ctx); err != nil {
 			return err
 		}
 	}
 
-	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, "charts")
+	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, common.ChartPath)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		if err := proxy.Deploy(context.TODO()); err != nil {
+		if err := proxy.Deploy(ctx); err != nil {
 			return err
 		}
 	} else {
-		if err := proxy.Destroy(context.TODO()); err != nil {
+		if err := proxy.Destroy(ctx); err != nil {
 			return err
 		}
 	}
 
 	if seed.Info.Status.ClusterIdentity == nil {
-		seedClusterIdentity, err := determineClusterIdentity(context.TODO(), k8sSeedClient.Client())
+		seedClusterIdentity, err := determineClusterIdentity(ctx, k8sSeedClient.Client())
 		if err != nil {
 			return err
 		}
 
 		seed.Info.Status.ClusterIdentity = &seedClusterIdentity
-		if err := k8sGardenClient.Client().Status().Update(context.TODO(), seed.Info); err != nil {
+		if err := k8sGardenClient.Client().Status().Update(ctx, seed.Info); err != nil {
 			return err
 		}
 	}
@@ -621,11 +603,9 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			"secretName": grafanaTLSOverride,
 		},
 		"fluent-bit": map[string]interface{}{
-			"enabled": loggingEnabled,
-			"extensions": map[string]interface{}{
-				"parsers": parsers.String(),
-				"filters": filters.String(),
-			},
+			"enabled":           loggingEnabled,
+			"additionalParsers": parsers.String(),
+			"additionalFilters": filters.String(),
 		},
 		"loki": map[string]interface{}{
 			"enabled": loggingEnabled,
@@ -638,6 +618,12 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
 					},
+				},
+			},
+			"application": map[string]interface{}{
+				"admissionController": map[string]interface{}{
+					"controlNamespace": v1beta1constants.GardenNamespace,
+					"caCert":           deployedSecretsMap[common.VPASecretName].Data[secretsutils.DataKeyCertificateCA],
 				},
 			},
 		},
@@ -658,7 +644,32 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		"cluster-identity": map[string]interface{}{"clusterIdentity": &seed.Info.Status.ClusterIdentity},
 	})
 
-	return chartApplier.Apply(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions)
+	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+		return err
+	}
+
+	// Deploy component specific resources
+	for _, componentFn := range []component.BootstrapSeed{
+		clusterautoscaler.BootstrapSeed,
+	} {
+		if err := componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version()); err != nil {
+			return err
+		}
+	}
+
+	// TODO: remove in a future release
+	// Clean up the stale vpa-webhook-config MutatingWebhookConfiguration.
+	// We can delete vpa-webhook-config as the new vpa-webhook-config-seed will be created with the apply of the seed-boostrap chart.
+	if vpaEnabled {
+		webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config"},
+		}
+		if err := k8sSeedClient.Client().Delete(ctx, webhook); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes

@@ -19,8 +19,7 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
-
-	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"

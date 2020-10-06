@@ -25,8 +25,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,7 +36,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -60,7 +61,34 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		usersDashboards     = strings.Builder{}
 	)
 
-	// Find extensions provider-specific monitoring configuration
+	// Fetch component-specific monitoring configuration
+	monitoringComponents := []component.MonitoringComponent{
+		b.Shoot.Components.ControlPlane.KubeScheduler,
+	}
+
+	if b.Shoot.WantsClusterAutoscaler {
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
+	}
+
+	for _, component := range monitoringComponents {
+		componentsScrapeConfigs, err := component.ScrapeConfigs()
+		if err != nil {
+			return err
+		}
+		for _, config := range componentsScrapeConfigs {
+			scrapeConfigs.WriteString(fmt.Sprintf("- %s\n", indent(config, 2)))
+		}
+
+		componentsAlertingRules, err := component.AlertingRules()
+		if err != nil {
+			return err
+		}
+		for filename, rule := range componentsAlertingRules {
+			alertingRules.WriteString(fmt.Sprintf("%s: |\n  %s\n", filename, indent(rule, 2)))
+		}
+	}
+
+	// Fetch extensions provider-specific monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
@@ -124,9 +152,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"rules": map[string]interface{}{
 				"optional": map[string]interface{}{
-					"cluster-autoscaler": map[string]interface{}{
-						"enabled": b.Shoot.WantsClusterAutoscaler,
-					},
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
@@ -149,15 +174,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"name":                b.Shoot.Info.Name,
 				"project":             b.Garden.Project.Name,
 			},
-			"ignoreAlerts": b.Shoot.IgnoreAlerts,
-			"alerting":     alerting,
-			"extensions": map[string]interface{}{
-				"rules":         alertingRules.String(),
-				"scrapeConfigs": scrapeConfigs.String(),
-			},
-		}
-		kubeStateMetricsSeedConfig = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
+			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
+			"alerting":                alerting,
+			"additionalRules":         alertingRules.String(),
+			"additionalScrapeConfigs": scrapeConfigs.String(),
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
@@ -186,10 +206,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsSeed, err := b.InjectSeedShootImages(kubeStateMetricsSeedConfig, common.KubeStateMetricsImageName)
-	if err != nil {
-		return err
-	}
 	kubeStateMetricsShoot, err := b.InjectSeedShootImages(kubeStateMetricsShootConfig, common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
@@ -202,8 +218,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 		},
 		"prometheus":               prometheus,
-		"kube-state-metrics-seed":  kubeStateMetricsSeed,
 		"kube-state-metrics-shoot": kubeStateMetricsShoot,
+	}
+
+	// TODO: (wyb1) Remove in next minor release
+	err = b.DeleteKubeStateMetricsSeed(ctx)
+	if err != nil {
+		return err
 	}
 
 	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
@@ -401,23 +422,11 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
-// DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
-// during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
-// deleted.
-func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
-	if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
-		return err
-	}
-
-	if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
-		return err
-	}
-
-	if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
-		return err
-	}
-
-	for _, obj := range []runtime.Object{
+// TODO: (wyb1) Delete in next minor release
+// DeleteKubeStateMetricsSeed will delete everything related to the kube-state-metrics-seed deployment
+// present in the shoot namespaces.
+func (b *Botanist) DeleteKubeStateMetricsSeed(ctx context.Context) error {
+	objects := []runtime.Object{
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
@@ -448,7 +457,33 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "kube-state-metrics-seed-vpa",
 			},
 		},
+	}
 
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...)
+}
+
+// DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
+// during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
+// deleted.
+func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
+	if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
+		return err
+	}
+
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
+		return err
+	}
+
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
+		return err
+	}
+
+	// TODO: (wyb1) Delete in next minor release
+	if err := b.DeleteKubeStateMetricsSeed(ctx); err != nil {
+		return err
+	}
+
+	objects := []runtime.Object{
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
@@ -546,11 +581,11 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "prometheus-db-prometheus-0",
 			},
 		},
-	} {
-		if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-			return err
-		}
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...)
+}
+
+func indent(str string, spaces int) string {
+	return strings.ReplaceAll(str, "\n", "\n"+strings.Repeat(" ", spaces))
 }

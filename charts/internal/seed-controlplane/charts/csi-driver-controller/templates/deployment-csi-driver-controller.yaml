@@ -88,6 +88,7 @@ spec:
         - --default-fstype=ext4
         - --leader-election
         - --leader-election-namespace=kube-system
+        - --timeout={{ .Values.timeout }}
         - --v=5
         env:
         - name: ADDRESS
@@ -110,6 +111,7 @@ spec:
         - --kubeconfig=/var/lib/csi-attacher/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
+        - --timeout={{ .Values.timeout }}
         - --v=5
         env:
         - name: ADDRESS
@@ -132,6 +134,7 @@ spec:
         - --kubeconfig=/var/lib/csi-snapshotter/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
+        - --timeout={{ .Values.timeout }}
         - --snapshot-name-prefix={{ .Release.Namespace }}
         env:
         - name: CSI_ENDPOINT
@@ -154,6 +157,7 @@ spec:
         - --kubeconfig=/var/lib/csi-resizer/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
+        - --csiTimeout={{ .Values.timeout }}
         - --v=5
         env:
         - name: ADDRESS

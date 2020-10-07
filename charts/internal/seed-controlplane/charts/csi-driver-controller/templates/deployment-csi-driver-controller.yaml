@@ -157,7 +157,7 @@ spec:
         - --kubeconfig=/var/lib/csi-resizer/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
+        - --csiTimeout={{ .Values.timeout }}
         - --v=5
         env:
         - name: ADDRESS

@@ -114,9 +114,10 @@ var _ = Describe("ValuesProvider", func() {
 
 		cp = defaultControlPlane()
 
-		cidr                       = "10.250.0.0/19"
-		useOctavia                 = true
-		rescanBlockStorageOnResize = true
+		cidr                             = "10.250.0.0/19"
+		useOctavia                       = true
+		rescanBlockStorageOnResize       = true
+		nodeVoluemAttachLimit      int32 = 25
 
 		cloudProfileConfig = &api.CloudProfileConfig{
 			KeyStoneURL:                authURL,
@@ -124,6 +125,7 @@ var _ = Describe("ValuesProvider", func() {
 			RequestTimeout:             requestTimeout,
 			UseOctavia:                 pointer.BoolPtr(useOctavia),
 			RescanBlockStorageOnResize: pointer.BoolPtr(rescanBlockStorageOnResize),
+			NodeVolumeAttachLimit:      pointer.Int32Ptr(nodeVoluemAttachLimit),
 		}
 		cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
 
@@ -259,6 +261,7 @@ var _ = Describe("ValuesProvider", func() {
 			"requestTimeout":             requestTimeout,
 			"useOctavia":                 useOctavia,
 			"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
+			"nodeVolumeAttachLimit":      pointer.Int32Ptr(nodeVoluemAttachLimit),
 		}
 
 		It("should return correct config chart values", func() {

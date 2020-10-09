@@ -84,6 +84,11 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.NodeVolumeAttachLimit != nil {
+		in, out := &in.NodeVolumeAttachLimit, &out.NodeVolumeAttachLimit
+		*out = new(int32)
+		**out = **in
+	}
 	if in.UseOctavia != nil {
 		in, out := &in.UseOctavia, &out.UseOctavia
 		*out = new(bool)

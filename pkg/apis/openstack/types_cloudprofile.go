@@ -45,6 +45,8 @@ type CloudProfileConfig struct {
 	// RescanBlockStorageOnResize specifies whether the storage plugin scans and checks new block device size before it resizes
 	// the filesystem.
 	RescanBlockStorageOnResize *bool
+	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
+	NodeVolumeAttachLimit *int32
 	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
 	UseOctavia *bool
 }

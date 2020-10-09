@@ -10,6 +10,10 @@ maxSurge: 50%
 resources: {}
 vpa:
   enabled: true
+# resourcePolicy:
+#   minAllowed:
+#     cpu: 100m
+#     memory: 128Mi
   updatePolicy:
     updateMode: "Auto"
 
@@ -21,6 +25,8 @@ controllers:
   controlplane:
     concurrentSyncs: 5
   csimigration:
+    concurrentSyncs: 5
+  healthcheck:
     concurrentSyncs: 5
   infrastructure:
     concurrentSyncs: 5

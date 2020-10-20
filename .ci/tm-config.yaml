@@ -1,0 +1,2 @@
+test-single:
+  testrunPath: .ci/testruns/default.yaml

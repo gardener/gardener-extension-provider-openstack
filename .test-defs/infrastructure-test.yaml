@@ -19,5 +19,4 @@ spec:
     --region='$(shell cat $(REGION))' \
     --tenant-name='$(shell cat $(TENANT_NAME))' \
     --user-name='$(shell cat $(USER_NAME))' \
-    --region=$REGION
   image: golang:1.14

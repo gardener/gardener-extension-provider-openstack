@@ -34,7 +34,7 @@ ifeq ($(WEBHOOK_CONFIG_MODE), service)
   WEBHOOK_PARAM := --webhook-config-namespace=$(EXTENSION_NAMESPACE)
 endif
 
-REGION             := eu-nl-1
+REGION             := .kube-secrets/openstack/region.secret
 AUTH_URL           := .kube-secrets/openstack/auth_url.secret
 DOMAIN_NAME        := .kube-secrets/openstack/domain_name.secret
 FLOATING_POOL_NAME := .kube-secrets/openstack/floating_pool_name.secret
@@ -159,4 +159,4 @@ integration-test-infra:
 		--password='$(shell cat $(PASSWORD))' \
 		--tenant-name='$(shell cat $(TENANT_NAME))' \
 		--user-name='$(shell cat $(USER_NAME))' \
-		--region=$(REGION)
+		--region='$(shell cat $(REGION))'

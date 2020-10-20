@@ -53,12 +53,11 @@ import (
 )
 
 const (
-	routerName = "shoot--core--openstack-infra"
-	vpcCIDR    = "10.250.0.0/16"
+	vpcCIDR = "10.250.0.0/16"
 )
 
 var (
-	authURL          = flag.String("auth-url", "", "Authrization URL for openstack")
+	authURL          = flag.String("auth-url", "", "Authorization URL for openstack")
 	domainName       = flag.String("domain-name", "", "Domain name for openstack")
 	floatingPoolName = flag.String("floating-pool-name", "", "Floating pool name for creating router")
 	password         = flag.String("password", "", "Password for openstack")
@@ -160,12 +159,8 @@ var _ = Describe("Infrastructure tests", func() {
 
 		decoder = serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder()
 
-		flag.Parse()
-		validateFlags()
-
 		openstackClient, err = NewOpenstackClient(*authURL, *domainName, *floatingPoolName, *password, *region, *tenantName, *userName)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	AfterSuite(func() {
@@ -189,7 +184,7 @@ var _ = Describe("Infrastructure tests", func() {
 		})
 
 		It("should successfully create and delete", func() {
-			providerConfig := newProviderConfig(nil)
+			providerConfig := newProviderConfig("")
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
@@ -222,9 +217,7 @@ var _ = Describe("Infrastructure tests", func() {
 				framework.RemoveCleanupAction(cleanupHandle)
 			})
 
-			providerConfig := newProviderConfig(&openstackv1alpha1.Router{
-				ID: *routerID,
-			})
+			providerConfig := newProviderConfig(*routerID)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
 			err = runTest(ctx, logger, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
@@ -391,7 +384,16 @@ func runTest(
 	return nil
 }
 
-func newProviderConfig(router *openstackv1alpha1.Router) *openstackv1alpha1.InfrastructureConfig {
+// newProviderConfig creates a providerConfig with the network and router details.
+// If routerID is set to "", it requests a new router creation.
+// Else it reuses the suppiled routerID.
+func newProviderConfig(routerID string) *openstackv1alpha1.InfrastructureConfig {
+	var router *openstackv1alpha1.Router
+
+	if routerID != "" {
+		router = &openstackv1alpha1.Router{ID: routerID}
+	}
+
 	return &openstackv1alpha1.InfrastructureConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
@@ -473,12 +475,12 @@ func prepareNewRouter(ctx context.Context, logger *logrus.Entry, routerName stri
 }
 
 func teardownRouter(ctx context.Context, logger *logrus.Entry, routerID string, openstackClient *OpenstackClient) error {
-	logger.Infof("Waiting until router '%s' is deleted...", routerName)
+	logger.Infof("Waiting until router '%s' is deleted...", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Router '%s' is deleted...", routerName)
+	logger.Infof("Router '%s' is deleted...", routerID)
 	return nil
 }
 

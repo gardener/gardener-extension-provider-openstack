@@ -47,6 +47,8 @@ type CloudProfileConfig struct {
 	RescanBlockStorageOnResize *bool
 	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
 	UseOctavia *bool
+	// UseSNAT specifies whether S-NAT is supposed to be used for the Gardener managed OpenStack router.
+	UseSNAT *bool
 }
 
 // Constraints is an object containing constraints for the shoots.

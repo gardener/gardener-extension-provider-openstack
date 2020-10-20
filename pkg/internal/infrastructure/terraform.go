@@ -102,6 +102,10 @@ func ComputeTerraformerChartValues(
 		return nil, err
 	}
 
+	if cloudProfileConfig.UseSNAT != nil {
+		routerConfig["enableSNAT"] = *cloudProfileConfig.UseSNAT
+	}
+
 	workersCIDR := config.Networks.Workers
 	// Backwards compatibility - remove this code in a future version.
 	if workersCIDR == "" {

@@ -300,6 +300,7 @@ func autoConvert_v1alpha1_CloudProfileConfig_To_openstack_CloudProfileConfig(in 
 	out.RequestTimeout = (*string)(unsafe.Pointer(in.RequestTimeout))
 	out.RescanBlockStorageOnResize = (*bool)(unsafe.Pointer(in.RescanBlockStorageOnResize))
 	out.UseOctavia = (*bool)(unsafe.Pointer(in.UseOctavia))
+	out.UseSNAT = (*bool)(unsafe.Pointer(in.UseSNAT))
 	return nil
 }
 
@@ -320,6 +321,7 @@ func autoConvert_openstack_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in 
 	out.RequestTimeout = (*string)(unsafe.Pointer(in.RequestTimeout))
 	out.RescanBlockStorageOnResize = (*bool)(unsafe.Pointer(in.RescanBlockStorageOnResize))
 	out.UseOctavia = (*bool)(unsafe.Pointer(in.UseOctavia))
+	out.UseSNAT = (*bool)(unsafe.Pointer(in.UseSNAT))
 	return nil
 }
 

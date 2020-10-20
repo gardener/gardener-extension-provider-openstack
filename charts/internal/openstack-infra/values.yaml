@@ -12,6 +12,7 @@ sshPublicKey: sshkey-12345
 
 router:
   id: openstack_networking_router_v2.router.id
+  # enableSNAT: true
   # floatingPoolSubnetName: my-fip-subnet-name
 
 dnsServers:

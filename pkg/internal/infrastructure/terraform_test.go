@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"k8s.io/utils/pointer"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -162,9 +164,14 @@ var _ = Describe("Terraform", func() {
 		})
 
 		It("should correctly compute the terraformer chart values with vpc creation", func() {
+			cloudProfileConfig.UseSNAT = pointer.BoolPtr(true)
+			cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
+			cluster.CloudProfile.Spec.ProviderConfig.Raw = cloudProfileConfigJSON
+
 			config.Networks.Router = nil
 			expectedCreateValues["router"] = true
 			expectedRouterValues["id"] = DefaultRouterID
+			expectedRouterValues["enableSNAT"] = true
 
 			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
 			Expect(err).To(BeNil())

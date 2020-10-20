@@ -45,6 +45,7 @@ machineImages:
 # - 10.10.10.12
 # requestTimeout: 60s
 # useOctavia: true
+# useSNAT: true
 # rescanBlockStorageOnResize: true
 constraints:
   floatingPools:
@@ -97,6 +98,8 @@ with setting the optional field `nonConstraining` to `true`.
 Some OpenStack environments don't need these regional mappings, hence, the `region` and `keystoneURLs` fields are optional.
 If your OpenStack environment only has regional values and it doesn't make sense to provide a (non-regional) fallback then simply
 omit `keystoneURL` and always specify `region`.
+
+If Gardener creates and manages the router of a shoot cluster, it is additionally possible to specify that the [enable_snat](https://registry.terraform.io/providers/terraform-provider-openstack/openstack/latest/docs/resources/networking_router_v2#enable_snat) field is set to `true` via `useSNAT: true` in the `CloudProfileConfig`.
 
 ## Example `CloudProfile` manifest
 

@@ -15,6 +15,7 @@ dhcpDomain: foobar
 requestTimeout: 2s
 useOctavia: false
 rescanBlockStorageOnResize: false
+# nodeVolumeAttachLimit: 25
 # floatingClasses:
 # - name: A
 #   floatingNetworkID: "1234"

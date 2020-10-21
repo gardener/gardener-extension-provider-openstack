@@ -154,6 +154,18 @@ the filesystem.</p>
 </tr>
 <tr>
 <td>
+<code>nodeVolumeAttachLimit</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeVolumeAttachLimit specifies how many volumes can be attached to a node.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>useOctavia</code></br>
 <em>
 bool

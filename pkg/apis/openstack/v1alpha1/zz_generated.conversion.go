@@ -299,6 +299,7 @@ func autoConvert_v1alpha1_CloudProfileConfig_To_openstack_CloudProfileConfig(in 
 	out.MachineImages = *(*[]openstack.MachineImages)(unsafe.Pointer(&in.MachineImages))
 	out.RequestTimeout = (*string)(unsafe.Pointer(in.RequestTimeout))
 	out.RescanBlockStorageOnResize = (*bool)(unsafe.Pointer(in.RescanBlockStorageOnResize))
+	out.NodeVolumeAttachLimit = (*int32)(unsafe.Pointer(in.NodeVolumeAttachLimit))
 	out.UseOctavia = (*bool)(unsafe.Pointer(in.UseOctavia))
 	return nil
 }
@@ -319,6 +320,7 @@ func autoConvert_openstack_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in 
 	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
 	out.RequestTimeout = (*string)(unsafe.Pointer(in.RequestTimeout))
 	out.RescanBlockStorageOnResize = (*bool)(unsafe.Pointer(in.RescanBlockStorageOnResize))
+	out.NodeVolumeAttachLimit = (*int32)(unsafe.Pointer(in.NodeVolumeAttachLimit))
 	out.UseOctavia = (*bool)(unsafe.Pointer(in.UseOctavia))
 	return nil
 }

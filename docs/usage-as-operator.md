@@ -22,6 +22,10 @@ In case your OpenStack system uses [Octavia](https://docs.openstack.org/octavia/
 Some hypervisors (especially those which are VMware-based) don't automatically send a new volume size to a Linux kernel when a volume is resized and in-use.
 For those hypervisors you can enable the storage plugin interacting with Cinder to telling the SCSI block device to refresh its information to provide information about it's updated size to the kernel. You might need to enable this behavior depending on the underlying hypervisor of your OpenStack installation. The `rescanBlockStorageOnResize` field controls this. Please note that it only applies for Kubernetes versions where CSI is used.
 
+Some openstack configurations do not allow to attach more volumes than a specific amount to a single node. 
+To tell the k8s scheduler to not over schedule volumes on a node, you can set `nodeVolumeAttachLimit` which defaults to 256.
+See [CSI Cinder driver](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/cinder-csi-plugin/using-cinder-csi-plugin.md#block-storage). 
+
 The cloud profile config also contains constraints for floating pools and load balancer providers that can be used in shoots.
 
 An example `CloudProfileConfig` for the OpenStack extension looks as follows:
@@ -46,6 +50,7 @@ machineImages:
 # requestTimeout: 60s
 # useOctavia: true
 # rescanBlockStorageOnResize: true
+# nodeVolumeAttachLimit: 30
 constraints:
   floatingPools:
   - name: fp-pool-1

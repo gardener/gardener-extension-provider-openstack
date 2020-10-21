@@ -5,6 +5,9 @@
 
 [BlockStorage]
 rescan-on-resize={{ .Values.rescanBlockStorageOnResize }}
+{{- if .Values.nodeVolumeAttachLimit }}
+node-volume-attach-limit={{ .Values.nodeVolumeAttachLimit }}
+{{- end -}}
 {{- end -}}
 {{- if semverCompare ">= 1.19-0" .Values.kubernetesVersion }}
 ---

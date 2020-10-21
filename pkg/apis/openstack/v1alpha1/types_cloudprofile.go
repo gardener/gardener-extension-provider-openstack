@@ -50,6 +50,9 @@ type CloudProfileConfig struct {
 	// the filesystem.
 	// +optional
 	RescanBlockStorageOnResize *bool `json:"rescanBlockStorageOnResize,omitempty"`
+	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
+	// +optional
+	NodeVolumeAttachLimit *int32 `json:"nodeVolumeAttachLimit,omitempty"`
 	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
 	// +optional
 	UseOctavia *bool `json:"useOctavia,omitempty"`

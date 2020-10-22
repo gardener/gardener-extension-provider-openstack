@@ -56,6 +56,9 @@ type CloudProfileConfig struct {
 	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
 	// +optional
 	UseOctavia *bool `json:"useOctavia,omitempty"`
+	// UseSNAT specifies whether S-NAT is supposed to be used for the Gardener managed OpenStack router.
+	// +optional
+	UseSNAT *bool `json:"useSNAT,omitempty"`
 }
 
 // Constraints is an object containing constraints for the shoots.

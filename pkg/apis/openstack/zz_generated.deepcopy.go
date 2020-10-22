@@ -94,6 +94,11 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.UseSNAT != nil {
+		in, out := &in.UseSNAT, &out.UseSNAT
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

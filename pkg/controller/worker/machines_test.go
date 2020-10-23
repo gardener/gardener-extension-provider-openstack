@@ -106,6 +106,7 @@ var _ = Describe("Machines", func() {
 				machineType       string
 				userData          []byte
 				networkID         string
+				subnetID          string
 				podCIDR           string
 				securityGroupName string
 
@@ -162,6 +163,7 @@ var _ = Describe("Machines", func() {
 				machineType = "large"
 				userData = []byte("some-user-data")
 				networkID = "network-id"
+				subnetID = "subnet-id"
 				podCIDR = "1.2.3.4/5"
 				securityGroupName = "nodes-sec-group"
 
@@ -272,6 +274,12 @@ var _ = Describe("Machines", func() {
 								},
 								Networks: api.NetworkStatus{
 									ID: networkID,
+									Subnets: []api.Subnet{
+										{
+											Purpose: api.PurposeNodes,
+											ID:      subnetID,
+										},
+									},
 								},
 							}),
 						},
@@ -350,6 +358,7 @@ var _ = Describe("Machines", func() {
 						"machineType":    machineType,
 						"keyName":        keyName,
 						"networkID":      networkID,
+						"subnetID":       subnetID,
 						"podNetworkCidr": podCIDR,
 						"securityGroups": []string{securityGroupName},
 						"tags": map[string]string{

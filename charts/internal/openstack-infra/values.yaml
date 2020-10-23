@@ -7,6 +7,7 @@ openstack:
 
 create:
   router: true
+  network: false
 
 sshPublicKey: sshkey-12345
 
@@ -22,6 +23,7 @@ clusterName: test-namespace
 
 networks:
   workers: 10.250.0.0/19
+  id: 12345678-abcd-9876-a0b1-abcdef123456
 
 outputKeys:
   routerID: router_id

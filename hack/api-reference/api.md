@@ -1115,6 +1115,18 @@ string
 <p>Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>id</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ID is the OpenStack UUID of an existing network that should be reused</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.NodeStatus">NodeStatus

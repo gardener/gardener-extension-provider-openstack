@@ -38,15 +38,25 @@ resource "openstack_networking_router_v2" "router" {
 }
 {{- end}}
 
+{{ if .Values.create.network -}}
 resource "openstack_networking_network_v2" "cluster" {
   name           = "{{ required "clusterName is required" .Values.clusterName }}"
   admin_state_up = "true"
 }
+{{- else }}
+data "openstack_networking_network_v2" "cluster" {
+  network_id = "{{ required "networks.id is required" .Values.networks.id }}"
+}
+{{- end}}
 
 resource "openstack_networking_subnet_v2" "cluster" {
   name            = "{{ required "clusterName is required" .Values.clusterName }}"
   cidr            = "{{ required "networks.workers is required" .Values.networks.workers }}"
+  {{- if .Values.create.network }}
   network_id      = openstack_networking_network_v2.cluster.id
+  {{- else }}
+  network_id      = data.openstack_networking_network_v2.cluster.id
+  {{- end }}
   ip_version      = 4
   {{- if .Values.dnsServers }}
   dns_nameservers = [{{- include "openstack-infra.dnsServers" . | trimSuffix ", " }}]
@@ -117,7 +127,11 @@ output "{{ .Values.outputKeys.routerID }}" {
 }
 
 output "{{ .Values.outputKeys.networkID }}" {
+  {{- if .Values.create.network }}
   value = openstack_networking_network_v2.cluster.id
+  {{- else }}
+  value = data.openstack_networking_network_v2.cluster.id
+  {{- end}}
 }
 
 output "{{ .Values.outputKeys.keyName }}" {

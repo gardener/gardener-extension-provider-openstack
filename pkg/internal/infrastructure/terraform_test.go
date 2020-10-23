@@ -128,7 +128,8 @@ var _ = Describe("Terraform", func() {
 				"floatingPoolName": config.FloatingPoolName,
 			}
 			expectedCreateValues = map[string]interface{}{
-				"router": false,
+				"router":  false,
+				"network": true,
 			}
 			expectedRouterValues = map[string]interface{}{
 				"id": strconv.Quote("1"),
@@ -170,6 +171,7 @@ var _ = Describe("Terraform", func() {
 
 			config.Networks.Router = nil
 			expectedCreateValues["router"] = true
+
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["enableSNAT"] = true
 
@@ -197,6 +199,28 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["floatingPoolSubnetName"] = fipSubnetID
 			expectedOutputKeysValues["floatingSubnetID"] = TerraformOutputKeyFloatingSubnetID
+
+			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
+			Expect(err).To(BeNil())
+			Expect(values).To(Equal(map[string]interface{}{
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
+				"dnsServers":   dnsServers,
+				"sshPublicKey": string(infra.Spec.SSHPublicKey),
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
+			}))
+		})
+
+		It("should correctly compute the terraformer chart values with a given network ID", func() {
+			networkID := "12345678-abcd-9876-a0b1-abcdef123456"
+
+			config.Networks.ID = &networkID
+
+			expectedCreateValues["network"] = false
+			expectedNetworkValues["id"] = networkID
 
 			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
 			Expect(err).To(BeNil())

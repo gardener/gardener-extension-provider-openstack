@@ -704,6 +704,7 @@ func autoConvert_v1alpha1_Networks_To_openstack_Networks(in *Networks, out *open
 	out.Router = (*openstack.Router)(unsafe.Pointer(in.Router))
 	out.Worker = in.Worker
 	out.Workers = in.Workers
+	out.ID = (*string)(unsafe.Pointer(in.ID))
 	return nil
 }
 
@@ -716,6 +717,7 @@ func autoConvert_openstack_Networks_To_v1alpha1_Networks(in *openstack.Networks,
 	out.Router = (*Router)(unsafe.Pointer(in.Router))
 	out.Worker = in.Worker
 	out.Workers = in.Workers
+	out.ID = (*string)(unsafe.Pointer(in.ID))
 	return nil
 }
 

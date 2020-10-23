@@ -1,0 +1,55 @@
+apiVersion: testmachinery.sapcloud.io/v1beta1
+kind: Testrun
+metadata:
+  generateName: tm-extension-openstack-
+  namespace: default
+spec:
+
+  ttlSecondsAfterFinished: 172800 # 2 days
+
+  config:
+  - name: DOMAIN_NAME
+    type: env
+    valueFrom:
+      secretKeyRef:
+        name: shoot-operator-ccee-eu-nl-1
+        key: domainName
+  - name: PASSWORD
+    type: env
+    valueFrom:
+      secretKeyRef:
+        name: shoot-operator-ccee-eu-nl-1
+        key: password
+  - name: TENANT_NAME
+    type: env
+    valueFrom:
+      secretKeyRef:
+        name: shoot-operator-ccee-eu-nl-1
+        key: tenantName
+  - name: USER_NAME
+    type: env
+    valueFrom:
+      secretKeyRef:
+        name: shoot-operator-ccee-eu-nl-1
+        key: username
+  - name: AUTH_URL
+    type: env
+    valueFrom:
+      secretKeyRef:
+        name: shoot-operator-ccee-eu-nl-1
+        key: authURL
+  - name: FLOATING_POOL_NAME
+    type: env
+    valueFrom:
+      secretKeyRef:
+        name: shoot-operator-ccee-eu-nl-1
+        key: floatingPoolName
+
+  testflow:
+  - name: infrastructure-test
+    definition:
+      name: infrastructure-test
+      config:
+      - name: REGION
+        type: env
+        value: eu-nl-1

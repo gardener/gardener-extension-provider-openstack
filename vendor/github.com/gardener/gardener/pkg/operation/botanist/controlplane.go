@@ -295,70 +295,6 @@ func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
-// WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
-// * etcd-events
-// * etcd-main
-// * kube-apiserver
-// * kube-controller-manager
-func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
-	// use direct client here, as cached client sometimes causes scale functions not to work properly
-	// e.g. Deployments not scaled down/up
-	client := b.K8sSeedClient.DirectClient()
-
-	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, client, kutil.Key(b.Shoot.SeedNamespace, etcd), 1); err != nil {
-			return err
-		}
-	}
-	if err := b.WaitUntilEtcdReady(ctx); err != nil {
-		return err
-	}
-
-	if err := component.OpWaiter(b.Shoot.Components.ControlPlane.KubeAPIServerService).Deploy(ctx); err != nil {
-		return err
-	}
-
-	if b.APIServerSNIEnabled() {
-		if err := b.DestroyControlPlaneExposure(ctx); err != nil {
-			return err
-		}
-
-		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
-			return err
-		}
-	}
-
-	if err := b.DeployInternalDNS(ctx); err != nil {
-		return err
-	}
-
-	if err := b.DeployExternalDNS(ctx); err != nil {
-		return err
-	}
-
-	if err := b.DeployKubeAPIServer(ctx); err != nil {
-		return err
-	}
-
-	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
-		return err
-	}
-	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
-		return err
-	}
-
-	for _, deployment := range []string{
-		v1beta1constants.DeploymentNameKubeControllerManager,
-		v1beta1constants.DeploymentNameGardenerResourceManager,
-	} {
-		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
 func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
@@ -412,6 +348,19 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		if err := b.WaitUntilEndpointsDoNotContainPodIPs(ctxWithTimeOut); err != nil {
 			return err
 		}
+
+		// TODO: remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
+		// Currently on hibernation Machines are forecefully deleted and machine-controller-manager does not wait volumes to be detached.
+		// In this case kube-controller-manager cannot delete the corresponding VolumeAttachment objects and they are orphaned.
+		// Such orphaned VolumeAttachments then prevent/block PV deletion. For more details see https://github.com/gardener/gardener-extension-provider-gcp/issues/172.
+		// As the Nodes are already deleted, we can delete all VolumeAttachments.
+		if err := DeleteVolumeAttachments(ctxWithTimeOut, b.K8sShootClient.Client()); err != nil {
+			return err
+		}
+
+		if err := WaitUntilVolumeAttachmentsDeleted(ctxWithTimeOut, b.K8sShootClient.Client(), b.Logger); err != nil {
+			return err
+		}
 	}
 
 	// invalidate shoot client here before scaling down API server
@@ -457,7 +406,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 // ScaleETCDToZero scales ETCD main and events to zero
 func (b *Botanist) ScaleETCDToZero(ctx context.Context) error {
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, etcd), 0); client.IgnoreNotFound(err) != nil {
+		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, etcd), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -467,16 +416,26 @@ func (b *Botanist) ScaleETCDToZero(ctx context.Context) error {
 // ScaleETCDToOne scales ETCD main and events replicas to one
 func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, etcd), 1); err != nil {
+		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, etcd), 1); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// ScaleKubeAPIServerToOne scales kube-apiserver replicas to one
+func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
+}
+
+// ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one
+func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), 1)
+}
+
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
 // PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
@@ -1188,17 +1147,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				return err
 			}
 		}
-	}
-
-	// Remove deprecated blackbox exporter configmap
-	// TODO: Remove in a future version
-	if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "blackbox-exporter-config-apiserver",
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}); client.IgnoreNotFound(err) != nil {
-		return err
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))

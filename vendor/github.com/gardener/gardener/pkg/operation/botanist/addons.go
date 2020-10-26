@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -55,13 +56,15 @@ const (
 func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
 	var (
 		enabled = b.Shoot.KubernetesDashboardEnabled()
-		values  map[string]interface{}
+		values  = map[string]interface{}{}
 	)
 
+	if b.APIServerSNIEnabled() {
+		values["kubeAPIServerHost"] = b.outOfClusterAPIServerFQDN()
+	}
+
 	if enabled && b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
-		values = map[string]interface{}{
-			"authenticationMode": *b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode,
-		}
+		values["authenticationMode"] = *b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
@@ -184,6 +187,10 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 				},
 			},
 		}
+
+		if b.APIServerSNIEnabled() {
+			values["kubeAPIServerHost"] = b.outOfClusterAPIServerFQDN()
+		}
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
@@ -206,7 +213,7 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		if err := common.DeployManagedResource(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, options.keepObjects, renderedChart.AsSecretData()); err != nil {
+		if err := common.DeployManagedResourceForShoot(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, options.keepObjects, renderedChart.AsSecretData()); err != nil {
 			return err
 		}
 	}
@@ -257,7 +264,7 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		cloudConfigCharts[name] = b.getGenerateCloudConfigExecutionChartFunc(name, worker, bootstrapTokenSecret)
 	}
 
-	cloudConfigManagedResource := common.NewManagedResource(b.K8sSeedClient.Client(), managedResourceName, b.Shoot.SeedNamespace, false)
+	cloudConfigManagedResource := common.NewManagedResourceForShoot(b.K8sSeedClient.Client(), managedResourceName, b.Shoot.SeedNamespace, false)
 
 	// reconcile secrets and reference them to the ManagedResource
 	fns := make([]flow.TaskFn, 0, len(cloudConfigCharts))
@@ -318,6 +325,7 @@ func (b *Botanist) deleteStaleSecretsMatchLabel(ctx context.Context, labels map[
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
+		kasFQDN         = b.outOfClusterAPIServerFQDN()
 		kubeProxySecret = b.Secrets["kube-proxy"]
 		global          = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -382,10 +390,31 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		nodeExporterConfig        = map[string]interface{}{}
 		blackboxExporterConfig    = map[string]interface{}{}
 		nodeProblemDetectorConfig = map[string]interface{}{}
-		networkPolicyConfig       = map[string]interface{}{}
+		networkPolicyConfig       = netpol.ShootNetworkPolicyValues{
+			Enabled: true,
+			NodeLocalDNS: netpol.NodeLocalDNSValues{
+				Enabled:          b.Shoot.NodeLocalDNSEnabled,
+				KubeDNSClusterIP: b.Shoot.Networks.CoreDNS.String(),
+			},
+		}
 
 		nodeNetwork = b.Shoot.GetNodeNetwork()
 	)
+
+	if b.Shoot.IPVSEnabled() {
+		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = NodeLocalIPVSAddress
+	}
+
+	if b.APIServerSNIEnabled() {
+		coreDNSConfig["kubeAPIServerHost"] = kasFQDN
+		metricsServerConfig["kubeAPIServerHost"] = kasFQDN
+		nodeProblemDetectorConfig["env"] = []interface{}{
+			map[string]interface{}{
+				"name":  "KUBERNETES_SERVICE_HOST",
+				"value": kasFQDN,
+			},
+		}
+	}
 
 	if _, ok := b.Secrets[common.VPASecretName]; ok {
 		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = b.Secrets[common.VPASecretName].Data[secrets.DataKeyCertificateCA]
@@ -474,7 +503,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.GetPurpose() != gardencorev1beta1.ShootPurposeTesting),
-		"network-policies":        common.GenerateAddonConfig(networkPolicyConfig, true),
+		"network-policies":        networkPolicyConfig,
 		"node-problem-detector":   common.GenerateAddonConfig(nodeProblemDetector, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
@@ -600,4 +629,11 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
 	})
+}
+
+// outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver
+// with dot "." suffix. It'll prevent extra requests to the DNS in case the record is not
+// available.
+func (b *Botanist) outOfClusterAPIServerFQDN() string {
+	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
 }

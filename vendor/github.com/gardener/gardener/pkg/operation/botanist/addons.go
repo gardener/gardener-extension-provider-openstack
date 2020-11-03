@@ -478,7 +478,10 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 
 	apiserverProxyConfig := map[string]interface{}{
 		"advertiseIPAddress": b.APIServerClusterIP,
-		"proxySeedServer":    fmt.Sprintf("%s:8443", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
+		"proxySeedServer": map[string]interface{}{
+			"host": kasFQDN,
+			"port": "8443",
+		},
 	}
 
 	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerPorxySidecarImageName, common.APIServerProxyImageName)
@@ -491,14 +494,13 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	}
 
 	values := map[string]interface{}{
-		"global":                  global,
-		"coredns":                 coreDNS,
-		"node-local-dns":          common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
-		"kube-apiserver-kubelet":  common.GenerateAddonConfig(nil, true),
-		"apiserver-proxy":         common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
-		"kube-controller-manager": common.GenerateAddonConfig(nil, true),
-		"kube-proxy":              common.GenerateAddonConfig(kubeProxy, true),
-		"metrics-server":          common.GenerateAddonConfig(metricsServer, true),
+		"global":                 global,
+		"coredns":                coreDNS,
+		"node-local-dns":         common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
+		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
+		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
+		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, true),
+		"metrics-server":         common.GenerateAddonConfig(metricsServer, true),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

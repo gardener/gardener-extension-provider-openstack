@@ -48,7 +48,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.11.1-0.20201023184146-f36d165c48fc
+# github.com/gardener/gardener v1.12.3
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -144,6 +144,7 @@ github.com/gardener/gardener/pkg/operation/botanist/clusteridentity
 github.com/gardener/gardener/pkg/operation/botanist/component
 github.com/gardener/gardener/pkg/operation/botanist/controlplane
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler
+github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler
 github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/extensions/dns

@@ -64,6 +64,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	// Fetch component-specific monitoring configuration
 	monitoringComponents := []component.MonitoringComponent{
 		b.Shoot.Components.ControlPlane.KubeScheduler,
+		b.Shoot.Components.ControlPlane.KubeControllerManager,
 	}
 
 	if b.Shoot.WantsClusterAutoscaler {
@@ -408,6 +409,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 		"konnectivityTunnel": map[string]interface{}{
 			"enabled": b.Shoot.KonnectivityTunnelEnabled,
+		},
+		"sni": map[string]interface{}{
+			"enabled": b.APIServerSNIEnabled(),
 		},
 	}, common.GrafanaImageName, common.BusyboxImageName)
 	if err != nil {

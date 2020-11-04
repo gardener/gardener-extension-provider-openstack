@@ -1,6 +1,6 @@
 module github.com/gardener/gardener-extension-provider-openstack
 
-go 1.14
+go 1.15
 
 require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
@@ -8,7 +8,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/frankban/quicktest v1.9.0 // indirect
 	github.com/gardener/etcd-druid v0.3.0
-	github.com/gardener/gardener v1.11.1-0.20201023184146-f36d165c48fc
+	github.com/gardener/gardener v1.12.3
 	github.com/gardener/machine-controller-manager v0.33.0
 	github.com/go-logr/logr v0.1.0
 	github.com/gobuffalo/packr/v2 v2.8.0

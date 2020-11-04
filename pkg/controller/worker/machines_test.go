@@ -41,12 +41,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -140,8 +138,6 @@ var _ = Describe("Machines", func() {
 				clusterWithoutImages   *extensionscontroller.Cluster
 				cluster                *extensionscontroller.Cluster
 				w                      *extensionsv1alpha1.Worker
-
-				shootClient *mockclient.MockClient
 			)
 
 			BeforeEach(func() {
@@ -327,8 +323,6 @@ var _ = Describe("Machines", func() {
 				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster)
 
 				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, clusterWithoutImages)
-
-				shootClient = mockclient.NewMockClient(ctrl)
 			})
 
 			Describe("machine images", func() {
@@ -448,13 +442,6 @@ var _ = Describe("Machines", func() {
 				It("should return the expected machine deployments for profile image types", func() {
 					setup(region, machineImage, "")
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster)
-
-					oldNewClientForShoot := NewClientForShoot
-					defer func() { NewClientForShoot = oldNewClientForShoot }()
-					NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options) (*rest.Config, client.Client, error) {
-						return nil, shootClient, nil
-					}
-					expectStorageClassDeletionToWork(shootClient)
 
 					expectGetSecretCallToWork(c, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword)
 
@@ -682,26 +669,6 @@ func expectGetSecretCallToWork(c *mockclient.MockClient, openstackDomainName, op
 			}
 			return nil
 		})
-}
-
-func expectStorageClassDeletionToWork(c *mockclient.MockClient) {
-	var (
-		sc1 = storagev1beta1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
-		sc2 = storagev1beta1.StorageClass{
-			ObjectMeta: metav1.ObjectMeta{Name: "default-class"},
-			Parameters: map[string]string{
-				"availability": "foo",
-			},
-		}
-	)
-
-	c.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&storagev1beta1.StorageClassList{})).DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
-		obj := &storagev1beta1.StorageClassList{Items: []storagev1beta1.StorageClass{sc1, sc2}}
-		obj.DeepCopyInto(list.(*storagev1beta1.StorageClassList))
-		return nil
-	})
-
-	c.EXPECT().Delete(context.TODO(), sc2.DeepCopy())
 }
 
 func useDefaultMachineClass(def map[string]interface{}, key string, value interface{}) map[string]interface{} {

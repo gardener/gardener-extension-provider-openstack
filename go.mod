@@ -11,7 +11,7 @@ require (
 	github.com/gardener/gardener v1.12.3
 	github.com/gardener/machine-controller-manager v0.33.0
 	github.com/go-logr/logr v0.1.0
-	github.com/gobuffalo/packr/v2 v2.8.0
+	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
 	github.com/google/go-cmp v0.4.1 // indirect
 	github.com/gophercloud/gophercloud v0.7.0

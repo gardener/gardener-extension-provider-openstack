@@ -14,5 +14,6 @@ spec:
     --controlplane-provider-config-filepath=$CONTROLPLANE_PROVIDER_CONFIG_FILEPATH
     --floating-pool-name=$FLOATING_POOL_NAME
     --loadbalancer-provider=$LOADBALANCER_PROVIDER
+    --network-worker-cidr=$NETWORK_WORKER_CIDR
 
   image: golang:1.13.0

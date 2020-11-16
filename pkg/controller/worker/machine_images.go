@@ -28,18 +28,22 @@ import (
 func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	if w.machineImages == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
-			return err
+			return errors.Wrapf(err, "unable to generate the machine config")
 		}
 	}
 
 	// Decode the current worker provider status.
 	workerStatus, err := w.decodeWorkerProviderStatus()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "unable to decode the worker provider status")
 	}
 
 	workerStatus.MachineImages = w.machineImages
-	return w.updateWorkerProviderStatus(ctx, workerStatus)
+	if err := w.updateWorkerProviderStatus(ctx, workerStatus); err != nil {
+		return errors.Wrapf(err, "unable to update worker provider status")
+	}
+
+	return nil
 }
 
 func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineImage, error) {

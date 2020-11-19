@@ -25,6 +25,9 @@ data:
 
 Please look up https://docs.openstack.org/keystone/pike/admin/identity-concepts.html as well.
 
+⚠️ Depending on your API usage it can be problematic to reuse the same provider credentials for different Shoot clusters due to rate limits.
+Please consider spreading your Shoots over multiple credentials from different tenants if you are hitting those limits.
+
 ## `InfrastructureConfig`
 
 The infrastructure configuration mainly describes how the network layout looks like in order to create the shoot worker nodes in a later step, thus, prepares everything relevant to create VMs, load balancers, volumes, etc.

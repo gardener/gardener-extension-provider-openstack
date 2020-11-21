@@ -114,6 +114,7 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 	return component.OpDestroy(dns.NewDNSEntry(
 		&dns.EntryValues{
 			Name: DNSIngressName,
+			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -158,6 +159,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				DNSName: b.Shoot.GetIngressFQDN("*"),
 				Targets: []string{address},
 				OwnerID: ownerID,
+				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),
@@ -274,12 +276,13 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		secretName, secret := common.NewManagedResourceSecret(b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, renderedChart.AsSecretData())
+		secretName, secret := common.NewManagedResourceSecret(b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace)
 		cloudConfigManagedResource.WithSecretRef(secretName)
 		wantedSecretNames.Insert(secretName)
 
 		fns = append(fns, func(ctx context.Context) error {
 			return secret.
+				WithKeyValues(renderedChart.AsSecretData()).
 				WithLabels(map[string]string{SecretLabelKeyManagedResource: managedResourceName}).
 				Reconcile(ctx)
 		})
@@ -357,14 +360,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			},
 			"enableIPVS": b.Shoot.IPVSEnabled(),
 		}
-		metricsServerConfig = map[string]interface{}{
-			"tls": map[string]interface{}{
-				"caBundle": b.Secrets[v1beta1constants.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
-			},
-			"secret": map[string]interface{}{
-				"data": b.Secrets["metrics-server"].Data,
-			},
-		}
 		verticalPodAutoscaler = map[string]interface{}{
 			"clusterType": "shoot",
 			"admissionController": map[string]interface{}{
@@ -407,7 +402,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 
 	if b.APIServerSNIEnabled() {
 		coreDNSConfig["kubeAPIServerHost"] = kasFQDN
-		metricsServerConfig["kubeAPIServerHost"] = kasFQDN
 		nodeProblemDetectorConfig["env"] = []interface{}{
 			map[string]interface{}{
 				"name":  "KUBERNETES_SERVICE_HOST",
@@ -462,11 +456,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
-	metricsServer, err := b.InjectShootShootImages(metricsServerConfig, common.MetricsServerImageName)
-	if err != nil {
-		return nil, err
-	}
-
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, common.NodeExporterImageName)
 	if err != nil {
 		return nil, err
@@ -482,9 +471,13 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"host": kasFQDN,
 			"port": "8443",
 		},
+		"webhook": map[string]interface{}{
+			"caBundle": b.Secrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA],
+		},
+		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 	}
 
-	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerPorxySidecarImageName, common.APIServerProxyImageName)
+	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerProxySidecarImageName, common.APIServerProxyImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -500,7 +493,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, true),
-		"metrics-server":         common.GenerateAddonConfig(metricsServer, true),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
@@ -513,7 +505,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.Info.Status.ClusterIdentity},
 	}
 
-	var shootClient = b.K8sShootClient.Client()
+	shootClient := b.K8sShootClient.Client()
 
 	if b.Shoot.KonnectivityTunnelEnabled {
 		konnectivityAgentConfig := map[string]interface{}{

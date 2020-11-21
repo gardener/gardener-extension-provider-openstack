@@ -366,6 +366,18 @@ type KubeAPIServerConfig struct {
 	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	WatchCacheSizes *WatchCacheSizes
+	// Requests contains configuration for request-specific settings for the kube-apiserver.
+	Requests *KubeAPIServerRequests
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type KubeAPIServerRequests struct {
+	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	MaxNonMutatingInflight *int32
+	// MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	MaxMutatingInflight *int32
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -467,6 +479,8 @@ type KubeControllerManagerConfig struct {
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
 	NodeCIDRMaskSize *int32
+	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
+	PodEvictionTimeout *metav1.Duration
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -921,6 +935,9 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+	// ShootMaintenancePreconditionsSatisfied is a constant for a condition type indicating whether all preconditions
+	// for a shoot maintenance operation are satisfied.
+	ShootMaintenancePreconditionsSatisfied ConditionType = "MaintenancePreconditionsSatisfied"
 )
 
 // DNSUnmanaged is a constant for the 'unmanaged' DNS provider.

@@ -37,6 +37,11 @@ func (w *workerDelegate) MachineClassKind() string {
 	return "OpenStackMachineClass"
 }
 
+// MachineClass yields a newly initialized machine class object.
+func (w *workerDelegate) MachineClass() runtime.Object {
+	return &machinev1alpha1.OpenStackMachineClass{}
+}
+
 // MachineClassList yields a newly initialized OpenStackMachineClassList object.
 func (w *workerDelegate) MachineClassList() runtime.Object {
 	return &machinev1alpha1.OpenStackMachineClassList{}

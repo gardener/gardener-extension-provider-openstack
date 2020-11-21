@@ -29,13 +29,6 @@ const (
 	// KonnectivityTunnel dictates that a konnectivity proxy is used as a tunnel between seed and shoot networks.
 	KonnectivityTunnel string = "konnectivity-agent"
 
-	// BackupBucketName is a constant for the name of bucket of object storage.
-	BackupBucketName = "bucketName"
-
-	// BackupSecretName defines the name of the secret containing the credentials which are required to
-	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
-	BackupSecretName = "etcd-backup"
-
 	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
 	BasicAuthSecretName = "kube-apiserver-basic-auth"
 
@@ -79,12 +72,6 @@ const (
 	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
 	// of zones that shall be excluded.
 	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
-
-	// EtcdRoleMain is the constant defining the role for main etcd storing data about objects in Shoot.
-	EtcdRoleMain = "main"
-
-	// EtcdRoleEvents is the constant defining the role for etcd storing events in Shoot.
-	EtcdRoleEvents = "events"
 
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
@@ -134,9 +121,6 @@ const (
 	// GardenRoleInternalDomain is the value of the GardenRole key indicating type 'internal-domain'.
 	GardenRoleInternalDomain = "internal-domain"
 
-	// GardenRoleAlertingSMTP is the value of the GardenRole key indicating type 'alerting-smtp'.
-	GardenRoleAlertingSMTP = "alerting-smtp"
-
 	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
 
@@ -152,12 +136,6 @@ const (
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "gardener.cloud/created-by"
-
-	// GardenCreatedByDeprecated is the key for an annotation of a Shoot cluster whose value indicates contains the username
-	// of the user that created the resource.
-	//
-	// Deprecated: Use `GardenCreatedBy` instead.
-	GardenCreatedByDeprecated = "garden.sapcloud.io/createdBy"
 
 	// GrafanaOperatorsPrefix is a constant for a prefix used for the operators Grafana instance.
 	GrafanaOperatorsPrefix = "go"
@@ -203,9 +181,6 @@ const (
 
 	// VPNShootDeploymentName is the name of the vpn-shoot deployment.
 	VPNShootDeploymentName = "vpn-shoot"
-
-	// MetricsServerDeploymentName is the name of the metrics-server deployment.
-	MetricsServerDeploymentName = "metrics-server"
 
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
@@ -253,6 +228,11 @@ const (
 	//
 	// Deprecated: Use `ProjectName` instead.
 	ProjectNameDeprecated = "project.garden.sapcloud.io/name"
+
+	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
+	// skipped by the stale project controller. If the project has already configured stale timestamps in its status
+	// then they will be reset.
+	ProjectSkipStaleCheck = "project.gardener.cloud/skip-stale-check"
 
 	// NamespaceProject is they key of an annotation on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.gardener.cloud/project"
@@ -486,17 +466,14 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// IstioIngressGatewayNamespace is the istio-ingress namespace
-	IstioIngressGatewayNamespace = "istio-ingress"
-
-	// IstioIngressGatewayServiceName is the name of the Service used for SNI to the Shoot API Servers.
-	IstioIngressGatewayServiceName = "istio-ingressgateway"
-
 	// APIServerProxyImageName is the image of apiserver-proxy
 	APIServerProxyImageName = "apiserver-proxy"
 
-	// APIServerPorxySidecarImageName is the image of apiserver-proxy sidecar
-	APIServerPorxySidecarImageName = "apiserver-proxy-sidecar"
+	// APIServerProxySidecarImageName is the image of apiserver-proxy sidecar.
+	APIServerProxySidecarImageName = "apiserver-proxy-sidecar"
+
+	// APIServerProxyPodMutatorWebhookImageName is the image of apiserver-proxy pod mutator webhook.
+	APIServerProxyPodMutatorWebhookImageName = "apiserver-proxy-pod-webhook"
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
@@ -511,10 +488,6 @@ const (
 	GrafanaTLS = "grafana-tls"
 	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
 	PrometheusTLS = "prometheus-tls"
-	// EtcdServerTLS is the name of the secret resource which holds TLS server certificate of Etcd
-	EtcdServerTLS = "etcd-server-cert"
-	// EtcdClientTLS is the name of the secret resource which holds TLS client certificate of Etcd
-	EtcdClientTLS = "etcd-client-tls"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
@@ -547,12 +520,5 @@ var (
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
 		v1beta1constants.StatefulSetNameLoki,
-	)
-
-	// ManagedResourcesShoot is a set of managed resource names which contain resources deployed to the shoot.
-	ManagedResourcesShoot = sets.NewString(
-		ManagedResourceCoreNamespaceName,
-		ManagedResourceShootCoreName,
-		ManagedResourceAddonsName,
 	)
 )

@@ -26,7 +26,7 @@ import (
 )
 
 func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	tf, err := internal.NewTerraformer(a.RESTConfig(), infrastructure.TerraformerPurpose, infra.Namespace, infra.Name)
+	tf, err := internal.NewTerraformer(a.RESTConfig(), infrastructure.TerraformerPurpose, infra)
 	if err != nil {
 		return fmt.Errorf("could not create the Terraformer: %+v", err)
 	}
@@ -44,12 +44,7 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 		return tf.CleanupConfiguration(ctx)
 	}
 
-	creds, err := infrastructure.GetCredentialsFromInfrastructure(ctx, a.Client(), infra)
-	if err != nil {
-		return err
-	}
-
 	return tf.
-		SetVariablesEnvironment(internal.TerraformerVariablesEnvironmentFromCredentials(creds)).
+		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef)...).
 		Destroy()
 }

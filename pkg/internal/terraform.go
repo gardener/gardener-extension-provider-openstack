@@ -17,12 +17,14 @@ package internal
 import (
 	"time"
 
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
-	"github.com/gardener/gardener/extensions/pkg/terraformer"
-	"github.com/gardener/gardener/pkg/logger"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -32,23 +34,34 @@ const (
 	TerraformVarNamePassword = "TF_VAR_PASSWORD"
 )
 
-// TerraformerVariablesEnvironmentFromCredentials computes the Terraformer variables environment from the
-// given Credentials.
-func TerraformerVariablesEnvironmentFromCredentials(creds *openstack.Credentials) map[string]string {
-	return map[string]string{
-		TerraformVarNameUserName: creds.Username,
-		TerraformVarNamePassword: creds.Password,
-	}
+// TerraformerEnvVars computes the Terraformer environment variables from the given secret reference.
+func TerraformerEnvVars(secretRef corev1.SecretReference) []corev1.EnvVar {
+	return []corev1.EnvVar{{
+		Name: TerraformVarNameUserName,
+		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretRef.Name,
+			},
+			Key: openstack.UserName,
+		}},
+	}, {
+		Name: TerraformVarNamePassword,
+		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretRef.Name,
+			},
+			Key: openstack.Password,
+		}},
+	}}
 }
 
 // NewTerraformer initializes a new Terraformer.
 func NewTerraformer(
 	restConfig *rest.Config,
-	purpose,
-	namespace,
-	name string,
+	purpose string,
+	infra *extensionsv1alpha1.Infrastructure,
 ) (terraformer.Terraformer, error) {
-	tf, err := terraformer.NewForConfig(logger.NewLogger("info"), restConfig, purpose, namespace, name, imagevector.TerraformerImage())
+	tf, err := terraformer.NewForConfig(logger.NewLogger("info"), restConfig, purpose, infra.Namespace, infra.Name, imagevector.TerraformerImage())
 	if err != nil {
 		return nil, err
 	}
@@ -62,15 +75,13 @@ func NewTerraformer(
 // NewTerraformerWithAuth initializes a new Terraformer that has the credentials.
 func NewTerraformerWithAuth(
 	restConfig *rest.Config,
-	purpose,
-	namespace,
-	name string,
-	creds *openstack.Credentials,
+	purpose string,
+	infra *extensionsv1alpha1.Infrastructure,
 ) (terraformer.Terraformer, error) {
-	tf, err := NewTerraformer(restConfig, purpose, namespace, name)
+	tf, err := NewTerraformer(restConfig, purpose, infra)
 	if err != nil {
 		return nil, err
 	}
 
-	return tf.SetVariablesEnvironment(TerraformerVariablesEnvironmentFromCredentials(creds)), nil
+	return tf.SetEnvVars(TerraformerEnvVars(infra.Spec.SecretRef)...), nil
 }

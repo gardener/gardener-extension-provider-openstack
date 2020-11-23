@@ -723,6 +723,23 @@ message KubeAPIServerConfig {
   // cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
   // +optional
   optional WatchCacheSizes watchCacheSizes = 9;
+
+  // Requests contains configuration for request-specific settings for the kube-apiserver.
+  // +optional
+  optional KubeAPIServerRequests requests = 10;
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+message KubeAPIServerRequests {
+  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxNonMutatingInflight = 1;
+
+  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxMutatingInflight = 2;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -736,6 +753,10 @@ message KubeControllerManagerConfig {
   // NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
   // +optional
   optional int32 nodeCIDRMaskSize = 3;
+
+  // PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration podEvictionTimeout = 4;
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
@@ -1780,6 +1801,15 @@ message SeedStatus {
   // ClusterIdentity is the identity of the Seed cluster
   // +optional
   optional string clusterIdentity = 5;
+
+  // Capacity represents the total resources of a seed.
+  // +optional
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> capacity = 6;
+
+  // Allocatable represents the resources of a seed that are available for scheduling.
+  // Defaults to Capacity.
+  // +optional
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> allocatable = 7;
 }
 
 // SeedTaint describes a taint on a seed.

@@ -23,8 +23,10 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
@@ -55,6 +57,7 @@ type Shoot struct {
 	SeedNamespace               string
 	KubernetesMajorMinorVersion string
 	KubernetesVersion           *semver.Version
+	GardenerVersion             *semver.Version
 
 	DisableDNS            bool
 	InternalClusterDomain string
@@ -85,19 +88,22 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	Extensions      *Extensions
-	ControlPlane    *ControlPlane
-	ClusterIdentity component.Deployer
+	ClusterIdentity  component.Deployer
+	Extensions       *Extensions
+	ControlPlane     *ControlPlane
+	SystemComponents *SystemComponents
 }
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
+	EtcdMain              etcd.Etcd
+	EtcdEvents            etcd.Etcd
 	KubeAPIServerService  component.DeployWaiter
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase
 	KubeScheduler         kubescheduler.KubeScheduler
 	KubeControllerManager kubecontrollermanager.KubeControllerManager
+	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
 }
 
 // Extensions contains references to extension resources.
@@ -106,6 +112,11 @@ type Extensions struct {
 	Infrastructure   Infrastructure
 	Network          component.DeployMigrateWaiter
 	ContainerRuntime ContainerRuntime
+}
+
+// SystemComponents contains references to system components.
+type SystemComponents struct {
+	MetricsServer metricsserver.MetricsServer
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

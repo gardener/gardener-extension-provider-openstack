@@ -48,7 +48,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.12.3
+# github.com/gardener/gardener v1.13.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -144,6 +144,7 @@ github.com/gardener/gardener/pkg/operation/botanist/clusteridentity
 github.com/gardener/gardener/pkg/operation/botanist/component
 github.com/gardener/gardener/pkg/operation/botanist/controlplane
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler
+github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler
 github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime
@@ -151,6 +152,7 @@ github.com/gardener/gardener/pkg/operation/botanist/extensions/dns
 github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure
 github.com/gardener/gardener/pkg/operation/botanist/extensions/network
 github.com/gardener/gardener/pkg/operation/botanist/matchers
+github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver
 github.com/gardener/gardener/pkg/operation/common
 github.com/gardener/gardener/pkg/operation/etcdencryption
 github.com/gardener/gardener/pkg/operation/garden
@@ -184,12 +186,12 @@ github.com/gardener/gardener/pkg/version
 github.com/gardener/gardener/test/framework
 github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
-# github.com/gardener/gardener-resource-manager v0.13.1
+# github.com/gardener/gardener-resource-manager v0.18.0
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper
 github.com/gardener/gardener-resource-manager/pkg/manager
-# github.com/gardener/hvpa-controller v0.2.5
+# github.com/gardener/hvpa-controller v0.3.1
 github.com/gardener/hvpa-controller/api/v1alpha1
 # github.com/gardener/machine-controller-manager v0.33.0
 ## explicit
@@ -279,7 +281,8 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/golang/snappy v0.0.1
+# github.com/golang/snappy v0.0.2
+## explicit
 github.com/golang/snappy
 # github.com/google/go-cmp v0.4.1
 ## explicit
@@ -683,7 +686,7 @@ honnef.co/go/tools/staticcheck/vrp
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
-# k8s.io/api v0.18.8 => k8s.io/api v0.18.8
+# k8s.io/api v0.18.10 => k8s.io/api v0.18.10
 ## explicit
 k8s.io/api/admission/v1beta1
 k8s.io/api/admissionregistration/v1
@@ -726,7 +729,7 @@ k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.18.8 => k8s.io/apiextensions-apiserver v0.18.8
+# k8s.io/apiextensions-apiserver v0.18.10 => k8s.io/apiextensions-apiserver v0.18.10
 ## explicit
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
@@ -735,7 +738,7 @@ k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
-# k8s.io/apimachinery v0.18.8 => k8s.io/apimachinery v0.18.8
+# k8s.io/apimachinery v0.18.10 => k8s.io/apimachinery v0.18.10
 ## explicit
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -790,7 +793,7 @@ k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/apiserver v0.18.8 => k8s.io/apiserver v0.18.8
+# k8s.io/apiserver v0.18.10 => k8s.io/apiserver v0.18.10
 ## explicit
 k8s.io/apiserver/pkg/apis/audit
 k8s.io/apiserver/pkg/apis/audit/v1
@@ -799,12 +802,13 @@ k8s.io/apiserver/pkg/apis/audit/v1beta1
 k8s.io/apiserver/pkg/apis/audit/validation
 k8s.io/apiserver/pkg/apis/config
 k8s.io/apiserver/pkg/apis/config/v1
+k8s.io/apiserver/pkg/authentication/serviceaccount
 k8s.io/apiserver/pkg/authentication/user
 k8s.io/apiserver/pkg/util/feature
 # k8s.io/autoscaler v0.0.0-20190805135949-100e91ba756e
 ## explicit
 k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2
-# k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible => k8s.io/client-go v0.18.8
+# k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible => k8s.io/client-go v0.18.10
 ## explicit
 k8s.io/client-go/discovery
 k8s.io/client-go/dynamic
@@ -976,10 +980,10 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/cluster-bootstrap v0.18.8 => k8s.io/cluster-bootstrap v0.18.8
+# k8s.io/cluster-bootstrap v0.18.10 => k8s.io/cluster-bootstrap v0.18.10
 k8s.io/cluster-bootstrap/token/api
 k8s.io/cluster-bootstrap/token/util
-# k8s.io/code-generator v0.18.8 => k8s.io/code-generator v0.18.8
+# k8s.io/code-generator v0.18.10 => k8s.io/code-generator v0.18.10
 ## explicit
 k8s.io/code-generator
 k8s.io/code-generator/cmd/client-gen
@@ -1015,7 +1019,7 @@ k8s.io/code-generator/cmd/set-gen
 k8s.io/code-generator/pkg/namer
 k8s.io/code-generator/pkg/util
 k8s.io/code-generator/third_party/forked/golang/reflect
-# k8s.io/component-base v0.18.8 => k8s.io/component-base v0.18.8
+# k8s.io/component-base v0.18.10 => k8s.io/component-base v0.18.10
 ## explicit
 k8s.io/component-base/config
 k8s.io/component-base/config/v1alpha1
@@ -1059,7 +1063,7 @@ k8s.io/helm/pkg/version
 k8s.io/klog
 # k8s.io/klog/v2 v2.0.0
 k8s.io/klog/v2
-# k8s.io/kube-aggregator v0.18.8 => k8s.io/kube-aggregator v0.18.8
+# k8s.io/kube-aggregator v0.18.10 => k8s.io/kube-aggregator v0.18.10
 k8s.io/kube-aggregator/pkg/apis/apiregistration
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1
@@ -1080,10 +1084,10 @@ k8s.io/kube-openapi/pkg/generators
 k8s.io/kube-openapi/pkg/generators/rules
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
-# k8s.io/kubelet v0.18.8
+# k8s.io/kubelet v0.18.10
 ## explicit
 k8s.io/kubelet/config/v1beta1
-# k8s.io/metrics v0.18.8
+# k8s.io/metrics v0.18.10
 k8s.io/metrics/pkg/apis/metrics
 k8s.io/metrics/pkg/apis/metrics/v1alpha1
 k8s.io/metrics/pkg/apis/metrics/v1beta1
@@ -1141,13 +1145,13 @@ sigs.k8s.io/structured-merge-diff/v3/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-# k8s.io/api => k8s.io/api v0.18.8
-# k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8
-# k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
-# k8s.io/apiserver => k8s.io/apiserver v0.18.8
-# k8s.io/client-go => k8s.io/client-go v0.18.8
-# k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.18.8
-# k8s.io/code-generator => k8s.io/code-generator v0.18.8
-# k8s.io/component-base => k8s.io/component-base v0.18.8
+# k8s.io/api => k8s.io/api v0.18.10
+# k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.10
+# k8s.io/apimachinery => k8s.io/apimachinery v0.18.10
+# k8s.io/apiserver => k8s.io/apiserver v0.18.10
+# k8s.io/client-go => k8s.io/client-go v0.18.10
+# k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.18.10
+# k8s.io/code-generator => k8s.io/code-generator v0.18.10
+# k8s.io/component-base => k8s.io/component-base v0.18.10
 # k8s.io/helm => k8s.io/helm v2.13.1+incompatible
-# k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.8
+# k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.10

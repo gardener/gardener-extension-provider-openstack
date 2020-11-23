@@ -21,6 +21,7 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -34,6 +35,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/sirupsen/logrus"
 )
 
 func requiredConditionMissing(conditionType string) error {
@@ -339,7 +341,7 @@ var Now = time.Now
 type conditionerFunc func(conditionType string, message string) gardencorev1beta1.Condition
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.
-func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1beta1.Condition {
+func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc, log logrus.FieldLogger) gardencorev1beta1.Condition {
 	now := Now()
 	response := restClient.Get().AbsPath("/healthz").Do(ctx)
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
@@ -361,9 +363,48 @@ func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1
 			body = string(bodyRaw)
 		}
 		message := fmt.Sprintf("API server /healthz endpoint check returned a non ok status code %d. (%s)", statusCode, body)
+		log.Error(message)
 		return conditioner("HealthzRequestError", message)
 	}
 
 	message := "API server /healthz endpoint responded with success status code."
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
+}
+
+var (
+	trueManagedResourceConditionTypes = []resourcesv1alpha1.ConditionType{
+		resourcesv1alpha1.ResourcesApplied,
+		resourcesv1alpha1.ResourcesHealthy,
+	}
+)
+
+// CheckManagedResource checks whether the given ManagedResource is healthy.
+// A ManagedResource is considered healthy if its controller observed its current revision,
+// and if the required conditions are healthy.
+func CheckManagedResource(managedResource *resourcesv1alpha1.ManagedResource) error {
+	if managedResource.Status.ObservedGeneration < managedResource.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", managedResource.Status.ObservedGeneration, managedResource.Generation)
+	}
+
+	for _, trueConditionType := range trueManagedResourceConditionTypes {
+		conditionType := string(trueConditionType)
+		condition := getManagedResourceCondition(managedResource.Status.Conditions, trueConditionType)
+		if condition == nil {
+			return requiredConditionMissing(conditionType)
+		}
+		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getManagedResourceCondition(conditions []resourcesv1alpha1.ManagedResourceCondition, conditionType resourcesv1alpha1.ConditionType) *resourcesv1alpha1.ManagedResourceCondition {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			return &condition
+		}
+	}
+	return nil
 }

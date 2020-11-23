@@ -39,6 +39,8 @@ type GardenletConfiguration struct {
 	ShootClientConnection *ShootClientConnection
 	// Controllers defines the configuration of the controllers.
 	Controllers *GardenletControllerConfiguration
+	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
+	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection *LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -62,6 +64,9 @@ type GardenletConfiguration struct {
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging
+	// SNI contains an optional configuration for the APIServerSNI feature used
+	// by the Gardenlet in the seed clusters.
+	SNI *SNI
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -116,6 +121,8 @@ type GardenletControllerConfiguration struct {
 	ShootCare *ShootCareControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
 	ShootStateSync *ShootStateSyncControllerConfiguration
+	// ShootedSeedRegistration the configuration of the shooted seed registration controller.
+	ShootedSeedRegistration *ShootedSeedRegistrationControllerConfiguration
 	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller.
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 }
@@ -195,6 +202,9 @@ type ShootControllerConfiguration struct {
 	RetryDuration *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
+	// DNSEntryTTLSeconds is the TTL in seconds that is being used for DNS entries when reconciling shoots.
+	// Default: 120s
+	DNSEntryTTLSeconds *int64
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare
@@ -215,6 +225,14 @@ type ShootCareControllerConfiguration struct {
 	StaleExtensionHealthCheckThreshold *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
+}
+
+// ShootedSeedRegistrationControllerConfiguration defines the configuration of the shooted seed registration controller.
+type ShootedSeedRegistrationControllerConfiguration struct {
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the shooted seeds will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	SyncJitterPeriod *metav1.Duration
 }
 
 // ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
@@ -241,6 +259,15 @@ type ShootStateSyncControllerConfiguration struct {
 type SeedAPIServerNetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
+}
+
+// ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
+type ResourcesConfiguration struct {
+	// Capacity defines the total resources of a seed.
+	Capacity corev1.ResourceList
+	// Reserved defines the resources of a seed that are reserved for use by Gardener.
+	// Defaults to 0.
+	Reserved corev1.ResourceList
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election
@@ -306,4 +333,24 @@ type TLSServer struct {
 	ServerCertPath string
 	// ServerKeyPath is the path to the private key file.
 	ServerKeyPath string
+}
+
+// SNI contains an optional configuration for the APIServerSNI feature used
+// by the Gardenlet in the seed clusters.
+type SNI struct {
+	// Ingress is the ingressgateway configuration.
+	Ingress *SNIIngress
+}
+
+// SNIIngress contains configuration of the ingressgateway.
+type SNIIngress struct {
+	// ServiceName is the name of the ingressgateway Service.
+	// Defaults to "istio-ingressgateway".
+	ServiceName *string
+	// Namespace is the namespace in which the ingressgateway is deployed in.
+	// Defaults to "istio-ingress".
+	Namespace *string
+	// Labels of the ingressgateway
+	// Defaults to "istio: ingressgateway".
+	Labels map[string]string
 }

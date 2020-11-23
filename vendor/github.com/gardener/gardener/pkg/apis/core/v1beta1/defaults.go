@@ -16,6 +16,7 @@ package v1beta1
 
 import (
 	"math"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
@@ -24,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
@@ -117,20 +119,6 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
-
-	// TODO: remove taints removal in version >=1.13
-	taintsToRemove := []string{
-		"seed.gardener.cloud/disable-capacity-reservation",
-		"seed.gardener.cloud/disable-dns",
-		"seed.gardener.cloud/invisible",
-	}
-	for _, taint := range taintsToRemove {
-		for i := len(obj.Spec.Taints) - 1; i >= 0; i-- {
-			if obj.Spec.Taints[i].Key == taint {
-				obj.Spec.Taints = append(obj.Spec.Taints[:i], obj.Spec.Taints[i+1:]...)
-			}
-		}
-	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.
@@ -153,12 +141,24 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
 		}
 	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Requests == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Requests = &KubeAPIServerRequests{}
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = pointer.Int32Ptr(400)
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32Ptr(200)
+	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(obj.Spec.Kubernetes.Kubelet, obj.Spec.Provider.Workers)
+	}
+	if obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout == nil {
+		obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 2 * time.Minute}
 	}
 
 	if obj.Spec.Kubernetes.KubeProxy == nil {

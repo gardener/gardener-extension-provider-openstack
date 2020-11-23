@@ -90,10 +90,14 @@ const (
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
+	// ETCDRoleMain is a constant for the main etcd role.
+	ETCDRoleMain = "main"
+	// ETCDRoleEvents is a constant for the events etcd role.
+	ETCDRoleEvents = "events"
 	// ETCDMain is a constant for the name of etcd-main Etcd object.
-	ETCDMain = "etcd-main"
+	ETCDMain = "etcd-" + ETCDRoleMain
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
-	ETCDEvents = "etcd-events"
+	ETCDEvents = "etcd-" + ETCDRoleEvents
 	// StatefulSetNameLoki is a constant for the name of a Kubernetes stateful set object that contains
 	// the loki pod.
 	StatefulSetNameLoki = "loki"
@@ -103,6 +107,8 @@ const (
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
+	// GardenerDescription is a constant for a key in an annotation describing what the resource is used for.
+	GardenerDescription = "gardener.cloud/description"
 
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
@@ -201,6 +207,13 @@ const (
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
+	// LabelNetworkPolicyShootFromSeed allows Ingress traffic from the seed cluster (where the shoot's kube-apiserver
+	// runs).
+	LabelNetworkPolicyShootFromSeed = "networking.gardener.cloud/from-seed"
+	// LabelNetworkPolicyShootToAPIServer allows Egress traffic to the shoot's API server.
+	LabelNetworkPolicyShootToAPIServer = "networking.gardener.cloud/to-apiserver"
+	// LabelNetworkPolicyShootToKubelet allows Egress traffic to the kubelets.
+	LabelNetworkPolicyShootToKubelet = "networking.gardener.cloud/to-kubelet"
 	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
 	LabelNetworkPolicyAllowed = "allowed"
 	// LabelNetworkPolicyDisallowed is a constant for disallowing a network policy.
@@ -236,25 +249,24 @@ const (
 	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	AnnotationShootUseAsSeed = "shoot.gardener.cloud/use-as-seed"
-	// AnnotationShootUseAsSeedDeprecated is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
-	// Garden cluster once successfully created.
-	//
-	// Deprecated: Use `AnnotationShootUseAsSeed` instead.
-	AnnotationShootUseAsSeedDeprecated = "shoot.garden.sapcloud.io/use-as-seed"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"
-	// AnnotationShootIgnoreAlertsDeprecated is the key for an annotation of a Shoot cluster whose value indicates
-	// if alerts for this cluster should be ignored
-	//
-	// Deprecated: Use `AnnotationShootIgnoreAlerts` instead.
-	AnnotationShootIgnoreAlertsDeprecated = "shoot.garden.sapcloud.io/ignore-alerts"
 	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
 	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
 	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"
 	// AnnotationShootKonnectivityTunnel is the key for an annotation of a Shoot cluster whose value indicates
 	// if a konnectivity-tunnel should be deployed into the shoot cluster or not.
 	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
+
+	// AnnotationShootAPIServerSNIPodInjector is the key for an annotation of a Shoot cluster whose value indicates
+	// if pod injection of 'KUBERNETES_SERVICE_HOST' environment variable should happen for clusters where APIServerSNI
+	// featuregate is enabled.
+	// Any value than 'disable' enables this feature.
+	AnnotationShootAPIServerSNIPodInjector = "alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector"
+	// AnnotationShootAPIServerSNIPodInjectorDisableValue is the value of the
+	// `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation that disables the pod injection.
+	AnnotationShootAPIServerSNIPodInjectorDisableValue = "disable"
 
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
@@ -282,21 +294,21 @@ const (
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
+	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
+	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
+	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
+	LabelWorkerPool = "worker.gardener.cloud/pool"
+	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
+	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
+	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
+	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
 
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
 	EventResourceReferenced = "ResourceReferenced"
 
-	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
-	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
-
-	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
-	LabelWorkerPool = "worker.gardener.cloud/pool"
-	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
-	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
-
-	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
-	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
+	// PriorityClassNameShootControlPlane is the name of a priority class for critical pods of a shoot control plane.
+	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
 
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.

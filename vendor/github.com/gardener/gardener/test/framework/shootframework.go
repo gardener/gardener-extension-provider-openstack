@@ -133,20 +133,24 @@ func (f *ShootFramework) AfterEach(ctx context.Context) {
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: f.Namespace},
 		}
+		f.Namespace = ""
 		err := f.ShootClient.DirectClient().Delete(ctx, ns)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				ExpectNoError(err)
 			}
 		}
-		err = f.WaitUntilNamespaceIsDeleted(ctx, f.ShootClient, f.Namespace)
+		err = f.WaitUntilNamespaceIsDeleted(ctx, f.ShootClient, ns.Name)
 		if err != nil {
-			err2 := f.DumpDefaultResourcesInNamespace(ctx, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, f.Namespace), f.ShootClient, f.Namespace)
+			ctx2, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			defer cancel()
+			err2 := f.dumpNamespaceResource(ctx2, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, ns.Name), f.ShootClient, ns.Name)
+			ExpectNoError(err2)
+			err2 = f.DumpDefaultResourcesInNamespace(ctx2, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, ns.Name), f.ShootClient, ns.Name)
 			ExpectNoError(err2)
 		}
 		ExpectNoError(err)
-		f.Namespace = ""
-		ginkgo.By(fmt.Sprintf("deleted test namespace %s", f.Namespace))
+		ginkgo.By(fmt.Sprintf("deleted test namespace %s", ns.Name))
 	}
 }
 
@@ -218,7 +222,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		return errors.Wrap(err, "could not add schemes to shoot scheme")
 	}
 	if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
-		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.DirectClient(), computeTechnicalID(f.Project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
+		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.DirectClient(), ComputeTechnicalID(f.Project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
 			Scheme: shootScheme,
 		}))
 		if err != nil {

@@ -12,11 +12,11 @@ spec:
     go test -timeout=0 -mod=vendor ./test/integration/infrastructure
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     --kubeconfig=$TM_KUBECONFIG_PATH/testmachinery.config
-    --auth-url='$(shell cat $(AUTH_URL))' \
-    --domain-name='$(shell cat $(DOMAIN_NAME))' \
-    --floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
-    --password='$(shell cat $(PASSWORD))' \
-    --region='$(shell cat $(REGION))' \
-    --tenant-name='$(shell cat $(TENANT_NAME))' \
-    --user-name='$(shell cat $(USER_NAME))' \
+    --auth-url="$AUTH_URL"
+    --domain-name="$DOMAIN_NAME"
+    --floating-pool-name="$FLOATING_POOL_NAME"
+    --password="$PASSWORD"
+    --region="$REGION"
+    --tenant-name="$TENANT_NAME"
+    --user-name="$USER_NAME"
   image: golang:1.15.3

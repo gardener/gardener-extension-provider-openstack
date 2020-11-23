@@ -15,33 +15,35 @@
 package internal
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Terraform", func() {
-	var (
-		username    string
-		password    string
-		credentials *openstack.Credentials
-	)
-
-	BeforeEach(func() {
-		username = "user"
-		password = "password"
-		credentials = &openstack.Credentials{Username: username, Password: password}
-	})
-
-	Describe("#TerraformerVariablesEnvironmentFromCredentials", func() {
-		It("should correctly create the variables environment", func() {
-			variables := TerraformerVariablesEnvironmentFromCredentials(credentials)
-
-			Expect(variables).To(Equal(map[string]string{
-				TerraformVarNameUserName: username,
-				TerraformVarNamePassword: password,
-			}))
+	Describe("#TerraformerEnvVars", func() {
+		It("should correctly create the environment variables", func() {
+			secretRef := corev1.SecretReference{Name: "cloud"}
+			Expect(TerraformerEnvVars(secretRef)).To(ConsistOf(
+				corev1.EnvVar{
+					Name: "TF_VAR_USER_NAME",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secretRef.Name,
+						},
+						Key: "username",
+					}},
+				},
+				corev1.EnvVar{
+					Name: "TF_VAR_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secretRef.Name,
+						},
+						Key: "password",
+					}},
+				}))
 		})
 	})
 })

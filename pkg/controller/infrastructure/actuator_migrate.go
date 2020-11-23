@@ -26,7 +26,7 @@ import (
 )
 
 func (a *actuator) Migrate(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	tf, err := internal.NewTerraformer(a.RESTConfig(), infrastructure.TerraformerPurpose, infra.Namespace, infra.Name)
+	tf, err := internal.NewTerraformer(a.RESTConfig(), infrastructure.TerraformerPurpose, infra)
 	if err != nil {
 		return fmt.Errorf("could not create the Terraformer: %+v", err)
 	}

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -47,6 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -80,15 +82,17 @@ type HealthChecker struct {
 	staleExtensionHealthCheckThreshold *metav1.Duration
 	lastOperation                      *gardencorev1beta1.LastOperation
 	kubernetesVersion                  *semver.Version
+	gardenerVersion                    *semver.Version
 }
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, lastOperation *gardencorev1beta1.LastOperation, kubernetesVersion *semver.Version) *HealthChecker {
+func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, lastOperation *gardencorev1beta1.LastOperation, kubernetesVersion *semver.Version, gardenerVersion *semver.Version) *HealthChecker {
 	return &HealthChecker{
 		conditionThresholds:                conditionThresholds,
 		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
 		lastOperation:                      lastOperation,
 		kubernetesVersion:                  kubernetesVersion,
+		gardenerVersion:                    gardenerVersion,
 	}
 }
 
@@ -397,7 +401,7 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 func (b *Botanist) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	return health.CheckAPIServerAvailability(ctx, condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
-	})
+	}, b.Logger)
 }
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
@@ -563,6 +567,21 @@ func (b *Botanist) checkControlPlane(
 	return &c, nil
 }
 
+var versionConstraintGreaterEqual113 *semver.Constraints
+
+func init() {
+	var err error
+
+	versionConstraintGreaterEqual113, err = semver.NewConstraint(">= 1.13")
+	utilruntime.Must(err)
+}
+
+var managedResourcesShoot = sets.NewString(
+	common.ManagedResourceCoreNamespaceName,
+	common.ManagedResourceShootCoreName,
+	common.ManagedResourceAddonsName,
+)
+
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (b *Botanist) checkSystemComponents(
 	ctx context.Context,
@@ -570,7 +589,12 @@ func (b *Botanist) checkSystemComponents(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	for name := range common.ManagedResourcesShoot {
+	managedResources := managedResourcesShoot.List()
+	if versionConstraintGreaterEqual113.Check(checker.gardenerVersion) {
+		managedResources = append(managedResources, metricsserver.ManagedResourceName)
+	}
+
+	for _, name := range managedResources {
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), mr); err != nil {
 			return nil, err
@@ -779,6 +803,7 @@ func (b *Botanist) healthChecks(
 	initializeShootClients func() (bool, error),
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
+	gardenerVersion *semver.Version,
 	apiserverAvailability,
 	controlPlane,
 	nodes,
@@ -799,7 +824,7 @@ func (b *Botanist) healthChecks(
 	}
 
 	var (
-		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, b.Shoot.Info.Status.LastOperation, b.Shoot.KubernetesVersion)
+		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, b.Shoot.Info.Status.LastOperation, b.Shoot.KubernetesVersion, gardenerVersion)
 		seedDeploymentLister  = makeDeploymentLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedStatefulSetLister = makeStatefulSetLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedEtcdLister        = makeEtcdLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
@@ -896,6 +921,7 @@ func (b *Botanist) HealthChecks(
 	initializeShootClients func() (bool, error),
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
+	gardenerVersion *semver.Version,
 	apiserverAvailability,
 	controlPlane,
 	nodes,
@@ -906,7 +932,7 @@ func (b *Botanist) HealthChecks(
 	gardencorev1beta1.Condition,
 	gardencorev1beta1.Condition,
 ) {
-	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(ctx, initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, apiserverAvailability, controlPlane, nodes, systemComponents)
+	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(ctx, initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, gardenerVersion, apiserverAvailability, controlPlane, nodes, systemComponents)
 	lastOp := b.Shoot.Info.Status.LastOperation
 	lastErrors := b.Shoot.Info.Status.LastErrors
 	return PardonCondition(apiServerAvailable, lastOp, lastErrors),

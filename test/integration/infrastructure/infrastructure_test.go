@@ -21,25 +21,19 @@ import (
 	"path/filepath"
 	"time"
 
-	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
-	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-
 	gardenerv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,6 +44,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 const (
@@ -137,7 +136,9 @@ var _ = Describe("Infrastructure tests", func() {
 		Expect(cfg).NotTo(BeNil())
 
 		By("setup manager")
-		mgr, err := manager.New(cfg, manager.Options{})
+		mgr, err := manager.New(cfg, manager.Options{
+			MetricsBindAddress: "0",
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())

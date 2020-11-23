@@ -20,16 +20,26 @@ type Secret struct {
 	Name string
 	// Checksum is the checksum of the secret's data.
 	Checksum string
+	// Data is the data of the secret.
+	Data map[string][]byte
 }
 
-// LoggingConfig is a structure that contains additional Fluentbit filters and parsers
-type LoggingConfig struct {
-	// Filters contains the filters for specific component
+// CentralMonitoringConfig is a structure that contains configuration for the central monitoring stack.
+type CentralMonitoringConfig struct {
+	// ScrapeConfigs are the scrape configurations for central Prometheus.
+	ScrapeConfigs []string
+	// CAdvisorScrapeConfigMetricRelabelConfigs are metric_relabel_configs for the cadvisor scrape config job.
+	CAdvisorScrapeConfigMetricRelabelConfigs []string
+}
+
+// CentralLoggingConfig is a structure that contains configuration for the central logging stack.
+type CentralLoggingConfig struct {
+	// Filters contains the filters for specific component.
 	Filters string
-	// Parser contains the parsers for specific component
+	// Parser contains the parsers for specific component.
 	Parsers string
-	// PodPrefix is the prefix of the pod name
+	// PodPrefix is the prefix of the pod name.
 	PodPrefix string
-	// UserExposed defines if the component is exposed to the end-user
+	// UserExposed defines if the component is exposed to the end-user.
 	UserExposed bool
 }

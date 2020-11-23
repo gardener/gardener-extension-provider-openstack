@@ -22,17 +22,25 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // kubeAPIServiceValues configure the kube-apiserver service SNI.
 type KubeAPIServerSNIValues struct {
-	Hosts                    []string  `json:"hosts,omitempty"`
-	Name                     string    `json:"name,omitempty"`
-	NamespaceUID             types.UID `json:"namespaceUID,omitempty"`
-	ApiserverClusterIP       string    `json:"apiserverClusterIP,omitempty"`
-	IstioIngressNamespace    string    `json:"istioIngressNamespace,omitempty"`
-	EnableKonnectivityTunnel bool      `json:"enableKonnectivityTunnel,omitempty"`
+	Hosts                    []string            `json:"hosts,omitempty"`
+	Name                     string              `json:"name,omitempty"`
+	NamespaceUID             types.UID           `json:"namespaceUID,omitempty"`
+	ApiserverClusterIP       string              `json:"apiserverClusterIP,omitempty"`
+	IstioIngressGateway      IstioIngressGateway `json:"istioIngressGateway,omitempty"`
+	EnableKonnectivityTunnel bool                `json:"enableKonnectivityTunnel,omitempty"`
+}
+
+// IstioIngressGateway contain the values for istio ingress gateway configuration.
+type IstioIngressGateway struct {
+	Namespace string            `json:"namespace,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
 }
 
 // NewKubeAPIServerSNI creates a new instance of DeployWaiter which deploys Istio resources for
@@ -86,3 +94,19 @@ func (k *kubeAPIServerSNI) Destroy(ctx context.Context) error {
 
 func (k *kubeAPIServerSNI) Wait(ctx context.Context) error        { return nil }
 func (k *kubeAPIServerSNI) WaitCleanup(ctx context.Context) error { return nil }
+
+// AnyDeployedSNI returns true if any SNI is deployed in the cluster.
+func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
+	l := &unstructured.UnstructuredList{
+		Object: map[string]interface{}{
+			"apiVersion": "networking.istio.io/v1beta1",
+			"kind":       "VirtualServiceList",
+		},
+	}
+
+	if err := c.List(ctx, l, client.MatchingFields{"metadata.name": "kube-apiserver"}, client.Limit(1)); err != nil && !meta.IsNoMatchError(err) {
+		return false, err
+	}
+
+	return len(l.Items) > 0, nil
+}

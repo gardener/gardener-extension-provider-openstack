@@ -52,7 +52,7 @@ func (a *actuator) updateProviderStatus(
 	infra *extensionsv1alpha1.Infrastructure,
 	config *api.InfrastructureConfig,
 ) error {
-	status, err := infrainternal.ComputeStatus(tf, config)
+	status, err := infrainternal.ComputeStatus(ctx, tf, config)
 	if err != nil {
 		return err
 	}

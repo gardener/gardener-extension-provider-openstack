@@ -166,6 +166,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
+			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 		deployment.Spec.Replicas = &c.replicas
@@ -254,6 +255,17 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		}
 		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
+		}
+		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
+			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				{
+					ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("20m"),
+						corev1.ResourceMemory: resource.MustParse("50Mi"),
+					},
+				},
+			},
 		}
 		return nil
 	}); err != nil {

@@ -47,7 +47,6 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/pkg/version"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -325,11 +324,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	images[common.GardenerSeedAdmissionControllerImageName] = &imagevector.Image{
 		Repository: repository,
 		Tag:        &tag,
-	}
-	// TODO: Remove in future release
-	// Delete the mutatingwebhookconfigoration
-	if err := deleteMutatingWebHookConfiguration(ctx, k8sSeedClient.Client()); err != nil {
-		return err
 	}
 
 	// HVPA feature gate
@@ -769,30 +763,16 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	// Deploy component specific resources
+	bootstrapComponents, err := bootstrapComponents(k8sSeedClient, v1beta1constants.GardenNamespace, imageVector, imageVectorOverwrites)
+	if err != nil {
+		return err
+	}
+
 	var bootstrapFunctions []flow.TaskFn
-	for _, componentFn := range []component.BootstrapSeed{
-		clusterautoscaler.BootstrapSeed,
-		func(ctx context.Context, c client.Client, namespace, version string) error {
-			image, err := imageVector.FindImage(
-				common.EtcdDruidImageName,
-				imagevector.RuntimeVersion(k8sSeedClient.Version()),
-				imagevector.TargetVersion(k8sSeedClient.Version()),
-			)
-			if err != nil {
-				return err
-			}
-
-			var imageVectorOverwrite *string
-			if val, ok := imageVectorOverwrites[etcd.Druid]; ok {
-				imageVectorOverwrite = &val
-			}
-
-			return etcd.BootstrapSeed(ctx, c, namespace, version, image.String(), imageVectorOverwrite)
-		},
-	} {
+	for _, componentFn := range bootstrapComponents {
 		fn := componentFn
 		bootstrapFunctions = append(bootstrapFunctions, func(ctx context.Context) error {
-			return fn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version())
+			return component.OpWaiter(fn).Deploy(ctx)
 		})
 	}
 
@@ -801,18 +781,49 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 
 // DebootstrapCluster deletes certain resources from the seed cluster.
 func DebootstrapCluster(ctx context.Context, k8sSeedClient kubernetes.Interface) error {
+	bootstrapComponents, err := bootstrapComponents(k8sSeedClient, v1beta1constants.GardenNamespace, nil, nil)
+	if err != nil {
+		return err
+	}
+
 	// Delete component specific resources
 	var debootstrapFunctions []flow.TaskFn
-	for _, componentFn := range []component.DebootstrapSeed{
-		clusterautoscaler.DebootstrapSeed,
-		etcd.DebootstrapSeed,
-	} {
+	for _, componentFn := range bootstrapComponents {
+		fn := componentFn
 		debootstrapFunctions = append(debootstrapFunctions, func(ctx context.Context) error {
-			return componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace)
+			return component.OpDestroyAndWait(fn).Destroy(ctx)
 		})
 	}
 
 	return flow.Parallel(debootstrapFunctions...)(ctx)
+}
+
+func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector imagevector.ImageVector, imageVectorOverwrites map[string]string) ([]component.DeployWaiter, error) {
+	var components []component.DeployWaiter
+
+	// cluster-autoscaler
+	components = append(components, clusterautoscaler.NewBootstrapper(c.Client(), namespace))
+
+	// etcd
+	var (
+		etcdImage                string
+		etcdImageVectorOverwrite *string
+	)
+	if imageVector != nil {
+		image, err := imageVector.FindImage(common.EtcdDruidImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+		if err != nil {
+			return nil, err
+		}
+		etcdImage = image.String()
+	}
+	if imageVectorOverwrites != nil {
+		if val, ok := imageVectorOverwrites[etcd.Druid]; ok {
+			etcdImageVectorOverwrite = &val
+		}
+	}
+	components = append(components, etcd.NewBootstrapper(c.Client(), namespace, etcdImage, c.Version(), etcdImageVectorOverwrite))
+
+	return components, nil
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
@@ -928,15 +939,4 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 		return string(gardenNamespace.UID), nil
 	}
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
-}
-
-func deleteMutatingWebHookConfiguration(ctx context.Context, k8sSeedClient client.Client) error {
-	a := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener-seed-admission-controller",
-		},
-	}
-
-	err := k8sSeedClient.Delete(ctx, a)
-	return client.IgnoreNotFound(err)
 }

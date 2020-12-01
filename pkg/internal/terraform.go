@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 
@@ -57,11 +57,12 @@ func TerraformerEnvVars(secretRef corev1.SecretReference) []corev1.EnvVar {
 
 // NewTerraformer initializes a new Terraformer.
 func NewTerraformer(
+	logger logr.Logger,
 	restConfig *rest.Config,
 	purpose string,
 	infra *extensionsv1alpha1.Infrastructure,
 ) (terraformer.Terraformer, error) {
-	tf, err := terraformer.NewForConfig(logger.NewLogger("info"), restConfig, purpose, infra.Namespace, infra.Name, imagevector.TerraformerImage())
+	tf, err := terraformer.NewForConfig(logger, restConfig, purpose, infra.Namespace, infra.Name, imagevector.TerraformerImage())
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +75,12 @@ func NewTerraformer(
 
 // NewTerraformerWithAuth initializes a new Terraformer that has the credentials.
 func NewTerraformerWithAuth(
+	logger logr.Logger,
 	restConfig *rest.Config,
 	purpose string,
 	infra *extensionsv1alpha1.Infrastructure,
 ) (terraformer.Terraformer, error) {
-	tf, err := NewTerraformer(restConfig, purpose, infra)
+	tf, err := NewTerraformer(logger, restConfig, purpose, infra)
 	if err != nil {
 		return nil, err
 	}

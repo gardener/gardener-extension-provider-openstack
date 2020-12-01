@@ -169,6 +169,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
+			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 		deployment.Spec.Replicas = &k.replicas
@@ -504,7 +505,6 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 }
 
 var (
-	versionConstraintK8sEqual113        *semver.Constraints
 	versionConstraintK8sGreaterEqual112 *semver.Constraints
 	versionConstraintK8sSmaller112      *semver.Constraints
 	versionConstraintK8sGreaterEqual113 *semver.Constraints
@@ -520,8 +520,6 @@ func init() {
 	versionConstraintK8sSmaller112, err = semver.NewConstraint("< 1.12")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual112, err = semver.NewConstraint(">= 1.12")
-	utilruntime.Must(err)
-	versionConstraintK8sEqual113, err = semver.NewConstraint("~ 1.13")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual113, err = semver.NewConstraint(">= 1.13")
 	utilruntime.Must(err)

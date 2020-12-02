@@ -163,7 +163,7 @@ var (
 				Objects: []*chart.Object{
 					{Type: &corev1.Service{}, Name: openstack.CloudControllerManagerName},
 					{Type: &appsv1.Deployment{}, Name: openstack.CloudControllerManagerName},
-					{Type: &corev1.ConfigMap{}, Name: openstack.CloudControllerManagerName + "-monitoring-config"},
+					{Type: &corev1.ConfigMap{}, Name: openstack.CloudControllerManagerName + "-observability-config"},
 					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CloudControllerManagerName + "-vpa"},
 				},
 			},
@@ -182,6 +182,7 @@ var (
 					// csi-driver-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSIControllerName},
 					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CSIControllerName + "-vpa"},
+					{Type: &corev1.ConfigMap{}, Name: openstack.CSIControllerName + "-observability-config"},
 					// csi-snapshot-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotControllerName},
 					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
@@ -336,6 +337,11 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 			return nil, err
 		}
 		checksums[openstack.CloudProviderCSIDiskConfigName] = gutil.ComputeChecksum(cpDiskConfigSecret.Data)
+	}
+
+	// TODO: Remove this code in next version. Delete old config
+	if err := vp.deleteCCMMonitoringConfig(ctx, cp.Namespace); err != nil {
+		return nil, err
 	}
 
 	return getControlPlaneChartValues(cpConfig, cp, cluster, checksums, scaledDown)

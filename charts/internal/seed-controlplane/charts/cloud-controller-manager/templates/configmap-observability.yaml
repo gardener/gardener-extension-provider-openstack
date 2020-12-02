@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cloud-controller-manager-monitoring-config
+  name: cloud-controller-manager-observability-config
   namespace: {{ .Release.Namespace }}
   labels:
     extensions.gardener.cloud/configuration: monitoring
@@ -55,8 +55,8 @@ data:
 
   dashboard_operators: |
     cloud-controller-manager-dashboard.json: |-
-{{- .Files.Get "ccm-monitoring-dashboard.json" | nindent 6 }}
+{{- .Files.Get "ccm-observability-dashboard.json" | nindent 6 }}
 
   dashboard_users: |
     cloud-controller-manager-dashboard.json: |-
-{{- .Files.Get "ccm-monitoring-dashboard.json" | nindent 6 }}
+{{- .Files.Get "ccm-observability-dashboard.json" | nindent 6 }}

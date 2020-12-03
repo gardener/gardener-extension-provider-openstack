@@ -34,7 +34,7 @@ spec:
         networking.gardener.cloud/to-private-networks: allowed
     spec:
       containers:
-      - name: csi-driver
+      - name: openstack-csi-driver
         image: {{ index .Values.images "csi-driver-cinder" }}
         imagePullPolicy: IfNotPresent
         args :
@@ -77,7 +77,7 @@ spec:
           name: etc-ssl
           readOnly: true
 
-      - name: csi-provisioner
+      - name: openstack-csi-provisioner
         image: {{ index .Values.images "csi-provisioner" }}
         imagePullPolicy: IfNotPresent
         args:
@@ -103,7 +103,7 @@ spec:
         - name: csi-provisioner
           mountPath: /var/lib/csi-provisioner
 
-      - name: csi-attacher
+      - name: openstack-csi-attacher
         image: {{ index .Values.images "csi-attacher" }}
         imagePullPolicy: IfNotPresent
         args:
@@ -126,7 +126,7 @@ spec:
         - name: csi-attacher
           mountPath: /var/lib/csi-attacher
 
-      - name: csi-snapshotter
+      - name: openstack-csi-snapshotter
         image: {{ index .Values.images "csi-snapshotter" }}
         imagePullPolicy: IfNotPresent
         args:
@@ -149,7 +149,7 @@ spec:
         - name: csi-snapshotter
           mountPath: /var/lib/csi-snapshotter
 
-      - name: csi-resizer
+      - name: openstack-csi-resizer
         image: {{ index .Values.images "csi-resizer" }}
         imagePullPolicy: IfNotPresent
         args:
@@ -172,7 +172,7 @@ spec:
         - name: csi-resizer
           mountPath: /var/lib/csi-resizer
 
-      - name: csi-liveness-probe
+      - name: openstack-csi-liveness-probe
         image: {{ index .Values.images "csi-liveness-probe" }}
         args:
         - --csi-address=/csi/csi.sock

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: csi-driver-controller-observability-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    extensions.gardener.cloud/configuration: monitoring
+data:
+  dashboard_operators: |
+    csi-driver-controller-dashboard.json: |-
+{{- .Files.Get "csi-driver-controller-dashboard.json" | nindent 6 }}
+
+  dashboard_users: |
+    csi-driver-controller-dashboard.json: |-
+{{- .Files.Get "csi-driver-controller-dashboard.json" | nindent 6 }}

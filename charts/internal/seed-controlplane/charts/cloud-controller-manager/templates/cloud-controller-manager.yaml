@@ -4,7 +4,6 @@ metadata:
   name: cloud-controller-manager
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: controlplane
     app: kubernetes
     role: cloud-controller-manager
 spec:
@@ -22,6 +21,7 @@ spec:
 {{- end }}
       labels:
         garden.sapcloud.io/role: controlplane
+        gardener.cloud/role: controlplane
         app: kubernetes
         role: cloud-controller-manager
         networking.gardener.cloud/to-dns: allowed

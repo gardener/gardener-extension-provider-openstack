@@ -43,7 +43,7 @@ spec:
         - --endpoint=$(CSI_ENDPOINT)
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster={{ .Release.Namespace }}
-        - --v=5
+        - --v=3
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock

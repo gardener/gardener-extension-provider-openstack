@@ -28,6 +28,14 @@ See [CSI Cinder driver](https://github.com/kubernetes/cloud-provider-openstack/b
 
 The cloud profile config also contains constraints for floating pools and load balancer providers that can be used in shoots.
 
+If your OpenStack system supports server groups, the `serverGroupPolicies` property will enable your end-users to create shoots with workers where the nodes are managed by Nova's server groups.
+Specifying `serverGroupPolicies` is optional and can be omitted. If enabled, the end-user can choose whether or not to use this feature for a shoot's workers. Gardener will handle the creation of the server group and node assignment.
+
+To enable this feature, an operator should:
+
++ specify the allowed policy values (e.g. `affintity`, `anti-affinity`) in this section. Only the policies in the allow-list will be available for end-users.
++ make sure that your OpenStack project has enough server group capacity. Otherwise, shoot creation will fail.
+
 An example `CloudProfileConfig` for the OpenStack extension looks as follows:
 
 ```yaml
@@ -52,6 +60,9 @@ machineImages:
 # useSNAT: true
 # rescanBlockStorageOnResize: true
 # nodeVolumeAttachLimit: 30
+# serverGroupPolicies:
+# - soft-anti-affinity
+# - anti-affinity
 constraints:
   floatingPools:
   - name: fp-pool-1

@@ -51,6 +51,8 @@ type CloudProfileConfig struct {
 	UseOctavia *bool
 	// UseSNAT specifies whether S-NAT is supposed to be used for the Gardener managed OpenStack router.
 	UseSNAT *bool
+	// ServerGroupPolicies specify the allowed server group policies for worker groups.
+	ServerGroupPolicies []string
 }
 
 // Constraints is an object containing constraints for the shoots.

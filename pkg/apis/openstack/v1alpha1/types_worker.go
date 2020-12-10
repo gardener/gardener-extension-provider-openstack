@@ -32,6 +32,10 @@ type WorkerStatus struct {
 	// reconciliation is possible.
 	// +optional
 	MachineImages []MachineImage `json:"machineImages,omitempty"`
+
+	// ServerGroupDependencies is a list of external server group dependencies.
+	// +optional
+	ServerGroupDependencies []ServerGroupDependency `json:"serverGroupDependencies,omitempty"`
 }
 
 // MachineImage is a mapping from logical names and versions to provider-specific machine image data.
@@ -44,4 +48,31 @@ type MachineImage struct {
 	Image string `json:"image,omitempty"`
 	// ID is the id of the image. (one of Image or ID must be set)
 	ID string `json:"id,omitempty"`
+}
+
+// ServerGroupDependency is a reference to an external machine dependency of OpenStack server groups.
+type ServerGroupDependency struct {
+	// PoolName identifies the worker pool that this dependency belongs
+	PoolName string `json:"poolName"`
+	// ID is the provider's generated ID for a server group
+	ID string `json:"id"`
+	// Name is the name of the server group
+	Name string `json:"name"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// WorkerConfig contains configuration data for a worker pool.
+type WorkerConfig struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// ServerGroup contains configuration data for the worker pool's server group. If this object is present,
+	// OpenStack provider extension will try to create a new server group for instances of this worker pool.
+	ServerGroup *ServerGroup `json:"serverGroup,omitempty"`
+}
+
+// ServerGroup contains configuration data for setting up a server group.
+type ServerGroup struct {
+	// Policy describes the kind of affinity policy for instances of the server group.
+	// https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html
+	Policy string `json:"policy"`
 }

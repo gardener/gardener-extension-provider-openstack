@@ -17,64 +17,22 @@ package client
 import (
 	"context"
 
-	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/containers"
 	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/objects"
 	"github.com/gophercloud/gophercloud/pagination"
-	"github.com/gophercloud/utils/openstack/clientconfig"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewStorageClientFromSecretRef retrieves the openstack client from specified by the secret reference.
-func NewStorageClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, region string) (*StorageClient, error) {
-	credentials, err := os.GetCredentials(ctx, c, secretRef)
+func NewStorageClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, region string) (Storage, error) {
+	base, err := NewOpenStackClientFromSecretRef(ctx, c, secretRef)
 	if err != nil {
 		return nil, err
 	}
 
-	return newStorageClientFromCredentials(credentials, region)
-}
-
-// newStorageClientFromCredentials create the storage client from credentials.
-func newStorageClientFromCredentials(credentials *os.Credentials, region string) (*StorageClient, error) {
-	opts := &clientconfig.ClientOpts{
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     credentials.AuthURL,
-			Username:    credentials.Username,
-			Password:    credentials.Password,
-			ProjectName: credentials.TenantName,
-			DomainName:  credentials.DomainName,
-		},
-		RegionName: region,
-	}
-	authOpts, err := clientconfig.AuthOptions(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// AllowReauth should be set to true if you grant permission for Gophercloud to
-	// cache your credentials in memory, and to allow Gophercloud to attempt to
-	// re-authenticate automatically if/when your token expires.
-	authOpts.AllowReauth = true
-
-	provider, err := openstack.AuthenticatedClient(*authOpts)
-	if err != nil {
-		return nil, err
-
-	}
-	client, err := openstack.NewObjectStorageV1(provider, gophercloud.EndpointOpts{})
-	if err != nil {
-		return nil, err
-
-	}
-
-	return &StorageClient{
-		client: client,
-	}, nil
+	return base.Storage(WithRegion(region))
 }
 
 // DeleteObjectsWithPrefix deletes the blob objects with the specific <prefix> from <container>. If it does not exist,
@@ -111,8 +69,8 @@ func (s *StorageClient) DeleteObjectsWithPrefix(ctx context.Context, container, 
 func (s *StorageClient) deleteObjectIfExists(ctx context.Context, container, objectName string) error {
 	result := objects.Delete(s.client, container, objectName, nil)
 	if _, err := result.Extract(); err != nil {
-		if _, ok := result.Err.(gophercloud.Err404er); ok {
-			return result.Err
+		if !IsNotFoundError(err) {
+			return err
 		}
 	}
 	return nil

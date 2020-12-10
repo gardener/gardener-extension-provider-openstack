@@ -12,22 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,Compute
 package client
 
 import (
 	"context"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 )
 
-// StorageClient represents a Azure storage client.
+// OpenstackClientFactory implements a factory that can construct clients for Openstack services.
+type OpenstackClientFactory struct {
+	providerClient *gophercloud.ProviderClient
+}
+
+// StorageClient is a client for the Swift service.
 type StorageClient struct {
 	client *gophercloud.ServiceClient
 }
 
-// Storage represents a Openstack swift storage client.
+// ComputeClient is a client for the Nova service.
+type ComputeClient struct {
+	client *gophercloud.ServiceClient
+}
+
+// Option can be passed to Factory implementations to modify the produced clients.
+type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
+
+// Factory is an interface for constructing OpenStack service clients.
+type Factory interface {
+	Compute(options ...Option) (Compute, error)
+	Storage(options ...Option) (Storage, error)
+}
+
+// Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
 type Storage interface {
 	DeleteObjectsWithPrefix(ctx context.Context, container, prefix string) error
 	CreateContainerIfNotExists(ctx context.Context, container string) error
 	DeleteContainerIfExists(ctx context.Context, container string) error
+}
+
+// Compute describes the operations of a client interacting with OpenStack's Compute service.
+type Compute interface {
+	CreateServerGroup(name, policy string) (*servergroups.ServerGroup, error)
+	GetServerGroup(id string) (*servergroups.ServerGroup, error)
+	DeleteServerGroup(id string) error
+	ListServerGroups() ([]servergroups.ServerGroup, error)
 }

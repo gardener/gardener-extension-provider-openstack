@@ -17,6 +17,9 @@ package worker
 import (
 	"context"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	"github.com/pkg/errors"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
@@ -73,6 +76,11 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		return nil, err
 	}
 
+	openstackClient, err := client.NewOpenStackClientFromSecretRef(ctx, d.Client(), worker.Spec.SecretRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create openstack client")
+	}
+
 	return NewWorkerDelegate(
 		d.ClientContext,
 
@@ -81,6 +89,7 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 
 		worker,
 		cluster,
+		openstackClient,
 	)
 }
 
@@ -97,6 +106,8 @@ type workerDelegate struct {
 	machineClasses     []map[string]interface{}
 	machineDeployments worker.MachineDeployments
 	machineImages      []api.MachineImage
+
+	openstackClient client.Factory
 }
 
 // NewWorkerDelegate creates a new context for a worker reconciliation.
@@ -108,11 +119,13 @@ func NewWorkerDelegate(
 
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,
+	openstackClient client.Factory,
 ) (genericactuator.WorkerDelegate, error) {
 	config, err := helper.CloudProfileConfigFromCluster(cluster)
 	if err != nil {
 		return nil, err
 	}
+
 	return &workerDelegate{
 		ClientContext: clientContext,
 
@@ -122,5 +135,6 @@ func NewWorkerDelegate(
 		cloudProfileConfig: config,
 		cluster:            cluster,
 		worker:             worker,
+		openstackClient:    openstackClient,
 	}, nil
 }

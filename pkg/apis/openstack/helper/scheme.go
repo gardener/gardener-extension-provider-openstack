@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -69,4 +68,22 @@ func CloudProfileConfigFromCluster(cluster *controller.Cluster) (*api.CloudProfi
 		}
 	}
 	return cloudProfileConfig, nil
+}
+
+// WorkerConfigFromRawExtension extracts the provider specific configuration for a worker pool.
+func WorkerConfigFromRawExtension(raw *runtime.RawExtension) (*api.WorkerConfig, error) {
+	poolConfig := &api.WorkerConfig{}
+
+	if raw != nil {
+		marshalled, err := raw.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, _, err := decoder.Decode(marshalled, nil, poolConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	return poolConfig, nil
 }

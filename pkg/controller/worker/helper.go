@@ -34,8 +34,12 @@ func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error)
 		return workerStatus, nil
 	}
 
-	if _, _, err := w.Decoder().Decode(w.worker.Status.ProviderStatus.Raw, nil, workerStatus); err != nil {
-		return nil, errors.Wrapf(err, "could not decode WorkerStatus '%s'", kutil.ObjectName(w.worker))
+	marshalled, err := w.worker.Status.GetProviderStatus().MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if _, _, err := w.Decoder().Decode(marshalled, nil, workerStatus); err != nil {
+		return nil, errors.Wrapf(err, "could not decode WorkerStatus %q", kutil.ObjectName(w.worker))
 	}
 
 	return workerStatus, nil
@@ -57,4 +61,22 @@ func (w *workerDelegate) updateWorkerProviderStatus(ctx context.Context, workerS
 		w.worker.Status.ProviderStatus = &runtime.RawExtension{Object: workerStatusV1alpha1}
 		return nil
 	})
+}
+
+func (w *workerDelegate) updateMachineDependenciesStatus(ctx context.Context, workerStatus *api.WorkerStatus, serverGroupDependencies []api.ServerGroupDependency, err error) error {
+	workerStatus.ServerGroupDependencies = serverGroupDependencies
+	if statusUpdateErr := w.updateWorkerProviderStatus(ctx, workerStatus); statusUpdateErr != nil {
+		if err != nil {
+			err = errors.Wrapf(statusUpdateErr, err.Error())
+		} else {
+			err = statusUpdateErr
+		}
+	}
+
+	return err
+}
+
+// ClusterTechnicalName returns the technical name of the cluster this worker belongs.
+func (w *workerDelegate) ClusterTechnicalName() string {
+	return w.cluster.ObjectMeta.Name
 }

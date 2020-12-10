@@ -188,6 +188,18 @@ bool
 <p>UseSNAT specifies whether S-NAT is supposed to be used for the Gardener managed OpenStack router.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>serverGroupPolicies</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServerGroupPolicies specify the allowed server group policies for worker groups.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig
@@ -388,6 +400,20 @@ gets the mapping from name/version to the provider-specific machine image data i
 a version that is still in use gets removed from this componentconfig it cannot reconcile anymore existing <code>Worker</code>
 resources that are still using this version. Hence, it stores the used versions in the provider status to ensure
 reconciliation is possible.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serverGroupDependencies</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroupDependency">
+[]ServerGroupDependency
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServerGroupDependencies is a list of external server group dependencies.</p>
 </td>
 </tr>
 </tbody>
@@ -1286,6 +1312,89 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroup">ServerGroup
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerConfig">WorkerConfig</a>)
+</p>
+<p>
+<p>ServerGroup contains configuration data for setting up a server group.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>policy</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Policy describes the kind of affinity policy for instances of the server group.
+<a href="https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html">https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroupDependency">ServerGroupDependency
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
+</p>
+<p>
+<p>ServerGroupDependency is a reference to an external machine dependency of OpenStack server groups.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>poolName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PoolName identifies the worker pool that this dependency belongs</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>id</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ID is the provider&rsquo;s generated ID for a server group</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the server group</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Subnet">Subnet
 </h3>
 <p>
@@ -1325,6 +1434,35 @@ string
 </td>
 <td>
 <p>ID is the subnet id.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerConfig">WorkerConfig
+</h3>
+<p>
+<p>WorkerConfig contains configuration data for a worker pool.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>serverGroup</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroup">
+ServerGroup
+</a>
+</em>
+</td>
+<td>
+<p>ServerGroup contains configuration data for the worker pool&rsquo;s server group. If this object is present,
+OpenStack provider extension will try to create a new server group for instances of this worker pool.</p>
 </td>
 </tr>
 </tbody>

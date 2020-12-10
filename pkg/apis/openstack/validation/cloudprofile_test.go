@@ -330,5 +330,21 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				}))))
 			})
 		})
+
+		Context("server group policy validation", func() {
+			It("should forbid unsupported machine image version configuration", func() {
+				cloudProfileConfig.ServerGroupPolicies = []string{
+					"affinity",
+					"",
+				}
+
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("serverGroupPolicies[1]"),
+				}))))
+			})
+		})
 	})
 })

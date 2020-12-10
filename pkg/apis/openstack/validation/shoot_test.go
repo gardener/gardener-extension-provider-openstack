@@ -15,12 +15,15 @@
 package validation_test
 
 import (
+	"encoding/json"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 )
@@ -87,7 +90,7 @@ var _ = Describe("Shoot validation", func() {
 		Describe("#ValidateWorkers", func() {
 			It("should pass because workers are configured correctly", func() {
 
-				errorList := ValidateWorkers(workers, nilPath)
+				errorList := ValidateWorkers(workers, nil, nilPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -95,7 +98,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should forbid because worker does not specify a zone", func() {
 				workers[0].Zones = nil
 
-				errorList := ValidateWorkers(workers, nilPath)
+				errorList := ValidateWorkers(workers, nil, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -108,7 +111,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should enforce workers min > 0 if max > 0", func() {
 				workers[0].Minimum = 0
 
-				errorList := ValidateWorkers(workers, nilPath)
+				errorList := ValidateWorkers(workers, nil, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -116,6 +119,111 @@ var _ = Describe("Shoot validation", func() {
 						"Field": Equal("[0].minimum"),
 					})),
 				))
+			})
+
+			Context("#ValidateServerGroups", func() {
+				var cloudProfileConfig *openstack.CloudProfileConfig
+
+				BeforeEach(func() {
+					cloudProfileConfig = &openstack.CloudProfileConfig{
+						ServerGroupPolicies: []string{"foo", "bar", openstack.ServerGroupPolicyAffinity},
+					}
+				})
+
+				It("should disallow policies not in cloud profile", func() {
+					const invalidPolicyValue = "baz"
+					providerConfig := &openstack.WorkerConfig{
+						ServerGroup: &openstack.ServerGroup{
+							Policy: invalidPolicyValue,
+						},
+					}
+
+					arr, err := json.Marshal(providerConfig)
+					Expect(err).To(BeNil())
+
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Raw: arr,
+					}
+
+					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					Expect(errorList).To(Not(BeEmpty()))
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.serverGroup.policy"),
+							"BadValue": Equal(invalidPolicyValue),
+						})),
+					))
+				})
+
+				It("should disallow empty values in policy field", func() {
+					providerConfig := &openstack.WorkerConfig{
+						ServerGroup: &openstack.ServerGroup{
+							Policy: "",
+						},
+					}
+
+					arr, err := json.Marshal(providerConfig)
+					Expect(err).To(BeNil())
+
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Raw: arr,
+					}
+
+					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					Expect(errorList).To(Not(BeEmpty()))
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.serverGroup.policy"),
+							"BadValue": Equal(""),
+						})),
+					))
+				})
+
+				It("should allow policies in found in cloud profile", func() {
+					providerConfig := &openstack.WorkerConfig{
+						ServerGroup: &openstack.ServerGroup{
+							Policy: "foo",
+						},
+					}
+
+					arr, err := json.Marshal(providerConfig)
+					Expect(err).To(BeNil())
+
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Raw: arr,
+					}
+
+					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should not allow hard affinity policy with multiple availability zones", func() {
+					providerConfig := &openstack.WorkerConfig{
+						ServerGroup: &openstack.ServerGroup{
+							Policy: openstack.ServerGroupPolicyAffinity,
+						},
+					}
+
+					arr, err := json.Marshal(providerConfig)
+					Expect(err).To(BeNil())
+
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Raw: arr,
+					}
+
+					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					Expect(errorList).NotTo(BeEmpty())
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("[0].providerConfig.serverGroup.policy"),
+						})),
+					))
+				})
 			})
 		})
 
@@ -188,6 +296,69 @@ var _ = Describe("Shoot validation", func() {
 						"Field": Equal("[1].zones"),
 					})),
 				))
+			})
+
+			Context("#ValidateServerGroups", func() {
+				BeforeEach(func() {
+					providerConfig := &openstack.WorkerConfig{
+						ServerGroup: &openstack.ServerGroup{
+							Policy: "foo",
+						},
+					}
+
+					arr, err := json.Marshal(providerConfig)
+					Expect(err).To(BeNil())
+
+					for i := range workers {
+						workers[i].ProviderConfig = &runtime.RawExtension{
+							Raw: arr,
+						}
+					}
+				})
+
+				It("should forbid removing server group policies", func() {
+					newWorkers := copyWorkers(workers)
+
+					newWorkers[0].ProviderConfig = nil
+					errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.serverGroup"),
+							"BadValue": BeNil(),
+						})),
+					))
+				})
+
+				It("should forbid modifying server group policies", func() {
+					newWorkers := copyWorkers(workers)
+
+					newWorkers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &openstack.WorkerConfig{
+							ServerGroup: &openstack.ServerGroup{
+								Policy: "bar",
+							},
+						},
+					}
+
+					errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.serverGroup.policy"),
+							"BadValue": Equal("bar"),
+						})),
+					))
+				})
+
+				It("should allow updates with no server group changes", func() {
+					newWorkers := copyWorkers(workers)
+
+					errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+					Expect(errorList).To(BeEmpty())
+				})
 			})
 		})
 	})

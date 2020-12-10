@@ -15,6 +15,10 @@
 package validation
 
 import (
+	"fmt"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -33,7 +37,7 @@ func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.E
 }
 
 // ValidateWorkers validates the workers of a Shoot.
-func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
+func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for i, worker := range workers {
@@ -46,6 +50,16 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		if worker.Maximum != 0 && worker.Minimum == 0 {
 			allErrs = append(allErrs, field.Forbidden(workerFldPath.Child("minimum"), "minimum value must be >= 1 if maximum value > 0 (auto scaling to 0 is not supported)"))
 		}
+
+		if worker.ProviderConfig != nil {
+			workerConfig, err := helper.WorkerConfigFromRawExtension(worker.ProviderConfig)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("providerConfig"), string(worker.ProviderConfig.Raw), fmt.Sprint("providerConfig could not be decoded", err)))
+				continue
+			}
+
+			allErrs = append(allErrs, validateWorkerConfig(workerFldPath.Child("providerConfig"), &worker, workerConfig, cloudProfileCfg)...)
+		}
 	}
 
 	return allErrs
@@ -55,14 +69,87 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	for i, newWorker := range newWorkers {
-		for _, oldWorker := range oldWorkers {
+		for j, oldWorker := range oldWorkers {
 			if newWorker.Name == oldWorker.Name {
 				if validation.ShouldEnforceImmutability(newWorker.Zones, oldWorker.Zones) {
 					allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.Zones, oldWorker.Zones, fldPath.Index(i).Child("zones"))...)
 				}
+
+				allErrs = append(allErrs, validateUpdateWorkerConfig(newWorker, oldWorker, fldPath.Index(i), fldPath.Index(j))...)
 				break
 			}
 		}
 	}
+	return allErrs
+}
+
+func validateWorkerConfig(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if workerConfig.ServerGroup == nil {
+		return allErrs
+	}
+
+	if workerConfig.ServerGroup.Policy == "" {
+		allErrs = append(allErrs, field.Invalid(parent.Child("serverGroup", "policy"), workerConfig.ServerGroup.Policy, "policy field cannot be empty"))
+		return allErrs
+	}
+
+	isPolicyMatching := func() bool {
+		if cloudProfileConfig == nil {
+			return false
+		}
+
+		for _, policy := range cloudProfileConfig.ServerGroupPolicies {
+			if policy == workerConfig.ServerGroup.Policy {
+				return true
+			}
+		}
+		return false
+	}()
+
+	if !isPolicyMatching {
+		allErrs = append(allErrs, field.Invalid(parent.Child("serverGroup", "policy"), workerConfig.ServerGroup.Policy, "no matching server group policy found in cloudprofile"))
+		return allErrs
+	}
+
+	if len(worker.Zones) > 1 && workerConfig.ServerGroup.Policy == api.ServerGroupPolicyAffinity {
+		allErrs = append(allErrs, field.Forbidden(parent.Child("serverGroup", "policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", api.ServerGroupPolicyAffinity)))
+	}
+
+	return allErrs
+}
+
+func validateUpdateWorkerConfig(newWorker, oldWorker core.Worker, newRoot, oldRoot *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newWorker.ProviderConfig == nil && oldWorker.ProviderConfig == nil {
+		return nil
+	}
+
+	newWorkerCfg, err := helper.WorkerConfigFromRawExtension(newWorker.ProviderConfig)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(newRoot.Child("providerConfig"), newWorker.ProviderConfig, fmt.Sprintf("providerConfig could not be decoded: %v", err)))
+		return allErrs
+	}
+
+	oldWorkerCfg, err := helper.WorkerConfigFromRawExtension(oldWorker.ProviderConfig)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(oldRoot.Child("providerConfig"), oldWorker.ProviderConfig, fmt.Sprintf("providerConfig could not be decoded: %v", err)))
+		return allErrs
+	}
+
+	if (newWorkerCfg.ServerGroup == nil && oldWorkerCfg.ServerGroup != nil) || (newWorkerCfg.ServerGroup != nil && oldWorkerCfg.ServerGroup == nil) {
+		allErrs = append(allErrs, field.Invalid(newRoot.Child("providerConfig", "serverGroup"), newWorkerCfg.ServerGroup, "cannot add or remove server group configuration from a worker"))
+		return allErrs
+	}
+
+	if newWorkerCfg.ServerGroup != nil && oldWorkerCfg.ServerGroup != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(
+			newWorkerCfg.ServerGroup.Policy,
+			oldWorkerCfg.ServerGroup.Policy,
+			newRoot.Child("providerConfig", "serverGroup", "policy"))...)
+	}
+
 	return allErrs
 }

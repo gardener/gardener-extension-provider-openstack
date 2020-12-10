@@ -154,5 +154,14 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 		}
 	}
 
+	serverGroupPath := field.NewPath("serverGroupPolicies")
+	for i, policy := range cloudProfile.ServerGroupPolicies {
+		idxPath := serverGroupPath.Index(i)
+
+		if len(policy) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath, "policy cannot be empty"))
+		}
+	}
+
 	return allErrs
 }

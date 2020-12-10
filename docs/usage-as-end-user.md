@@ -81,8 +81,31 @@ The `loadBalancerProvider` is the provider name you want to use for load balance
 If you don't know which types are available look it up in the respective `CloudProfile`.
 
 The `cloudControllerManager.featureGates` contains a map of explicitly enabled or disabled feature gates.
-For production usage it's not recommend to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
+For production usage it's not recommended to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
 If you don't want to configure anything for the `cloudControllerManager` simply omit the key in the YAML specification.
+
+## `WorkerConfig`
+
+Each worker group in a shoot may contain provider specific configurations and options. These are contained in the `providerConfig` section of a worker group.
+An example of a `WorkerConfig` looks as follows:
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: WorkerConfig
+serverGroup:
+  policy: soft-anti-affinity
+```
+
+When you specify the `serverGroup` section in your worker group configuration, a new server group will be created with the configured policy and all machines managed by this worker group will be assigned as members of the created server group.
+For users to have access to this feature, it must be enabled on the `CloudProfile` by your operator.
+
+Existing shoots that want to use this feature, have to create **new** worker groups with a server group configuration and migrate their workloads on the new nodes. Updating existing worker groups with server group configuration is currently prohibited.
+
+Please note the following restrictions when deploying workers with server groups:
++ The `serverGroup` and `serverGroup.policy` fields are immutable upon creation. Users are not allowed to change the policy value and neither add or remove a `serverGroup` section from a worker group after it has been created.
++ The `serverGroup` section is optional, but if it is included in the worker configuration, it must contain a valid policy value.
++ The available `policy` values that can be used, are defined in the provider specific section of `CloudProfile`, by your operator.
++ Certain policy values may induce further constraints. Using the `affinity` policy is only allowed when the worker group utilizes a single zone.
 
 ## Example `Shoot` manifest (one availability zone)
 

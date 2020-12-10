@@ -30,6 +30,9 @@ type WorkerStatus struct {
 	// resources that are still using this version. Hence, it stores the used versions in the provider status to ensure
 	// reconciliation is possible.
 	MachineImages []MachineImage
+
+	// ServerGroupDependencies is a list of external machine dependencies.
+	ServerGroupDependencies []ServerGroupDependency
 }
 
 // MachineImage is a mapping from logical names and versions to provider-specific machine image data.
@@ -42,4 +45,36 @@ type MachineImage struct {
 	Image string
 	// ID is the id of the image. (one of Image or ID must be set)
 	ID string
+}
+
+// ServerGroupDependency is a reference to an external machine dependency of openstack server groups.
+type ServerGroupDependency struct {
+	// PoolName identifies the worker pool that this dependency belongs
+	PoolName string
+	// ID is the provider's generated ID for a server group
+	ID string
+	// Name is the name of the server group
+	Name string
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// WorkerConfig contains configuration data for a worker pool.
+type WorkerConfig struct {
+	metav1.TypeMeta
+
+	// ServerGroup contains configuration data for the worker pool's server group. If this object is present,
+	// OpenStack provider extension will try to create a new server group for instances of this worker pool.
+	ServerGroup *ServerGroup
+}
+
+const (
+	// ServerGroupPolicyAffinity is a server group policy that hints the Nova scheduler to co-locate nodes in the same hypervisor.
+	ServerGroupPolicyAffinity string = "affinity"
+)
+
+// ServerGroup contains configuration data for setting up a server group.
+type ServerGroup struct {
+	// Policy describes the kind of affinity policy for instances of the server group.
+	// https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html
+	Policy string
 }

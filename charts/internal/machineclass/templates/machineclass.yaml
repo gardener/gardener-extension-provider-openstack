@@ -39,6 +39,9 @@ spec:
 {{- if $machineClass.rootDiskSize }}
   rootDiskSize: {{ $machineClass.rootDiskSize }}
 {{- end}}
+{{- if $machineClass.serverGroupID }}
+  serverGroupID: {{ $machineClass.serverGroupID }}
+{{- end }}
   securityGroups:
 {{ toYaml $machineClass.securityGroups | indent 2 }}
   secretRef:

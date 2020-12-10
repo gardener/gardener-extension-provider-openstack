@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -110,6 +112,13 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		return err
 	}
 
+	workerStatus, err := w.decodeWorkerProviderStatus()
+	if err != nil {
+		return err
+	}
+
+	serverGroupDepSet := newServerGroupDependencySet(workerStatus.ServerGroupDependencies)
+
 	nodesSecurityGroup, err := helper.FindSecurityGroupByPurpose(infrastructureStatus.SecurityGroups, api.PurposeNodes)
 	if err != nil {
 		return err
@@ -117,11 +126,6 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones))
-
-		workerPoolHash, err := worker.WorkerPoolHash(pool, w.cluster)
-		if err != nil {
-			return err
-		}
 
 		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version)
 		if err != nil {
@@ -135,6 +139,12 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+		}
+
+		serverGroupDep := serverGroupDepSet.getByPoolName(pool.Name)
+		workerPoolHash, err := w.generateWorkerPoolHash(pool, serverGroupDep)
+		if err != nil {
+			return err
 		}
 
 		for zoneIndex, zone := range pool.Zones {
@@ -162,10 +172,14 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 
 			if machineImage.ID != "" {
 				machineClassSpec["imageID"] = machineImage.ID
-
 			} else {
 				machineClassSpec["imageName"] = machineImage.Image
 			}
+
+			if serverGroupDep != nil {
+				machineClassSpec["serverGroupID"] = serverGroupDep.ID
+			}
+
 			var (
 				deploymentName = fmt.Sprintf("%s-%s-z%d", w.worker.Namespace, pool.Name, zoneIndex+1)
 				className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
@@ -204,4 +218,16 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	w.machineImages = machineImages
 
 	return nil
+}
+
+func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency) (string, error) {
+	var additionalHashData = []string{}
+
+	// Include the given worker pool dependencies into the hash.
+	if serverGroupDependency != nil {
+		additionalHashData = append(additionalHashData, serverGroupDependency.ID)
+	}
+
+	// Generate the worker pool hash.
+	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData...)
 }

@@ -70,7 +70,7 @@ var _ = Describe("Machines", func() {
 	})
 
 	Context("workerDelegate", func() {
-		workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(nil, nil, nil), nil, "", nil, nil)
+		workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(nil, nil, nil), nil, "", nil, nil, nil)
 
 		Describe("#MachineClassKind", func() {
 			It("should return the correct kind of the machine class", func() {
@@ -322,7 +322,7 @@ var _ = Describe("Machines", func() {
 				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster)
 				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster)
 
-				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, clusterWithoutImages)
+				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, clusterWithoutImages, nil)
 			})
 
 			Describe("machine images", func() {
@@ -441,7 +441,7 @@ var _ = Describe("Machines", func() {
 
 				It("should return the expected machine deployments for profile image types", func() {
 					setup(region, machineImage, "")
-					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster)
+					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 					expectGetSecretCallToWork(c, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword)
 
@@ -499,7 +499,7 @@ var _ = Describe("Machines", func() {
 
 				It("should return the expected machine deployments for profile image types with id", func() {
 					setup(regionWithImages, "", machineImageID)
-					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithRegion, clusterWithRegion)
+					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithRegion, clusterWithRegion, nil)
 
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.BoolPtr(true)}
 
@@ -558,6 +558,93 @@ var _ = Describe("Machines", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(Equal(machineDeployments))
 				})
+
+				It("should create the expected machine classes with server group configurations", func() {
+					var (
+						serverGroupName1 = "servergroup1"
+						serverGroupName2 = "servergroup2"
+						serverGroupID1   = "id1"
+						serverGroupID2   = "id2"
+					)
+
+					setup(region, machineImage, "")
+					expectGetSecretCallToWork(c, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword)
+					workerWithServerGroup := w.DeepCopy()
+					workerWithServerGroup.Status.ProviderStatus = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerStatus{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerStatus",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+								{
+									PoolName: namePool1,
+									Name:     serverGroupName1,
+									ID:       serverGroupID1,
+								},
+								{
+									PoolName: namePool2,
+									Name:     serverGroupName2,
+									ID:       serverGroupID2,
+								},
+							},
+						},
+					}
+
+					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithServerGroup, cluster, nil)
+
+					// Test workerDelegate.DeployMachineClasses()
+					workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, serverGroupID1)
+					workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, serverGroupID2)
+					machineClassPool1Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+						"availabilityZone": zone1,
+						"serverGroupID":    serverGroupID1,
+					})
+					machineClassPool1Zone2 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+						"availabilityZone": zone2,
+						"serverGroupID":    serverGroupID1,
+					})
+					machineClassPool2Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+						"availabilityZone": zone1,
+						"serverGroupID":    serverGroupID2,
+					})
+					machineClassPool2Zone2 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+						"availabilityZone": zone2,
+						"serverGroupID":    serverGroupID2,
+					})
+					machineClassNamePool1Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool1)
+					machineClassNamePool1Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool1)
+					machineClassNamePool2Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool2)
+					machineClassNamePool2Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool2)
+					machineClassWithHashPool1Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone1, workerPoolHash1)
+					machineClassWithHashPool1Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone2, workerPoolHash1)
+					machineClassWithHashPool2Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone1, workerPoolHash2)
+					machineClassWithHashPool2Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone2, workerPoolHash2)
+					addNameAndSecretToMachineClass(machineClassPool1Zone1, openstackAuthURL, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword, machineClassWithHashPool1Zone1)
+					addNameAndSecretToMachineClass(machineClassPool1Zone2, openstackAuthURL, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword, machineClassWithHashPool1Zone2)
+					addNameAndSecretToMachineClass(machineClassPool2Zone1, openstackAuthURL, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword, machineClassWithHashPool2Zone1)
+					addNameAndSecretToMachineClass(machineClassPool2Zone2, openstackAuthURL, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword, machineClassWithHashPool2Zone2)
+					machineClasses := map[string]interface{}{"machineClasses": []map[string]interface{}{
+						machineClassPool1Zone1,
+						machineClassPool1Zone2,
+						machineClassPool2Zone1,
+						machineClassPool2Zone2,
+					}}
+
+					chartApplier.
+						EXPECT().
+						Apply(
+							context.TODO(),
+							filepath.Join(openstack.InternalChartsPath, "machineclass"),
+							namespace,
+							"machineclass",
+							kubernetes.Values(machineClasses),
+						).
+						Return(nil)
+
+					err := workerDelegate.DeployMachineClasses(context.TODO())
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 
 			It("should fail because the secret cannot be read", func() {
@@ -574,7 +661,7 @@ var _ = Describe("Machines", func() {
 				expectGetSecretCallToWork(c, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword)
 
 				clusterWithoutImages.Shoot.Spec.Kubernetes.Version = "invalid"
-				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster)
+				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
 				Expect(err).To(HaveOccurred())
@@ -586,7 +673,7 @@ var _ = Describe("Machines", func() {
 
 				w.Spec.InfrastructureProviderStatus = &runtime.RawExtension{}
 
-				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster)
+				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
 				Expect(err).To(HaveOccurred())
@@ -600,7 +687,7 @@ var _ = Describe("Machines", func() {
 					Raw: encode(&api.InfrastructureStatus{}),
 				}
 
-				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster)
+				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
 				Expect(err).To(HaveOccurred())
@@ -612,7 +699,7 @@ var _ = Describe("Machines", func() {
 
 				clusterWithoutImages.CloudProfile.Name = "another-cloud-profile"
 
-				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, clusterWithoutImages)
+				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, clusterWithoutImages, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
 				Expect(err).To(HaveOccurred())
@@ -635,7 +722,7 @@ var _ = Describe("Machines", func() {
 					NodeConditions:         testNodeConditions,
 				}
 
-				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster)
+				workerDelegate, _ = NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
 				resultSettings := result[0].MachineConfiguration
@@ -682,6 +769,19 @@ func useDefaultMachineClass(def map[string]interface{}, key string, value interf
 	return out
 }
 
+func useDefaultMachineClassWith(def map[string]interface{}, add map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(add))
+
+	for k, v := range def {
+		out[k] = v
+	}
+
+	for k, v := range add {
+		out[k] = v
+	}
+
+	return out
+}
 func addNameAndSecretToMachineClass(class map[string]interface{}, openstackAuthURL, openstackDomainName, openstackTenantName, openstackUserName, openstackPassword, name string) {
 	class["name"] = name
 	class["labels"] = map[string]string{

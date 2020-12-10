@@ -59,6 +59,9 @@ type CloudProfileConfig struct {
 	// UseSNAT specifies whether S-NAT is supposed to be used for the Gardener managed OpenStack router.
 	// +optional
 	UseSNAT *bool `json:"useSNAT,omitempty"`
+	// ServerGroupPolicies specify the allowed server group policies for worker groups.
+	// +optional
+	ServerGroupPolicies []string `json:"serverGroupPolicies,omitempty"`
 }
 
 // Constraints is an object containing constraints for the shoots.

@@ -644,6 +644,23 @@ func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) 
 	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
 }
 
+// LastReconciliationDuringThisTimeWindow returns true if <now> is contained in the given effective maintenance time
+// window of the shoot and if the <lastReconciliation> did not happen longer than the longest possible duration of a
+// maintenance time window.
+func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Status.LastOperation == nil {
+		return false
+	}
+
+	var (
+		timeWindow         = EffectiveShootMaintenanceTimeWindow(shoot)
+		now                = time.Now()
+		lastReconciliation = shoot.Status.LastOperation.LastUpdateTime.Time
+	)
+
+	return timeWindow.Contains(lastReconciliation) && now.UTC().Sub(lastReconciliation.UTC()) <= gardencorev1beta1.MaintenanceTimeWindowDurationMaximum
+}
+
 // IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
 // is Succeeded.
 func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1beta1.Shoot) bool {
@@ -816,4 +833,27 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) e
 // ExtensionID returns an identifier for the given extension kind/type.
 func ExtensionID(extensionKind, extensionType string) string {
 	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
+}
+
+// DeleteDeploymentsHavingDeprecatedRoleLabelKey deletes the Deployments with the passed object keys if
+// the corresponding Deployment .spec.selector contains the deprecated "garden.sapcloud.io/role" label key.
+func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client.Client, keys []client.ObjectKey) error {
+	for _, key := range keys {
+		deployment := &appsv1.Deployment{}
+		if err := c.Get(ctx, key, deployment); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+
+			return err
+		}
+
+		if _, ok := deployment.Spec.Selector.MatchLabels[v1beta1constants.DeprecatedGardenRole]; ok {
+			if err := c.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

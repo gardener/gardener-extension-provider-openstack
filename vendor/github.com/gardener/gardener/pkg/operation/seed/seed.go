@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
@@ -47,8 +48,10 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/pkg/version"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -306,26 +309,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
-	// Special handling for gardener-seed-admission-controller because it's a component whose version is controlled by
-	// this project/repository
-
-	gardenerSeedAdmissionControllerImage, err := imageVector.FindImage(common.GardenerSeedAdmissionControllerImageName)
-	if err != nil {
-		return err
-	}
-	var (
-		repository = gardenerSeedAdmissionControllerImage.String()
-		tag        = version.Get().GitVersion
-	)
-	if gardenerSeedAdmissionControllerImage.Tag != nil {
-		repository = gardenerSeedAdmissionControllerImage.Repository
-		tag = *gardenerSeedAdmissionControllerImage.Tag
-	}
-	images[common.GardenerSeedAdmissionControllerImageName] = &imagevector.Image{
-		Repository: repository,
-		Tag:        &tag,
-	}
-
 	// HVPA feature gate
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if !hvpaEnabled {
@@ -388,7 +371,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 
 		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
-		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil {
+		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 			return err
 		}
 
@@ -403,10 +386,14 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 
 		componentsFunctions := []component.CentralLoggingConfiguration{
+			// seed system components
+			seedadmission.CentralLoggingConfiguration,
+			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
 			clusterautoscaler.CentralLoggingConfiguration,
 			kubescheduler.CentralLoggingConfiguration,
 			kubecontrollermanager.CentralLoggingConfiguration,
+			// shoot system components
 			metricsserver.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer}
@@ -530,11 +517,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		if err := common.DeleteReserveExcessCapacity(ctx, k8sSeedClient.Client()); client.IgnoreNotFound(err) != nil {
 			return err
 		}
-	}
-
-	nodes := &corev1.NodeList{}
-	if err = k8sSeedClient.Client().List(ctx, nodes); err != nil {
-		return err
 	}
 
 	chartApplier := k8sSeedClient.ChartApplier()
@@ -685,6 +667,23 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
+	// .spec.selector of a Deployment is immutable. If Deployment's .spec.selector contains
+	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
+	// TODO: remove in a future version
+	deploymentKeys := []client.ObjectKey{
+		kutil.Key(v1beta1constants.GardenNamespace, "vpa-exporter"),
+	}
+	if vpaEnabled {
+		deploymentKeys = append(deploymentKeys,
+			kutil.Key(v1beta1constants.GardenNamespace, "vpa-updater"),
+			kutil.Key(v1beta1constants.GardenNamespace, "vpa-recommender"),
+			kutil.Key(v1beta1constants.GardenNamespace, "vpa-admission-controller"),
+		)
+	}
+	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, k8sSeedClient.Client(), deploymentKeys); err != nil {
+		return err
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"cloudProvider":     seed.Info.Spec.Provider.Type,
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
@@ -801,6 +800,11 @@ func DebootstrapCluster(ctx context.Context, k8sSeedClient kubernetes.Interface)
 func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector imagevector.ImageVector, imageVectorOverwrites map[string]string) ([]component.DeployWaiter, error) {
 	var components []component.DeployWaiter
 
+	kubernetesVersion, err := semver.NewVersion(c.Version())
+	if err != nil {
+		return nil, err
+	}
+
 	// cluster-autoscaler
 	components = append(components, clusterautoscaler.NewBootstrapper(c.Client(), namespace))
 
@@ -821,7 +825,29 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 			etcdImageVectorOverwrite = &val
 		}
 	}
-	components = append(components, etcd.NewBootstrapper(c.Client(), namespace, etcdImage, c.Version(), etcdImageVectorOverwrite))
+	components = append(components, etcd.NewBootstrapper(c.Client(), namespace, etcdImage, kubernetesVersion, etcdImageVectorOverwrite))
+
+	// gardener-seed-admission-controller
+	var gsacImage imagevector.Image
+	if imageVector != nil {
+		gardenerSeedAdmissionControllerImage, err := imageVector.FindImage(common.GardenerSeedAdmissionControllerImageName)
+		if err != nil {
+			return nil, err
+		}
+		var (
+			repository = gardenerSeedAdmissionControllerImage.String()
+			tag        = version.Get().GitVersion
+		)
+		if gardenerSeedAdmissionControllerImage.Tag != nil {
+			repository = gardenerSeedAdmissionControllerImage.Repository
+			tag = *gardenerSeedAdmissionControllerImage.Tag
+		}
+		gsacImage = imagevector.Image{
+			Repository: repository,
+			Tag:        &tag,
+		}
+	}
+	components = append(components, seedadmission.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
 
 	return components, nil
 }

@@ -76,7 +76,17 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		return nil, err
 	}
 
-	openstackClient, err := client.NewOpenStackClientFromSecretRef(ctx, d.Client(), worker.Spec.SecretRef)
+	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	keyStoneURL, err := helper.FindKeyStoneURL(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneURL, worker.Spec.Region)
+	if err != nil {
+		return nil, err
+	}
+
+	openstackClient, err := client.NewOpenStackClientFromSecretRef(ctx, d.Client(), worker.Spec.SecretRef, &keyStoneURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create openstack client")
 	}

@@ -18,6 +18,7 @@ package client
 
 import (
 	"context"
+	"strings"
 
 	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gophercloud/gophercloud"
@@ -61,12 +62,15 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 
 // NewOpenStackClientFromSecretRef returns a Factory implementation that can be used to create clients for OpenStack services.
 // The credentials are fetched from the Kubernetes secret referenced by <secretRef>.
-func NewOpenStackClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference) (Factory, error) {
+func NewOpenStackClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, keyStoneUrl *string) (Factory, error) {
 	creds, err := os.GetCredentials(ctx, c, secretRef)
 	if err != nil {
 		return nil, err
 	}
 
+	if len(strings.TrimSpace(creds.AuthURL)) == 0 && keyStoneUrl != nil {
+		creds.AuthURL = *keyStoneUrl
+	}
 	return NewOpenstackClientFromCredentials(creds)
 }
 

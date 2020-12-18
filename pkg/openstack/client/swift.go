@@ -27,7 +27,7 @@ import (
 
 // NewStorageClientFromSecretRef retrieves the openstack client from specified by the secret reference.
 func NewStorageClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, region string) (Storage, error) {
-	base, err := NewOpenStackClientFromSecretRef(ctx, c, secretRef)
+	base, err := NewOpenStackClientFromSecretRef(ctx, c, secretRef, nil)
 	if err != nil {
 		return nil, err
 	}

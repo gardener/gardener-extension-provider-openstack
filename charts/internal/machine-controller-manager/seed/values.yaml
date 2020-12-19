@@ -1,5 +1,6 @@
 images:
   machine-controller-manager: image-repository:image-tag
+  machine-controller-manager-provider-openstack: image-repository:image-tag
 
 replicas: 1
 
@@ -13,6 +14,7 @@ namespace:
   uid: uuid-of-namespace
 
 metricsPort: 10258
+metricsPortOpenstack: 10259
 
 vpa:
   enabled: true

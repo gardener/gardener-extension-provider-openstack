@@ -30,22 +30,23 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MachineClassKind yields the name of the OpenStack machine class.
 func (w *workerDelegate) MachineClassKind() string {
-	return "OpenStackMachineClass"
+	return "MachineClass"
 }
 
 // MachineClass yields a newly initialized machine class object.
 func (w *workerDelegate) MachineClass() client.Object {
-	return &machinev1alpha1.OpenStackMachineClass{}
+	return &machinev1alpha1.MachineClass{}
 }
 
 // MachineClassList yields a newly initialized OpenStackMachineClassList object.
 func (w *workerDelegate) MachineClassList() client.ObjectList {
-	return &machinev1alpha1.OpenStackMachineClassList{}
+	return &machinev1alpha1.MachineClassList{}
 }
 
 // DeployMachineClasses generates and creates the OpenStack specific machine classes.
@@ -55,6 +56,12 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 			return err
 		}
 	}
+
+	// Delete any older version machine class CRs.
+	if err := w.Client().DeleteAllOf(ctx, &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(w.worker.Namespace)); err != nil {
+		return errors.Wrapf(err, "cleaning up old OpenstackMachineClass resources failed")
+	}
+
 	return w.seedChartApplier.Apply(ctx, filepath.Join(openstack.InternalChartsPath, "machineclass"), w.worker.Namespace, "machineclass", kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}))
 }
 

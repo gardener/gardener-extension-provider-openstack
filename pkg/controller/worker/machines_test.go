@@ -75,13 +75,13 @@ var _ = Describe("Machines", func() {
 
 		Describe("#MachineClassKind", func() {
 			It("should return the correct kind of the machine class", func() {
-				Expect(workerDelegate.MachineClassKind()).To(Equal("OpenStackMachineClass"))
+				Expect(workerDelegate.MachineClassKind()).To(Equal("MachineClass"))
 			})
 		})
 
 		Describe("#MachineClassList", func() {
 			It("should return the correct type for the machine class list", func() {
-				Expect(workerDelegate.MachineClassList()).To(Equal(&machinev1alpha1.OpenStackMachineClassList{}))
+				Expect(workerDelegate.MachineClassList()).To(Equal(&machinev1alpha1.MachineClassList{}))
 			})
 		})
 
@@ -436,6 +436,8 @@ var _ = Describe("Machines", func() {
 					setup(region, machineImage, "")
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
+					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
+
 					// Test workerDelegate.DeployMachineClasses()
 
 					chartApplier.
@@ -492,6 +494,8 @@ var _ = Describe("Machines", func() {
 					setup(regionWithImages, "", machineImageID)
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.BoolPtr(true)}
+
+					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
 
 					// Test workerDelegate.DeployMachineClasses()
 
@@ -556,6 +560,8 @@ var _ = Describe("Machines", func() {
 					)
 
 					setup(region, machineImage, "")
+					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
+
 					workerWithServerGroup := w.DeepCopy()
 					workerWithServerGroup.Status.ProviderStatus = &runtime.RawExtension{
 						Object: &apiv1alpha1.WorkerStatus{
@@ -617,6 +623,27 @@ var _ = Describe("Machines", func() {
 						machineClassPool2Zone1,
 						machineClassPool2Zone2,
 					}}
+
+					chartApplier.
+						EXPECT().
+						Apply(
+							context.TODO(),
+							filepath.Join(openstack.InternalChartsPath, "machineclass"),
+							namespace,
+							"machineclass",
+							kubernetes.Values(machineClasses),
+						).
+						Return(nil)
+
+					err := workerDelegate.DeployMachineClasses(context.TODO())
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should delete the old OpenStackMachineClass", func() {
+					setup(region, machineImage, "")
+					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
+
+					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
 
 					chartApplier.
 						EXPECT().

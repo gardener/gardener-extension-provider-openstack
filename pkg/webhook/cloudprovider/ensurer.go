@@ -51,24 +51,37 @@ func (e *ensurer) InjectScheme(scheme *runtime.Scheme) error {
 	return nil
 }
 
-func (e *ensurer) EnsureCloudproviderSecret(
+func (e *ensurer) EnsureCloudProviderSecret(
 	ctx context.Context,
 	ectx genericmutator.EnsurerContext,
 	new, _ *corev1.Secret,
 ) error {
 	cluster, err := ectx.GetCluster(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get cluster object from ensurer context: %v", err)
 	}
 
-	cloudProfileConfig := &openstack.CloudProfileConfig{}
-	if _ , _, err := e.decoder.Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-		return err
+	// do not do anything if the providerConfig is missing from cluster
+	if cluster.CloudProfile.Spec.ProviderConfig == nil {
+		return nil
 	}
 
-	keyStoneURL, err := helper.FindKeyStoneURL(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneURL, cluster.Shoot.Spec.Region)
+	config := &openstack.CloudProfileConfig{}
+	raw, err := cluster.CloudProfile.Spec.ProviderConfig.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("could not decode cluster object's providerConfig: %v", err)
+	}
+	if _ , _, err := e.decoder.Decode(raw, nil, config); err != nil {
+		return fmt.Errorf("could not decode cluster object's providerConfig: %v", err)
+	}
+
+	keyStoneURL, err := helper.FindKeyStoneURL(config.KeyStoneURLs, config.KeyStoneURL, cluster.Shoot.Spec.Region)
 	if err != nil {
 		return fmt.Errorf("could not find KeyStoneUrl: %v", err)
+	}
+
+	if new.Data == nil {
+		new.Data = make(map[string][]byte)
 	}
 	new.Data[authUrlKey] = []byte(keyStoneURL)
 	return nil

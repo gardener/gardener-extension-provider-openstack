@@ -242,21 +242,23 @@ func TaintsAreTolerated(taints []gardencorev1beta1.SeedTaint, tolerations []gard
 }
 
 type ShootedSeed struct {
-	DisableDNS                     *bool
-	DisableCapacityReservation     *bool
-	Protected                      *bool
-	Visible                        *bool
-	MinimumVolumeSize              *string
-	APIServer                      *ShootedSeedAPIServer
-	BlockCIDRs                     []string
-	ShootDefaults                  *gardencorev1beta1.ShootNetworks
-	Backup                         *gardencorev1beta1.SeedBackup
-	SeedProviderConfig             *runtime.RawExtension
-	NoGardenlet                    bool
-	UseServiceAccountBootstrapping bool
-	WithSecretRef                  bool
-	FeatureGates                   map[string]bool
-	Resources                      *ShootedSeedResources
+	DisableDNS                      *bool
+	DisableCapacityReservation      *bool
+	Protected                       *bool
+	Visible                         *bool
+	LoadBalancerServicesAnnotations map[string]string
+	MinimumVolumeSize               *string
+	APIServer                       *ShootedSeedAPIServer
+	BlockCIDRs                      []string
+	ShootDefaults                   *gardencorev1beta1.ShootNetworks
+	Backup                          *gardencorev1beta1.SeedBackup
+	SeedProviderConfig              *runtime.RawExtension
+	IngressController               *gardencorev1beta1.IngressController
+	NoGardenlet                     bool
+	UseServiceAccountBootstrapping  bool
+	WithSecretRef                   bool
+	FeatureGates                    map[string]bool
+	Resources                       *ShootedSeedResources
 }
 
 type ShootedSeedAPIServer struct {
@@ -303,7 +305,8 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 
 	shootedSeed := ShootedSeed{
-		FeatureGates: parseShootedSeedFeatureGates(settings),
+		LoadBalancerServicesAnnotations: parseShootedSeedLoadBalancerServicesAnnotations(settings),
+		FeatureGates:                    parseShootedSeedFeatureGates(settings),
 	}
 
 	apiServer, err := parseShootedSeedAPIServer(settings)
@@ -330,7 +333,7 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 	shootedSeed.Backup = backup
 
-	seedProviderConfig, err := parseShootedSeedProviderConfig(settings)
+	seedProviderConfig, err := parseProviderConfig("providerConfig.", settings)
 	if err != nil {
 		return nil, err
 	}
@@ -341,6 +344,12 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		return nil, err
 	}
 	shootedSeed.Resources = resources
+
+	ingressController, err := parseIngressController(settings)
+	if err != nil {
+		return nil, err
+	}
+	shootedSeed.IngressController = ingressController
 
 	if size, ok := settings["minimumVolumeSize"]; ok {
 		shootedSeed.MinimumVolumeSize = &size
@@ -408,6 +417,24 @@ func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1bet
 	return shootNetworks, nil
 }
 
+func parseIngressController(settings map[string]string) (*gardencorev1beta1.IngressController, error) {
+	ingressController := &gardencorev1beta1.IngressController{}
+
+	kind, ok := settings["ingress.controller.kind"]
+	if !ok {
+		return nil, nil
+	}
+	ingressController.Kind = kind
+
+	parsedProviderConfig, err := parseProviderConfig("ingress.controller.providerConfig.", settings)
+	if err != nil {
+		return nil, fmt.Errorf("parsing Ingress providerConfig failed: %s", err.Error())
+	}
+	ingressController.ProviderConfig = parsedProviderConfig
+
+	return ingressController, nil
+}
+
 func parseShootedSeedBackup(settings map[string]string) (*gardencorev1beta1.SeedBackup, error) {
 	var (
 		provider, ok1           = settings["backup.provider"]
@@ -455,13 +482,13 @@ func parseShootedSeedFeatureGates(settings map[string]string) map[string]bool {
 	return featureGates
 }
 
-func parseShootedSeedProviderConfig(settings map[string]string) (*runtime.RawExtension, error) {
+func parseProviderConfig(prefix string, settings map[string]string) (*runtime.RawExtension, error) {
 	// reconstruct providerConfig structure
 	providerConfig := map[string]interface{}{}
 
 	var err error
 	for k, v := range settings {
-		if strings.HasPrefix(k, "providerConfig.") {
+		if strings.HasPrefix(k, prefix) {
 			var value interface{}
 			if strings.HasPrefix(v, `"`) && strings.HasSuffix(v, `"`) {
 				value, err = strconv.Unquote(v)
@@ -475,7 +502,9 @@ func parseShootedSeedProviderConfig(settings map[string]string) (*runtime.RawExt
 			} else {
 				value = v
 			}
-			if err := unstructured.SetNestedField(providerConfig, value, strings.Split(k, ".")[1:]...); err != nil {
+
+			path := strings.TrimPrefix(k, prefix)
+			if err := unstructured.SetNestedField(providerConfig, value, strings.Split(path, ".")...); err != nil {
 				return nil, err
 			}
 		}
@@ -493,6 +522,24 @@ func parseShootedSeedProviderConfig(settings map[string]string) (*runtime.RawExt
 	return &runtime.RawExtension{
 		Raw: jsonStr,
 	}, nil
+}
+
+func parseShootedSeedLoadBalancerServicesAnnotations(settings map[string]string) map[string]string {
+	const optionPrefix = "loadBalancerServices.annotations."
+
+	annotations := make(map[string]string)
+	for k, v := range settings {
+		if strings.HasPrefix(k, optionPrefix) {
+			annotationKey := strings.TrimPrefix(k, optionPrefix)
+			annotations[annotationKey] = v
+		}
+	}
+
+	if len(annotations) == 0 {
+		return nil
+	}
+
+	return annotations
 }
 
 func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServer, error) {
@@ -1138,4 +1185,14 @@ func GetPurpose(s *gardencorev1beta1.Shoot) gardencorev1beta1.ShootPurpose {
 		return *v
 	}
 	return gardencorev1beta1.ShootPurposeEvaluation
+}
+
+// KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
+func KubernetesDashboardEnabled(addons *gardencorev1beta1.Addons) bool {
+	return addons != nil && addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled
+}
+
+// NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
+func NginxIngressEnabled(addons *gardencorev1beta1.Addons) bool {
+	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
 }

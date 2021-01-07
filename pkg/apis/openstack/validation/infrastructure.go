@@ -82,10 +82,12 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 }
 
 // ValidateInfrastructureConfigAgainstCloudProfile validates the given InfrastructureConfig against constraints in the given CloudProfile.
-func ValidateInfrastructureConfigAgainstCloudProfile(infra *api.InfrastructureConfig, domain, shootRegion string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateInfrastructureConfigAgainstCloudProfile(oldInfra, infra *api.InfrastructureConfig, domain, shootRegion string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, domain, shootRegion, infra.FloatingPoolName, fldPath)...)
+	if oldInfra == nil || oldInfra.FloatingPoolName != infra.FloatingPoolName {
+		allErrs = append(allErrs, validateFloatingPoolNameConstraints(cloudProfileConfig.Constraints.FloatingPools, domain, shootRegion, infra.FloatingPoolName, fldPath)...)
+	}
 
 	return allErrs
 }

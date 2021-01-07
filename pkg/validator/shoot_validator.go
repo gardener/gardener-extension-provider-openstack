@@ -39,13 +39,12 @@ type validationContext struct {
 }
 
 var (
-	specPath           = field.NewPath("spec")
-	providerConfigPath = specPath.Child("providerConfig")
-	nwPath             = specPath.Child("networking")
-	providerPath       = specPath.Child("provider")
-	infraConfigPath    = providerPath.Child("infrastructureConfig")
-	cpConfigPath       = providerPath.Child("controlPlaneConfig")
-	workersPath        = providerPath.Child("workers")
+	specPath        = field.NewPath("spec")
+	nwPath          = specPath.Child("networking")
+	providerPath    = specPath.Child("provider")
+	infraConfigPath = providerPath.Child("infrastructureConfig")
+	cpConfigPath    = providerPath.Child("controlPlaneConfig")
+	workersPath     = providerPath.Child("workers")
 )
 
 func (v *Shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, domain string) error {
@@ -56,8 +55,8 @@ func (v *Shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, do
 
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, domain, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(valContext.cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, domain, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
 	allErrs = append(allErrs, v.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
@@ -76,12 +75,7 @@ func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigUpdate(oldValContext.infraConfig, valContext.infraConfig, infraConfigPath)...)
-
-	// Only validate against cloud profile when related configuration is updated.
-	// This ensures that already running shoots won't break after constraints were removed from the cloud profile.
-	if oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
-		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(valContext.infraConfig, domain, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
-	}
+	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(oldValContext.infraConfig, valContext.infraConfig, domain, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
 
 	var (
 		oldCpConfig = oldValContext.cpConfig
@@ -97,7 +91,7 @@ func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 		oldCpConfig.Zone != cpConfig.Zone ||
 		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) ||
 		oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
-		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
+		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
 	}
 
 	if errList := openstackvalidation.ValidateWorkersUpdate(oldValContext.shoot.Spec.Provider.Workers, valContext.shoot.Spec.Provider.Workers, workersPath); len(errList) > 0 {
@@ -121,7 +115,7 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 	if shoot.Spec.Provider.InfrastructureConfig == nil {
 		return nil, field.Required(infraConfigPath, "infrastructureConfig must be set for OpenStack shoots")
 	}
-	infraConfig, err := decodeInfrastructureConfig(decoder, shoot.Spec.Provider.InfrastructureConfig, infraConfigPath)
+	infraConfig, err := decodeInfrastructureConfig(decoder, shoot.Spec.Provider.InfrastructureConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding infrastructureConfig: %v", err)
 	}
@@ -129,7 +123,7 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 	if shoot.Spec.Provider.ControlPlaneConfig == nil {
 		return nil, field.Required(cpConfigPath, "controlPlaneConfig must be set for OpenStack shoots")
 	}
-	cpConfig, err := decodeControlPlaneConfig(decoder, shoot.Spec.Provider.ControlPlaneConfig, cpConfigPath)
+	cpConfig, err := decodeControlPlaneConfig(decoder, shoot.Spec.Provider.ControlPlaneConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding controlPlaneConfig: %v", err)
 	}
@@ -142,7 +136,7 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 	if cloudProfile.Spec.ProviderConfig == nil {
 		return nil, fmt.Errorf("providerConfig is not given for cloud profile %q", cloudProfile.Name)
 	}
-	cloudProfileConfig, err := decodeCloudProfileConfig(decoder, cloudProfile.Spec.ProviderConfig, providerConfigPath)
+	cloudProfileConfig, err := decodeCloudProfileConfig(decoder, cloudProfile.Spec.ProviderConfig)
 	if err != nil {
 		return nil, fmt.Errorf("an error occurred while reading the cloud profile %q: %v", cloudProfile.Name, err)
 	}

@@ -115,7 +115,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		It("should require a name of a load balancer provider that is part of the constraints", func() {
 			controlPlane.LoadBalancerProvider = "bar"
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -147,7 +147,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}
 			controlPlane.LoadBalancerProvider = lbProvider1
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, differentRegion, "", cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, "", cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -180,7 +180,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}
 			controlPlane.LoadBalancerProvider = lbProvider1
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -213,7 +213,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}
 			controlPlane.LoadBalancerProvider = lbProvider2
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, differentRegion, "", cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, "", cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -221,7 +221,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		It("should pass because no load balancer class is configured in cloud profile", func() {
 			cloudProfileConfig.Constraints.FloatingPools[0].LoadBalancerClasses = nil
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -229,7 +229,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		It("should pass because load balancer class is configured correctly in control plane", func() {
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{loadBalancerClass}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -248,7 +248,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[1], lbClasses[0]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -287,7 +287,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[1]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, differentRegion, fpName, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, fpName, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -308,7 +308,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[1]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, fpName, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, fpName, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -326,7 +326,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[0]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -348,7 +348,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = append(controlPlane.LoadBalancerClasses, lbClasses[0])
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -377,9 +377,9 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = append(controlPlane.LoadBalancerClasses, lbClasses[0])
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
-			errorList = ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, differentDomain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList = ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, differentDomain, region, floatingPool, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("loadBalancerClasses[0]"),
@@ -390,7 +390,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{loadBalancerClass}
 			cloudProfileConfig.Constraints.FloatingPools = nil
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
@@ -403,12 +403,31 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			lbClass.FloatingNetworkID = nil
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClass}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("loadBalancerClasses[0]"),
 			}))))
+		})
+
+		It("should not validate anything if the load balancer provider was not changed", func() {
+			controlPlane.LoadBalancerProvider = "does-for-sure-not-exist-in-cloudprofile"
+			oldControlPlane := controlPlane.DeepCopy()
+
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(oldControlPlane, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not validate anything if the load balancer classes were not changed", func() {
+			loadBalancerClassNotInCloudProfile := loadBalancerClass.DeepCopy()
+			loadBalancerClassNotInCloudProfile.Name = "does-for-sure-not-exist-in-cloudprofile"
+
+			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{*loadBalancerClassNotInCloudProfile}
+			oldControlPlane := controlPlane.DeepCopy()
+
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(oldControlPlane, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 })

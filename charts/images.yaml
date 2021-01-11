@@ -32,6 +32,12 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: docker.io/k8scloudprovider/cinder-csi-plugin
   tag: "v1.19.0"
+  targetVersion: "1.19.x"
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: docker.io/k8scloudprovider/cinder-csi-plugin
+  tag: "v1.20.0"
+  targetVersion: ">= 1.20"
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: k8s.gcr.io/sig-storage/csi-provisioner

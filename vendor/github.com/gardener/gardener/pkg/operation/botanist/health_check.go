@@ -53,13 +53,12 @@ import (
 )
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
-	// TODO (ialidzhikov): switch to v1beta1constants.GardenRole in a future version.
 	if len(gardenRoles) == 1 {
-		return labels.SelectorFromSet(map[string]string{v1beta1constants.DeprecatedGardenRole: gardenRoles[0]})
+		return labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: gardenRoles[0]})
 	}
 
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(v1beta1constants.DeprecatedGardenRole, selection.In, gardenRoles)
+	requirement, err := labels.NewRequirement(v1beta1constants.GardenRole, selection.In, gardenRoles)
 	if err != nil {
 		panic(err)
 	}
@@ -277,6 +276,8 @@ func computeRequiredControlPlaneDeployments(
 			return nil, err
 		}
 
+		// TODO: This check can be removed after few releases, as the cluster-autoscaler is now enabled even
+		// during the rolling-update. Related change: https://github.com/gardener/gardener/pull/3332
 		// if worker resource is processing (during maintenance), there might be a rolling update in progress
 		// during rolling updates, the autoscaler deployment is scaled down & therefore not required
 		rollingUpdateMightBeOngoing := false

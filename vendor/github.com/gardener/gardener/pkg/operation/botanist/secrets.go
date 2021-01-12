@@ -46,7 +46,7 @@ import (
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener).DeepCopy()
 
-	if val, ok := common.GetShootOperationAnnotation(b.Shoot.Info.Annotations); ok && val == common.ShootOperationRotateKubeconfigCredentials {
+	if val, ok := b.Shoot.Info.Annotations[v1beta1constants.GardenerOperation]; ok && val == common.ShootOperationRotateKubeconfigCredentials {
 		if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
 			return err
 		}
@@ -221,7 +221,6 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 	}
 	_, err := kutil.TryUpdateShootAnnotations(ctx, b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		delete(shoot.Annotations, common.ShootOperationDeprecated)
 		return shoot, nil
 	})
 	return err
@@ -282,7 +281,6 @@ const (
 	secretSuffixKubeConfig = "kubeconfig"
 	secretSuffixSSHKeyPair = v1beta1constants.SecretNameSSHKeyPair
 	secretSuffixMonitoring = "monitoring"
-	secretSuffixLogging    = "logging" // deprecated, used only to delete unused secrets
 )
 
 func computeProjectSecretName(shootName, suffix string) string {
@@ -349,19 +347,6 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 			return err
 		})
 	}
-
-	// Clean Kibana credentials that are not used since https://github.com/gardener/gardener/pull/2515
-	// TOOD, remove in future version.
-	fns = append(fns, func(ctx context.Context) error {
-		secretObj := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      computeProjectSecretName(b.Shoot.Info.Name, secretSuffixLogging),
-				Namespace: b.Shoot.Info.Namespace,
-			},
-		}
-
-		return client.IgnoreNotFound(b.K8sGardenClient.Client().Delete(ctx, secretObj, &client.DeleteOptions{}))
-	})
 
 	return flow.Parallel(fns...)(ctx)
 }

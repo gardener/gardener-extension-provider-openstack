@@ -42,14 +42,18 @@ func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConf
 }
 
 // ValidateControlPlaneConfigAgainstCloudProfile validates the given ControlPlaneConfig against constraints in the given CloudProfile.
-func ValidateControlPlaneConfigAgainstCloudProfile(cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(cloudProfileConfig.Constraints.LoadBalancerProviders, shootRegion, cpConfig.LoadBalancerProvider); !ok {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("loadBalancerProvider"), cpConfig.LoadBalancerProvider, validLoadBalancerProviders))
+	if oldCpConfig == nil || oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider {
+		if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(cloudProfileConfig.Constraints.LoadBalancerProviders, shootRegion, cpConfig.LoadBalancerProvider); !ok {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("loadBalancerProvider"), cpConfig.LoadBalancerProvider, validLoadBalancerProviders))
+		}
 	}
 
-	allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, domain, shootRegion, floatingPoolName, fldPath.Child("loadBalancerClasses"))...)
+	if oldCpConfig == nil || !equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) {
+		allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, domain, shootRegion, floatingPoolName, fldPath.Child("loadBalancerClasses"))...)
+	}
 
 	return allErrs
 }

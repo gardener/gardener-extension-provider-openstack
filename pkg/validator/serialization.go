@@ -16,13 +16,12 @@ package validator
 
 import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener/extensions/pkg/util"
 
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-func decodeControlPlaneConfig(decoder runtime.Decoder, cp *runtime.RawExtension, fldPath *field.Path) (*openstack.ControlPlaneConfig, error) {
+func decodeControlPlaneConfig(decoder runtime.Decoder, cp *runtime.RawExtension) (*openstack.ControlPlaneConfig, error) {
 	controlPlaneConfig := &openstack.ControlPlaneConfig{}
 	if err := util.Decode(decoder, cp.Raw, controlPlaneConfig); err != nil {
 		return nil, err
@@ -31,7 +30,7 @@ func decodeControlPlaneConfig(decoder runtime.Decoder, cp *runtime.RawExtension,
 	return controlPlaneConfig, nil
 }
 
-func decodeInfrastructureConfig(decoder runtime.Decoder, infra *runtime.RawExtension, fldPath *field.Path) (*openstack.InfrastructureConfig, error) {
+func decodeInfrastructureConfig(decoder runtime.Decoder, infra *runtime.RawExtension) (*openstack.InfrastructureConfig, error) {
 	infraConfig := &openstack.InfrastructureConfig{}
 	if err := util.Decode(decoder, infra.Raw, infraConfig); err != nil {
 		return nil, err
@@ -40,7 +39,7 @@ func decodeInfrastructureConfig(decoder runtime.Decoder, infra *runtime.RawExten
 	return infraConfig, nil
 }
 
-func decodeCloudProfileConfig(decoder runtime.Decoder, config *runtime.RawExtension, fldPath *field.Path) (*openstack.CloudProfileConfig, error) {
+func decodeCloudProfileConfig(decoder runtime.Decoder, config *runtime.RawExtension) (*openstack.CloudProfileConfig, error) {
 	cloudProfileConfig := &openstack.CloudProfileConfig{}
 	if err := util.Decode(decoder, config.Raw, cloudProfileConfig); err != nil {
 		return nil, err

@@ -182,7 +182,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		It("should allow using a regional floating pool from the same region", func() {
 			infrastructureConfig.FloatingPoolName = floatingPoolName1
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -191,7 +191,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			cloudProfileConfig.Constraints.FloatingPools[0].Name = "*"
 			infrastructureConfig.FloatingPoolName = floatingPoolName1
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -212,7 +212,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName1
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -226,7 +226,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName1
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -251,12 +251,12 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName2
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("floatingPoolName"),
 			}))
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
 		})
 
@@ -279,16 +279,16 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName2
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("floatingPoolName"),
 			}))
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentDomain, region, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, differentDomain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentDomain, differentRegion, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, differentDomain, differentRegion, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
 		})
 
@@ -311,19 +311,19 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName1
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentDomain, region, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, differentDomain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("floatingPoolName"),
 			}))
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentDomain, differentRegion, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, differentDomain, differentRegion, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("floatingPoolName"),
 			}))
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("floatingPoolName"),
@@ -347,9 +347,9 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = floatingPoolName1
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
-			errorList = ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, differentDomain, region, cloudProfileConfig, nilPath)
+			errorList = ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, differentDomain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("floatingPoolName"),
@@ -373,8 +373,16 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}
 			infrastructureConfig.FloatingPoolName = someFloatingPool
 
-			errorList := ValidateInfrastructureConfigAgainstCloudProfile(infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(nil, infrastructureConfig, domain, differentRegion, cloudProfileConfig, nilPath)
 
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not validate anything if the floating pool name was not changed", func() {
+			infrastructureConfig.FloatingPoolName = "does-for-sure-not-exist-in-cloudprofile"
+			oldInfrastructureConfig := infrastructureConfig.DeepCopy()
+
+			errorList := ValidateInfrastructureConfigAgainstCloudProfile(oldInfrastructureConfig, infrastructureConfig, domain, region, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
 		})
 	})

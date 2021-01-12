@@ -12,24 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
-
-import corev1 "k8s.io/api/core/v1"
-
-// SortableEvents implements sort.Interface for []api.Event based on the Timestamp field.
-type SortableEvents []corev1.Event
-
-// Len implements sort.Interface.
-func (list SortableEvents) Len() int {
-	return len(list)
-}
-
-// Swap implements sort.Interface.
-func (list SortableEvents) Swap(i, j int) {
-	list[i], list[j] = list[j], list[i]
-}
-
-// Less implements sort.Interface.
-func (list SortableEvents) Less(i, j int) bool {
-	return list[i].LastTimestamp.Time.Before(list[j].LastTimestamp.Time)
-}
+// Package v20 a kube-scheduler specific configuration for
+// 1.20 Kubernetes version. The API types used by the scheduler
+// are in the v1beta1 subpackage.
+package v20

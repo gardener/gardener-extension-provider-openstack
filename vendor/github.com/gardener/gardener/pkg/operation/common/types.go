@@ -47,12 +47,6 @@ const (
 	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
 
-	// ConfirmationDeletionDeprecated is an annotation on a Shoot resource whose value must be set to "true" in order to
-	// allow deleting the Shoot (if the annotation is not set any DELETE request will be denied).
-	//
-	// Deprecated: Use `ConfirmationDeletion` instead.
-	ConfirmationDeletionDeprecated = "confirmation.garden.sapcloud.io/deletion"
-
 	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
@@ -221,26 +215,16 @@ const (
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
 
-	// ProjectName is they key of a label on namespaces whose value holds the project name.
+	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
-
-	// ProjectNameDeprecated is they key of a label on namespaces whose value holds the project name.
-	//
-	// Deprecated: Use `ProjectName` instead.
-	ProjectNameDeprecated = "project.garden.sapcloud.io/name"
 
 	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
 	// skipped by the stale project controller. If the project has already configured stale timestamps in its status
 	// then they will be reset.
 	ProjectSkipStaleCheck = "project.gardener.cloud/skip-stale-check"
 
-	// NamespaceProject is they key of an annotation on namespace whose value holds the project uid.
+	// NamespaceProject is the key of an annotation on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.gardener.cloud/project"
-
-	// NamespaceProjectDeprecated is they key of an annotation on namespace whose value holds the project uid.
-	//
-	// Deprecated: Use `NamespaceProject` instead.
-	NamespaceProjectDeprecated = "namespace.garden.sapcloud.io/project"
 
 	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
 	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
@@ -259,17 +243,12 @@ const (
 	// of referenced quotas.
 	ShootExpirationTimestamp = "shoot.gardener.cloud/expiration-timestamp"
 
-	// ShootNoCleanup is a constant for a label on a resource indicating the the Gardener cleaner should not delete this
+	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
 
 	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
 	ShootStatus = "shoot.gardener.cloud/status"
-
-	// ShootOperationDeprecated is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
-	//
-	// Deprecated: Use `v1beta1constants.GardenerOperation` instead.
-	ShootOperationDeprecated = "shoot.garden.sapcloud.io/operation"
 
 	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be executed as soon as
 	// possible.
@@ -285,7 +264,8 @@ const (
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
 	ShootTasks = "shoot.gardener.cloud/tasks"
 
-	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task.
+	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the
+	// Infrastructure extension resource shall be reconciled.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
 
 	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.

@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
+	"github.com/gardener/gardener/pkg/operation/seed/scheduler"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -191,8 +192,8 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
-func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
+func deployCertificates(ctx context.Context, seed *Seed, k8sSeedClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
+	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -211,14 +212,14 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 	for name, secret := range existingSecretsMap {
 		_, ok := secret.Labels[renewedLabel]
 		if browserCerts.Has(name) && !ok {
-			if err := k8sSeedClient.Client().Delete(context.TODO(), secret); client.IgnoreNotFound(err) != nil {
+			if err := k8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
 				return nil, err
 			}
 			delete(existingSecretsMap, name)
 		}
 	}
 
-	secrets, err := secretsutils.GenerateClusterSecrets(context.TODO(), k8sSeedClient, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
+	secrets, err := secretsutils.GenerateClusterSecrets(ctx, k8sSeedClient, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +234,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 			}
 			secret.Labels[renewedLabel] = "true"
 
-			if err := k8sSeedClient.Client().Update(context.TODO(), secret); err != nil {
+			if err := k8sSeedClient.Client().Update(ctx, secret); err != nil {
 				return nil, err
 			}
 		}
@@ -488,7 +489,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
 	}
 
-	deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
+	deployedSecretsMap, err := deployCertificates(ctx, seed, k8sSeedClient, existingSecretsMap)
 	if err != nil {
 		return err
 	}
@@ -887,6 +888,22 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	}
 	components = append(components, seedadmission.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
 
+	// gardener-seed-scheduler
+	schedulerImage := &imagevector.Image{}
+	if imageVector != nil {
+		schedulerImage, err = imageVector.FindImage(common.KubeSchedulerImageName, imagevector.TargetVersion(kubernetesVersion.String()))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sched, err := scheduler.Bootstrap(c.DirectClient(), namespace, schedulerImage, kubernetesVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	components = append(components, sched)
+
 	return components, nil
 }
 
@@ -1199,8 +1216,8 @@ func deleteIngressController(ctx context.Context, c client.Client) error {
 	return kutil.DeleteObjects(
 		ctx,
 		c,
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress"}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress"}},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:seed:nginx-ingress"}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:seed:nginx-ingress"}},
 		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},

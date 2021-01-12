@@ -19,17 +19,18 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
+	"github.com/coreos/go-systemd/v22/unit"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/csimigration"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/version"
-
-	"github.com/coreos/go-systemd/v22/unit"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -63,8 +64,8 @@ var _ = Describe("Ensurer", func() {
 		c       *mockclient.MockClient
 		ensurer genericmutator.Ensurer
 
-		dummyContext   = genericmutator.NewEnsurerContext(nil, nil)
-		eContextK8s116 = genericmutator.NewInternalEnsurerContext(
+		dummyContext   = gcontext.NewGardenContext(nil, nil)
+		eContextK8s116 = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -75,7 +76,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			},
 		)
-		eContextK8s119 = genericmutator.NewInternalEnsurerContext(
+		eContextK8s119 = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -86,7 +87,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			},
 		)
-		eContextK8s119WithCSIAnnotation = genericmutator.NewInternalEnsurerContext(
+		eContextK8s119WithCSIAnnotation = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{

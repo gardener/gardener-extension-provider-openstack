@@ -18,11 +18,12 @@ import (
 	"context"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-	"github.com/gardener/gardener/extensions/pkg/controller"
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/gardener/gardener/extensions/pkg/controller"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -55,7 +56,7 @@ func (e *ensurer) InjectClient(client client.Client) error {
 }
 
 // EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, ectx genericmutator.EnsurerContext, new, old *appsv1.Deployment) error {
+func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error {
 	if v1beta1helper.IsAPIServerExposureManaged(new) {
 		return nil
 	}
@@ -83,7 +84,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, ectx generi
 }
 
 // EnsureETCD ensures that the etcd conform to the provider requirements.
-func (e *ensurer) EnsureETCD(ctx context.Context, ectx genericmutator.EnsurerContext, new, old *druidv1alpha1.Etcd) error {
+func (e *ensurer) EnsureETCD(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) error {
 	capacity := resource.MustParse("10Gi")
 	class := ""
 

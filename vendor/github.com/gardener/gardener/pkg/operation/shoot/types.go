@@ -17,7 +17,6 @@ package shoot
 import (
 	"context"
 	"net"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -26,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -77,10 +77,8 @@ type Shoot struct {
 	Components *Components
 
 	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
-	Extensions                map[string]Extension
+	Extensions                map[string]extension.Extension
 	InfrastructureStatus      []byte
-	ControlPlaneStatus        []byte
-	MachineDeployments        []extensionsv1alpha1.MachineDeployment
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
 
@@ -109,12 +107,14 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
+	ContainerRuntime     ExtensionContainerRuntime
 	ControlPlane         ExtensionControlPlane
 	ControlPlaneExposure ExtensionControlPlane
 	DNS                  *DNS
+	Extension            extension.Interface
 	Infrastructure       ExtensionInfrastructure
 	Network              component.DeployMigrateWaiter
-	ContainerRuntime     ExtensionContainerRuntime
+	Worker               ExtensionWorker
 }
 
 // SystemComponents contains references to system components.
@@ -139,7 +139,7 @@ type DNS struct {
 // ExtensionInfrastructure contains references to an Infrastructure extension deployer and its generated provider
 // status.
 type ExtensionInfrastructure interface {
-	component.DeployWaiter
+	component.DeployMigrateWaiter
 	SetSSHPublicKey([]byte)
 	ProviderStatus() *runtime.RawExtension
 	NodesCIDR() *string
@@ -156,6 +156,15 @@ type ExtensionControlPlane interface {
 type ExtensionContainerRuntime interface {
 	component.DeployMigrateWaiter
 	DeleteStaleResources(ctx context.Context) error
+}
+
+// ExtensionWorker contains references to a Worker extension deployer.
+type ExtensionWorker interface {
+	component.DeployMigrateWaiter
+	SetSSHPublicKey([]byte)
+	SetInfrastructureProviderStatus(*runtime.RawExtension)
+	SetOperatingSystemConfigMaps(map[string]OperatingSystemConfigs)
+	MachineDeployments() []extensionsv1alpha1.MachineDeployment
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.
@@ -188,12 +197,6 @@ type OperatingSystemConfigData struct {
 	Content string
 	Command *string
 	Units   []string
-}
-
-// Extension contains information about the extension api resouce as well as configuration information.
-type Extension struct {
-	extensionsv1alpha1.Extension
-	Timeout time.Duration
 }
 
 // IncompleteDNSConfigError is a custom error type.

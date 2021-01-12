@@ -50,7 +50,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.15.0
+# github.com/gardener/gardener v1.15.1-0.20210112065447-570ae178874b
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -83,6 +83,7 @@ github.com/gardener/gardener/extensions/pkg/terraformer
 github.com/gardener/gardener/extensions/pkg/util
 github.com/gardener/gardener/extensions/pkg/webhook
 github.com/gardener/gardener/extensions/pkg/webhook/cmd
+github.com/gardener/gardener/extensions/pkg/webhook/context
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test
@@ -153,8 +154,10 @@ github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler
 github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane
 github.com/gardener/gardener/pkg/operation/botanist/extensions/dns
+github.com/gardener/gardener/pkg/operation/botanist/extensions/extension
 github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure
 github.com/gardener/gardener/pkg/operation/botanist/extensions/network
+github.com/gardener/gardener/pkg/operation/botanist/extensions/worker
 github.com/gardener/gardener/pkg/operation/botanist/matchers
 github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission
 github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver
@@ -164,6 +167,11 @@ github.com/gardener/gardener/pkg/operation/etcdencryption
 github.com/gardener/gardener/pkg/operation/garden
 github.com/gardener/gardener/pkg/operation/seed
 github.com/gardener/gardener/pkg/operation/seed/istio
+github.com/gardener/gardener/pkg/operation/seed/scheduler
+github.com/gardener/gardener/pkg/operation/seed/scheduler/configurator
+github.com/gardener/gardener/pkg/operation/seed/scheduler/v18
+github.com/gardener/gardener/pkg/operation/seed/scheduler/v19
+github.com/gardener/gardener/pkg/operation/seed/scheduler/v20
 github.com/gardener/gardener/pkg/operation/shoot
 github.com/gardener/gardener/pkg/operation/shootsecrets
 github.com/gardener/gardener/pkg/scheduler
@@ -171,6 +179,7 @@ github.com/gardener/gardener/pkg/scheduler/apis/config
 github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1
 github.com/gardener/gardener/pkg/scheduler/controller/common
 github.com/gardener/gardener/pkg/scheduler/controller/shoot
+github.com/gardener/gardener/pkg/seedadmission
 github.com/gardener/gardener/pkg/utils
 github.com/gardener/gardener/pkg/utils/chart
 github.com/gardener/gardener/pkg/utils/context
@@ -192,6 +201,9 @@ github.com/gardener/gardener/pkg/version
 github.com/gardener/gardener/test/framework
 github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
+github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2
+github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1
+github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1
 # github.com/gardener/gardener-resource-manager v0.18.0
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
@@ -528,7 +540,6 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 # golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
-golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
@@ -1099,6 +1110,8 @@ k8s.io/kube-openapi/pkg/generators
 k8s.io/kube-openapi/pkg/generators/rules
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
+# k8s.io/kube-scheduler v0.18.10
+k8s.io/kube-scheduler/config/v1
 # k8s.io/kubelet v0.18.10
 ## explicit
 k8s.io/kubelet/config/v1beta1

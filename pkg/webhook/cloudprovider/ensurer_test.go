@@ -1,3 +1,17 @@
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cloudprovider
 
 import (
@@ -6,9 +20,10 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,7 +41,7 @@ func TestController(t *testing.T) {
 var _ = Describe("Ensurer", func() {
 	var (
 		ctx     = context.TODO()
-		ectx    genericmutator.EnsurerContext
+		ectx    gcontext.GardenContext
 		ensurer cloudprovider.Ensurer
 		scheme  *runtime.Scheme
 
@@ -37,7 +52,7 @@ var _ = Describe("Ensurer", func() {
 		scheme = runtime.NewScheme()
 		install.Install(scheme)
 
-		ectx = genericmutator.NewInternalEnsurerContext(
+		ectx = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				CloudProfile: &gardencorev1beta1.CloudProfile{
 					TypeMeta: metav1.TypeMeta{
@@ -77,7 +92,7 @@ var _ = Describe("Ensurer", func() {
 		var (
 			new = &corev1.Secret{}
 		)
-		ectx := genericmutator.NewInternalEnsurerContext(
+		ectx := gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				CloudProfile: &gardencorev1beta1.CloudProfile{
 					Spec: gardencorev1beta1.CloudProfileSpec{

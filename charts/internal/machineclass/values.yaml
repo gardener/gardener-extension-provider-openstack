@@ -24,3 +24,6 @@ machineClasses:
     username: abc
     password: abc
     cloudConfig: abc
+  credentialsSecretRef:
+    name: cloudprovider
+    namespace: shoot-namespace

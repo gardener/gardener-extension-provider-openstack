@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -76,10 +76,4 @@ func (w *workerDelegate) GetMachineControllerManagerShootChartValues(ctx context
 	return map[string]interface{}{
 		"providerName": openstack.Name,
 	}, nil
-}
-
-// GetMachineControllerManagerCloudCredentials should return the IaaS credentials
-// with the secret keys used by the machine-controller-manager.
-func (w *workerDelegate) GetMachineControllerManagerCloudCredentials(ctx context.Context) (map[string][]byte, error) {
-	return w.generateMachineClassSecretData(ctx)
 }

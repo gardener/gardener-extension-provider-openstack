@@ -80,5 +80,6 @@ func (e *ensurer) EnsureCloudProviderSecret(
 		new.Data = make(map[string][]byte)
 	}
 	new.Data[types.AuthURL] = []byte(keyStoneURL)
+	new.Data[types.Insecure] = []byte("true")
 	return nil
 }

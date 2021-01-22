@@ -1,4 +1,4 @@
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ include "name" . }}
@@ -19,6 +19,9 @@ webhooks:
   objectSelector: {}
   namespaceSelector: {}
   sideEffects: None
+  admissionReviewVersions:
+  - v1
+  - v1beta1
   clientConfig:
     {{- if .Values.global.virtualGarden.enabled }}
     url: {{ printf "https://%s.%s/webhooks/validate" (include "name" .) (.Release.Namespace) }}

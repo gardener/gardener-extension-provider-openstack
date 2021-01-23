@@ -33,16 +33,21 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - ""
+  - coordination.k8s.io
   resources:
-  - configmaps
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
   resourceNames:
   - provider-openstack-leader-election
   verbs:
   - get
   - watch
   - update
-  - patch
 - apiGroups:
   - ""
   - apps

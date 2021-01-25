@@ -297,69 +297,6 @@ var _ = Describe("Shoot validation", func() {
 					})),
 				))
 			})
-
-			Context("#ValidateServerGroups", func() {
-				BeforeEach(func() {
-					providerConfig := &openstack.WorkerConfig{
-						ServerGroup: &openstack.ServerGroup{
-							Policy: "foo",
-						},
-					}
-
-					arr, err := json.Marshal(providerConfig)
-					Expect(err).To(BeNil())
-
-					for i := range workers {
-						workers[i].ProviderConfig = &runtime.RawExtension{
-							Raw: arr,
-						}
-					}
-				})
-
-				It("should forbid removing server group policies", func() {
-					newWorkers := copyWorkers(workers)
-
-					newWorkers[0].ProviderConfig = nil
-					errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
-					Expect(errorList).To(HaveLen(1))
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeInvalid),
-							"Field":    Equal("[0].providerConfig.serverGroup"),
-							"BadValue": BeNil(),
-						})),
-					))
-				})
-
-				It("should forbid modifying server group policies", func() {
-					newWorkers := copyWorkers(workers)
-
-					newWorkers[0].ProviderConfig = &runtime.RawExtension{
-						Object: &openstack.WorkerConfig{
-							ServerGroup: &openstack.ServerGroup{
-								Policy: "bar",
-							},
-						},
-					}
-
-					errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
-					Expect(errorList).To(HaveLen(1))
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeInvalid),
-							"Field":    Equal("[0].providerConfig.serverGroup.policy"),
-							"BadValue": Equal("bar"),
-						})),
-					))
-				})
-
-				It("should allow updates with no server group changes", func() {
-					newWorkers := copyWorkers(workers)
-
-					errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
-					Expect(errorList).To(BeEmpty())
-				})
-			})
 		})
 	})
 })

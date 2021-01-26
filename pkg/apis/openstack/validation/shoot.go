@@ -69,13 +69,12 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	for i, newWorker := range newWorkers {
-		for j, oldWorker := range oldWorkers {
+		for _, oldWorker := range oldWorkers {
 			if newWorker.Name == oldWorker.Name {
 				if validation.ShouldEnforceImmutability(newWorker.Zones, oldWorker.Zones) {
 					allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.Zones, oldWorker.Zones, fldPath.Index(i).Child("zones"))...)
 				}
 
-				allErrs = append(allErrs, validateUpdateWorkerConfig(newWorker, oldWorker, fldPath.Index(i), fldPath.Index(j))...)
 				break
 			}
 		}
@@ -115,40 +114,6 @@ func validateWorkerConfig(parent *field.Path, worker *core.Worker, workerConfig 
 
 	if len(worker.Zones) > 1 && workerConfig.ServerGroup.Policy == api.ServerGroupPolicyAffinity {
 		allErrs = append(allErrs, field.Forbidden(parent.Child("serverGroup", "policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", api.ServerGroupPolicyAffinity)))
-	}
-
-	return allErrs
-}
-
-func validateUpdateWorkerConfig(newWorker, oldWorker core.Worker, newRoot, oldRoot *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if newWorker.ProviderConfig == nil && oldWorker.ProviderConfig == nil {
-		return nil
-	}
-
-	newWorkerCfg, err := helper.WorkerConfigFromRawExtension(newWorker.ProviderConfig)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(newRoot.Child("providerConfig"), newWorker.ProviderConfig, fmt.Sprintf("providerConfig could not be decoded: %v", err)))
-		return allErrs
-	}
-
-	oldWorkerCfg, err := helper.WorkerConfigFromRawExtension(oldWorker.ProviderConfig)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(oldRoot.Child("providerConfig"), oldWorker.ProviderConfig, fmt.Sprintf("providerConfig could not be decoded: %v", err)))
-		return allErrs
-	}
-
-	if (newWorkerCfg.ServerGroup == nil && oldWorkerCfg.ServerGroup != nil) || (newWorkerCfg.ServerGroup != nil && oldWorkerCfg.ServerGroup == nil) {
-		allErrs = append(allErrs, field.Invalid(newRoot.Child("providerConfig", "serverGroup"), newWorkerCfg.ServerGroup, "cannot add or remove server group configuration from a worker"))
-		return allErrs
-	}
-
-	if newWorkerCfg.ServerGroup != nil && oldWorkerCfg.ServerGroup != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(
-			newWorkerCfg.ServerGroup.Policy,
-			oldWorkerCfg.ServerGroup.Policy,
-			newRoot.Child("providerConfig", "serverGroup", "policy"))...)
 	}
 
 	return allErrs

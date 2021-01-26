@@ -86,7 +86,7 @@ If you don't want to configure anything for the `cloudControllerManager` simply 
 
 ## `WorkerConfig`
 
-Each worker group in a shoot may contain provider specific configurations and options. These are contained in the `providerConfig` section of a worker group.
+Each worker group in a shoot may contain provider-specific configurations and options. These are contained in the `providerConfig` section of a worker group and can be configured using a `WorkerConfig` object.
 An example of a `WorkerConfig` looks as follows:
 
 ```yaml
@@ -96,15 +96,17 @@ serverGroup:
   policy: soft-anti-affinity
 ```
 
-When you specify the `serverGroup` section in your worker group configuration, a new server group will be created with the configured policy and all machines managed by this worker group will be assigned as members of the created server group.
-For users to have access to this feature, it must be enabled on the `CloudProfile` by your operator.
+When you specify the `serverGroup` section in your worker group configuration, a new server group will be created with the configured policy for each worker group that enabled this setting and all machines managed by this worker group will be assigned as members of the created server group.
 
-Existing shoots that want to use this feature, have to create **new** worker groups with a server group configuration and migrate their workloads on the new nodes. Updating existing worker groups with server group configuration is currently prohibited.
+For users to have access to the server group feature, it must be enabled on the `CloudProfile` by your operator. 
+Existing clusters can take advantage of this feature by updating the server group configuration of their respective worker groups. Worker groups that are already configured with server groups can update their setting to change the policy used, or remove it altogether at any time.
+
+Users must be aware that **any change to the server group settings will result in a rolling deployment of new nodes for the affected worker group**.
+
 
 Please note the following restrictions when deploying workers with server groups:
-+ The `serverGroup` and `serverGroup.policy` fields are immutable upon creation. Users are not allowed to change the policy value and neither add or remove a `serverGroup` section from a worker group after it has been created.
 + The `serverGroup` section is optional, but if it is included in the worker configuration, it must contain a valid policy value.
-+ The available `policy` values that can be used, are defined in the provider specific section of `CloudProfile`, by your operator.
++ The available `policy` values that can be used, are defined in the provider specific section of `CloudProfile` by your operator.
 + Certain policy values may induce further constraints. Using the `affinity` policy is only allowed when the worker group utilizes a single zone.
 
 ## Example `Shoot` manifest (one availability zone)

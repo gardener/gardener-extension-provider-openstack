@@ -21,9 +21,9 @@ import (
 	"reflect"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/go-logr/logr"
 
 	"github.com/gardener/gardener/extensions/test/tm/generator"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
@@ -61,7 +61,7 @@ func addFlags() {
 func main() {
 	addFlags()
 	flag.Parse()
-	log.SetLogger(zap.Logger(false))
+	log.SetLogger(zap.New(zap.UseDevMode(false)))
 	logger = log.Log.WithName("openstack-generator")
 	if err := validate(); err != nil {
 		logger.Error(err, "error validating input flags")
@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 	if err := generator.MarshalAndWriteConfig(cfg.controlplaneProviderConfigPath, cp); err != nil {
-		logger.Error(err, "unable to write infrastructure config")
+		logger.Error(err, "unable to write controlplane config")
 		os.Exit(1)
 	}
 	logger.Info("successfully written openstack provider configuration", "infra", cfg.infrastructureProviderConfigPath, "controlplane", cfg.controlplaneProviderConfigPath)

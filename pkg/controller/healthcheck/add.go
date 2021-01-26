@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -58,7 +59,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 	if err := healthcheck.DefaultRegistration(
 		openstack.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ControlPlaneResource),
-		func() runtime.Object { return &extensionsv1alpha1.ControlPlaneList{} },
+		func() client.ObjectList { return &extensionsv1alpha1.ControlPlaneList{} },
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
 		mgr,
 		opts,
@@ -93,7 +94,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 	return healthcheck.DefaultRegistration(
 		openstack.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource),
-		func() runtime.Object { return &extensionsv1alpha1.WorkerList{} },
+		func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} },
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
 		mgr,
 		opts,

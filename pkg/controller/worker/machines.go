@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -29,9 +27,10 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MachineClassKind yields the name of the OpenStack machine class.
@@ -40,12 +39,12 @@ func (w *workerDelegate) MachineClassKind() string {
 }
 
 // MachineClass yields a newly initialized machine class object.
-func (w *workerDelegate) MachineClass() runtime.Object {
+func (w *workerDelegate) MachineClass() client.Object {
 	return &machinev1alpha1.OpenStackMachineClass{}
 }
 
 // MachineClassList yields a newly initialized OpenStackMachineClassList object.
-func (w *workerDelegate) MachineClassList() runtime.Object {
+func (w *workerDelegate) MachineClassList() client.ObjectList {
 	return &machinev1alpha1.OpenStackMachineClassList{}
 }
 

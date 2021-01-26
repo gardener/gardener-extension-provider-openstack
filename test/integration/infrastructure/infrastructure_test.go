@@ -114,7 +114,7 @@ var _ = Describe("Infrastructure tests", func() {
 		openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
 
 		// enable manager logs
-		logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+		logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 
 		log := logrus.New()
 		log.SetOutput(GinkgoWriter)
@@ -151,7 +151,7 @@ var _ = Describe("Infrastructure tests", func() {
 
 		By("start manager")
 		go func() {
-			err := mgr.Start(mgrContext.Done())
+			err := mgr.Start(mgrContext)
 			Expect(err).NotTo(HaveOccurred())
 		}()
 
@@ -357,8 +357,8 @@ func runTest(
 		ctx,
 		c,
 		logger,
-		func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} },
-		"Infrastucture",
+		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
+		extensionsv1alpha1.InfrastructureResource,
 		infra.Namespace,
 		infra.Name,
 		10*time.Second,

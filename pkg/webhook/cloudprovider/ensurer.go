@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	types "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -27,10 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-)
-
-const (
-	authUrlKey = "auth_url"
 )
 
 // NewEnsurer creates cloudprovider ensurer.
@@ -82,6 +79,6 @@ func (e *ensurer) EnsureCloudProviderSecret(
 	if new.Data == nil {
 		new.Data = make(map[string][]byte)
 	}
-	new.Data[authUrlKey] = []byte(keyStoneURL)
+	new.Data[types.AuthURL] = []byte(keyStoneURL)
 	return nil
 }

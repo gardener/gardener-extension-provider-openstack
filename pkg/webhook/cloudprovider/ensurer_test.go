@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	types "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
@@ -85,7 +86,7 @@ var _ = Describe("Ensurer", func() {
 		)
 		err := ensurer.EnsureCloudProviderSecret(ctx, ectx, new, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(new.Data[authUrlKey])).To(Equal(authUrl))
+		Expect(string(new.Data[types.AuthURL])).To(Equal(authUrl))
 	})
 
 	It("Should return an error if no authURL is found", func() {

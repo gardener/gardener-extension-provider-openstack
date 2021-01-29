@@ -12,6 +12,7 @@ images:
 
 socketPath: /var/lib/csi/sockets/pluginproxy
 timeout: 3m
+userAgentHeaders: []
 
 resources:
   driver:

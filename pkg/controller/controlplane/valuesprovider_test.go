@@ -118,6 +118,7 @@ var _ = Describe("ValuesProvider", func() {
 		useOctavia                       = true
 		rescanBlockStorageOnResize       = true
 		nodeVoluemAttachLimit      int32 = 25
+		technicalID                      = "shoot--dev--test"
 
 		cloudProfileConfig = &api.CloudProfileConfig{
 			KeyStoneURL:                authURL,
@@ -146,6 +147,9 @@ var _ = Describe("ValuesProvider", func() {
 						Version: "1.13.4",
 					},
 				},
+				Status: gardencorev1beta1.ShootStatus{
+					TechnicalID: technicalID,
+				},
 			},
 		}
 		clusterK8sAtLeast119 = &extensionscontroller.Cluster{
@@ -168,6 +172,9 @@ var _ = Describe("ValuesProvider", func() {
 						},
 					},
 				},
+				Status: gardencorev1beta1.ShootStatus{
+					TechnicalID: technicalID,
+				},
 			},
 		}
 
@@ -179,6 +186,8 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 
+		domainName  = "domain-name"
+		tenantName  = "tenant-name"
 		cpSecretKey = client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}
 		cpSecret    = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -187,8 +196,8 @@ var _ = Describe("ValuesProvider", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"domainName": []byte(`domain-name`),
-				"tenantName": []byte(`tenant-name`),
+				"domainName": []byte(domainName),
+				"tenantName": []byte(tenantName),
 				"username":   []byte(`username`),
 				"password":   []byte(`password`),
 			},
@@ -393,11 +402,13 @@ var _ = Describe("ValuesProvider", func() {
 
 		It("should return correct control plane chart values (k8s >= 1.19)", func() {
 			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sAtLeast119, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
+					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
 					"kubernetesVersion": clusterK8sAtLeast119.Shoot.Spec.Kubernetes.Version,
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
@@ -409,6 +420,7 @@ var _ = Describe("ValuesProvider", func() {
 						"checksum/secret-" + openstack.CSIResizerName:                 checksums[openstack.CSIResizerName],
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,
 						"podAnnotations": map[string]interface{}{
@@ -439,6 +451,7 @@ var _ = Describe("ValuesProvider", func() {
 
 		It("should return correct shoot control plane chart values (k8s >= 1.19)", func() {
 			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 			values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
@@ -449,6 +462,7 @@ var _ = Describe("ValuesProvider", func() {
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
+					"userAgentHeaders":    []string{domainName, tenantName, technicalID},
 					"cloudProviderConfig": cloudProviderDiskConfig,
 				}),
 			}))

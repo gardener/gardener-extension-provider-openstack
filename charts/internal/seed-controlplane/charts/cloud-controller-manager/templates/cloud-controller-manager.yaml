@@ -66,6 +66,9 @@ spec:
         {{- end }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
         - --use-service-account-credentials
+        {{- if semverCompare ">= 1.15" .Values.kubernetesVersion }}{{- range $userAgentHeader := .Values.userAgentHeaders }}
+        - --user-agent={{ $userAgentHeader }}
+        {{- end }}{{- end }}
         - --v=2
         livenessProbe:
           httpGet:

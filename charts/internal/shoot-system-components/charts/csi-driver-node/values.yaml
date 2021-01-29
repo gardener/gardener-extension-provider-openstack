@@ -8,6 +8,7 @@ images:
 
 socketPath: /csi/csi.sock
 vpaEnabled: false
+userAgentHeaders: []
 
 resources:
   driver:

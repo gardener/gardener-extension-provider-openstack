@@ -331,20 +331,21 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		return nil, err
 	}
 
+	var userAgentHeaders []string
 	if !k8sVersionLessThan119 {
 		cpDiskConfigSecret := &corev1.Secret{}
 		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
 			return nil, err
 		}
 		checksums[openstack.CloudProviderCSIDiskConfigName] = gutil.ComputeChecksum(cpDiskConfigSecret.Data)
+		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
 
 	// TODO: Remove this code in next version. Delete old config
 	if err := vp.deleteCCMMonitoringConfig(ctx, cp.Namespace); err != nil {
 		return nil, err
 	}
-
-	return getControlPlaneChartValues(cpConfig, cp, cluster, checksums, scaledDown)
+	return getControlPlaneChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown)
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
@@ -359,7 +360,11 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 		return nil, err
 	}
 
-	var cloudProviderDiskConfig []byte
+	var (
+		cloudProviderDiskConfig []byte
+		userAgentHeaders        []string
+	)
+
 	if !k8sVersionLessThan119 {
 		secret := &corev1.Secret{}
 		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
@@ -368,9 +373,9 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 
 		cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
 		checksums[openstack.CloudProviderCSIDiskConfigName] = gutil.ComputeChecksum(secret.Data)
+		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
-
-	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig)
+	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig, userAgentHeaders)
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
@@ -387,6 +392,31 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 	return map[string]interface{}{
 		"useLegacyProvisioner": k8sVersionLessThan119,
 	}, nil
+}
+
+func (vp *valuesProvider) getUserAgentHeaders(
+	ctx context.Context,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+) []string {
+	var headers = []string{}
+
+	// Add the domain and project/tenant to the useragent headers if the secret
+	// could be read and the respective fields in secret are not empty.
+	if credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef); err == nil && credentials != nil {
+		if credentials.DomainName != "" {
+			headers = append(headers, credentials.DomainName)
+		}
+		if credentials.TenantName != "" {
+			headers = append(headers, credentials.TenantName)
+		}
+	}
+
+	if cluster.Shoot != nil {
+		headers = append(headers, cluster.Shoot.Status.TechnicalID)
+	}
+
+	return headers
 }
 
 // getConfigChartValues collects and returns the configuration chart values.
@@ -492,15 +522,16 @@ func getControlPlaneChartValues(
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
 ) (map[string]interface{}, error) {
-	ccm, err := getCCMChartValues(cpConfig, cp, cluster, checksums, scaledDown)
+	ccm, err := getCCMChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown)
 	if err != nil {
 		return nil, err
 	}
 
-	csi, err := getCSIControllerChartValues(cluster, checksums, scaledDown)
+	csi, err := getCSIControllerChartValues(cluster, userAgentHeaders, checksums, scaledDown)
 	if err != nil {
 		return nil, err
 	}
@@ -516,6 +547,7 @@ func getCCMChartValues(
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
 ) (map[string]interface{}, error) {
@@ -536,6 +568,10 @@ func getCCMChartValues(
 		},
 	}
 
+	if userAgentHeaders != nil {
+		values["userAgentHeaders"] = userAgentHeaders
+	}
+
 	if cpConfig.CloudControllerManager != nil {
 		values["featureGates"] = cpConfig.CloudControllerManager.FeatureGates
 	}
@@ -546,6 +582,7 @@ func getCCMChartValues(
 // getCSIControllerChartValues collects and returns the CSIController chart values.
 func getCSIControllerChartValues(
 	cluster *extensionscontroller.Cluster,
+	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
 ) (map[string]interface{}, error) {
@@ -558,7 +595,7 @@ func getCSIControllerChartValues(
 		return map[string]interface{}{"enabled": false}, nil
 	}
 
-	return map[string]interface{}{
+	var values = map[string]interface{}{
 		"enabled":  true,
 		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
@@ -574,7 +611,11 @@ func getCSIControllerChartValues(
 				"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
 			},
 		},
-	}, nil
+	}
+	if userAgentHeaders != nil {
+		values["userAgentHeaders"] = userAgentHeaders
+	}
+	return values, nil
 }
 
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.
@@ -583,16 +624,22 @@ func getControlPlaneShootChartValues(
 	checksums map[string]string,
 	k8sVersionLessThan119 bool,
 	cloudProviderDiskConfig []byte,
+	userAgentHeader []string,
 ) (map[string]interface{}, error) {
+	var csiNodeDriverValues = map[string]interface{}{
+		"enabled":    !k8sVersionLessThan119,
+		"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+		},
+		"cloudProviderConfig": cloudProviderDiskConfig,
+	}
+	if userAgentHeader != nil {
+		csiNodeDriverValues["userAgentHeaders"] = userAgentHeader
+	}
+
 	return map[string]interface{}{
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
-		openstack.CSINodeName: map[string]interface{}{
-			"enabled":    !k8sVersionLessThan119,
-			"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-			},
-			"cloudProviderConfig": cloudProviderDiskConfig,
-		},
+		openstack.CSINodeName:                csiNodeDriverValues,
 	}, nil
 }

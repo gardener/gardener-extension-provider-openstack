@@ -43,6 +43,9 @@ spec:
         - --endpoint=$(CSI_ENDPOINT)
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster={{ .Release.Namespace }}
+        {{- range $userAgentHeader := .Values.userAgentHeaders }}
+        - --user-agent={{ $userAgentHeader }}
+        {{- end }}
         - --v=3
         env:
         - name: CSI_ENDPOINT

@@ -8,7 +8,7 @@ metadata:
     role: controller
 spec:
   replicas: {{ .Values.csiSnapshotController.replicas }}
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       app: csi-snapshot-controller

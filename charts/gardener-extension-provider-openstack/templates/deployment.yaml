@@ -10,7 +10,7 @@ metadata:
   labels:
 {{ include "labels" . | indent 4 }}
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:

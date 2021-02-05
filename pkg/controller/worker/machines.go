@@ -68,43 +68,12 @@ func (w *workerDelegate) GenerateMachineDeployments(ctx context.Context) (worker
 	return w.machineDeployments, nil
 }
 
-func (w *workerDelegate) generateMachineClassSecretData(ctx context.Context) (map[string][]byte, error) {
-	credentials, err := openstack.GetCredentials(ctx, w.Client(), w.worker.Spec.SecretRef)
-	if err != nil {
-		return nil, err
-	}
-
-	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(w.cluster)
-	if err != nil {
-		return nil, err
-	}
-
-	keyStoneURL, err := helper.FindKeyStoneURL(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneURL, w.worker.Spec.Region)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string][]byte{
-		machinev1alpha1.OpenStackAuthURL:    []byte(keyStoneURL),
-		machinev1alpha1.OpenStackInsecure:   []byte("true"),
-		machinev1alpha1.OpenStackDomainName: []byte(credentials.DomainName),
-		machinev1alpha1.OpenStackTenantName: []byte(credentials.TenantName),
-		machinev1alpha1.OpenStackUsername:   []byte(credentials.Username),
-		machinev1alpha1.OpenStackPassword:   []byte(credentials.Password),
-	}, nil
-}
-
 func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineDeployments = worker.MachineDeployments{}
 		machineClasses     []map[string]interface{}
 		machineImages      []api.MachineImage
 	)
-
-	machineClassSecretData, err := w.generateMachineClassSecretData(ctx)
-	if err != nil {
-		return err
-	}
 
 	infrastructureStatus := &api.InfrastructureStatus{}
 	if _, _, err := w.Decoder().Decode(w.worker.Spec.InfrastructureProviderStatus.Raw, nil, infrastructureStatus); err != nil {
@@ -160,6 +129,10 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 					fmt.Sprintf("kubernetes.io-cluster-%s", w.worker.Namespace): "1",
 					"kubernetes.io-role-node":                                   "1",
 				},
+				"credentialsSecretRef": map[string]interface{}{
+					"name":      w.worker.Spec.SecretRef.Name,
+					"namespace": w.worker.Spec.SecretRef.Namespace,
+				},
 				"secret": map[string]interface{}{
 					"cloudConfig": string(pool.UserData),
 				},
@@ -202,11 +175,6 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			machineClassSpec["labels"] = map[string]string{
 				v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass,
 			}
-			machineClassSpec["secret"].(map[string]interface{})[openstack.AuthURL] = string(machineClassSecretData[machinev1alpha1.OpenStackAuthURL])
-			machineClassSpec["secret"].(map[string]interface{})[openstack.DomainName] = string(machineClassSecretData[machinev1alpha1.OpenStackDomainName])
-			machineClassSpec["secret"].(map[string]interface{})[openstack.TenantName] = string(machineClassSecretData[machinev1alpha1.OpenStackTenantName])
-			machineClassSpec["secret"].(map[string]interface{})[openstack.UserName] = string(machineClassSecretData[machinev1alpha1.OpenStackUsername])
-			machineClassSpec["secret"].(map[string]interface{})[openstack.Password] = string(machineClassSecretData[machinev1alpha1.OpenStackPassword])
 
 			machineClasses = append(machineClasses, machineClassSpec)
 		}

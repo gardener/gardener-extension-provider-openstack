@@ -57,6 +57,8 @@ const (
 	Password = "password"
 	// Region is a constant for the key in a backup secret that holds the Openstack region.
 	Region = "region"
+	// Insecure is a constant for the key in a cloud provider secret that configures whether the OpenStack client verifies the server's certificate.
+	Insecure = "insecure"
 
 	// CloudProviderConfigName is the name of the secret containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"

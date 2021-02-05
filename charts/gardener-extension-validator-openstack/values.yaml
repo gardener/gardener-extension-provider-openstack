@@ -7,6 +7,14 @@ global:
     pullPolicy: IfNotPresent
   replicaCount: 1
   resources: {}
+  vpa:
+    enabled: true
+    resourcePolicy:
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+    updatePolicy:
+      updateMode: "Auto"
   webhookConfig:
     caBundle: |
       -----BEGIN CERTIFICATE-----

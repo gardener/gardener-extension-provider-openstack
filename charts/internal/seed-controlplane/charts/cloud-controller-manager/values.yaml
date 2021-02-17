@@ -9,6 +9,7 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository:image-tag
+userAgentHeaders: []
 resources:
   requests:
     cpu: 100m

@@ -38,6 +38,9 @@ spec:
         - --endpoint=$(CSI_ENDPOINT)
         - --nodeid=$(NODE_ID)
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        {{- range $userAgentHeader := .Values.userAgentHeaders }}
+        - --user-agent={{ $userAgentHeader }}
+        {{- end }}
         - --v=5
         env:
         - name: CSI_ENDPOINT

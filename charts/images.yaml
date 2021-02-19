@@ -54,11 +54,11 @@ images:
 - name: csi-snapshotter
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: k8s.gcr.io/sig-storage/csi-snapshotter
-  tag: "v2.1.3"
+  tag: "v2.1.4"
 - name: csi-snapshot-controller
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: k8s.gcr.io/sig-storage/snapshot-controller
-  tag: "v2.1.3"
+  tag: "v2.1.4"
 - name: csi-resizer
   sourceRepository: github.com/kubernetes-csi/external-resizer
   repository: k8s.gcr.io/sig-storage/csi-resizer

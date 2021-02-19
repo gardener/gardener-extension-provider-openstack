@@ -6,6 +6,7 @@ provider "openstack" {
   user_name   = var.USER_NAME
   password    = var.PASSWORD
   insecure    = true
+  max_retries = "{{ required "openstack.maxApiCallRetries is required" .Values.openstack.maxApiCallRetries }}"
 }
 
 //=====================================================================

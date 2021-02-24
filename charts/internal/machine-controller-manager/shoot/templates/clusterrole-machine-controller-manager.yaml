@@ -60,3 +60,10 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - policy
+  verbs:
+  - list
+  - watch
+  resources:
+  - poddisruptionbudgets

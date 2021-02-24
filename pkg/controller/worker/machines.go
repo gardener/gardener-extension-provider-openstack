@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MachineClassKind yields the name of the OpenStack machine class.
+// MachineClassKind yields the name of the machine class kind used by OpenStack provider.
 func (w *workerDelegate) MachineClassKind() string {
 	return "MachineClass"
 }
@@ -44,7 +44,7 @@ func (w *workerDelegate) MachineClass() client.Object {
 	return &machinev1alpha1.MachineClass{}
 }
 
-// MachineClassList yields a newly initialized OpenStackMachineClassList object.
+// MachineClassList yields a newly initialized MachineClassList object.
 func (w *workerDelegate) MachineClassList() client.ObjectList {
 	return &machinev1alpha1.MachineClassList{}
 }

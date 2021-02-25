@@ -29,6 +29,7 @@ spec:
   imageName: {{ $machineClass.imageName }}
 {{- end }}
   networkID: {{ $machineClass.networkID }}
+  subnetID: {{ $machineClass.subnetID }}
   podNetworkCidr: {{ $machineClass.podNetworkCidr }}
 {{- if $machineClass.rootDiskSize }}
   rootDiskSize: {{ $machineClass.rootDiskSize }}

@@ -16,6 +16,7 @@ package validation
 
 import (
 	"reflect"
+	"regexp"
 	"sort"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -59,6 +60,14 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 
 	if nodes != nil {
 		allErrs = append(allErrs, nodes.ValidateSubset(workerCIDR)...)
+	}
+
+	if infra.Networks.ID != nil {
+		const openStackUUIDRegExp = "[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}"
+		regex := regexp.MustCompile(openStackUUIDRegExp)
+		if !regex.MatchString(*infra.Networks.ID) {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("id"), infra.Networks.ID, "network id - if provided - must be an OpenStack UUID"))
+		}
 	}
 
 	if infra.Networks.Router != nil && len(infra.Networks.Router.ID) == 0 {

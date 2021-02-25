@@ -92,6 +92,11 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		return err
 	}
 
+	subnet, err := helper.FindSubnetByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
+	if err != nil {
+		return err
+	}
+
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones))
 
@@ -123,6 +128,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				"machineType":      pool.MachineType,
 				"keyName":          infrastructureStatus.Node.KeyName,
 				"networkID":        infrastructureStatus.Networks.ID,
+				"subnetID":         subnet.ID,
 				"podNetworkCidr":   extensionscontroller.GetPodNetwork(w.cluster),
 				"securityGroups":   []string{nodesSecurityGroup.Name},
 				"tags": map[string]string{

@@ -478,6 +478,11 @@ func (in *Networks) DeepCopyInto(out *Networks) {
 		*out = new(Router)
 		**out = **in
 	}
+	if in.ID != nil {
+		in, out := &in.ID, &out.ID
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

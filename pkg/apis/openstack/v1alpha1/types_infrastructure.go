@@ -43,6 +43,9 @@ type Networks struct {
 	Worker string `json:"worker"`
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	Workers string `json:"workers"`
+	// ID is the OpenStack UUID of an existing network that should be reused
+	// +optional
+	ID *string `json:"id,omitempty"`
 }
 
 // Router indicates whether to use an existing router or create a new one.

@@ -69,8 +69,9 @@ func ComputeTerraformerChartValues(
 	cluster *controller.Cluster,
 ) (map[string]interface{}, error) {
 	var (
-		createRouter = true
-		routerConfig = map[string]interface{}{
+		createRouter  = true
+		createNetwork = true
+		routerConfig  = map[string]interface{}{
 			"id": DefaultRouterID,
 		}
 		outputKeysConfig = map[string]interface{}{
@@ -82,12 +83,19 @@ func ComputeTerraformerChartValues(
 			"floatingNetworkID": TerraformOutputKeyFloatingNetworkID,
 			"subnetID":          TerraformOutputKeySubnetID,
 		}
+		networkConfig = map[string]interface{}{}
 	)
 
 	if config.Networks.Router != nil {
 		createRouter = false
 		routerConfig["id"] = strconv.Quote(config.Networks.Router.ID)
 	}
+
+	if config.Networks.ID != nil {
+		createNetwork = false
+		networkConfig["id"] = *config.Networks.ID
+	}
+
 	if createRouter && config.FloatingPoolSubnetName != nil {
 		routerConfig["floatingPoolSubnetName"] = *config.FloatingPoolSubnetName
 		outputKeysConfig["floatingSubnetID"] = TerraformOutputKeyFloatingSubnetID
@@ -112,6 +120,7 @@ func ComputeTerraformerChartValues(
 	if workersCIDR == "" {
 		workersCIDR = config.Networks.Worker
 	}
+	networkConfig["workers"] = workersCIDR
 
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
@@ -122,16 +131,15 @@ func ComputeTerraformerChartValues(
 			"floatingPoolName": config.FloatingPoolName,
 		},
 		"create": map[string]interface{}{
-			"router": createRouter,
+			"router":  createRouter,
+			"network": createNetwork,
 		},
 		"dnsServers":   cloudProfileConfig.DNSServers,
 		"sshPublicKey": string(infra.Spec.SSHPublicKey),
 		"router":       routerConfig,
 		"clusterName":  infra.Namespace,
-		"networks": map[string]interface{}{
-			"workers": workersCIDR,
-		},
-		"outputKeys": outputKeysConfig,
+		"networks":     networkConfig,
+		"outputKeys":   outputKeysConfig,
 	}, nil
 }
 

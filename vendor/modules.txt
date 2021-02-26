@@ -51,7 +51,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.16.3
+# github.com/gardener/gardener v1.17.1
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -113,6 +113,11 @@ github.com/gardener/gardener/pkg/apis/core/validation
 github.com/gardener/gardener/pkg/apis/extensions
 github.com/gardener/gardener/pkg/apis/extensions/v1alpha1
 github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper
+github.com/gardener/gardener/pkg/apis/seedmanagement
+github.com/gardener/gardener/pkg/apis/seedmanagement/helper
+github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1
+github.com/gardener/gardener/pkg/apis/settings
+github.com/gardener/gardener/pkg/apis/settings/v1alpha1
 github.com/gardener/gardener/pkg/chartrenderer
 github.com/gardener/gardener/pkg/client/core/clientset/versioned
 github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme
@@ -130,12 +135,17 @@ github.com/gardener/gardener/pkg/client/kubernetes
 github.com/gardener/gardener/pkg/client/kubernetes/clientmap
 github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal
 github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys
+github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned
+github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme
+github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
+github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme
 github.com/gardener/gardener/pkg/controllerutils
 github.com/gardener/gardener/pkg/controllerutils/metrics
 github.com/gardener/gardener/pkg/extensions
 github.com/gardener/gardener/pkg/features
 github.com/gardener/gardener/pkg/gardenlet/apis/config
 github.com/gardener/gardener/pkg/gardenlet/apis/config/helper
+github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1
 github.com/gardener/gardener/pkg/gardenlet/features
 github.com/gardener/gardener/pkg/logger
 github.com/gardener/gardener/pkg/mock/controller-runtime/client
@@ -150,8 +160,10 @@ github.com/gardener/gardener/pkg/operation/botanist/component
 github.com/gardener/gardener/pkg/operation/botanist/controlplane
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd
+github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager
 github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler
+github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager
 github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry
 github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane
@@ -159,6 +171,27 @@ github.com/gardener/gardener/pkg/operation/botanist/extensions/dns
 github.com/gardener/gardener/pkg/operation/botanist/extensions/extension
 github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure
 github.com/gardener/gardener/pkg/operation/botanist/extensions/network
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader/templates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/executor
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/executor/templates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/containerd
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/containerd/templates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/docker
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/docker/templates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/gardeneruser
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/gardeneruser/templates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/journald
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kernelconfig
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kubelet
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kubelet/templates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/logrotate
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/rootcertificates
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/varlibmount
+github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/utils
 github.com/gardener/gardener/pkg/operation/botanist/extensions/worker
 github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission
 github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver
@@ -198,7 +231,6 @@ github.com/gardener/gardener/pkg/utils/test/matchers
 github.com/gardener/gardener/pkg/utils/time
 github.com/gardener/gardener/pkg/utils/validation/cidr
 github.com/gardener/gardener/pkg/utils/version
-github.com/gardener/gardener/pkg/version
 github.com/gardener/gardener/test/framework
 github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
@@ -267,6 +299,7 @@ github.com/gobwas/glob/util/runes
 github.com/gobwas/glob/util/strings
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/gogoproto
+github.com/gogo/protobuf/jsonpb
 github.com/gogo/protobuf/plugin/compare
 github.com/gogo/protobuf/plugin/defaultcheck
 github.com/gogo/protobuf/plugin/description
@@ -290,6 +323,7 @@ github.com/gogo/protobuf/protoc-gen-gogo/generator/internal/remap
 github.com/gogo/protobuf/protoc-gen-gogo/grpc
 github.com/gogo/protobuf/protoc-gen-gogo/plugin
 github.com/gogo/protobuf/sortkeys
+github.com/gogo/protobuf/types
 github.com/gogo/protobuf/vanity
 github.com/gogo/protobuf/vanity/command
 # github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7
@@ -686,6 +720,14 @@ gopkg.in/tomb.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 gopkg.in/yaml.v3
+# istio.io/api v0.0.0-20201123152548-197f11e4ea09
+istio.io/api/analysis/v1alpha1
+istio.io/api/meta/v1alpha1
+istio.io/api/networking/v1beta1
+# istio.io/client-go v1.8.1
+istio.io/client-go/pkg/apis/networking/v1beta1
+# istio.io/gogo-genproto v0.0.0-20190930162913-45029607206a
+istio.io/gogo-genproto/googleapis/google/api
 # k8s.io/api v0.19.6 => k8s.io/api v0.19.6
 ## explicit
 k8s.io/api/admission/v1
@@ -1030,6 +1072,7 @@ k8s.io/code-generator/third_party/forked/golang/reflect
 k8s.io/component-base/config
 k8s.io/component-base/config/v1alpha1
 k8s.io/component-base/featuregate
+k8s.io/component-base/version
 # k8s.io/gengo v0.0.0-20200428234225-8167cfdcfc14
 ## explicit
 k8s.io/gengo/args

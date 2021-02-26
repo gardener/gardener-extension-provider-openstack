@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -43,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
@@ -252,6 +255,29 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	return nil
 }
 
+// removeFinalizerFromWorkerSecretRef removes the MCM finalizers from the secret that is referenced by the worker
+func (a *genericActuator) removeFinalizerFromWorkerSecretRef(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
+	logger.Info("Removing MCM finalizers from worker`s secret")
+	secret, err := kutil.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	finalizersToRemove := []string{}
+	if controllerutil.ContainsFinalizer(secret, mcmFinalizer) {
+		finalizersToRemove = append(finalizersToRemove, mcmFinalizer)
+	}
+	if controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer) {
+		finalizersToRemove = append(finalizersToRemove, mcmProviderFinalizer)
+	}
+	if len(finalizersToRemove) == 0 {
+		return nil
+	}
+	return controllerutils.PatchRemoveFinalizers(ctx, a.client, secret, finalizersToRemove...)
+}
+
 // cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0
 func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Logger, namespace string) error {
 	logger.Info("Cleaning up machine sets")
@@ -331,7 +357,7 @@ func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineD
 	ownerReferenceToMachineSet := workerhelper.BuildOwnerToMachineSetsMap(machineSets)
 
 	for _, machineDeployment := range machineDeployments {
-		if !controllerutils.HasFinalizer(&machineDeployment, mcmFinalizer) {
+		if !controllerutil.ContainsFinalizer(&machineDeployment, mcmFinalizer) {
 			continue
 		}
 

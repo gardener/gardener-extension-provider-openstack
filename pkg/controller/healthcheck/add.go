@@ -31,7 +31,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/version"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -48,7 +47,7 @@ var (
 // RegisterHealthChecks registers health checks for each extension resource
 // HealthChecks are grouped by extension (e.g worker), extension.type (e.g aws) and  Health Check Type (e.g SystemComponentsHealthy)
 func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) error {
-	csiEnabledPreCheckFunc := func(_ runtime.Object, cluster *extensionscontroller.Cluster) bool {
+	csiEnabledPreCheckFunc := func(_ client.Object, cluster *extensionscontroller.Cluster) bool {
 		csiEnabled, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, ">=", "1.19")
 		if err != nil {
 			return false

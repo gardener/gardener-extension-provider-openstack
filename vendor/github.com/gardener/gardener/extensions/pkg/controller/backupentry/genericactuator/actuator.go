@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -56,7 +55,7 @@ func NewActuator(backupEntryDelegate BackupEntryDelegate, logger logr.Logger) ba
 	}
 }
 
-// Reconcile reconciles the update of a BackupEntry
+// Reconcile reconciles the update of a BackupEntry.
 func (a *actuator) Reconcile(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.deployEtcdBackupSecret(ctx, be)
 }
@@ -77,7 +76,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 		return nil
 	}
 
-	backupSecret, err := extensionscontroller.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
+	backupSecret, err := kutil.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
 	if err != nil {
 		a.logger.Error(err, "failed to read backup extension secret")
 		return err
@@ -104,17 +103,17 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 	return err
 }
 
-// Delete deletes the BackupEntry
+// Delete deletes the BackupEntry.
 func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.backupEntryDelegate.Delete(ctx, be)
 }
 
-// Restore restores the update of a BackupEntry
+// Restore restores the BackupEntry.
 func (a *actuator) Restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.Reconcile(ctx, be)
 }
 
-// Migrate migrates the BackupEntry
-func (a *actuator) Migrate(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+// Migrate migrates the BackupEntry.
+func (a *actuator) Migrate(_ context.Context, _ *extensionsv1alpha1.BackupEntry) error {
 	return nil
 }

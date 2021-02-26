@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -34,6 +35,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -123,7 +125,7 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
@@ -158,7 +160,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
@@ -190,11 +192,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 }
 
 func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(be, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(be, FinalizerName) {
 		r.logger.Info("Deleting backupentry causes a no-op as there is no finalizer.", "backupentry", be.Name)
 		return reconcile.Result{}, nil
 	}
@@ -207,7 +205,7 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 	r.logger.Info("Starting the deletion of backupentry", "backupentry", be.Name)
 	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryDeletion, "Deleting the backupentry")
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
@@ -268,7 +266,7 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}

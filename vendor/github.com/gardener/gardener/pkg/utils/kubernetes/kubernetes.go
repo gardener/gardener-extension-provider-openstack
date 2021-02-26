@@ -38,7 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -77,15 +77,6 @@ func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
 	return ok && val == value
 }
 
-// HasDeletionTimestamp checks if an object has a deletion timestamp
-func HasDeletionTimestamp(obj runtime.Object) (bool, error) {
-	metadata, err := meta.Accessor(obj)
-	if err != nil {
-		return false, err
-	}
-	return metadata.GetDeletionTimestamp() != nil, nil
-}
-
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
@@ -108,12 +99,6 @@ func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, nam
 func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 	namespace, name := nameAndNamespace(namespaceOrName, nameOpt...)
 	return client.ObjectKey{Namespace: namespace, Name: name}
-}
-
-// KeyFromObject obtains the client.ObjectKey from the given metav1.Object.
-// Deprecated: use client.ObjectKeyFromObject instead.
-func KeyFromObject(obj metav1.Object) client.ObjectKey {
-	return Key(obj.GetNamespace(), obj.GetName())
 }
 
 // ObjectMeta creates a new metav1.ObjectMeta from the given parameters.
@@ -185,9 +170,12 @@ func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, 
 // WaitUntilLoadBalancerIsReady waits until the given external load balancer has
 // been created (i.e., its ingress information has been updated in the service status).
 func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Interface, namespace, name string, timeout time.Duration, logger *logrus.Entry) (string, error) {
-	var loadBalancerIngress string
+	var (
+		loadBalancerIngress string
+		service             = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	)
 	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, kubeClient.Client(), namespace, name)
+		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, kubeClient.Client(), service)
 		if err != nil {
 			logger.Infof("Waiting until the %s service deployed is ready...", name)
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
@@ -195,35 +183,29 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 		}
 		return retry.Ok()
 	}); err != nil {
-		fieldSelector := client.MatchingFields{
-			"involvedObject.kind":      "Service",
-			"involvedObject.name":      name,
-			"involvedObject.namespace": namespace,
-			"type":                     corev1.EventTypeWarning,
-		}
-		eventList := &corev1.EventList{}
-		if err2 := kubeClient.DirectClient().List(ctx, eventList, fieldSelector); err2 != nil {
-			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
-		}
+		const eventsLimit = 2
 
-		if len(eventList.Items) > 0 {
-			eventsErrorMessage := buildEventsErrorMessage(eventList.Items)
+		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), service, corev1.EventTypeWarning, eventsLimit)
+		if err2 != nil {
+			logger.Errorf("error %q occured while fetching events for error %q", err2, err)
+			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
+		}
+		if eventsErrorMessage != "" {
 			errorMessage := err.Error() + "\n\n" + eventsErrorMessage
 			return "", errors.New(errorMessage)
 		}
-
 		return "", err
 	}
 
 	return loadBalancerIngress, nil
 }
 
-// GetLoadBalancerIngress takes a context, a client, a namespace and a service name. It queries for a load balancer's technical name
-// (ip address or hostname). It returns the value of the technical name whereby it always prefers the hostname (if given)
-// over the IP address. It also returns the list of all load balancer ingresses.
-func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace, name string) (string, error) {
-	service := &corev1.Service{}
-	if err := client.Get(ctx, Key(namespace, name), service); err != nil {
+// GetLoadBalancerIngress takes a context, a client, a service object. It gets the `service` and
+// queries for a load balancer's technical name (ip address or hostname). It returns the value of the technical name
+// whereby it always prefers the hostname (if given) over the IP address.
+// The passed `service` instance is updated with the information received from the API server.
+func GetLoadBalancerIngress(ctx context.Context, c client.Client, service *corev1.Service) (string, error) {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
 		return "", err
 	}
 
@@ -317,8 +299,44 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 	return out
 }
 
-func buildEventsErrorMessage(events []corev1.Event) string {
-	sortByLastTimestamp := func(o1, o2 controllerutil.Object) bool {
+// FetchEventMessages gets events for the given object of the given `eventType` and returns them as a formatted output.
+// The function expects that the given `obj` is specified with a proper `metav1.TypeMeta`.
+func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object, eventType string, eventsLimit int) (string, error) {
+	if c.Scheme() == nil {
+		return "", errors.New("scheme is not provided")
+	}
+	gvk, err := apiutil.GVKForObject(obj, c.Scheme())
+	if err != nil {
+		return "", fmt.Errorf("failed identify GVK for object: %w", err)
+	}
+
+	apiVersion, kind := gvk.ToAPIVersionAndKind()
+	if apiVersion == "" {
+		return "", fmt.Errorf("apiVersion not specified for object %s/%s", obj.GetNamespace(), obj.GetName())
+	}
+	if kind == "" {
+		return "", fmt.Errorf("kind not specified for object %s/%s", obj.GetNamespace(), obj.GetName())
+	}
+	fieldSelector := client.MatchingFields{
+		"involvedObject.apiVersion": apiVersion,
+		"involvedObject.kind":       kind,
+		"involvedObject.name":       obj.GetName(),
+		"involvedObject.namespace":  obj.GetNamespace(),
+		"type":                      eventType,
+	}
+	eventList := &corev1.EventList{}
+	if err := c.List(ctx, eventList, fieldSelector); err != nil {
+		return "", fmt.Errorf("error '%v' occurred while fetching more details", err)
+	}
+
+	if len(eventList.Items) > 0 {
+		return buildEventsErrorMessage(eventList.Items, eventsLimit), nil
+	}
+	return "", nil
+}
+
+func buildEventsErrorMessage(events []corev1.Event, eventsLimit int) string {
+	sortByLastTimestamp := func(o1, o2 client.Object) bool {
 		obj1, ok1 := o1.(*corev1.Event)
 		obj2, ok2 := o2.(*corev1.Event)
 
@@ -333,7 +351,6 @@ func buildEventsErrorMessage(events []corev1.Event) string {
 	SortBy(sortByLastTimestamp).Sort(list)
 	events = list.Items
 
-	const eventsLimit = 2
 	if len(events) > eventsLimit {
 		events = events[len(events)-eventsLimit:]
 	}
@@ -398,13 +415,8 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 }
 
 // OwnedBy checks if the given object's owner reference contains an entry with the provided attributes.
-func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) bool {
-	acc, err := meta.Accessor(obj)
-	if err != nil {
-		return false
-	}
-
-	for _, ownerReference := range acc.GetOwnerReferences() {
+func OwnedBy(obj client.Object, apiVersion, kind, name string, uid types.UID) bool {
+	for _, ownerReference := range obj.GetOwnerReferences() {
 		return ownerReference.APIVersion == apiVersion &&
 			ownerReference.Kind == kind &&
 			ownerReference.Name == name &&
@@ -418,7 +430,7 @@ func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) b
 // is provided then it will be applied for each object right after listing all objects. If no object remains then nil
 // is returned. The Items field in the list object will be populated with the result returned from the server after
 // applying the filter function (if provided).
-func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(runtime.Object) bool, listOpts ...client.ListOption) (runtime.Object, error) {
+func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(client.Object) bool, listOpts ...client.ListOption) (client.Object, error) {
 	if err := c.List(ctx, listObj, listOpts...); err != nil {
 		return nil, err
 	}
@@ -426,7 +438,12 @@ func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectLis
 	if filterFn != nil {
 		var items []runtime.Object
 
-		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+		if err := meta.EachListItem(listObj, func(object runtime.Object) error {
+			obj, ok := object.(client.Object)
+			if !ok {
+				return fmt.Errorf("%T does not implement client.Object", object)
+			}
+
 			if filterFn(obj) {
 				items = append(items, obj)
 			}
@@ -451,7 +468,13 @@ func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectLis
 		return nil, err
 	}
 
-	return items[meta.LenList(listObj)-1], nil
+	newestObject := items[meta.LenList(listObj)-1]
+	obj, ok := newestObject.(client.Object)
+	if !ok {
+		return nil, fmt.Errorf("%T does not implement client.Object", newestObject)
+	}
+
+	return obj, nil
 }
 
 // NewestPodForDeployment returns the most recently created Pod object for the given deployment.
@@ -465,7 +488,7 @@ func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *ap
 		ctx,
 		c,
 		&appsv1.ReplicaSetList{},
-		func(obj runtime.Object) bool {
+		func(obj client.Object) bool {
 			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "Deployment", deployment.Name, deployment.UID)
 		},
 		listOpts...,
@@ -486,7 +509,7 @@ func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *ap
 		ctx,
 		c,
 		&corev1.PodList{},
-		func(obj runtime.Object) bool {
+		func(obj client.Object) bool {
 			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "ReplicaSet", newestReplicaSet.Name, newestReplicaSet.UID)
 		},
 		listOpts...,

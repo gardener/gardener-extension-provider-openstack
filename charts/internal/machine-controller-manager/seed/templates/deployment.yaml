@@ -83,7 +83,7 @@ spec:
           readOnly: true
       - name: provider-openstack
         image: {{ index .Values.images "machine-controller-manager-provider-openstack" }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command:
           - ./machine-controller
           - --control-kubeconfig=inClusterConfig

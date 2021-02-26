@@ -58,6 +58,7 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	}
 
 	// Delete any older version machine class CRs.
+	// TODO: This can safely be removed after a few releases. It only facilitates the transition between OpenStackMachineClass -> MachineClass for existing shoots.
 	if err := w.Client().DeleteAllOf(ctx, &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(w.worker.Namespace)); err != nil {
 		return errors.Wrapf(err, "cleaning up old OpenstackMachineClass resources failed")
 	}

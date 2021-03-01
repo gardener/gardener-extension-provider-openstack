@@ -71,6 +71,8 @@ type FloatingPool struct {
 	Region *string
 	// Domain is the domain name.
 	Domain *string
+	// DefaultFloatingSubnet is the default floating subnet for the floating pool.
+	DefaultFloatingSubnet *string
 	// NonConstraining specifies whether this floating pool is not constraining, that means additionally available independent of other FP constraints.
 	NonConstraining *bool
 	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.

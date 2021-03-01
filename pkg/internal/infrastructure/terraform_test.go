@@ -195,8 +195,7 @@ var _ = Describe("Terraform", func() {
 
 			expectedCreateValues["router"] = true
 			expectedRouterValues["id"] = DefaultRouterID
-			expectedRouterValues["floatingPoolSubnetName"] = fipSubnetID
-			expectedOutputKeysValues["floatingSubnetID"] = TerraformOutputKeyFloatingSubnetID
+			expectedRouterValues["floatingPoolSubnet"] = fipSubnetID
 
 			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
 			Expect(err).To(BeNil())
@@ -282,15 +281,6 @@ var _ = Describe("Terraform", func() {
 		It("should correctly compute the status", func() {
 			status := StatusFromTerraformState(&state)
 
-			Expect(status).To(Equal(&expectedInfraStatus))
-		})
-
-		It("should compute status which contain floating pool subnet", func() {
-			fipSubnetID := "sample-fip-subnet-id"
-			state.FloatingPoolSubnetID = fipSubnetID
-			expectedInfraStatus.Networks.FloatingPool.SubnetID = &fipSubnetID
-
-			status := StatusFromTerraformState(&state)
 			Expect(status).To(Equal(&expectedInfraStatus))
 		})
 	})

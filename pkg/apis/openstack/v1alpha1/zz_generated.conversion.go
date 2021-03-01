@@ -416,6 +416,7 @@ func autoConvert_v1alpha1_FloatingPool_To_openstack_FloatingPool(in *FloatingPoo
 	out.Name = in.Name
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
+	out.DefaultFloatingSubnet = (*string)(unsafe.Pointer(in.DefaultFloatingSubnet))
 	out.NonConstraining = (*bool)(unsafe.Pointer(in.NonConstraining))
 	out.LoadBalancerClasses = *(*[]openstack.LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	return nil
@@ -430,6 +431,7 @@ func autoConvert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.F
 	out.Name = in.Name
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
+	out.DefaultFloatingSubnet = (*string)(unsafe.Pointer(in.DefaultFloatingSubnet))
 	out.NonConstraining = (*bool)(unsafe.Pointer(in.NonConstraining))
 	out.LoadBalancerClasses = *(*[]LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	return nil
@@ -443,7 +445,6 @@ func Convert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.Float
 func autoConvert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *FloatingPoolStatus, out *openstack.FloatingPoolStatus, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
-	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
 	return nil
 }
 
@@ -455,7 +456,6 @@ func Convert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *Flo
 func autoConvert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *openstack.FloatingPoolStatus, out *FloatingPoolStatus, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
-	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
 	return nil
 }
 

@@ -82,6 +82,9 @@ type FloatingPool struct {
 	// Domain is the domain name.
 	// +optional
 	Domain *string `json:"domain,omitempty"`
+	// DefaultFloatingSubnet is the default floating subnet for the floating pool.
+	// +optional
+	DefaultFloatingSubnet *string `json:"defaultFloatingSubnet,omitempty"`
 	// NonConstraining specifies whether this floating pool is not constraining, that means additionally available independent of other FP constraints.
 	// +optional
 	NonConstraining *bool `json:"nonConstraining,omitempty"`

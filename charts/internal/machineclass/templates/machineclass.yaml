@@ -14,38 +14,46 @@ data:
   userData: {{ $machineClass.secret.cloudConfig | b64enc }}
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
-kind: OpenStackMachineClass
+kind: MachineClass
 metadata:
   name: {{ $machineClass.name }}
   namespace: {{ $.Release.Namespace }}
-spec:
-  region: {{ $machineClass.region }}
-  availabilityZone: {{ $machineClass.availabilityZone }}
-  flavorName: {{ $machineClass.machineType }}
-  keyName: {{ $machineClass.keyName }}
-{{- if $machineClass.imageID }}
-  imageID: {{ $machineClass.imageID }}
-{{- else }}
-  imageName: {{ $machineClass.imageName }}
+{{- if $machineClass.labels }}
+  labels:
+  {{ toYaml $machineClass.labels | indent 4 }}
 {{- end }}
-  networkID: {{ $machineClass.networkID }}
-  podNetworkCidr: {{ $machineClass.podNetworkCidr }}
+provider: "OpenStack"
+secretRef:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+credentialsSecretRef:
+  name: {{ $machineClass.credentialsSecretRef.name }}
+  namespace: {{ $machineClass.credentialsSecretRef.namespace }}
+providerSpec:
+  apiVersion: openstack.machine.gardener.cloud/v1alpha1
+  kind: MachineProviderConfig
+  spec:
+    region: {{ $machineClass.region }}
+    availabilityZone: {{ $machineClass.availabilityZone }}
+    flavorName: {{ $machineClass.machineType }}
+    keyName: {{ $machineClass.keyName }}
+{{- if $machineClass.imageID }}
+    imageID: {{ $machineClass.imageID }}
+{{- else }}
+    imageName: {{ $machineClass.imageName }}
+{{- end }}
+    networkID: {{ $machineClass.networkID }}
+    podNetworkCidr: {{ $machineClass.podNetworkCidr }}
 {{- if $machineClass.rootDiskSize }}
-  rootDiskSize: {{ $machineClass.rootDiskSize }}
+    rootDiskSize: {{ $machineClass.rootDiskSize }}
 {{- end}}
 {{- if $machineClass.serverGroupID }}
-  serverGroupID: {{ $machineClass.serverGroupID }}
+    serverGroupID: {{ $machineClass.serverGroupID }}
 {{- end }}
-  securityGroups:
-{{ toYaml $machineClass.securityGroups | indent 2 }}
-  secretRef:
-    name: {{ $machineClass.name }}
-    namespace: {{ $.Release.Namespace }}
-  credentialsSecretRef:
-    name: {{ $machineClass.credentialsSecretRef.name }}
-    namespace: {{ $machineClass.credentialsSecretRef.namespace }}
+    securityGroups:
+{{ toYaml $machineClass.securityGroups | indent 4 }}
 {{- if $machineClass.tags }}
-  tags:
-{{ toYaml $machineClass.tags | indent 4 }}
+    tags:
+{{ toYaml $machineClass.tags | indent 6 }}
 {{- end }}
 {{- end }}

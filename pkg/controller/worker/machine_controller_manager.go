@@ -34,7 +34,7 @@ var (
 	mcmChart = &chart.Chart{
 		Name:   openstack.MachineControllerManagerName,
 		Path:   filepath.Join(openstack.InternalChartsPath, openstack.MachineControllerManagerName, "seed"),
-		Images: []string{openstack.MachineControllerManagerImageName},
+		Images: []string{openstack.MachineControllerManagerImageName, openstack.MachineControllerManagerProviderOpenStackImageName},
 		Objects: []*chart.Object{
 			{Type: &appsv1.Deployment{}, Name: openstack.MachineControllerManagerName},
 			{Type: &corev1.Service{}, Name: openstack.MachineControllerManagerName},

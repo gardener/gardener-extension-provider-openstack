@@ -24,8 +24,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
@@ -52,6 +53,15 @@ const (
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
 
+// Interface is an interface for managing Workers.
+type Interface interface {
+	component.DeployMigrateWaiter
+	SetSSHPublicKey([]byte)
+	SetInfrastructureProviderStatus(*runtime.RawExtension)
+	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
+	MachineDeployments() []extensionsv1alpha1.MachineDeployment
+}
+
 // Values contains the values used to create a Worker resources.
 type Values struct {
 	// Namespace is the Shoot namespace in the seed.
@@ -71,11 +81,11 @@ type Values struct {
 	// InfrastructureProviderStatus is the provider status of the Infrastructure resource which might be relevant for
 	// the Worker reconciliation.
 	InfrastructureProviderStatus *runtime.RawExtension
-	// OperatingSystemConfigsMap contains the operating system configurations for the worker pools.
-	OperatingSystemConfigsMap map[string]shoot.OperatingSystemConfigs
+	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
+	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
 }
 
-// New creates a new instance of a Worker deployer.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
@@ -83,7 +93,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) shoot.ExtensionWorker {
+) Interface {
 	return &worker{
 		client:              client,
 		logger:              logger,
@@ -186,8 +196,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		}
 
 		var userData []byte
-		if val, ok := w.values.OperatingSystemConfigsMap[workerPool.Name]; ok {
-			userData = []byte(val.Downloader.Data.Content)
+		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
+			userData = []byte(val.Downloader.Content)
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
@@ -242,8 +252,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 func (w *worker) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return common.RestoreExtensionWithDeployFunction(
 		ctx,
-		shootState,
 		w.client,
+		shootState,
 		extensionsv1alpha1.WorkerResource,
 		w.values.Namespace,
 		w.deploy,
@@ -285,7 +295,7 @@ func (w *worker) Wait(ctx context.Context) error {
 		w.waitInterval,
 		w.waitSevereThreshold,
 		w.waitTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			worker, ok := obj.(*extensionsv1alpha1.Worker)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.Worker but got %T", worker)
@@ -336,8 +346,8 @@ func (w *worker) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
 }
 
 // SetOperatingSystemConfigMaps sets the operating system config maps in the values.
-func (w *worker) SetOperatingSystemConfigMaps(maps map[string]shoot.OperatingSystemConfigs) {
-	w.values.OperatingSystemConfigsMap = maps
+func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*operatingsystemconfig.OperatingSystemConfigs) {
+	w.values.WorkerNameToOperatingSystemConfigsMap = maps
 }
 
 // MachineDeployments returns the generated machine deployments of the Worker.

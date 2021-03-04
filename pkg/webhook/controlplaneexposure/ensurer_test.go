@@ -144,7 +144,7 @@ var _ = Describe("Ensurer", func() {
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
 			c.EXPECT().Get(context.TODO(), client.ObjectKey{Name: namespace}, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(cluster))
-			c.EXPECT().Get(context.TODO(), svcKey, &corev1.Service{}).DoAndReturn(clientGet(svc))
+			c.EXPECT().Get(context.TODO(), svcKey, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(clientGet(svc))
 
 			// Create ensurer
 			ensurer := NewEnsurer(etcdStorage, logger)
@@ -179,7 +179,7 @@ var _ = Describe("Ensurer", func() {
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
 			c.EXPECT().Get(context.TODO(), client.ObjectKey{Name: namespace}, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(cluster))
-			c.EXPECT().Get(context.TODO(), svcKey, &corev1.Service{}).DoAndReturn(clientGet(svc))
+			c.EXPECT().Get(context.TODO(), svcKey, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(clientGet(svc))
 
 			// Create ensurer
 			ensurer := NewEnsurer(etcdStorage, logger)

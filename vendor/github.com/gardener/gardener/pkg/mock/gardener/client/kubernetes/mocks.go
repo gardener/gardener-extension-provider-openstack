@@ -11,9 +11,9 @@ import (
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	versioned0 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gomock "github.com/golang/mock/gomock"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	meta "k8s.io/apimachinery/pkg/api/meta"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
@@ -215,6 +215,20 @@ func (mr *MockInterfaceMockRecorder) GardenCore() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenCore", reflect.TypeOf((*MockInterface)(nil).GardenCore))
 }
 
+// GardenSeedManagement mocks base method.
+func (m *MockInterface) GardenSeedManagement() versioned0.Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GardenSeedManagement")
+	ret0, _ := ret[0].(versioned0.Interface)
+	return ret0
+}
+
+// GardenSeedManagement indicates an expected call of GardenSeedManagement.
+func (mr *MockInterfaceMockRecorder) GardenSeedManagement() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenSeedManagement", reflect.TypeOf((*MockInterface)(nil).GardenSeedManagement))
+}
+
 // Kubernetes mocks base method.
 func (m *MockInterface) Kubernetes() kubernetes0.Interface {
 	m.ctrl.T.Helper()
@@ -255,20 +269,6 @@ func (m *MockInterface) RESTConfig() *rest.Config {
 func (mr *MockInterfaceMockRecorder) RESTConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTConfig", reflect.TypeOf((*MockInterface)(nil).RESTConfig))
-}
-
-// RESTMapper mocks base method.
-func (m *MockInterface) RESTMapper() meta.RESTMapper {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RESTMapper")
-	ret0, _ := ret[0].(meta.RESTMapper)
-	return ret0
-}
-
-// RESTMapper indicates an expected call of RESTMapper.
-func (mr *MockInterfaceMockRecorder) RESTMapper() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapper", reflect.TypeOf((*MockInterface)(nil).RESTMapper))
 }
 
 // Start mocks base method.

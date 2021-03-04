@@ -21,8 +21,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -34,18 +32,20 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -337,7 +337,7 @@ func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
-func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensionsv1alpha1.Purpose) shoot.ExtensionControlPlane {
+func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
 	values := &extensionscontrolplane.Values{
 		Name:      b.Shoot.Info.Name,
 		Namespace: b.Shoot.SeedNamespace,
@@ -378,49 +378,11 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlaneExposure)
 }
 
-func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane shoot.ExtensionControlPlane) error {
+func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane extensionscontrolplane.Interface) error {
 	if b.isRestorePhase() {
 		return controlPlane.Restore(ctx, b.ShootState)
 	}
 	return controlPlane.Deploy(ctx)
-}
-
-// DeployGardenerResourceManager deploys the gardener-resource-manager which will use CRD resources in order
-// to ensure that they exist in a cluster/reconcile them in case somebody changed something.
-func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-	name := "gardener-resource-manager"
-
-	defaultValues := map[string]interface{}{
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + name: b.CheckSums[name],
-		},
-		"replicas": b.Shoot.GetReplicas(1),
-		// We run one GRM per shoot control plane, and the GRM is doing its leader election via configmaps in the seed -
-		// by default every 2s. This can lead to a lot of PUT /v1/configmaps requests on the API server, and given that
-		// a seed is very busy anyways, we should not unnecessarily stress the API server with this leader election.
-		// The GRM's sync period is 1m anyways, so it doesn't matter too much if the leadership determination may take up
-		// to one minute.
-		"leaderElection": map[string]interface{}{
-			"leaseDuration": "40s",
-			"renewDeadline": "15s",
-			"retryPeriod":   "10s",
-		},
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.GardenerResourceManagerImageName)
-	if err != nil {
-		return err
-	}
-
-	// TODO (ialidzhikov): remove in a future version
-	deploymentKeys := []client.ObjectKey{
-		kutil.Key(b.Shoot.SeedNamespace, name),
-	}
-	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), deploymentKeys); err != nil {
-		return err
-	}
-
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 
 const (
@@ -603,7 +565,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"securePort":                443,
 			"podAnnotations":            podAnnotations,
 			"konnectivityTunnel": map[string]interface{}{
-				"enabled": b.Shoot.KonnectivityTunnelEnabled,
+				"enabled":    b.Shoot.KonnectivityTunnelEnabled,
+				"name":       konnectivity.ServerName,
+				"serverPort": konnectivity.ServerHTTPSPort,
 			},
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
@@ -622,7 +586,11 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	)
 
 	if b.Shoot.KonnectivityTunnelEnabled {
-		podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums["konnectivity-server"]
+		if b.APIServerSNIEnabled() {
+			podAnnotations["checksum/secret-"+konnectivity.SecretNameServerTLSClient] = b.CheckSums[konnectivity.SecretNameServerTLSClient]
+		} else {
+			podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums[konnectivity.ServerName]
+		}
 	} else {
 		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
 		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.CheckSums["vpn-seed-tlsauth"]
@@ -825,7 +793,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	tunnelComponentImageName := common.VPNSeedImageName
 	if b.Shoot.KonnectivityTunnelEnabled {
-		tunnelComponentImageName = common.KonnectivityServerImageName
+		tunnelComponentImageName = konnectivity.ServerImageName
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues,
@@ -842,19 +810,27 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
 		objects := []client.Object{
-			// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
-			&autoscalingv2beta1.HorizontalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: b.Shoot.SeedNamespace,
-					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
-				},
-			},
 			&autoscalingv1beta2.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: b.Shoot.SeedNamespace,
 					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
 				},
 			},
+		}
+
+		seedVersionGE112, err := version.CompareVersions(b.K8sSeedClient.Version(), ">=", "1.12")
+		if err != nil {
+			return err
+		}
+
+		hpaObjectMeta := kutil.ObjectMeta(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
+
+		// autoscaling/v2beta1 is deprecated in favor of autoscaling/v2beta2 beginning with v1.19
+		// ref https://github.com/kubernetes/kubernetes/pull/90463
+		if seedVersionGE112 {
+			objects = append(objects, &autoscalingv2beta2.HorizontalPodAutoscaler{ObjectMeta: hpaObjectMeta})
+		} else {
+			objects = append(objects, &autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: hpaObjectMeta})
 		}
 
 		if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...); err != nil {
@@ -1024,7 +1000,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
-			EnableKonnectivityTunnel: b.Shoot.KonnectivityTunnelEnabled,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),

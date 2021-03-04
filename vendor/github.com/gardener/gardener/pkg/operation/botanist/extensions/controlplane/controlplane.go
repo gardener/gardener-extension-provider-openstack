@@ -19,18 +19,18 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 const (
@@ -46,6 +46,13 @@ const (
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
+
+// Interface is an interface for managing ControlPlanes.
+type Interface interface {
+	component.DeployMigrateWaiter
+	SetInfrastructureProviderStatus(*runtime.RawExtension)
+	ProviderStatus() *runtime.RawExtension
+}
 
 // Values contains the values used to create an ControlPlane resources.
 type Values struct {
@@ -66,7 +73,7 @@ type Values struct {
 	InfrastructureProviderStatus *runtime.RawExtension
 }
 
-// New creates a new instance of an ControlPlane deployer.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
@@ -74,7 +81,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) shoot.ExtensionControlPlane {
+) Interface {
 	return &controlPlane{
 		client:              client,
 		logger:              logger,
@@ -152,8 +159,8 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 func (c *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return common.RestoreExtensionWithDeployFunction(
 		ctx,
-		shootState,
 		c.client,
+		shootState,
 		extensionsv1alpha1.ControlPlaneResource,
 		c.values.Namespace,
 		c.deploy,
@@ -195,7 +202,7 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 		c.waitInterval,
 		c.waitSevereThreshold,
 		c.waitTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.ControlPlane but got %T", controlPlane)

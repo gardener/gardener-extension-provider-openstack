@@ -21,14 +21,16 @@ import (
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
+	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	gardenseedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,6 +93,7 @@ func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
 		gardencorescheme.AddToScheme,
+		gardenseedmanagementscheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
@@ -103,6 +106,7 @@ func init() {
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
+		istionetworkingv1beta1.AddToScheme,
 	)
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 
@@ -136,7 +140,6 @@ type Applier interface {
 // of several Kubernetes versions.
 type Interface interface {
 	RESTConfig() *rest.Config
-	RESTMapper() meta.RESTMapper
 	RESTClient() rest.Interface
 
 	// Client returns the ClientSet's controller-runtime client. This client should be used by default, as it carries
@@ -157,6 +160,7 @@ type Interface interface {
 
 	Kubernetes() kubernetesclientset.Interface
 	GardenCore() gardencoreclientset.Interface
+	GardenSeedManagement() gardenseedmanagementclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
 

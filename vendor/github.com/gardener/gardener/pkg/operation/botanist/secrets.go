@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
@@ -56,7 +57,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				return err
 			}
 		} else {
-			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, common.KonnectivityServerKubeconfig, common.KonnectivityServerCertName); err != nil {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, konnectivity.SecretNameServerKubeconfig, konnectivity.SecretNameServerTLS); err != nil {
 				return err
 			}
 		}
@@ -73,7 +74,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	secretsManager := shootsecrets.NewSecretsManager(
 		gardenerResourceDataList,
 		b.generateStaticTokenConfig(),
-		wantedCertificateAuthorities,
+		b.wantedCertificateAuthorities(),
 		b.generateWantedSecretConfigs,
 	)
 
@@ -102,7 +103,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	secretsManager := shootsecrets.NewSecretsManager(
 		gardenerResourceDataList,
 		b.generateStaticTokenConfig(),
-		wantedCertificateAuthorities,
+		b.wantedCertificateAuthorities(),
 		b.generateWantedSecretConfigs,
 	)
 
@@ -211,7 +212,16 @@ func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1
 }
 
 func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	for _, secretName := range []string{common.StaticTokenSecretName, common.BasicAuthSecretName, common.KubecfgSecretName} {
+	secrets := []string{
+		common.StaticTokenSecretName,
+		common.BasicAuthSecretName,
+		common.KubecfgSecretName,
+	}
+	if b.Shoot.KonnectivityTunnelEnabled {
+		secrets = append(secrets, konnectivity.SecretNameServerKubeconfig)
+	}
+
+	for _, secretName := range secrets {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err
 		}

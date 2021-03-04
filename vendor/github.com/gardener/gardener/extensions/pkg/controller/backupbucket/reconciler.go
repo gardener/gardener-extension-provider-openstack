@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,6 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -97,7 +99,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
@@ -124,11 +126,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 }
 
 func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(bb, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(bb, FinalizerName) {
 		r.logger.Info("Deleting backupbucket causes a no-op as there is no finalizer.", "backupbucket", bb.Name)
 		return reconcile.Result{}, nil
 	}
@@ -154,7 +152,7 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}

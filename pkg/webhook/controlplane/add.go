@@ -21,6 +21,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kubelet"
+	oscutils "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,12 +34,12 @@ var logger = log.Log.WithName("openstack-controlplane-webhook")
 // AddToManager creates a webhook and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
-	fciCodec := controlplane.NewFileContentInlineCodec()
+	fciCodec := oscutils.NewFileContentInlineCodec()
 	return controlplane.New(mgr, controlplane.Args{
 		Kind:     controlplane.KindShoot,
 		Provider: openstack.Type,
 		Types:    []client.Object{&appsv1.Deployment{}, &extensionsv1alpha1.OperatingSystemConfig{}},
-		Mutator: genericmutator.NewMutator(NewEnsurer(logger), controlplane.NewUnitSerializer(),
-			controlplane.NewKubeletConfigCodec(fciCodec), fciCodec, logger),
+		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(),
+			kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }

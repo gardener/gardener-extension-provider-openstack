@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/version"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -50,6 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -366,14 +366,14 @@ func DeleteSeedLoggingStack(ctx context.Context, k8sClient client.Client) error 
 }
 
 // GetContainerResourcesInStatefulSet  returns the containers resources in StatefulSet
-func GetContainerResourcesInStatefulSet(ctx context.Context, k8sClient client.Client, key client.ObjectKey) ([]*corev1.ResourceRequirements, error) {
+func GetContainerResourcesInStatefulSet(ctx context.Context, k8sClient client.Client, key client.ObjectKey) (map[string]*corev1.ResourceRequirements, error) {
 	statefulSet := &appsv1.StatefulSet{}
-	resourcesPerContainer := make([]*corev1.ResourceRequirements, 0)
+	resourcesPerContainer := make(map[string]*corev1.ResourceRequirements)
 	if err := k8sClient.Get(ctx, key, statefulSet); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	} else if !apierrors.IsNotFound(err) {
 		for _, container := range statefulSet.Spec.Template.Spec.Containers {
-			resourcesPerContainer = append(resourcesPerContainer, container.Resources.DeepCopy())
+			resourcesPerContainer[container.Name] = container.Resources.DeepCopy()
 		}
 		return resourcesPerContainer, nil
 	}
@@ -697,7 +697,7 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 }
 
 // CheckIfDeletionIsConfirmed returns whether the deletion of an object is confirmed or not.
-func CheckIfDeletionIsConfirmed(obj metav1.Object) error {
+func CheckIfDeletionIsConfirmed(obj client.Object) error {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return annotationRequiredError()
@@ -725,13 +725,8 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) er
 		}
 
 		existing := obj.DeepCopyObject()
-
-		acc, err := meta.Accessor(obj)
-		if err != nil {
-			return err
-		}
-		kutil.SetMetaDataAnnotation(acc, ConfirmationDeletion, "true")
-		kutil.SetMetaDataAnnotation(acc, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
+		kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		if reflect.DeepEqual(existing, obj) {
 			return nil

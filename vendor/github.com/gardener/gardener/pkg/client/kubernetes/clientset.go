@@ -20,10 +20,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -41,7 +41,6 @@ import (
 // The version string contains only the major/minor part in the form <major>.<minor>.
 type clientSet struct {
 	config     *rest.Config
-	restMapper meta.RESTMapper
 	restClient rest.Interface
 
 	applier       Applier
@@ -59,10 +58,11 @@ type clientSet struct {
 	// startOnce guards starting the cache only once
 	startOnce sync.Once
 
-	kubernetes      kubernetes.Interface
-	gardenCore      gardencoreclientset.Interface
-	apiextension    apiextensionclientset.Interface
-	apiregistration apiregistrationclientset.Interface
+	kubernetes           kubernetes.Interface
+	gardenCore           gardencoreclientset.Interface
+	gardenSeedManagement gardenseedmanagementclientset.Interface
+	apiextension         apiextensionclientset.Interface
+	apiregistration      apiregistrationclientset.Interface
 
 	version string
 }
@@ -103,11 +103,6 @@ func (c *clientSet) Cache() cache.Cache {
 	return c.cache
 }
 
-// RESTMapper returns the restMapper of this ClientSet.
-func (c *clientSet) RESTMapper() meta.RESTMapper {
-	return c.restMapper
-}
-
 // Kubernetes will return the kubernetes attribute of the Client object.
 func (c *clientSet) Kubernetes() kubernetes.Interface {
 	return c.kubernetes
@@ -116,6 +111,11 @@ func (c *clientSet) Kubernetes() kubernetes.Interface {
 // GardenCore will return the gardenCore attribute of the Client object.
 func (c *clientSet) GardenCore() gardencoreclientset.Interface {
 	return c.gardenCore
+}
+
+// GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
+func (c *clientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
+	return c.gardenSeedManagement
 }
 
 // APIExtension will return the apiextensions attribute of the Client object.

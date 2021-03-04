@@ -35,14 +35,6 @@ const (
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
-	// CloudConfigPrefix is a constant for the prefix which is added to secret storing the original cloud config (which
-	// is being downloaded from the cloud-config-downloader process)
-	CloudConfigPrefix = "cloud-config"
-
-	// CloudConfigFilePath is the path on the shoot worker nodes to which the operating system specific configuration
-	// will be downloaded.
-	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
-
 	// CloudConfigChecksumSecretAnnotation is the key of an annotation on a Secret object whose value is the checksum of
 	// the cloud config user data stored in the data map of this Secret.
 	CloudConfigChecksumSecretAnnotation = "checksum/data-script"
@@ -174,9 +166,6 @@ const (
 
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
-
-	// KonnectivityServerCertName is the name of the api-proxy konnectivity-server
-	KonnectivityServerCertName = "konnectivity-server"
 
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
@@ -341,18 +330,6 @@ const (
 	// VPNSeedImageName is the name of the VPNSeed image.
 	VPNSeedImageName = "vpn-seed"
 
-	// KonnectivityServerImageName is the name of the konnectivity server image.
-	KonnectivityServerImageName = "konnectivity-server"
-
-	// KonnectivityServerUserName is the user name of the konnectivity server used for the token
-	KonnectivityServerUserName = "system:konnectivity-server"
-
-	// KonnectivityServerKubeconfig is the name of the konnectivity-server kubeconfig
-	KonnectivityServerKubeconfig = "konnectivity-server-kubeconfig"
-
-	// KonnectivityAgentImageName is the name of the konnectivity agent image.
-	KonnectivityAgentImageName = "konnectivity-agent"
-
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"
 
@@ -403,6 +380,9 @@ const (
 
 	// LokiImageName is the name of the Loki image used for logging
 	LokiImageName = "loki"
+
+	// CuratorImageName is the image of the curator responsible for Loki Disk
+	CuratorImageName = "loki-curator"
 
 	// FluentBitImageName is the image of Fluent-bit image
 	FluentBitImageName = "fluent-bit"

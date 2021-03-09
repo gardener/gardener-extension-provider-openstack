@@ -10,3 +10,9 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: Auto
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 20m
+        memory: 40M

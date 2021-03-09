@@ -16,6 +16,7 @@ package utils_test
 
 import (
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -45,5 +46,13 @@ var _ = Describe("Utils", func() {
 		Entry("should not match wildcard prefix", "*d", "test", false, 0),
 		Entry("should not match wildcard prefix", "*teste", "test", false, 0),
 		Entry("should not match wildcard arbitrary", "te*t", "test", false, 0),
+	)
+
+	DescribeTable("#IsStringPtrValueEqual", func(a *string, b string, expected bool) {
+		Expect(IsStringPtrValueEqual(a, b)).To(Equal(expected))
+	},
+		Entry("should be false as pointer points to nil", nil, "test", false),
+		Entry("should be false as pointer value is different", pointer.StringPtr("different"), "test", false),
+		Entry("should be true as pointer value is equal", pointer.StringPtr("test"), "test", true),
 	)
 })

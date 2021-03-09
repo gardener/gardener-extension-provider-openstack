@@ -26,7 +26,8 @@ type InfrastructureConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// FloatingPoolName contains the FloatingPoolName name in which LoadBalancer FIPs should be created.
 	FloatingPoolName string `json:"floatingPoolName"`
-	// FloatingPoolSubnetName contains the name of a subnet in the Floating IP Pool where the router should be attached to.
+	// FloatingPoolSubnetName contains the fixed name of subnet or matching name pattern for subnet
+	// in the Floating IP Pool where the router should be attached to.
 	// +optional
 	FloatingPoolSubnetName *string `json:"floatingPoolSubnetName,omitempty"`
 	// Networks is the OpenStack specific network configuration
@@ -94,9 +95,6 @@ type FloatingPoolStatus struct {
 	ID string `json:"id"`
 	// Name is the floating pool name.
 	Name string `json:"name"`
-	// SubnetID is the id of floating pool subnet.
-	// +optional
-	SubnetID *string `json:"subnetID,omitempty"`
 }
 
 // Purpose is a purpose of a resource.

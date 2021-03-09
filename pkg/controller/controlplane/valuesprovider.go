@@ -461,22 +461,8 @@ func getConfigChartValues(
 	}
 
 	if cpConfig.LoadBalancerClasses == nil {
-		var fallback *api.FloatingPool
-
-		for _, pool := range cloudProfileConfig.Constraints.FloatingPools {
-			if pool.Region == nil && fallback == nil && pool.Name == infraStatus.Networks.FloatingPool.Name {
-				v := pool
-				fallback = &v
-			}
-
-			if pool.Region != nil && *pool.Region == cp.Spec.Region && pool.Name == infraStatus.Networks.FloatingPool.Name {
-				cpConfig.LoadBalancerClasses = pool.LoadBalancerClasses
-				break
-			}
-		}
-
-		if cpConfig.LoadBalancerClasses == nil && fallback != nil {
-			cpConfig.LoadBalancerClasses = fallback.LoadBalancerClasses
+		if floatingPool, err := helper.FindFloatingPool(cloudProfileConfig.Constraints.FloatingPools, infraStatus.Networks.FloatingPool.Name, cp.Spec.Region, nil); err == nil {
+			cpConfig.LoadBalancerClasses = floatingPool.LoadBalancerClasses
 		}
 	}
 

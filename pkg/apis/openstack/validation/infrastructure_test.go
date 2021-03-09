@@ -157,6 +157,30 @@ var _ = Describe("InfrastructureConfig validation", func() {
 				"Field": Equal("networks"),
 			}))))
 		})
+
+		It("should forbid changing the floating pool", func() {
+			newInfrastructureConfig := infrastructureConfig.DeepCopy()
+			newInfrastructureConfig.FloatingPoolName = "test"
+
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("floatingPoolName"),
+			}))))
+		})
+
+		It("should forbid changing the floating pool subnet", func() {
+			newInfrastructureConfig := infrastructureConfig.DeepCopy()
+			newInfrastructureConfig.FloatingPoolSubnetName = pointer.StringPtr("test")
+
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("floatingPoolSubnetName"),
+			}))))
+		})
 	})
 
 	Describe("#ValidateInfrastructureConfigAgainstCloudProfile", func() {

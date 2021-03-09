@@ -25,6 +25,11 @@ func IsEmptyString(s *string) bool {
 	return s == nil || *s == ""
 }
 
+// IsStringPtrValueEqual checks whether the value of string pointer `a` is equal to value of string `b`.
+func IsStringPtrValueEqual(a *string, b string) bool {
+	return a != nil && *a == b
+}
+
 // StringValue returns an empty string (value/ptr)
 func StringValue(s *string) string {
 	if s == nil {

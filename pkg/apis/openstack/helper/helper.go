@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 // FindSubnetByPurpose takes a list of subnets and tries to find the first entry
@@ -107,4 +108,71 @@ func FindKeyStoneURL(keyStoneURLs []api.KeyStoneURL, keystoneURL, region string)
 	}
 
 	return "", fmt.Errorf("cannot find keystone URL for region %q", region)
+}
+
+// FindFloatingPool receives a list of floating pools and tries to find the best
+// match for a given `floatingPoolNamePattern` considering constraints like
+// `region` and `domain`. If no matching floating pool was found then an error will be returned.
+func FindFloatingPool(floatingPools []api.FloatingPool, floatingPoolNamePattern, region string, domain *string) (*api.FloatingPool, error) {
+	var (
+		floatingPoolCandidate        *api.FloatingPool
+		maxCandidateScore            int
+		nonConstrainingFloatingPools []api.FloatingPool
+	)
+
+	for _, f := range floatingPools {
+		var fip = f
+
+		// Check non constraining floating pools with second priority
+		// which means only when no other floating pool is matching.
+		if fip.NonConstraining != nil && *fip.NonConstraining {
+			nonConstrainingFloatingPools = append(nonConstrainingFloatingPools, fip)
+			continue
+		}
+
+		if candidate, score := checkFloatingPoolCandidate(&fip, floatingPoolNamePattern, region, domain); candidate != nil && score > maxCandidateScore {
+			floatingPoolCandidate = candidate
+			maxCandidateScore = score
+		}
+	}
+
+	if floatingPoolCandidate != nil {
+		return floatingPoolCandidate, nil
+	}
+
+	// So far no floating pool was matching to the `floatingPoolNamePattern`
+	// therefore try now if there is a non contraining floating pool matching.
+	for _, f := range nonConstrainingFloatingPools {
+		var fip = f
+		if candidate, score := checkFloatingPoolCandidate(&fip, floatingPoolNamePattern, region, domain); candidate != nil && score > maxCandidateScore {
+			floatingPoolCandidate = candidate
+			maxCandidateScore = score
+		}
+	}
+
+	if floatingPoolCandidate != nil {
+		return floatingPoolCandidate, nil
+	}
+
+	return nil, fmt.Errorf("cannot find a matching floating pool for pattern %q", floatingPoolNamePattern)
+}
+
+func checkFloatingPoolCandidate(floatingPool *api.FloatingPool, floatingPoolNamePattern, region string, domain *string) (*api.FloatingPool, int) {
+	// If the domain should be considered then only floating pools
+	// in the same domain will be considered.
+	if domain != nil && !utils.IsStringPtrValueEqual(floatingPool.Domain, *domain) {
+		return nil, 0
+	}
+
+	// Require floating pools are in the same region.
+	if !utils.IsStringPtrValueEqual(floatingPool.Region, region) {
+		return nil, 0
+	}
+
+	// Check that the name of the current floatingPool is matching to the `floatingPoolNamePattern`.
+	if isMatching, score := utils.SimpleMatch(floatingPool.Name, floatingPoolNamePattern); isMatching {
+		return floatingPool, score
+	}
+
+	return nil, 0
 }

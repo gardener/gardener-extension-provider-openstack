@@ -18,13 +18,10 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"k8s.io/utils/pointer"
-
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	"github.com/gardener/gardener/extensions/pkg/controller"
 
+	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -32,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Terraform", func() {
@@ -41,7 +39,6 @@ var _ = Describe("Terraform", func() {
 		cloudProfileConfigJSON []byte
 		config                 *api.InfrastructureConfig
 		cluster                *controller.Cluster
-		credentials            *openstack.Credentials
 
 		keystoneURL = "foo-bar.com"
 		dnsServers  = []string{"a", "b"}
@@ -106,8 +103,6 @@ var _ = Describe("Terraform", func() {
 				},
 			},
 		}
-
-		credentials = &openstack.Credentials{Username: "user", Password: "secret"}
 	})
 
 	Describe("#ComputeTerraformerChartValues", func() {
@@ -122,8 +117,6 @@ var _ = Describe("Terraform", func() {
 		BeforeEach(func() {
 			expectedOpenStackValues = map[string]interface{}{
 				"authURL":          keystoneURL,
-				"domainName":       credentials.DomainName,
-				"tenantName":       credentials.TenantName,
 				"region":           infra.Spec.Region,
 				"floatingPoolName": config.FloatingPoolName,
 			}
@@ -148,7 +141,7 @@ var _ = Describe("Terraform", func() {
 		})
 
 		It("should correctly compute the terraformer chart values", func() {
-			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
+			values, err := ComputeTerraformerChartValues(infra, config, cluster)
 			Expect(err).To(BeNil())
 
 			Expect(values).To(Equal(map[string]interface{}{
@@ -173,7 +166,7 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["enableSNAT"] = true
 
-			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
+			values, err := ComputeTerraformerChartValues(infra, config, cluster)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,
@@ -197,7 +190,7 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["floatingPoolSubnet"] = fipSubnetID
 
-			values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
+			values, err := ComputeTerraformerChartValues(infra, config, cluster)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,

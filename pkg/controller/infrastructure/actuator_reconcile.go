@@ -40,12 +40,7 @@ func (a *actuator) reconcile(ctx context.Context, logger logr.Logger, infra *ext
 		return err
 	}
 
-	creds, err := infrastructure.GetCredentialsFromInfrastructure(ctx, a.Client(), infra)
-	if err != nil {
-		return err
-	}
-
-	terraformFiles, err := infrastructure.RenderTerraformerChart(a.ChartRenderer(), infra, creds, config, cluster)
+	terraformFiles, err := infrastructure.RenderTerraformerChart(a.ChartRenderer(), infra, config, cluster)
 	if err != nil {
 		return err
 	}

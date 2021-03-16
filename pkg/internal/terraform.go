@@ -29,6 +29,10 @@ import (
 )
 
 const (
+	// TerraformVarNameDomainName maps to terraform internal var representation.
+	TerraformVarNameDomainName = "TF_VAR_DOMAIN_NAME"
+	// TerraformVarNameProjectName maps to terraform internal var representation.
+	TerraformVarNameProjectName = "TF_VAR_TENANT_NAME"
 	// TerraformVarNameUserName maps to terraform internal var representation.
 	TerraformVarNameUserName = "TF_VAR_USER_NAME"
 	// TerraformVarNamePassword maps to terraform internal var representation.
@@ -38,6 +42,22 @@ const (
 // TerraformerEnvVars computes the Terraformer environment variables from the given secret reference.
 func TerraformerEnvVars(secretRef corev1.SecretReference) []corev1.EnvVar {
 	return []corev1.EnvVar{{
+		Name: TerraformVarNameDomainName,
+		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretRef.Name,
+			},
+			Key: openstack.DomainName,
+		}},
+	}, {
+		Name: TerraformVarNameProjectName,
+		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretRef.Name,
+			},
+			Key: openstack.TenantName,
+		}},
+	}, {
 		Name: TerraformVarNameUserName,
 		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{

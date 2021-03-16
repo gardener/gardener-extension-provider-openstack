@@ -1,7 +1,7 @@
 provider "openstack" {
   auth_url    = "{{ required "openstack.authURL is required" .Values.openstack.authURL }}"
-  domain_name = "{{ required "openstack.domainName is required" .Values.openstack.domainName }}"
-  tenant_name = "{{ required "openstack.tenantName is required" .Values.openstack.tenantName }}"
+  domain_name = var.DOMAIN_NAME
+  tenant_name = var.TENANT_NAME
   region      = "{{ required "openstack.region is required" .Values.openstack.region }}"
   user_name   = var.USER_NAME
   password    = var.PASSWORD

@@ -22,11 +22,10 @@ import (
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstacktypes "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +61,6 @@ var StatusTypeMeta = metav1.TypeMeta{
 // ComputeTerraformerChartValues computes the values for the OpenStack Terraformer chart.
 func ComputeTerraformerChartValues(
 	infra *extensionsv1alpha1.Infrastructure,
-	credentials *openstack.Credentials,
 	config *api.InfrastructureConfig,
 	cluster *controller.Cluster,
 ) (map[string]interface{}, error) {
@@ -114,8 +112,6 @@ func ComputeTerraformerChartValues(
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
 			"authURL":          keyStoneURL,
-			"domainName":       credentials.DomainName,
-			"tenantName":       credentials.TenantName,
 			"region":           infra.Spec.Region,
 			"floatingPoolName": config.FloatingPoolName,
 		},
@@ -155,11 +151,10 @@ func findFloatingSubnet(isRouterRequired bool, config *api.InfrastructureConfig,
 func RenderTerraformerChart(
 	renderer chartrenderer.Interface,
 	infra *extensionsv1alpha1.Infrastructure,
-	credentials *openstack.Credentials,
 	config *api.InfrastructureConfig,
 	cluster *controller.Cluster,
 ) (*TerraformFiles, error) {
-	values, err := ComputeTerraformerChartValues(infra, credentials, config, cluster)
+	values, err := ComputeTerraformerChartValues(infra, config, cluster)
 	if err != nil {
 		return nil, err
 	}

@@ -91,8 +91,14 @@ type KeyStoneURL struct {
 type LoadBalancerClass struct {
 	// Name is the name of the LB class
 	Name string
+	// Purpose is reflecting if the loadbalancer class has a special purpose e.g. default, internal.
+	Purpose *string
 	// FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.
 	FloatingSubnetID *string
+	// FloatingSubnetTags is a list of tags which can be used to select subnets in the floating network pool.
+	FloatingSubnetTags *string
+	// FloatingSubnetName is can either be a name or a name pattern of a subnet in the floating network pool.
+	FloatingSubnetName *string
 	// FloatingNetworkID is the network ID of the floating network pool.
 	FloatingNetworkID *string
 	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
@@ -102,8 +108,17 @@ type LoadBalancerClass struct {
 
 func (in LoadBalancerClass) String() string {
 	result := fmt.Sprintf("Name: %q", in.Name)
+	if in.Purpose != nil {
+		result += fmt.Sprintf(", Purpose: %q", *in.Purpose)
+	}
 	if in.FloatingSubnetID != nil {
 		result += fmt.Sprintf(", FloatingSubnetID: %q", *in.FloatingSubnetID)
+	}
+	if in.FloatingSubnetTags != nil {
+		result += fmt.Sprintf(", FloatingSubnetTags: %q", *in.FloatingSubnetTags)
+	}
+	if in.FloatingSubnetName != nil {
+		result += fmt.Sprintf(", FloatingSubnetName: %q", *in.FloatingSubnetName)
 	}
 	if in.FloatingNetworkID != nil {
 		result += fmt.Sprintf(", FloatingNetworkID: %q", *in.FloatingNetworkID)

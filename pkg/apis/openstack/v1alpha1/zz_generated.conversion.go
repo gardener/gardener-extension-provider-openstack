@@ -548,7 +548,10 @@ func Convert_openstack_KeyStoneURL_To_v1alpha1_KeyStoneURL(in *openstack.KeySton
 
 func autoConvert_v1alpha1_LoadBalancerClass_To_openstack_LoadBalancerClass(in *LoadBalancerClass, out *openstack.LoadBalancerClass, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
 	out.FloatingSubnetID = (*string)(unsafe.Pointer(in.FloatingSubnetID))
+	out.FloatingSubnetTags = (*string)(unsafe.Pointer(in.FloatingSubnetTags))
+	out.FloatingSubnetName = (*string)(unsafe.Pointer(in.FloatingSubnetName))
 	out.FloatingNetworkID = (*string)(unsafe.Pointer(in.FloatingNetworkID))
 	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
 	return nil
@@ -561,7 +564,10 @@ func Convert_v1alpha1_LoadBalancerClass_To_openstack_LoadBalancerClass(in *LoadB
 
 func autoConvert_openstack_LoadBalancerClass_To_v1alpha1_LoadBalancerClass(in *openstack.LoadBalancerClass, out *LoadBalancerClass, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
 	out.FloatingSubnetID = (*string)(unsafe.Pointer(in.FloatingSubnetID))
+	out.FloatingSubnetTags = (*string)(unsafe.Pointer(in.FloatingSubnetTags))
+	out.FloatingSubnetName = (*string)(unsafe.Pointer(in.FloatingSubnetName))
 	out.FloatingNetworkID = (*string)(unsafe.Pointer(in.FloatingNetworkID))
 	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
 	return nil

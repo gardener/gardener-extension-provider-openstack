@@ -754,6 +754,18 @@ string
 </tr>
 <tr>
 <td>
+<code>purpose</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is reflecting if the loadbalancer class has a special purpose e.g. default, internal.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>floatingSubnetID</code></br>
 <em>
 string
@@ -762,6 +774,30 @@ string
 <td>
 <em>(Optional)</em>
 <p>FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>floatingSubnetTags</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FloatingSubnetTags is a list of tags which can be used to select subnets in the floating network pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>floatingSubnetName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FloatingSubnetName is can either be a name or a name pattern of a subnet in the floating network pool.</p>
 </td>
 </tr>
 <tr>

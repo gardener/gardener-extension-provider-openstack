@@ -19,6 +19,7 @@ import (
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -348,4 +349,34 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 		})
 	})
+})
+
+var _ = Describe("LoadBalancerClass validation", func() {
+	DescribeTable("LoadBalancerClass",
+		func(lbClass api.LoadBalancerClass, expectError bool) {
+			errorList := ValidateLoadBalancerClasses(lbClass, field.NewPath("loadBalancerClassTest"))
+			if !expectError {
+				Expect(errorList).To(BeEmpty())
+			}
+		},
+		Entry("pass as LoadBalancerClass class is valid", api.LoadBalancerClass{Name: "A"}, false),
+		Entry("fail as LoadBalancerClass has invalid purpose", api.LoadBalancerClass{Purpose: pointer.StringPtr("invalid")}, true),
+		Entry("fail as LoadBalancerClass specifies floating subnet by id, name and tags in parallel", api.LoadBalancerClass{
+			FloatingSubnetID:   pointer.StringPtr("floating-subnet-id"),
+			FloatingSubnetName: pointer.StringPtr("floating-subnet-name"),
+			FloatingSubnetTags: pointer.StringPtr("floating-subnet-tags"),
+		}, true),
+		Entry("fail as LoadBalancerClass specifies floating subnet by id and name", api.LoadBalancerClass{
+			FloatingSubnetID:   pointer.StringPtr("floating-subnet-id"),
+			FloatingSubnetName: pointer.StringPtr("floating-subnet-name"),
+		}, true),
+		Entry("fail as LoadBalancerClass specifies floating subnet by id and tags", api.LoadBalancerClass{
+			FloatingSubnetID:   pointer.StringPtr("floating-subnet-id"),
+			FloatingSubnetTags: pointer.StringPtr("floating-subnet-tags"),
+		}, true),
+		Entry("fail as LoadBalancerClass specifies floating subnet by name and tags", api.LoadBalancerClass{
+			FloatingSubnetName: pointer.StringPtr("floating-subnet-id"),
+			FloatingSubnetTags: pointer.StringPtr("floating-subnet-tags"),
+		}, true),
+	)
 })

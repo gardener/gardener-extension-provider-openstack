@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 
+	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -50,6 +51,7 @@ type validationContext struct {
 	cpConfig           *api.ControlPlaneConfig
 	cloudProfile       *gardencorev1beta1.CloudProfile
 	cloudProfileConfig *api.CloudProfileConfig
+	shootVersion       *semver.Version
 }
 
 var (
@@ -107,7 +109,7 @@ func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, do
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, domain, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.shootVersion, valContext.cloudProfileConfig, cpConfigPath)...)
 	allErrs = append(allErrs, s.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
@@ -142,7 +144,7 @@ func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 		oldCpConfig.Zone != cpConfig.Zone ||
 		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) ||
 		oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
-		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
+		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.shootVersion, valContext.cloudProfileConfig, cpConfigPath)...)
 	}
 
 	if errList := openstackvalidation.ValidateWorkersUpdate(oldValContext.shoot.Spec.Provider.Workers, valContext.shoot.Spec.Provider.Workers, workersPath); len(errList) > 0 {
@@ -157,7 +159,7 @@ func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, cpConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.shootVersion, cpConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateWorkers(context.shoot.Spec.Provider.Workers, context.cloudProfileConfig, workersPath)...)
 	return allErrs
 }
@@ -192,11 +194,17 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 		return nil, fmt.Errorf("an error occurred while reading the cloud profile %q: %v", cloudProfile.Name, err)
 	}
 
+	k8sVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+
 	return &validationContext{
 		shoot:              shoot,
 		infraConfig:        infraConfig,
 		cpConfig:           cpConfig,
 		cloudProfile:       cloudProfile,
 		cloudProfileConfig: cloudProfileConfig,
+		shootVersion:       k8sVersion,
 	}, nil
 }

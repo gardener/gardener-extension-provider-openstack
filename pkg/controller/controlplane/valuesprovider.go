@@ -378,6 +378,16 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig, userAgentHeaders)
 }
 
+// GetControlPlaneShootCRDsChartValues returns the values for the control plane shoot CRDs chart applied by the generic actuator.
+// Currently the provider extension does not specify a control plane shoot CRDs chart. That's why we simply return empty values.
+func (vp *valuesProvider) GetControlPlaneShootCRDsChartValues(
+	_ context.Context,
+	_ *extensionsv1alpha1.ControlPlane,
+	_ *extensionscontroller.Cluster,
+) (map[string]interface{}, error) {
+	return map[string]interface{}{}, nil
+}
+
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
 func (vp *valuesProvider) GetStorageClassesChartValues(
 	_ context.Context,

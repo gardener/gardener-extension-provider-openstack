@@ -20,25 +20,24 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
-	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
 	"github.com/Masterminds/semver"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -46,7 +45,7 @@ import (
 // Builder is an object that builds Shoot objects.
 type Builder struct {
 	shootObjectFunc  func(context.Context) (*gardencorev1beta1.Shoot, error)
-	cloudProfileFunc func(string) (*gardencorev1beta1.CloudProfile, error)
+	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
 	shootSecretFunc  func(context.Context, client.Client, string, string) (*corev1.Secret, error)
 	projectName      string
 	internalDomain   *garden.Domain
@@ -79,14 +78,8 @@ type Shoot struct {
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 
-	Components *Components
-
-	Extensions           map[string]extension.Extension
-	InfrastructureStatus []byte
-
+	Components     *Components
 	ETCDEncryption *etcdencryption.EncryptionConfig
-
-	ResourceRefs map[string]autoscalingv1.CrossVersionObjectReference
 }
 
 // Components contains different components deployed in the Shoot cluster.

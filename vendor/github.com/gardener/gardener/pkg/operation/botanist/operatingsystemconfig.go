@@ -19,13 +19,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/executor"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -44,7 +45,7 @@ import (
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig(seedClient client.Client) (operatingsystemconfig.Interface, error) {
-	images, err := imagevector.FindImages(b.ImageVector, []string{common.HyperkubeImageName, common.PauseContainerImageName}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	images, err := imagevector.FindImages(b.ImageVector, []string{charts.ImageNameHyperkube, charts.ImageNamePauseContainer}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	}
 	bootstrapToken := kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data)
 
-	imagesMap, err := imagevector.FindImages(b.ImageVector, []string{common.HyperkubeImageName}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imagesMap, err := imagevector.FindImages(b.ImageVector, []string{charts.ImageNameHyperkube}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return err
 	}

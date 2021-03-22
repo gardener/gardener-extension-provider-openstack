@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -81,7 +82,7 @@ func NewBuilder() *Builder {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 		chartsRootPathFunc: func() string {
-			return common.ChartPath
+			return charts.Path
 		},
 	}
 }
@@ -174,12 +175,12 @@ func (b *Builder) WithChartsRootPath(chartsRootPath string) *Builder {
 }
 
 // WithShootFrom sets the shootFunc attribute at the Builder which will build a new Shoot object.
-func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, s *gardencorev1beta1.Shoot) *Builder {
+func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, gardenClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
 		return shoot.
 			NewBuilder().
 			WithShootObject(s).
-			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
+			WithCloudProfileObjectFromReader(gardenClient.APIReader()).
 			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
 			WithProjectName(gardenObj.Project.Name).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
@@ -194,10 +195,12 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(k8sGardenCoreInformers gardencoreinformers.Interface, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
+		shootNamespace := shoot.ComputeTechnicalID(gardenObj.Project.Name, s)
+
 		shoot, err := shoot.
 			NewBuilder().
-			WithShootObjectFromCluster(seedClient, shoot.ComputeTechnicalID(gardenObj.Project.Name, s)).
-			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
+			WithShootObjectFromCluster(seedClient, shootNamespace).
+			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
 			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
 			WithProjectName(gardenObj.Project.Name).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
@@ -284,11 +287,28 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Shoot = shoot
 
-	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+	// Get the ManagedSeed object for this shoot, if it exists.
+	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
+	operation.ManagedSeed, err = kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.Info.Namespace, shoot.Info.Name)
 	if err != nil {
-		logger.Warnf("Cannot use shoot %s/%s as shooted seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
-	} else {
-		operation.ShootedSeed = shootedSeed
+		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.Info.Namespace, shoot.Info.Name, err)
+	}
+	operation.ManagedSeedAPIServer, err = gardencorev1beta1helper.ReadManagedSeedAPIServer(shoot.Info)
+	if err != nil {
+		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+	}
+
+	// If the managed-seed-api-server annotation is not present, try to read the managed seed API server settings
+	// from the use-as-seed annotation. This is done to avoid re-annotating a shoot annotated with the use-as-seed annotation
+	// by the shooted seed registration controller.
+	if operation.ManagedSeedAPIServer == nil {
+		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+		if err != nil {
+			return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+		}
+		if shootedSeed != nil {
+			operation.ManagedSeedAPIServer = shootedSeed.APIServer
+		}
 	}
 
 	operation.ChartsRootPath = b.chartsRootPathFunc()

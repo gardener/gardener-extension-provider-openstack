@@ -53,5 +53,5 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   github.com/gardener/gardener-extension-provider-openstack/pkg/apis \
   github.com/gardener/gardener-extension-provider-openstack/pkg/apis \
   "config:v1alpha1" \
-  --extra-peer-dirs=github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config,github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime, github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1 \
+  --extra-peer-dirs=github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config,github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1 \
   --go-header-file "${PROJECT_ROOT}/vendor/github.com/gardener/gardener/hack/LICENSE_BOILERPLATE.txt"

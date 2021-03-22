@@ -18,16 +18,17 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -83,9 +84,9 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 }
 
 var vpaSecrets = map[string]string{
-	common.VpaAdmissionControllerImageName: common.VpaAdmissionControllerName,
-	common.VpaRecommenderImageName:         common.VpaRecommenderName,
-	common.VpaUpdaterImageName:             common.VpaUpdaterName,
+	charts.ImageNameVpaAdmissionController: common.VpaAdmissionControllerName,
+	charts.ImageNameVpaRecommender:         common.VpaRecommenderName,
+	charts.ImageNameVpaUpdater:             common.VpaUpdaterName,
 }
 
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {

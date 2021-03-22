@@ -11,6 +11,12 @@ use-octavia="{{ .Values.useOctavia }}"
 {{- if .Values.floatingSubnetID }}
 floating-subnet-id="{{ .Values.floatingSubnetID }}"
 {{- end }}
+{{- if .Values.floatingSubnetName }}
+floating-subnet="{{ .Values.floatingSubnetName }}"
+{{- end }}
+{{- if .Values.floatingSubnetTags }}
+floating-subnet-tags="{{ .Values.floatingSubnetTags }}"
+{{- end }}
 {{- if .Values.subnetID }}
 subnet-id="{{ .Values.subnetID }}"
 {{- end }}
@@ -22,6 +28,12 @@ floating-network-id="{{ $class.floatingNetworkID }}"
 {{- end }}
 {{- if $class.floatingSubnetID }}
 floating-subnet-id="{{ $class.floatingSubnetID }}"
+{{- end }}
+{{- if $class.floatingSubnetName }}
+floating-subnet="{{ $class.floatingSubnetName }}"
+{{- end }}
+{{- if $class.floatingSubnetTags }}
+floating-subnet-tags="{{ $class.floatingSubnetTags }}"
 {{- end }}
 {{- if $class.subnetID }}
 subnet-id="{{ $class.subnetID }}"

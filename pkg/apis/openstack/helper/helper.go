@@ -19,7 +19,13 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+
+	"github.com/Masterminds/semver"
 )
+
+// K8sVersionV121 represents the Kubernetes v1.21.0 version.
+var K8sVersionV121 = semver.MustParse("v1.21.0")
 
 // FindSubnetByPurpose takes a list of subnets and tries to find the first entry
 // whose purpose matches with the given purpose. If no such entry is found then an error will be
@@ -175,4 +181,37 @@ func checkFloatingPoolCandidate(floatingPool *api.FloatingPool, floatingPoolName
 	}
 
 	return nil, 0
+}
+
+// FilterLoadBalancerClassByVersionContraints filters a given list of load balancer classes
+// to consider the only usable load balancer classes with version compatible features
+// based on a given kubernetes version.
+func FilterLoadBalancerClassByVersionContraints(lbClasses []api.LoadBalancerClass, version *semver.Version) []api.LoadBalancerClass {
+	var (
+		usableLoadBalancerClasses = []api.LoadBalancerClass{}
+		lessThenK8sV121           = version.LessThan(K8sVersionV121)
+	)
+
+	for _, lbClass := range lbClasses {
+		if lessThenK8sV121 && (lbClass.FloatingSubnetName != nil || lbClass.FloatingSubnetTags != nil) {
+			continue
+		}
+		lbClassRef := lbClass
+		usableLoadBalancerClasses = append(usableLoadBalancerClasses, lbClassRef)
+	}
+
+	return usableLoadBalancerClasses
+}
+
+// DetermineShootVersionFromCluster receives a cluster resource and determine the
+// Shoot version out of it. If it can't be determined an error will be returned.
+func DetermineShootVersionFromCluster(cluster *extensionscontroller.Cluster) (*semver.Version, error) {
+	if cluster == nil || cluster.Shoot == nil {
+		return nil, fmt.Errorf("cluster or shoot object in cluster is empty")
+	}
+	version, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+	return version, nil
 }

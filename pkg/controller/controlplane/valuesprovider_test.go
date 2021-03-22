@@ -285,20 +285,23 @@ var _ = Describe("ValuesProvider", func() {
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 			var (
-				floatingNetworkID = "4711"
-				fsid              = "0815"
-				floatingSubnetID2 = "pub0815"
-				subnetID          = "priv"
-				floatingSubnetID  = "default-floating-subnet-id"
-				cp                = controlPlane(
+				floatingNetworkID  = "4711"
+				fsid               = "0815"
+				floatingSubnetID2  = "pub0815"
+				floatingSubnetName = "*public*"
+				floatingSubnetTags = "tag1,tag2"
+				subnetID           = "priv"
+				floatingSubnetID   = "default-floating-subnet-id"
+				cp                 = controlPlane(
 					floatingNetworkID,
 					&api.ControlPlaneConfig{
 						LoadBalancerProvider: "load-balancer-provider",
 						LoadBalancerClasses: []api.LoadBalancerClass{
 							{
-								Name:             "test",
-								FloatingSubnetID: &fsid,
-								SubnetID:         nil,
+								Name:              "test",
+								FloatingNetworkID: &floatingNetworkID,
+								FloatingSubnetID:  &fsid,
+								SubnetID:          nil,
 							},
 							{
 								Name:             "default",
@@ -309,6 +312,14 @@ var _ = Describe("ValuesProvider", func() {
 								Name:             "public",
 								FloatingSubnetID: &floatingSubnetID2,
 								SubnetID:         nil,
+							},
+							{
+								Name:               "fip-subnet-by-name",
+								FloatingSubnetName: &floatingSubnetName,
+							},
+							{
+								Name:               "fip-subnet-by-tags",
+								FloatingSubnetTags: &floatingSubnetTags,
 							},
 							{
 								Name:     "other",
@@ -323,7 +334,7 @@ var _ = Describe("ValuesProvider", func() {
 					},
 				)
 
-				configValues = utils.MergeMaps(configChartValues, map[string]interface{}{
+				expectedValues = utils.MergeMaps(configChartValues, map[string]interface{}{
 					"floatingNetworkID": floatingNetworkID,
 					"floatingSubnetID":  floatingSubnetID,
 					"floatingClasses": []map[string]interface{}{
@@ -333,14 +344,20 @@ var _ = Describe("ValuesProvider", func() {
 							"floatingSubnetID":  fsid,
 						},
 						{
-							"name":              "default",
-							"floatingNetworkID": floatingNetworkID,
-							"floatingSubnetID":  floatingSubnetID,
+							"name":             "default",
+							"floatingSubnetID": floatingSubnetID,
 						},
 						{
-							"name":              "public",
-							"floatingNetworkID": floatingNetworkID,
-							"floatingSubnetID":  floatingSubnetID2,
+							"name":             "public",
+							"floatingSubnetID": floatingSubnetID2,
+						},
+						{
+							"name":               "fip-subnet-by-name",
+							"floatingSubnetName": floatingSubnetName,
+						},
+						{
+							"name":               "fip-subnet-by-tags",
+							"floatingSubnetTags": floatingSubnetTags,
 						},
 						{
 							"name":     "other",
@@ -352,7 +369,56 @@ var _ = Describe("ValuesProvider", func() {
 
 			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sLessThan119)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(values).To(Equal(configValues))
+			Expect(values).To(Equal(expectedValues))
+		})
+
+		It("should return correct config chart values with load balancer classes with purpose", func() {
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+
+			var (
+				floatingNetworkID = "fip1"
+				cp                = controlPlane(
+					floatingNetworkID,
+					&api.ControlPlaneConfig{
+						LoadBalancerProvider: "load-balancer-provider",
+						LoadBalancerClasses: []api.LoadBalancerClass{
+							{
+								Name:             "default",
+								FloatingSubnetID: pointer.StringPtr("fip-subnet-1"),
+							},
+							{
+								Name:             "real-default",
+								FloatingSubnetID: pointer.StringPtr("fip-subnet-2"),
+								Purpose:          pointer.StringPtr("default"),
+							},
+						},
+						CloudControllerManager: &api.CloudControllerManagerConfig{
+							FeatureGates: map[string]bool{
+								"CustomResourceValidation": true,
+							},
+						},
+					},
+				)
+
+				expectedValues = utils.MergeMaps(configChartValues, map[string]interface{}{
+					"floatingNetworkID": floatingNetworkID,
+					"floatingSubnetID":  "fip-subnet-2",
+					"floatingClasses": []map[string]interface{}{
+						{
+							"name":             "default",
+							"floatingSubnetID": "fip-subnet-1",
+						},
+						{
+							"name":             "real-default",
+							"floatingSubnetID": "fip-subnet-2",
+						},
+					},
+				})
+			)
+
+			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sLessThan119)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(expectedValues))
 		})
 	})
 

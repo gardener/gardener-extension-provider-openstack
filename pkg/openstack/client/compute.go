@@ -20,12 +20,32 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 )
 
+const (
+	ServerGroupPolicyAntiAffinity = "anti-affinity"
+	ServerGroupPolicyAffinity     = "affinity"
+
+	// softPolicyMicroversion defines the minimum API microversion for Nova that can support soft-* policy variants for server groups.
+	// We set the minimum supported microversion, since later versions (>=2.64) have non-backwards-compatible changes forcing the use of
+	// a new field to set the policy.
+	//
+	// See:
+	// https://docs.openstack.org/api-guide/compute/microversions.html
+	// https://docs.openstack.org/api-ref/compute/?expanded=create-server-group-detail#create-server-group
+	softPolicyMicroversion = "2.15"
+)
+
 // CreateServerGroup creates a server group with the specified policy.
 func (c *ComputeClient) CreateServerGroup(name, policy string) (*servergroups.ServerGroup, error) {
-	return servergroups.Create(c.client, servergroups.CreateOpts{
+	if policy != ServerGroupPolicyAffinity && policy != ServerGroupPolicyAntiAffinity {
+		c.client.Microversion = softPolicyMicroversion
+	}
+
+	createOpts := servergroups.CreateOpts{
 		Name:     name,
 		Policies: []string{policy},
-	}).Extract()
+	}
+
+	return servergroups.Create(c.client, createOpts).Extract()
 }
 
 // GetServerGroup retrieves the server group with the specified id.

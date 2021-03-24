@@ -19,6 +19,8 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -126,7 +128,7 @@ var _ = Describe("Shoot validation", func() {
 
 				BeforeEach(func() {
 					cloudProfileConfig = &openstack.CloudProfileConfig{
-						ServerGroupPolicies: []string{"foo", "bar", openstack.ServerGroupPolicyAffinity},
+						ServerGroupPolicies: []string{"foo", "bar", openstackclient.ServerGroupPolicyAffinity},
 					}
 				})
 
@@ -204,7 +206,7 @@ var _ = Describe("Shoot validation", func() {
 				It("should not allow hard affinity policy with multiple availability zones", func() {
 					providerConfig := &openstack.WorkerConfig{
 						ServerGroup: &openstack.ServerGroup{
-							Policy: openstack.ServerGroupPolicyAffinity,
+							Policy: openstackclient.ServerGroupPolicyAffinity,
 						},
 					}
 

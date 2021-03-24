@@ -19,6 +19,8 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -112,8 +114,8 @@ func validateWorkerConfig(parent *field.Path, worker *core.Worker, workerConfig 
 		return allErrs
 	}
 
-	if len(worker.Zones) > 1 && workerConfig.ServerGroup.Policy == api.ServerGroupPolicyAffinity {
-		allErrs = append(allErrs, field.Forbidden(parent.Child("serverGroup", "policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", api.ServerGroupPolicyAffinity)))
+	if len(worker.Zones) > 1 && workerConfig.ServerGroup.Policy == openstackclient.ServerGroupPolicyAffinity {
+		allErrs = append(allErrs, field.Forbidden(parent.Child("serverGroup", "policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", openstackclient.ServerGroupPolicyAffinity)))
 	}
 
 	return allErrs

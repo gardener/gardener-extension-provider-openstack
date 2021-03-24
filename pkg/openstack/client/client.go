@@ -98,14 +98,6 @@ func (oc *OpenstackClientFactory) Storage(options ...Option) (Storage, error) {
 	}, nil
 }
 
-type serviceVersion struct {
-	Version struct {
-		Version    string `json:"version"`
-		Status     string `json:"status"`
-		MinVersion string `json:"min_version"`
-	} `json:"version"`
-}
-
 // Compute returns a Compute client. The client uses Nova v2 API for issuing calls.
 func (oc *OpenstackClientFactory) Compute(options ...Option) (Compute, error) {
 	eo := gophercloud.EndpointOpts{}
@@ -117,17 +109,6 @@ func (oc *OpenstackClientFactory) Compute(options ...Option) (Compute, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// discover the latest microversion of the API and set it on the client.
-	// this is necessary for the creating servergroups with "soft-anti-affinity" policy. Soft variants of affinity policies,
-	// are only supported in >=2.1 version of Compute API.
-	// https://docs.openstack.org/api-guide/compute/microversions.html
-	version := serviceVersion{}
-	_, err = client.Get(client.ResourceBaseURL(), &version, nil)
-	if err != nil {
-		return nil, err
-	}
-	client.Microversion = version.Version.Version
 
 	return &ComputeClient{
 		client: client,

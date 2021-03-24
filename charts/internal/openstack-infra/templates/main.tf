@@ -89,6 +89,16 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
   security_group_id = openstack_networking_secgroup_v2.cluster.id
 }
 
+resource "openstack_networking_secgroup_rule_v2" "cluster_udp_all" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "udp"
+  port_range_min    = 1
+  port_range_max    = 65535
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.cluster.id
+}
+
 //=====================================================================
 //= SSH Key for Nodes (Bastion and Worker)
 //=====================================================================

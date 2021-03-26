@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -30,11 +31,11 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
-	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -63,7 +64,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
+var chartPathControlPlane = filepath.Join(charts.Path, "seed-controlplane", "charts")
 
 // EnsureClusterIdentity ensures that Shoot cluster-identity ConfigMap exists and stores its data
 // in the operation. Updates shoot.status.clusterIdentity if it doesn't exist already.
@@ -196,13 +197,13 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		}
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues, common.VpaAdmissionControllerImageName, common.VpaExporterImageName, common.VpaRecommenderImageName, common.VpaUpdaterImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, charts.ImageNameVpaAdmissionController, charts.ImageNameVpaExporter, charts.ImageNameVpaRecommender, charts.ImageNameVpaUpdater)
 	if err != nil {
 		return err
 	}
 	values["global"] = map[string]interface{}{"images": values["images"]}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
 }
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
@@ -367,9 +368,7 @@ func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensi
 
 // DeployControlPlane deploys or restores the ControlPlane custom resource (purpose normal).
 func (b *Botanist) DeployControlPlane(ctx context.Context) error {
-	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(&runtime.RawExtension{
-		Raw: b.Shoot.InfrastructureStatus,
-	})
+	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlane)
 }
 
@@ -476,7 +475,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		values      = map[string]interface{}{}
 	)
 
-	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { //nolint:exhaustive
+	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { // nolint:exhaustive
 	case component.PhaseEnabled, component.PhaseEnabling, component.PhaseDisabling:
 		// Enable network policies for SNI
 		// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
@@ -537,7 +536,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		memoryMetricForHpaEnabled = false
 	)
 
-	if b.ShootedSeed != nil {
+	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 		memoryMetricForHpaEnabled = true
@@ -631,19 +630,14 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		foundDeployment = false
 	}
 
-	if b.ShootedSeed != nil {
-		var (
-			apiServer  = b.ShootedSeed.APIServer
-			autoscaler = apiServer.Autoscaler
-		)
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil {
+		autoscaler := b.ManagedSeedAPIServer.Autoscaler
 		minReplicas = *autoscaler.MinReplicas
 		maxReplicas = autoscaler.MaxReplicas
 	}
 
-	if b.ShootedSeed != nil && !hvpaEnabled {
-		apiServer := b.ShootedSeed.APIServer
-
-		defaultValues["replicas"] = *apiServer.Replicas
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
+		defaultValues["replicas"] = *b.ManagedSeedAPIServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",
@@ -791,16 +785,16 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		"enabled": mountHostCADirectories,
 	}
 
-	tunnelComponentImageName := common.VPNSeedImageName
+	tunnelComponentImageName := charts.ImageNameVpnSeed
 	if b.Shoot.KonnectivityTunnelEnabled {
-		tunnelComponentImageName = konnectivity.ServerImageName
+		tunnelComponentImageName = charts.ImageNameKonnectivityServer
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues,
 		tunnelComponentImageName,
-		common.KubeAPIServerImageName,
-		common.AlpineIptablesImageName,
-		common.APIServerProxyPodMutatorWebhookImageName,
+		charts.ImageNameKubeApiserver,
+		charts.ImageNameAlpineIptables,
+		charts.ImageNameApiserverProxyPodWebhook,
 	)
 	if err != nil {
 		return err

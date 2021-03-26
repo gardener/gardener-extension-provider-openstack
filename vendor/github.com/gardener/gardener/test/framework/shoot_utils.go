@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -134,7 +135,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		// dump seed status if seed is available
 		if f.Shoot.Spec.SeedName != nil {
 			seed := &gardencorev1beta1.Seed{}
-			if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
 				f.Logger.Errorf("unable to get seed %s: %s", *f.Shoot.Spec.SeedName, err.Error())
 				return
 			}
@@ -167,6 +168,8 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 	setShootGeneralSettings(shoot, cfg, clearExtensions)
 
 	setShootNetworkingSettings(shoot, cfg, clearDNS)
+
+	setShootTolerations(shoot)
 
 	return shoot.Name, shoot, nil
 }
@@ -292,6 +295,16 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 
 	if clearDNS {
 		shoot.Spec.DNS = &gardencorev1beta1.DNS{}
+	}
+}
+
+// setShootTolerations sets the Shoot's tolerations
+func setShootTolerations(shoot *gardencorev1beta1.Shoot) {
+	shoot.Spec.Tolerations = []gardencorev1beta1.Toleration{
+		{
+			Key:   SeedTaintTestRun,
+			Value: pointer.StringPtr(GetTestRunID()),
+		},
 	}
 }
 

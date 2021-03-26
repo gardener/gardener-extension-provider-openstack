@@ -167,6 +167,8 @@ const (
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
 	ShootUID = "shoot.gardener.cloud/uid"
+	// ShootPurpose is a constant for the shoot purpose.
+	ShootPurpose = "shoot.gardener.cloud/purpose"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -255,6 +257,8 @@ const (
 	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	AnnotationShootUseAsSeed = "shoot.gardener.cloud/use-as-seed"
+	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
+	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"
@@ -329,4 +333,18 @@ const (
 	IngressKindNginx = "nginx"
 	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
 	ShootNginxIngressClass = "nginx"
+
+	// SeedsGroup is the identity group for gardenlets when authenticating to the API server.
+	SeedsGroup = "gardener.cloud:system:seeds"
+	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
+	SeedUserNamePrefix = "gardener.cloud:system:seed:"
+	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
+	SeedUserNameSuffixAmbiguous = "<ambiguous>"
 )
+
+// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
+var ControlPlaneSecretRoles = []string{
+	GardenRoleKubeconfig,
+	GardenRoleSSHKeyPair,
+	GardenRoleMonitoring,
+}

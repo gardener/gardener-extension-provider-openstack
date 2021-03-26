@@ -21,8 +21,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -30,7 +31,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,7 +57,7 @@ func (b *Botanist) DefaultWorker(seedClient client.Client) worker.Interface {
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployWorker(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys])
-	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(&runtime.RawExtension{Raw: b.Shoot.InfrastructureStatus})
+	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
 
 	if b.isRestorePhase() {
@@ -98,7 +98,7 @@ func WorkerPoolToCloudConfigSecretChecksumMap(ctx context.Context, shootClient c
 	for _, secret := range secretList.Items {
 		var (
 			poolName, ok1 = secret.Labels[v1beta1constants.LabelWorkerPool]
-			checksum, ok2 = secret.Annotations[common.CloudConfigChecksumSecretAnnotation]
+			checksum, ok2 = secret.Annotations[downloader.AnnotationKeyChecksum]
 		)
 
 		if ok1 && ok2 {
@@ -123,7 +123,7 @@ func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, wor
 		}
 
 		for _, node := range workerPoolToNodes[worker.Name] {
-			if nodeChecksum, ok := node.Annotations[common.CloudConfigChecksumNodeAnnotation]; ok && nodeChecksum != secretChecksum {
+			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; ok && nodeChecksum != secretChecksum {
 				result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
 			}
 		}
@@ -137,10 +137,10 @@ var (
 	// IntervalWaitCloudConfigUpdated is the interval when waiting until the cloud config was updated for all worker pools.
 	IntervalWaitCloudConfigUpdated = 5 * time.Second
 	// TimeoutWaitCloudConfigUpdated is the timeout when waiting until the cloud config was updated for all worker pools.
-	TimeoutWaitCloudConfigUpdated = 2 * time.Minute
+	TimeoutWaitCloudConfigUpdated = downloader.UnitRestartSeconds*time.Second*2 + executor.ExecutionMaxDelaySeconds*time.Second
 )
 
-// WaitUntilCloudConfigUpdatedForAllWorkerPools waits for a maximum 2 minutes until all the nodes for all the worker
+// WaitUntilCloudConfigUpdatedForAllWorkerPools waits for a maximum of 6 minutes until all the nodes for all the worker
 // pools in the Shoot have successfully applied the desired version of their cloud-config user data.
 func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitCloudConfigUpdated)

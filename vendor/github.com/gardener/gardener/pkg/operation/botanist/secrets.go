@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
@@ -310,6 +310,9 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		kubecfgURL = common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
 
+	// Secrets which are created by Gardener itself are usually excluded from informers to improve performance.
+	// Hence, if new secrets are synced to the Garden cluster, please consider adding the used `gardener.cloud/role`
+	// label value to the `v1beta1constants.ControlPlaneSecretRoles` list.
 	projectSecrets := []projectSecret{
 		{
 			secretName:  common.KubecfgSecretName,

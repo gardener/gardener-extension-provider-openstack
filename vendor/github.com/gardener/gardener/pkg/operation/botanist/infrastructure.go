@@ -19,7 +19,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -62,10 +62,6 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 	if err := b.Shoot.Components.Extensions.Infrastructure.Wait(ctx); err != nil {
 		return err
-	}
-
-	if providerStatus := b.Shoot.Components.Extensions.Infrastructure.ProviderStatus(); providerStatus != nil {
-		b.Shoot.InfrastructureStatus = providerStatus.Raw
 	}
 
 	if nodesCIDR := b.Shoot.Components.Extensions.Infrastructure.NodesCIDR(); nodesCIDR != nil {

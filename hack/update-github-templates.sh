@@ -26,6 +26,7 @@ for file in `find "$(dirname $0)"/../vendor/github.com/gardener/gardener/.github
     sed 's/to the Gardener project/for this extension/g' |\
     sed 's/to Gardener/to this extension/g' |\
     sed 's/- Gardener version:/- Gardener version (if relevant):\n- Extension version:/g' |\
-    sed 's/\/priority normal/\/priority normal\n\/platform openstack/g' \
+    sed 's/\/priority 3/\/priority 3\n\/platform openstack/g' |\
+    sed 's/\/kind TODO/\/kind TODO\n\/platform openstack/g' \
   > "$(dirname $0)/../.github/${file#*.github/}"
 done

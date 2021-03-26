@@ -22,9 +22,9 @@ In case your OpenStack system uses [Octavia](https://docs.openstack.org/octavia/
 Some hypervisors (especially those which are VMware-based) don't automatically send a new volume size to a Linux kernel when a volume is resized and in-use.
 For those hypervisors you can enable the storage plugin interacting with Cinder to telling the SCSI block device to refresh its information to provide information about it's updated size to the kernel. You might need to enable this behavior depending on the underlying hypervisor of your OpenStack installation. The `rescanBlockStorageOnResize` field controls this. Please note that it only applies for Kubernetes versions where CSI is used.
 
-Some openstack configurations do not allow to attach more volumes than a specific amount to a single node. 
+Some openstack configurations do not allow to attach more volumes than a specific amount to a single node.
 To tell the k8s scheduler to not over schedule volumes on a node, you can set `nodeVolumeAttachLimit` which defaults to 256.
-See [CSI Cinder driver](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/cinder-csi-plugin/using-cinder-csi-plugin.md#block-storage). 
+See [CSI Cinder driver](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/cinder-csi-plugin/using-cinder-csi-plugin.md#block-storage).
 
 The cloud profile config also contains constraints for floating pools and load balancer providers that can be used in shoots.
 
@@ -110,6 +110,8 @@ The default behavior is that, if found, the regional (and/or domain restricted) 
 If no entry for the given region exists then the fallback value is the most matching entry (w.r.t. wildcard matching) in the list without a `region` field (or the `keystoneURL` value for the keystone URLs).
 If an additional floating pool should be selectable for a region and/or domain, you can mark it as non constraining
 with setting the optional field `nonConstraining` to `true`.
+
+The `loadBalancerClasses` field is an optional list of load balancer classes which can be when the corresponding floating pool network is choosen. The load balancer classes can be configured in the same way as in the `ControlPlaneConfig` in the `Shoot` resource, therefore see [here](usage-as-end-user.md#ControlPlaneConfig) for more details.
 
 Some OpenStack environments don't need these regional mappings, hence, the `region` and `keystoneURLs` fields are optional.
 If your OpenStack environment only has regional values and it doesn't make sense to provide a (non-regional) fallback then simply

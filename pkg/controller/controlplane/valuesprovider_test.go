@@ -178,14 +178,6 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 
-		// TODO remove cpMap in next version
-		ccmMonitoringConfigmap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-				Name:      "cloud-controller-manager-monitoring-config",
-			},
-		}
-
 		domainName  = "domain-name"
 		tenantName  = "tenant-name"
 		cpSecretKey = client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}
@@ -385,7 +377,6 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		BeforeEach(func() {
-			c.EXPECT().Delete(context.TODO(), ccmMonitoringConfigmap).DoAndReturn(clientDeleteSuccess())
 			c.EXPECT().Get(ctx, cpConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfig))
 		})
 
@@ -499,12 +490,6 @@ func clientGet(result runtime.Object) interface{} {
 		case *corev1.Secret:
 			*obj.(*corev1.Secret) = *result.(*corev1.Secret)
 		}
-		return nil
-	}
-}
-
-func clientDeleteSuccess() interface{} {
-	return func(ctx context.Context, cm runtime.Object) error {
 		return nil
 	}
 }

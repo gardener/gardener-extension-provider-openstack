@@ -341,10 +341,6 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
 
-	// TODO: Remove this code in next version. Delete old config
-	if err := vp.deleteCCMMonitoringConfig(ctx, cp.Namespace); err != nil {
-		return nil, err
-	}
 	return getControlPlaneChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown)
 }
 

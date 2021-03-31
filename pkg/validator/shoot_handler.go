@@ -33,9 +33,10 @@ import (
 
 // Shoot validates shoots
 type Shoot struct {
-	client  client.Client
-	decoder runtime.Decoder
-	Logger  logr.Logger
+	client         client.Client
+	decoder        runtime.Decoder
+	lenientDecoder runtime.Decoder
+	Logger         logr.Logger
 }
 
 // Handle implements Handler.Handle
@@ -65,7 +66,7 @@ func (v *Shoot) Handle(ctx context.Context, req admission.Request) admission.Res
 		}
 	case admissionv1.Update:
 		oldShoot := &core.Shoot{}
-		if err := util.Decode(v.decoder, req.OldObject.Raw, oldShoot); err != nil {
+		if err := util.Decode(v.lenientDecoder, req.OldObject.Raw, oldShoot); err != nil {
 			v.Logger.Error(err, "failed to decode old shoot", "old shoot", string(req.OldObject.Raw))
 			return admission.Errored(http.StatusBadRequest, err)
 		}
@@ -89,6 +90,7 @@ func (v *Shoot) InjectClient(c client.Client) error {
 
 // InjectScheme injects the scheme.
 func (v *Shoot) InjectScheme(s *runtime.Scheme) error {
-	v.decoder = serializer.NewCodecFactory(s).UniversalDecoder()
+	v.decoder = serializer.NewCodecFactory(s, serializer.EnableStrict).UniversalDecoder()
+	v.lenientDecoder = serializer.NewCodecFactory(s).UniversalDecoder()
 	return nil
 }

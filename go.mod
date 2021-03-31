@@ -1,13 +1,14 @@
 module github.com/gardener/gardener-extension-provider-openstack
 
-go 1.15
+go 1.16
 
 require (
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/frankban/quicktest v1.9.0 // indirect
 	github.com/gardener/etcd-druid v0.3.0
-	github.com/gardener/gardener v1.19.0
+	github.com/gardener/gardener v1.20.0
 	github.com/gardener/machine-controller-manager v0.36.0
 	github.com/go-logr/logr v0.3.0
 	github.com/gobuffalo/packr/v2 v2.8.1
@@ -15,8 +16,9 @@ require (
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/gophercloud/gophercloud v0.7.0
 	github.com/gophercloud/utils v0.0.0-20200204043447-9864b6f1f12f
+	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
-	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.5
 	github.com/pierrec/lz4 v2.5.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1

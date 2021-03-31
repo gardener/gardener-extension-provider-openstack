@@ -43,7 +43,7 @@ type ensurer struct {
 }
 
 func (e *ensurer) InjectScheme(scheme *runtime.Scheme) error {
-	e.decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+	e.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 	return nil
 }
 

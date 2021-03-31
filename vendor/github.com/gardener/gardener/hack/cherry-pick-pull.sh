@@ -57,12 +57,12 @@ if ! which hub > /dev/null; then
 fi
 
 if [[ "$#" -lt 2 ]]; then
-  echo "${0} <remote branch> <pr-number>...: cherry pick one or more <pr> onto <remote branch> and leave instructions for proposing pull request"
+  echo "${0} <upstream remote>/<remote branch> <pr-number>...: cherry pick one or more <pr> onto <remote branch> and leave instructions for proposing pull request"
   echo
-  echo "  Checks out <remote branch> and handles the cherry-pick of <pr> (possibly multiple) for you."
+  echo "  Checks out <upstream remote>/<remote branch> and handles the cherry-pick of <pr> (possibly multiple) for you."
   echo "  Examples:"
-  echo "    $0 upstream/release-3.14 12345        # Cherry-picks PR 12345 onto upstream/release-3.14 and proposes that as a PR."
-  echo "    $0 upstream/release-3.14 12345 56789  # Cherry-picks PR 12345, then 56789 and proposes the combination as a single PR."
+  echo "    $0 ${UPSTREAM_REMOTE}/release-3.14 12345        # Cherry-picks PR 12345 onto ${UPSTREAM_REMOTE}/release-3.14 and proposes that as a PR."
+  echo "    $0 ${UPSTREAM_REMOTE}/release-3.14 12345 56789  # Cherry-picks PR 12345, then 56789 and proposes the combination as a single PR."
   echo
   echo "  Set the DRY_RUN environment var to skip git push and creating PR."
   echo "  This is useful for creating patches to a release branch without making a PR."
@@ -203,14 +203,15 @@ for pull in "${PULLS[@]}"; do
   }
 
   # set the subject
-  subject=$(grep -m 1 "^Subject" "/tmp/${pull}.patch" | sed -e 's/Subject: \[PATCH//g' | sed 's/.*] //')
+  pr_info=$(curl "https://api.github.com/repos/${MAIN_REPO_ORG}/${MAIN_REPO_NAME}/pulls/${pull}" -sS)
+  subject=$(echo ${pr_info} | jq -cr '.title')
   SUBJECTS+=("#${pull}: ${subject}")
 
   # remove the patch file from /tmp
   rm -f "/tmp/${pull}.patch"
 
   # get the release notes
-  notes=$(curl "https://api.github.com/repos/${MAIN_REPO_ORG}/${MAIN_REPO_NAME}/pulls/${pull}" -sS | jq '.body' | grep -Po "\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}.*?\`\`\`")
+  notes=$(echo ${pr_info} | jq '.body' | grep -Po "\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}.*?\`\`\`")
   RELEASE_NOTES+=("${notes}")
 done
 gitamcleanup=false

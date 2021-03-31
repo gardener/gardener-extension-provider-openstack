@@ -1,6 +1,7 @@
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/Masterminds/goutils v1.1.0
+# github.com/Masterminds/goutils v1.1.1
+## explicit
 github.com/Masterminds/goutils
 # github.com/Masterminds/semver v1.5.0
 github.com/Masterminds/semver
@@ -51,7 +52,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.19.0
+# github.com/gardener/gardener v1.20.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -124,15 +125,12 @@ github.com/gardener/gardener/pkg/client/core/clientset/versioned
 github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme
 github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1
 github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1
-github.com/gardener/gardener/pkg/client/core/informers/externalversions
-github.com/gardener/gardener/pkg/client/core/informers/externalversions/core
-github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1
 github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1
 github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces
-github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1
 github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1
 github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme
 github.com/gardener/gardener/pkg/client/kubernetes
+github.com/gardener/gardener/pkg/client/kubernetes/cache
 github.com/gardener/gardener/pkg/client/kubernetes/clientmap
 github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal
 github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys
@@ -168,21 +166,15 @@ github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrast
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/templates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/templates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/journald
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kernelconfig
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet/templates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
@@ -221,6 +213,7 @@ github.com/gardener/gardener/pkg/utils/chart
 github.com/gardener/gardener/pkg/utils/context
 github.com/gardener/gardener/pkg/utils/errors
 github.com/gardener/gardener/pkg/utils/flow
+github.com/gardener/gardener/pkg/utils/gardener
 github.com/gardener/gardener/pkg/utils/imagevector
 github.com/gardener/gardener/pkg/utils/infodata
 github.com/gardener/gardener/pkg/utils/kubernetes
@@ -387,7 +380,7 @@ github.com/gophercloud/utils/env
 github.com/gophercloud/utils/openstack/clientconfig
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.0.0
+# github.com/hashicorp/go-multierror v1.1.0
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/golang-lru v0.5.4
 github.com/hashicorp/golang-lru
@@ -403,7 +396,7 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/huandu/xstrings v1.3.1
+# github.com/huandu/xstrings v1.3.2
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.10
 github.com/imdario/mergo
@@ -435,7 +428,8 @@ github.com/mattn/go-isatty
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mholt/archiver v3.1.1+incompatible
 github.com/mholt/archiver
-# github.com/mitchellh/copystructure v1.0.0
+# github.com/mitchellh/copystructure v1.1.1
+## explicit
 github.com/mitchellh/copystructure
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
@@ -454,7 +448,7 @@ github.com/nxadm/tail/ratelimiter
 github.com/nxadm/tail/util
 github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
-# github.com/onsi/ginkgo v1.14.1
+# github.com/onsi/ginkgo v1.14.2
 ## explicit
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
@@ -599,7 +593,7 @@ golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/lint v0.0.0-20200302205851-738671d3881b
+# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
 golang.org/x/lint
 golang.org/x/lint/golint
 # golang.org/x/mod v0.3.0
@@ -620,7 +614,7 @@ golang.org/x/net/idna
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20201112073958-5cba982894dd
 golang.org/x/sys/cpu
@@ -651,7 +645,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200616195046-dc31b401abb5
+# golang.org/x/tools v0.0.0-20201002184944-ecd9fd270d5d
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
@@ -843,11 +837,6 @@ k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
 # k8s.io/apiserver v0.20.2 => k8s.io/apiserver v0.20.2
 ## explicit
-k8s.io/apiserver/pkg/apis/audit
-k8s.io/apiserver/pkg/apis/audit/v1
-k8s.io/apiserver/pkg/apis/audit/v1alpha1
-k8s.io/apiserver/pkg/apis/audit/v1beta1
-k8s.io/apiserver/pkg/apis/audit/validation
 k8s.io/apiserver/pkg/apis/config
 k8s.io/apiserver/pkg/apis/config/v1
 k8s.io/apiserver/pkg/authentication/serviceaccount
@@ -860,65 +849,6 @@ k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2
 ## explicit
 k8s.io/client-go/discovery
 k8s.io/client-go/dynamic
-k8s.io/client-go/informers
-k8s.io/client-go/informers/admissionregistration
-k8s.io/client-go/informers/admissionregistration/v1
-k8s.io/client-go/informers/admissionregistration/v1beta1
-k8s.io/client-go/informers/apiserverinternal
-k8s.io/client-go/informers/apiserverinternal/v1alpha1
-k8s.io/client-go/informers/apps
-k8s.io/client-go/informers/apps/v1
-k8s.io/client-go/informers/apps/v1beta1
-k8s.io/client-go/informers/apps/v1beta2
-k8s.io/client-go/informers/autoscaling
-k8s.io/client-go/informers/autoscaling/v1
-k8s.io/client-go/informers/autoscaling/v2beta1
-k8s.io/client-go/informers/autoscaling/v2beta2
-k8s.io/client-go/informers/batch
-k8s.io/client-go/informers/batch/v1
-k8s.io/client-go/informers/batch/v1beta1
-k8s.io/client-go/informers/batch/v2alpha1
-k8s.io/client-go/informers/certificates
-k8s.io/client-go/informers/certificates/v1
-k8s.io/client-go/informers/certificates/v1beta1
-k8s.io/client-go/informers/coordination
-k8s.io/client-go/informers/coordination/v1
-k8s.io/client-go/informers/coordination/v1beta1
-k8s.io/client-go/informers/core
-k8s.io/client-go/informers/core/v1
-k8s.io/client-go/informers/discovery
-k8s.io/client-go/informers/discovery/v1alpha1
-k8s.io/client-go/informers/discovery/v1beta1
-k8s.io/client-go/informers/events
-k8s.io/client-go/informers/events/v1
-k8s.io/client-go/informers/events/v1beta1
-k8s.io/client-go/informers/extensions
-k8s.io/client-go/informers/extensions/v1beta1
-k8s.io/client-go/informers/flowcontrol
-k8s.io/client-go/informers/flowcontrol/v1alpha1
-k8s.io/client-go/informers/flowcontrol/v1beta1
-k8s.io/client-go/informers/internalinterfaces
-k8s.io/client-go/informers/networking
-k8s.io/client-go/informers/networking/v1
-k8s.io/client-go/informers/networking/v1beta1
-k8s.io/client-go/informers/node
-k8s.io/client-go/informers/node/v1
-k8s.io/client-go/informers/node/v1alpha1
-k8s.io/client-go/informers/node/v1beta1
-k8s.io/client-go/informers/policy
-k8s.io/client-go/informers/policy/v1beta1
-k8s.io/client-go/informers/rbac
-k8s.io/client-go/informers/rbac/v1
-k8s.io/client-go/informers/rbac/v1alpha1
-k8s.io/client-go/informers/rbac/v1beta1
-k8s.io/client-go/informers/scheduling
-k8s.io/client-go/informers/scheduling/v1
-k8s.io/client-go/informers/scheduling/v1alpha1
-k8s.io/client-go/informers/scheduling/v1beta1
-k8s.io/client-go/informers/storage
-k8s.io/client-go/informers/storage/v1
-k8s.io/client-go/informers/storage/v1alpha1
-k8s.io/client-go/informers/storage/v1beta1
 k8s.io/client-go/kubernetes
 k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/kubernetes/typed/admissionregistration/v1
@@ -964,45 +894,7 @@ k8s.io/client-go/kubernetes/typed/scheduling/v1beta1
 k8s.io/client-go/kubernetes/typed/storage/v1
 k8s.io/client-go/kubernetes/typed/storage/v1alpha1
 k8s.io/client-go/kubernetes/typed/storage/v1beta1
-k8s.io/client-go/listers/admissionregistration/v1
-k8s.io/client-go/listers/admissionregistration/v1beta1
-k8s.io/client-go/listers/apiserverinternal/v1alpha1
-k8s.io/client-go/listers/apps/v1
-k8s.io/client-go/listers/apps/v1beta1
-k8s.io/client-go/listers/apps/v1beta2
-k8s.io/client-go/listers/autoscaling/v1
-k8s.io/client-go/listers/autoscaling/v2beta1
-k8s.io/client-go/listers/autoscaling/v2beta2
-k8s.io/client-go/listers/batch/v1
-k8s.io/client-go/listers/batch/v1beta1
-k8s.io/client-go/listers/batch/v2alpha1
-k8s.io/client-go/listers/certificates/v1
-k8s.io/client-go/listers/certificates/v1beta1
-k8s.io/client-go/listers/coordination/v1
-k8s.io/client-go/listers/coordination/v1beta1
 k8s.io/client-go/listers/core/v1
-k8s.io/client-go/listers/discovery/v1alpha1
-k8s.io/client-go/listers/discovery/v1beta1
-k8s.io/client-go/listers/events/v1
-k8s.io/client-go/listers/events/v1beta1
-k8s.io/client-go/listers/extensions/v1beta1
-k8s.io/client-go/listers/flowcontrol/v1alpha1
-k8s.io/client-go/listers/flowcontrol/v1beta1
-k8s.io/client-go/listers/networking/v1
-k8s.io/client-go/listers/networking/v1beta1
-k8s.io/client-go/listers/node/v1
-k8s.io/client-go/listers/node/v1alpha1
-k8s.io/client-go/listers/node/v1beta1
-k8s.io/client-go/listers/policy/v1beta1
-k8s.io/client-go/listers/rbac/v1
-k8s.io/client-go/listers/rbac/v1alpha1
-k8s.io/client-go/listers/rbac/v1beta1
-k8s.io/client-go/listers/scheduling/v1
-k8s.io/client-go/listers/scheduling/v1alpha1
-k8s.io/client-go/listers/scheduling/v1beta1
-k8s.io/client-go/listers/storage/v1
-k8s.io/client-go/listers/storage/v1alpha1
-k8s.io/client-go/listers/storage/v1beta1
 k8s.io/client-go/metadata
 k8s.io/client-go/pkg/apis/clientauthentication
 k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1

@@ -61,6 +61,9 @@ const (
 	// DeploymentNameKubeControllerManager is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-controller-manager pod.
 	DeploymentNameKubeControllerManager = "kube-controller-manager"
+	// DeploymentNameGardenlet is a constant for the name of a Kubernetes deployment object that contains
+	// the Gardenlet pod.
+	DeploymentNameGardenlet = "gardenlet"
 
 	// DeploymentNameKubeScheduler is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-scheduler pod.
@@ -158,6 +161,21 @@ const (
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
 	GardenRoleSSHKeyPair = "ssh-keypair"
+	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.
+	GardenRoleDefaultDomain = "default-domain"
+	// GardenRoleInternalDomain is the value of the GardenRole key indicating type 'internal-domain'.
+	GardenRoleInternalDomain = "internal-domain"
+	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
+	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
+	// GardenRoleGlobalMonitoring is the value of the GardenRole key indicating type 'global-monitoring'
+	GardenRoleGlobalMonitoring = "global-monitoring"
+	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
+	GardenRoleAlerting = "alerting"
+	// GardenRoleHvpa is the value of GardenRole key indicating type 'hvpa'.
+	GardenRoleHvpa = "hvpa"
+	// GardenRoleControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
+	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
+	GardenRoleControlPlaneWildcardCert = "controlplane-cert"
 
 	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`

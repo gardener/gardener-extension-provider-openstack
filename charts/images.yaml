@@ -74,4 +74,4 @@ images:
 - name: csi-liveness-probe
   sourceRepository: github.com/kubernetes-csi/livenessprobe
   repository: k8s.gcr.io/sig-storage/livenessprobe
-  tag: "v2.1.0"
+  tag: "v2.2.0"

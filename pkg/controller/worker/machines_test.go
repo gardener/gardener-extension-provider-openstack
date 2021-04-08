@@ -310,7 +310,7 @@ var _ = Describe("Machines", func() {
 				scheme = runtime.NewScheme()
 				_ = api.AddToScheme(scheme)
 				_ = apiv1alpha1.AddToScheme(scheme)
-				decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+				decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 
 				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster)
 				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster)

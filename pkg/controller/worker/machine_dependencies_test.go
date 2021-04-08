@@ -72,7 +72,7 @@ var _ = Describe("#MachineDependencies", func() {
 		scheme = runtime.NewScheme()
 		_ = api.AddToScheme(scheme)
 		_ = apiv1alpha1.AddToScheme(scheme)
-		decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+		decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 	})
 
 	AfterEach(func() {

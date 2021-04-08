@@ -42,7 +42,7 @@ func init() {
 	Scheme = runtime.NewScheme()
 	utilruntime.Must(install.AddToScheme(Scheme))
 
-	decoder = serializer.NewCodecFactory(Scheme).UniversalDecoder()
+	decoder = serializer.NewCodecFactory(Scheme, serializer.EnableStrict).UniversalDecoder()
 }
 
 // InfrastructureConfigFromInfrastructure extracts the InfrastructureConfig from the

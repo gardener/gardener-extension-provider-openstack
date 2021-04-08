@@ -17,7 +17,6 @@ package framework
 import (
 	"context"
 	"flag"
-	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -25,13 +24,12 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 var managedSeedConfig *ManagedSeedConfig
@@ -95,6 +93,7 @@ func (f *ManagedSeedFramework) AfterEach(ctx context.Context) {
 func validateManagedSeedConfig(cfg *ManagedSeedConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no configuration provided")
+		return // make linters happy
 	}
 	if !StringSet(cfg.ManagedSeedName) {
 		ginkgo.Fail("You should specify a name for the managed seed")
@@ -199,7 +198,7 @@ func (f *ManagedSeedFramework) buildManagedSeed() (*seedmanagementv1alpha1.Manag
 	)
 
 	// Build seed spec
-	seedSpec := f.buildSeedSpec()
+	seedSpec := BuildSeedSpecForTestrun(gardenerutils.ComputeGardenNamespace(f.Config.ManagedSeedName), &f.Config.BackupProvider)
 
 	if !f.Config.DeployGardenlet {
 		// Initialize seed template
@@ -245,27 +244,4 @@ func (f *ManagedSeedFramework) buildManagedSeed() (*seedmanagementv1alpha1.Manag
 			Gardenlet:    gardenlet,
 		},
 	}, nil
-}
-
-func (f *ManagedSeedFramework) buildSeedSpec() *gardencorev1beta1.SeedSpec {
-	return &gardencorev1beta1.SeedSpec{
-		Backup: &gardencorev1beta1.SeedBackup{
-			Provider: f.Config.BackupProvider,
-		},
-		SecretRef: &corev1.SecretReference{
-			Name:      fmt.Sprintf("seed-%s", f.Config.ManagedSeedName),
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-		Taints: []gardencorev1beta1.SeedTaint{
-			{
-				Key:   SeedTaintTestRun,
-				Value: pointer.StringPtr(GetTestRunID()),
-			},
-		},
-		Settings: &gardencorev1beta1.SeedSettings{
-			Scheduling: &gardencorev1beta1.SeedSettingScheduling{
-				Visible: false,
-			},
-		},
-	}
 }

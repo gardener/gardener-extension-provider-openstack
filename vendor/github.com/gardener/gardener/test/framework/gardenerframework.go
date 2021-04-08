@@ -100,6 +100,7 @@ func (f *GardenerFramework) BeforeEach() {
 func validateGardenerConfig(cfg *GardenerConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no gardener framework configuration provided")
+		return // make linters happy
 	}
 	if !StringSet(cfg.GardenerKubeconfig) {
 		ginkgo.Fail("you need to specify the correct path for the kubeconfig")
@@ -157,16 +158,4 @@ func (f *GardenerFramework) NewShootFramework(shoot *gardencorev1beta1.Shoot) (*
 		return nil, err
 	}
 	return shootFramework, nil
-}
-
-// NewSeedRegistrationFramework creates a new SeedRegistrationFramework with the current gardener framework
-func (f *GardenerFramework) NewSeedRegistrationFramework(seed *gardencorev1beta1.Seed) (*SeedRegistrationFramework, error) {
-	seedFramework := &SeedRegistrationFramework{
-		GardenerFramework: f,
-		Config: &SeedRegistrationConfig{
-			GardenerConfig: f.GardenerFrameworkConfig,
-		},
-	}
-
-	return seedFramework, seedFramework.AddSeed(context.TODO(), seed)
 }

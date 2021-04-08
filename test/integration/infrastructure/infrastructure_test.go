@@ -158,7 +158,7 @@ var _ = Describe("Infrastructure tests", func() {
 		c = mgr.GetClient()
 		Expect(c).NotTo(BeNil())
 
-		decoder = serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder()
+		decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 
 		openstackClient, err = NewOpenstackClient(*authURL, *domainName, *floatingPoolName, *password, *region, *tenantName, *userName)
 		Expect(err).NotTo(HaveOccurred())

@@ -23,6 +23,7 @@ This extension controller supports the following Kubernetes versions:
 
 | Version         | Support     | Conformance test results |
 | --------------- | ----------- | ------------------------ |
+| Kubernetes 1.21 | 1.21.0+     | N/A |
 | Kubernetes 1.20 | 1.20.0+     | [![Gardener v1.20 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.20%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.20%20OpenStack) |
 | Kubernetes 1.19 | 1.19.0+     | [![Gardener v1.19 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.19%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.19%20OpenStack) |
 | Kubernetes 1.18 | 1.18.0+     | [![Gardener v1.18 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.18%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.18%20OpenStack) |

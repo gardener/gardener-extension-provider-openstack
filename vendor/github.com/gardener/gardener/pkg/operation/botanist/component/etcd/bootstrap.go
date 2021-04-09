@@ -24,8 +24,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -291,7 +291,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 	resources["crd.yaml"] = crdYAML.Bytes()
 
-	return common.DeployManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
@@ -305,11 +305,11 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := common.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
 		return err
 	}
 
-	return common.DeleteManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace)
+	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -320,14 +320,14 @@ func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 var (
@@ -357,7 +357,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
   labels:
-    ` + common.GardenerDeletionProtected + `: "true"
+    ` + gutil.DeletionProtected + `: "true"
 spec:
   group: druid.gardener.cloud
   names:

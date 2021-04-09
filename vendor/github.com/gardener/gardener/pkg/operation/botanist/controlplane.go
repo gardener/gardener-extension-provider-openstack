@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -97,18 +98,6 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	if !b.Shoot.WantsVerticalPodAutoscaler {
 		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
-	}
-
-	// .spec.selector of a Deployment is immutable. If Deployment's .spec.selector contains
-	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
-	// TODO: remove in a future version
-	deploymentKeys := []client.ObjectKey{
-		kutil.Key(b.Shoot.SeedNamespace, "vpa-updater"),
-		kutil.Key(b.Shoot.SeedNamespace, "vpa-recommender"),
-		kutil.Key(b.Shoot.SeedNamespace, "vpa-admission-controller"),
-	}
-	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), deploymentKeys); err != nil {
-		return err
 	}
 
 	var (
@@ -934,8 +923,8 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			ApiserverClusterIP: clusterIP,
 			NamespaceUID:       b.SeedNamespaceObject.UID,
 			Hosts: []string{
-				common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			},
 			Name: v1beta1constants.DeploymentNameKubeAPIServer,
 			IstioIngressGateway: controlplane.IstioIngressGateway{
@@ -970,7 +959,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSInternalName,
-				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				DNSName: gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
@@ -996,7 +985,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSExternalName,
-				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				DNSName: gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,

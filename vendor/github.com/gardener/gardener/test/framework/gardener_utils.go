@@ -20,16 +20,14 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/utils/pointer"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -41,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -91,7 +90,7 @@ func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace 
 	if ns.Labels == nil {
 		return nil, fmt.Errorf("namespace %q does not have any labels", ns.Name)
 	}
-	projectName, ok := ns.Labels[common.ProjectName]
+	projectName, ok := ns.Labels[v1beta1constants.ProjectName]
 	if !ok {
 		return nil, fmt.Errorf("namespace %q did not contain a project label", ns.Name)
 	}
@@ -165,14 +164,14 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 // DeleteShoot deletes the test shoot
 func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = f.RemoveShootAnnotation(ctx, shoot, common.ShootIgnore)
+		err = f.RemoveShootAnnotation(ctx, shoot, v1beta1constants.ShootIgnore)
 		if err != nil {
 			return retry.MinorError(err)
 		}
 
 		// First we annotate the shoot to be deleted.
 		err = f.AnnotateShoot(ctx, shoot, map[string]string{
-			common.ConfirmationDeletion: "true",
+			gutil.ConfirmationDeletion: "true",
 		})
 		if err != nil {
 			return retry.MinorError(err)
@@ -594,12 +593,12 @@ func ParseSchedulerConfiguration(configuration *corev1.ConfigMap) (*config.Sched
 
 // ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
 func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-scheduler", gardencorev1beta1constants.GardenNamespace)
+	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-scheduler", v1beta1constants.GardenNamespace)
 }
 
 // ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
 func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", gardencorev1beta1constants.GardenNamespace)
+	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", v1beta1constants.GardenNamespace)
 }
 
 // CreateSeed creates a seed from a seed Object and waits until it is successfully reconciled
@@ -753,7 +752,7 @@ func BuildSeedSpecForTestrun(name string, backupProvider *string) *gardencorev1b
 	seedSpec := &gardencorev1beta1.SeedSpec{
 		SecretRef: &corev1.SecretReference{
 			Name:      name,
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 		Taints: []gardencorev1beta1.SeedTaint{
 			{

@@ -24,8 +24,8 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -41,21 +41,23 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
-		projectFunc:        func() (*gardencorev1beta1.Project, error) { return nil, fmt.Errorf("project is required but not set") },
+		projectFunc: func(context.Context) (*gardencorev1beta1.Project, error) {
+			return nil, fmt.Errorf("project is required but not set")
+		},
 		internalDomainFunc: func() (*Domain, error) { return nil, fmt.Errorf("internal domain is required but not set") },
 	}
 }
 
 // WithProject sets the projectFunc attribute at the Builder.
 func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
-	b.projectFunc = func() (*gardencorev1beta1.Project, error) { return project, nil }
+	b.projectFunc = func(context.Context) (*gardencorev1beta1.Project, error) { return project, nil }
 	return b
 }
 
-// WithProjectFromLister sets the projectFunc attribute after fetching it from the lister.
-func (b *Builder) WithProjectFromLister(projectLister gardencorelisters.ProjectLister, namespace string) *Builder {
-	b.projectFunc = func() (*gardencorev1beta1.Project, error) {
-		return common.ProjectForNamespace(projectLister, namespace)
+// WithProjectFromReader sets the projectFunc attribute after fetching it from the lister.
+func (b *Builder) WithProjectFromReader(reader client.Reader, namespace string) *Builder {
+	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
+		return gutil.ProjectForNamespaceFromReader(ctx, reader, namespace)
 	}
 	return b
 }
@@ -85,10 +87,10 @@ func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secre
 }
 
 // Build initializes a new Garden object.
-func (b *Builder) Build() (*Garden, error) {
+func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	garden := &Garden{}
 
-	project, err := b.projectFunc()
+	project, err := b.projectFunc(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +141,7 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, includeZones, excludeZones, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +225,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
@@ -236,7 +238,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
@@ -320,7 +322,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
 
-	logger.Logger.Infof("Found secrets: %s", strings.Join(logInfo, ", "))
+	logger.Logger.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
 }

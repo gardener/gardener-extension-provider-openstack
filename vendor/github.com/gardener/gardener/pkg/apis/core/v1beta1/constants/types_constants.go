@@ -177,16 +177,23 @@ const (
 	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
 	GardenRoleControlPlaneWildcardCert = "controlplane-cert"
 
-	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
-	// which value will be the value of `shoot.status.uid`
-	//
-	// Deprecated: Use the `Cluster` resource or the annotation key from the new API group `ShootUID`.
-	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
 	ShootUID = "shoot.gardener.cloud/uid"
 	// ShootPurpose is a constant for the shoot purpose.
 	ShootPurpose = "shoot.gardener.cloud/purpose"
+	// ShootSyncPeriod is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
+	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
+	// does only mean that the period reconciliation is disabled. However, when the Gardener is restarted/redeployed or the specification is
+	// changed then the reconciliation flow will be executed.
+	ShootSyncPeriod = "shoot.gardener.cloud/sync-period"
+	// ShootIgnore is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
+	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
+	// delete)).
+	ShootIgnore = "shoot.gardener.cloud/ignore"
+	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
+	// resource when cleaning a shoot during the deletion flow.
+	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -358,6 +365,22 @@ const (
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
 	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
 	SeedUserNameSuffixAmbiguous = "<ambiguous>"
+
+	// ProjectName is the key of a label on namespaces whose value holds the project name.
+	ProjectName = "project.gardener.cloud/name"
+	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
+	// skipped by the stale project controller. If the project has already configured stale timestamps in its status
+	// then they will be reset.
+	ProjectSkipStaleCheck = "project.gardener.cloud/skip-stale-check"
+	// NamespaceProject is the key of an annotation on namespace whose value holds the project uid.
+	NamespaceProject = "namespace.gardener.cloud/project"
+	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
+	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
+	// from the namespace will be removed when the project is being deleted.
+	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+
+	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
+	DefaultVpnRange = "192.168.123.0/24"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

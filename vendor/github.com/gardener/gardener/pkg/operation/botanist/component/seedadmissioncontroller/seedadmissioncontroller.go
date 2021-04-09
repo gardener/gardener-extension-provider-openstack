@@ -42,8 +42,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -360,7 +360,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 	if versionConstraintK8sGreaterEqual115.Check(g.kubernetesVersion) {
 		validatingWebhookConfiguration.Webhooks[0].ObjectSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{common.GardenerDeletionProtected: "true"},
+			MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
 		}
 	}
 
@@ -379,11 +379,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForSeed(ctx, g.client, managedResourceName, g.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceName, false, resources)
 }
 
 func (g *gardenerSeedAdmissionController) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForSeed(ctx, g.client, managedResourceName, g.namespace)
+	return managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceName)
 }
 
 func getLabels() map[string]string {
@@ -401,14 +401,14 @@ func (g *gardenerSeedAdmissionController) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, g.client, g.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, managedResourceName)
 }
 
 func (g *gardenerSeedAdmissionController) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, g.client, g.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceName)
 }
 
 var versionConstraintK8sGreaterEqual115 *semver.Constraints

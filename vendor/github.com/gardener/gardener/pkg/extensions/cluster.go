@@ -27,13 +27,82 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-var gardenscheme *runtime.Scheme
+var gardenScheme *runtime.Scheme
 
 func init() {
-	gardenscheme = runtime.NewScheme()
-	gardencoreinstall.Install(gardenscheme)
+	gardenScheme = runtime.NewScheme()
+	gardencoreinstall.Install(gardenScheme)
+}
+
+// SyncClusterResourceToSeed creates or updates the `extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed
+// cluster by adding the shoot, seed, and cloudprofile specification.
+func SyncClusterResourceToSeed(
+	ctx context.Context,
+	client client.Client,
+	clusterName string,
+	shoot *gardencorev1beta1.Shoot,
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	seed *gardencorev1beta1.Seed,
+) error {
+	if shoot.Spec.SeedName == nil {
+		return nil
+	}
+
+	var (
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterName,
+			},
+		}
+
+		cloudProfileObj *gardencorev1beta1.CloudProfile
+		seedObj         *gardencorev1beta1.Seed
+		shootObj        *gardencorev1beta1.Shoot
+	)
+
+	if cloudProfile != nil {
+		cloudProfileObj = cloudProfile.DeepCopy()
+		cloudProfileObj.TypeMeta = metav1.TypeMeta{
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+			Kind:       "CloudProfile",
+		}
+		cloudProfileObj.ManagedFields = nil
+	}
+
+	if seed != nil {
+		seedObj = seed.DeepCopy()
+		seedObj.TypeMeta = metav1.TypeMeta{
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+			Kind:       "Seed",
+		}
+		seedObj.ManagedFields = nil
+	}
+
+	if shoot != nil {
+		shootObj = shoot.DeepCopy()
+		shootObj.TypeMeta = metav1.TypeMeta{
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+			Kind:       "Shoot",
+		}
+		shootObj.ManagedFields = nil
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, client, cluster, func() error {
+		if cloudProfileObj != nil {
+			cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
+		}
+		if seedObj != nil {
+			cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
+		}
+		if shootObj != nil {
+			cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
+		}
+		return nil
+	})
+	return err
 }
 
 // Cluster contains the decoded resources of Gardener's extension Cluster resource.
@@ -51,10 +120,7 @@ func GetCluster(ctx context.Context, c client.Client, namespace string) (*Cluste
 		return nil, err
 	}
 
-	decoder, err := NewGardenDecoder()
-	if err != nil {
-		return nil, err
-	}
+	decoder := NewGardenDecoder()
 
 	cloudProfile, err := CloudProfileFromCluster(decoder, cluster)
 	if err != nil {
@@ -85,7 +151,7 @@ func CloudProfileFromCluster(decoder runtime.Decoder, cluster *extensionsv1alpha
 	if _, _, err := decoder.Decode(cluster.Spec.CloudProfile.Raw, nil, cloudProfileInternal); err != nil {
 		return nil, err
 	}
-	if err := gardenscheme.Convert(cloudProfileInternal, cloudProfile, nil); err != nil {
+	if err := gardenScheme.Convert(cloudProfileInternal, cloudProfile, nil); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +171,7 @@ func SeedFromCluster(decoder runtime.Decoder, cluster *extensionsv1alpha1.Cluste
 	if _, _, err := decoder.Decode(cluster.Spec.Seed.Raw, nil, seedInternal); err != nil {
 		return nil, err
 	}
-	if err := gardenscheme.Convert(seedInternal, seed, nil); err != nil {
+	if err := gardenScheme.Convert(seedInternal, seed, nil); err != nil {
 		return nil, err
 	}
 
@@ -125,7 +191,7 @@ func ShootFromCluster(decoder runtime.Decoder, cluster *extensionsv1alpha1.Clust
 	if _, _, err := decoder.Decode(cluster.Spec.Shoot.Raw, nil, shootInternal); err != nil {
 		return nil, err
 	}
-	if err := gardenscheme.Convert(shootInternal, shoot, nil); err != nil {
+	if err := gardenScheme.Convert(shootInternal, shoot, nil); err != nil {
 		return nil, err
 	}
 
@@ -139,15 +205,10 @@ func GetShoot(ctx context.Context, c client.Client, namespace string) (*gardenco
 		return nil, err
 	}
 
-	decoder, err := NewGardenDecoder()
-	if err != nil {
-		return nil, err
-	}
-
-	return ShootFromCluster(decoder, cluster)
+	return ShootFromCluster(NewGardenDecoder(), cluster)
 }
 
 // NewGardenDecoder returns a new Garden API decoder.
-func NewGardenDecoder() (runtime.Decoder, error) {
-	return serializer.NewCodecFactory(gardenscheme).UniversalDecoder(), nil
+func NewGardenDecoder() runtime.Decoder {
+	return serializer.NewCodecFactory(gardenScheme).UniversalDecoder()
 }

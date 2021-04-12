@@ -22,7 +22,7 @@ metadata:
   labels:
   {{ toYaml $machineClass.labels | indent 4 }}
 {{- end }}
-provider: "OpenStack"
+provider: "openstack"
 secretRef:
   name: {{ $machineClass.name }}
   namespace: {{ $.Release.Namespace }}

@@ -55,6 +55,8 @@ The `networks.router` section describes whether you want to create the shoot clu
 * If `networks.router.id` is given then you have to specify the router id of the existing router that was created by other means (manually, other tooling, ...).
 If you want to get a fresh router for the shoot then just omit the `networks.router` field.
 
+* In any case, the shoot cluster will be created in a **new** subnet. 
+
 The `networks.workers` section describes the CIDR for a subnet that is used for all shoot worker nodes, i.e., VMs which later run your applications.
 
 You can freely choose these CIDRs and it is your responsibility to properly design the network layout to suit your needs.

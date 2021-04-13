@@ -17,6 +17,3 @@ TODO
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*
-
-# Packr generated files
-*-packr.go

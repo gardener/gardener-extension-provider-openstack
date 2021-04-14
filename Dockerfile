@@ -15,8 +15,14 @@ COPY charts /charts
 COPY --from=builder /go/bin/gardener-extension-provider-openstack /gardener-extension-provider-openstack
 ENTRYPOINT ["/gardener-extension-provider-openstack"]
 
+############# gardener-extension-admission-openstack
+FROM base as gardener-extension-admission-openstack
+
+COPY --from=builder /go/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack
+ENTRYPOINT ["/gardener-extension-admission-openstack"]
+
 ############# gardener-extension-validator-openstack
 FROM base AS gardener-extension-validator-openstack
 
-COPY --from=builder /go/bin/gardener-extension-validator-openstack /gardener-extension-validator-openstack
-ENTRYPOINT ["/gardener-extension-validator-openstack"]
+COPY --from=builder /go/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack
+ENTRYPOINT ["/gardener-extension-admission-openstack"]

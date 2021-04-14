@@ -14,7 +14,7 @@
 
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := provider-openstack
-VALIDATOR_NAME              := validator-openstack
+ADMISSION_NAME              := admission-openstack
 REGISTRY                    := eu.gcr.io/gardener-project/gardener
 IMAGE_PREFIX                := $(REGISTRY)/extensions
 REPO_ROOT                   := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -60,15 +60,15 @@ start:
 		--webhook-config-mode=$(WEBHOOK_CONFIG_MODE) \
 		$(WEBHOOK_PARAM)
 
-.PHONY: start-validator
-start-validator:
+.PHONY: start-admission
+start-admission:
 	@LEADER_ELECTION_NAMESPACE=garden GO111MODULE=on go run \
 		-mod=vendor \
 		-ldflags $(LD_FLAGS) \
-		./cmd/$(EXTENSION_PREFIX)-$(VALIDATOR_NAME) \
+		./cmd/$(EXTENSION_PREFIX)-$(ADMISSION_NAME) \
 		--webhook-config-server-host=0.0.0.0 \
 		--webhook-config-server-port=9443 \
-		--webhook-config-cert-dir=./example/validator-openstack-certs
+		--webhook-config-cert-dir=./example/admission-openstack-certs
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
@@ -86,7 +86,7 @@ docker-login:
 .PHONY: docker-images
 docker-images:
 	@docker build -t $(IMAGE_PREFIX)/$(NAME):$(VERSION)           -t $(IMAGE_PREFIX)/$(NAME):latest           -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(NAME)           .
-	@docker build -t $(IMAGE_PREFIX)/$(VALIDATOR_NAME):$(VERSION) -t $(IMAGE_PREFIX)/$(VALIDATOR_NAME):latest -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(VALIDATOR_NAME) .
+	@docker build -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):$(VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):latest -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(ADMISSION_NAME) .
 
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #

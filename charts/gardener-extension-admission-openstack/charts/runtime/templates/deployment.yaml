@@ -14,9 +14,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/secret-gardener-extension-validator-openstack-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
+        checksum/secret-gardener-extension-admission-openstack-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
         {{- if .Values.global.kubeconfig }}
-        checksum/gardener-extension-validator-openstack-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
+        checksum/gardener-extension-admission-openstack-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
         {{- end }}
       labels:
 {{ include "labels" . | indent 8 }}
@@ -31,11 +31,11 @@ spec:
         image: {{ include "image" .Values.global.image }}
         imagePullPolicy: {{ .Values.global.image.pullPolicy }}
         command:
-        - /gardener-extension-validator-openstack
+        - /gardener-extension-admission-openstack
         - --webhook-config-server-port={{ .Values.global.webhookConfig.serverPort }}
-        - --webhook-config-cert-dir=/etc/gardener-extension-validator-openstack/srv
+        - --webhook-config-cert-dir=/etc/gardener-extension-admission-openstack/srv
         {{- if .Values.global.kubeconfig }}
-        - --kubeconfig=/etc/gardener-extension-validator-openstack/kubeconfig/kubeconfig
+        - --kubeconfig=/etc/gardener-extension-admission-openstack/kubeconfig/kubeconfig
         {{- end }}
         ports:
         - name: webhook-server
@@ -46,22 +46,22 @@ spec:
 {{ toYaml .Values.global.resources | nindent 10 }}
 {{- end }}
         volumeMounts:
-        - name: gardener-extension-validator-openstack-cert
-          mountPath: /etc/gardener-extension-validator-openstack/srv
+        - name: gardener-extension-admission-openstack-cert
+          mountPath: /etc/gardener-extension-admission-openstack/srv
           readOnly: true
         {{- if .Values.global.kubeconfig }}
-        - name: gardener-extension-validator-openstack-kubeconfig
-          mountPath: /etc/gardener-extension-validator-openstack/kubeconfig
+        - name: gardener-extension-admission-openstack-kubeconfig
+          mountPath: /etc/gardener-extension-admission-openstack/kubeconfig
           readOnly: true
         {{- end }}
       volumes:
-      - name: gardener-extension-validator-openstack-cert
+      - name: gardener-extension-admission-openstack-cert
         secret:
-          secretName: gardener-extension-validator-openstack-cert
+          secretName: gardener-extension-admission-openstack-cert
           defaultMode: 420
       {{- if .Values.global.kubeconfig }}
-      - name: gardener-extension-validator-openstack-kubeconfig
+      - name: gardener-extension-admission-openstack-kubeconfig
         secret:
-          secretName: gardener-extension-validator-openstack-kubeconfig
+          secretName: gardener-extension-admission-openstack-kubeconfig
           defaultMode: 420
       {{- end }}

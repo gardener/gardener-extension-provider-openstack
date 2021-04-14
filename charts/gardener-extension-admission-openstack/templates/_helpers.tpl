@@ -1,5 +1,5 @@
 {{- define "name" -}}
-gardener-extension-validator-openstack
+gardener-extension-admission-openstack
 {{- end -}}
 
 {{- define "labels.app.key" -}}

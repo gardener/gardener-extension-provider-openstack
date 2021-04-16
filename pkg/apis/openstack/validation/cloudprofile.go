@@ -19,18 +19,17 @@ import (
 	"net"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.
-func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.ErrorList {
+func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	floatingPoolPath := field.NewPath("constraints", "floatingPools")
+	floatingPoolPath := fldPath.Child("constraints", "floatingPools")
 	if len(cloudProfile.Constraints.FloatingPools) == 0 {
 		allErrs = append(allErrs, field.Required(floatingPoolPath, "must provide at least one floating pool"))
 	}
@@ -66,7 +65,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 		}
 	}
 
-	loadBalancerProviderPath := field.NewPath("constraints", "loadBalancerProviders")
+	loadBalancerProviderPath := fldPath.Child("constraints", "loadBalancerProviders")
 	if len(cloudProfile.Constraints.LoadBalancerProviders) == 0 {
 		allErrs = append(allErrs, field.Required(loadBalancerProviderPath, "must provide at least one load balancer provider"))
 	}
@@ -90,7 +89,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 		}
 	}
 
-	machineImagesPath := field.NewPath("machineImages")
+	machineImagesPath := fldPath.Child("machineImages")
 	if len(cloudProfile.MachineImages) == 0 {
 		allErrs = append(allErrs, field.Required(machineImagesPath, "must provide at least one machine image"))
 	}
@@ -110,19 +109,16 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 			if len(version.Version) == 0 {
 				allErrs = append(allErrs, field.Required(jdxPath.Child("version"), "must provide a version"))
 			}
-			if len(version.Image) == 0 {
-				allErrs = append(allErrs, field.Required(jdxPath.Child("image"), "must provide an image"))
-			}
 		}
 	}
 
 	if len(cloudProfile.KeyStoneURL) == 0 && len(cloudProfile.KeyStoneURLs) == 0 {
-		allErrs = append(allErrs, field.Required(field.NewPath("keyStoneURL"), "must provide the URL to KeyStone"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("keyStoneURL"), "must provide the URL to KeyStone"))
 	}
 
 	regionsFound = sets.NewString()
 	for i, val := range cloudProfile.KeyStoneURLs {
-		idxPath := field.NewPath("keyStoneURLs").Index(i)
+		idxPath := fldPath.Child("keyStoneURLs").Index(i)
 
 		if len(val.Region) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("region"), "must provide a region"))
@@ -140,21 +136,21 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig) field.Erro
 
 	for i, ip := range cloudProfile.DNSServers {
 		if net.ParseIP(ip) == nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("dnsServers").Index(i), ip, "must provide a valid IP"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dnsServers").Index(i), ip, "must provide a valid IP"))
 		}
 	}
 
 	if cloudProfile.DHCPDomain != nil && len(*cloudProfile.DHCPDomain) == 0 {
-		allErrs = append(allErrs, field.Required(field.NewPath("dhcpDomain"), "must provide a dhcp domain when the key is specified"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("dhcpDomain"), "must provide a dhcp domain when the key is specified"))
 	}
 
 	if cloudProfile.RequestTimeout != nil {
 		if _, err := time.ParseDuration(*cloudProfile.RequestTimeout); err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("requestTimeout"), *cloudProfile.RequestTimeout, fmt.Sprintf("invalid duration: %v", err)))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("requestTimeout"), *cloudProfile.RequestTimeout, fmt.Sprintf("invalid duration: %v", err)))
 		}
 	}
 
-	serverGroupPath := field.NewPath("serverGroupPolicies")
+	serverGroupPath := fldPath.Child("serverGroupPolicies")
 	for i, policy := range cloudProfile.ServerGroupPolicies {
 		idxPath := serverGroupPath.Index(i)
 

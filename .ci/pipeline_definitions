@@ -13,11 +13,11 @@ gardener-extension-provider-openstack:
             image: 'eu.gcr.io/gardener-project/gardener/extensions/provider-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-provider-openstack
-          gardener-extension-validator-openstack:
+          gardener-extension-admission-openstack:
             registry: 'gcr-readwrite'
-            image: 'eu.gcr.io/gardener-project/gardener/extensions/validator-openstack'
+            image: 'eu.gcr.io/gardener-project/gardener/extensions/admission-openstack'
             dockerfile: 'Dockerfile'
-            target: gardener-extension-validator-openstack
+            target: gardener-extension-admission-openstack
   jobs:
     head-update:
       traits:
@@ -51,5 +51,5 @@ gardener-extension-provider-openstack:
           dockerimages:
             gardener-extension-provider-openstack:
               tag_as_latest: true
-            gardener-extension-validator-openstack:
+            gardener-extension-admission-openstack:
               tag_as_latest: true

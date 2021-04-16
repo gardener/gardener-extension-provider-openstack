@@ -18,24 +18,38 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// NewShootValidator returns a new instance of a shoot validator.
+func NewShootValidator() extensionswebhook.Validator {
+	return &shoot{}
+}
+
+type shoot struct {
+	client         client.Client
+	decoder        runtime.Decoder
+	lenientDecoder runtime.Decoder
+}
+
 type validationContext struct {
 	shoot              *core.Shoot
-	infraConfig        *openstack.InfrastructureConfig
-	cpConfig           *openstack.ControlPlaneConfig
+	infraConfig        *api.InfrastructureConfig
+	cpConfig           *api.ControlPlaneConfig
 	cloudProfile       *gardencorev1beta1.CloudProfile
-	cloudProfileConfig *openstack.CloudProfileConfig
+	cloudProfileConfig *api.CloudProfileConfig
 }
 
 var (
@@ -47,8 +61,45 @@ var (
 	workersPath     = providerPath.Child("workers")
 )
 
-func (v *Shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, domain string) error {
-	valContext, err := newValidationContext(ctx, v.decoder, v.client, shoot)
+// InjectClient injects the given client into the validator.
+func (s *shoot) InjectClient(client client.Client) error {
+	s.client = client
+	return nil
+}
+
+// InjectScheme injects the given scheme into the validator.
+func (s *shoot) InjectScheme(scheme *runtime.Scheme) error {
+	s.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
+	s.lenientDecoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+	return nil
+}
+
+// Validate validates the given shoot object.
+func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
+	shoot, ok := new.(*core.Shoot)
+	if !ok {
+		return fmt.Errorf("wrong object type %T", new)
+	}
+
+	// Get credentials
+	credentials, err := openstack.GetCredentialsBySecretBinding(ctx, s.client, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Spec.SecretBindingName})
+	if err != nil {
+		return fmt.Errorf("could not get credentials from SecretBindingName %s: %w", shoot.Spec.SecretBindingName, err)
+	}
+
+	if old != nil {
+		oldShoot, ok := old.(*core.Shoot)
+		if !ok {
+			return fmt.Errorf("wrong object type %T for old object", old)
+		}
+		return s.validateShootUpdate(ctx, oldShoot, shoot, credentials.DomainName)
+	}
+
+	return s.validateShootCreation(ctx, shoot, credentials.DomainName)
+}
+
+func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, domain string) error {
+	valContext, err := newValidationContext(ctx, s.decoder, s.client, shoot)
 	if err != nil {
 		return err
 	}
@@ -57,17 +108,17 @@ func (v *Shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, do
 
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, domain, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, domain, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
-	allErrs = append(allErrs, v.validateShoot(valContext)...)
+	allErrs = append(allErrs, s.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.Shoot, domain string) error {
-	oldValContext, err := newValidationContext(ctx, v.decoder, v.client, oldShoot)
+func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.Shoot, domain string) error {
+	oldValContext, err := newValidationContext(ctx, s.lenientDecoder, s.client, oldShoot)
 	if err != nil {
 		return err
 	}
 
-	valContext, err := newValidationContext(ctx, v.decoder, v.client, shoot)
+	valContext, err := newValidationContext(ctx, s.decoder, s.client, shoot)
 	if err != nil {
 		return err
 	}
@@ -98,11 +149,11 @@ func (v *Shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 		return errList.ToAggregate()
 	}
 
-	allErrs = append(allErrs, v.validateShoot(valContext)...)
+	allErrs = append(allErrs, s.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (v *Shoot) validateShoot(context *validationContext) field.ErrorList {
+func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)

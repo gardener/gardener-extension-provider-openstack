@@ -2,7 +2,7 @@ global:
   virtualGarden:
     enabled: false
   image:
-    repository: eu.gcr.io/gardener-project/gardener/extensions/validator-openstack
+    repository: eu.gcr.io/gardener-project/gardener/extensions/admission-openstack
     tag: latest
     pullPolicy: IfNotPresent
   replicaCount: 1

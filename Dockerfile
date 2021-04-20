@@ -20,9 +20,3 @@ FROM base as gardener-extension-admission-openstack
 
 COPY --from=builder /go/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack
 ENTRYPOINT ["/gardener-extension-admission-openstack"]
-
-############# gardener-extension-validator-openstack
-FROM base AS gardener-extension-validator-openstack
-
-COPY --from=builder /go/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack
-ENTRYPOINT ["/gardener-extension-admission-openstack"]

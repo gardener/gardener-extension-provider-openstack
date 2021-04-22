@@ -27,8 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -258,7 +258,57 @@ func ValidateShootStatusUpdate(newStatus, oldStatus core.ShootStatus) field.Erro
 	if oldStatus.ClusterIdentity != nil && !apiequality.Semantic.DeepEqual(oldStatus.ClusterIdentity, newStatus.ClusterIdentity) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.ClusterIdentity, oldStatus.ClusterIdentity, fldPath.Child("clusterIdentity"))...)
 	}
+	if len(newStatus.AdvertisedAddresses) > 0 {
+		allErrs = append(allErrs, validateAdvertiseAddresses(newStatus.AdvertisedAddresses, fldPath.Child("advertisedAddresses"))...)
+	}
+
 	return allErrs
+}
+
+// validateAdvertiseAddresses validates kube-apiserver addresses.
+func validateAdvertiseAddresses(addresses []core.ShootAdvertisedAddress, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	names := sets.NewString()
+	for i, address := range addresses {
+		if address.Name == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
+		} else if names.Has(address.Name) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), address.Name))
+		} else {
+			names.Insert(address.Name)
+			allErrs = append(allErrs, validateAdvertisedURL(address.URL, fldPath.Index(i).Child("url"))...)
+		}
+	}
+	return allErrs
+}
+
+// validateAdvertisedURL validates kube-apiserver's URL.
+func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+	const form = "; desired format: https://host[:port]"
+	if u, err := url.Parse(URL); err != nil {
+		allErrors = append(allErrors, field.Required(fldPath, "url must be a valid URL: "+err.Error()+form))
+	} else {
+		if u.Scheme != "https" {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Scheme, "'https' is the only allowed URL scheme"+form))
+		}
+		if len(u.Host) == 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Host, "host must be provided"+form))
+		}
+		if len(u.Path) > 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Path, "path is not permitted in the URL"+form))
+		}
+		if u.User != nil {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.User.String(), "user information is not permitted in the URL"+form))
+		}
+		if len(u.Fragment) != 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Fragment, "fragments are not permitted in the URL"+form))
+		}
+		if len(u.RawQuery) != 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.RawQuery, "query parameters are not permitted in the URL"+form))
+		}
+	}
+	return allErrors
 }
 
 func validateAddons(addons *core.Addons, kubeAPIServerConfig *core.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
@@ -332,7 +382,7 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *core.KubeProxyConfig, ver
 	if oldConfig != nil {
 		oldMode = *oldConfig.Mode
 	}
-	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1, < 1.16"); ok {
+	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
 	return allErrs
@@ -451,7 +501,7 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		idxPath := fldPath.Child("providers").Index(i)
 
 		if provider.SecretName != nil && provider.Type != nil {
-			providerName := botanist.GenerateDNSProviderName(*provider.SecretName, *provider.Type)
+			providerName := gutil.GenerateDNSProviderName(*provider.SecretName, *provider.Type)
 			if names.Has(providerName) {
 				allErrs = append(allErrs, field.Invalid(idxPath, providerName, "combination of .secretName and .type must be unique across dns providers"))
 				continue
@@ -520,7 +570,6 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 	}
 
 	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		geqKubernetes111, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
 		geqKubernetes119, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.19")
 		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
 
@@ -570,9 +619,6 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			}
 			if oidc.SigningAlgs != nil && len(oidc.SigningAlgs) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signingAlgs cannot be empty when key is provided"))
-			}
-			if !geqKubernetes111 && oidc.RequiredClaims != nil {
-				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "requiredClaims cannot be provided when version is not greater or equal 1.11"))
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
@@ -731,11 +777,6 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 func validateKubeControllerManager(kubernetesVersion string, kcm *core.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	k8sVersionLessThan112, err := versionutils.CompareVersions(kubernetesVersion, "<", "1.12")
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, kubernetesVersion, err.Error()))
-	}
-
 	if kcm != nil {
 		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
 			if *maskSize < 16 || *maskSize > 28 {
@@ -756,39 +797,14 @@ func validateKubeControllerManager(kubernetesVersion string, kcm *core.KubeContr
 			if hpa.Tolerance != nil && *hpa.Tolerance <= 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("tolerance"), *hpa.Tolerance, "tolerance of must be greater than 0"))
 			}
-
-			if k8sVersionLessThan112 {
-				if hpa.DownscaleDelay != nil && hpa.DownscaleDelay.Duration < 0 {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleDelay"), *hpa.DownscaleDelay, "downscale delay must not be negative"))
-				}
-				if hpa.UpscaleDelay != nil && hpa.UpscaleDelay.Duration < 0 {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("upscaleDelay"), *hpa.UpscaleDelay, "upscale delay must not be negative"))
-				}
-				if hpa.DownscaleStabilization != nil {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("downscaleStabilization"), "downscale stabilization is not supported in k8s versions < 1.12"))
-				}
-				if hpa.InitialReadinessDelay != nil {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("initialReadinessDelay"), "initial readiness delay is not supported in k8s versions < 1.12"))
-				}
-				if hpa.CPUInitializationPeriod != nil {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("cpuInitializationPeriod"), "cpu initialization period is not supported in k8s versions < 1.12"))
-				}
-			} else {
-				if hpa.DownscaleDelay != nil {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("downscaleDelay"), "downscale delay is not supported in k8s versions >= 1.12"))
-				}
-				if hpa.UpscaleDelay != nil {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("upscaleDelay"), "upscale delay is not supported in k8s versions >= 1.12"))
-				}
-				if hpa.DownscaleStabilization != nil && hpa.DownscaleStabilization.Duration < 1*time.Second {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleStabilization"), *hpa.DownscaleStabilization, "downScale stabilization must not be less than a second"))
-				}
-				if hpa.InitialReadinessDelay != nil && hpa.InitialReadinessDelay.Duration <= 0 {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("initialReadinessDelay"), *hpa.InitialReadinessDelay, "initial readiness delay must be greater than 0"))
-				}
-				if hpa.CPUInitializationPeriod != nil && hpa.CPUInitializationPeriod.Duration < 1*time.Second {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
-				}
+			if hpa.DownscaleStabilization != nil && hpa.DownscaleStabilization.Duration < 1*time.Second {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleStabilization"), *hpa.DownscaleStabilization, "downScale stabilization must not be less than a second"))
+			}
+			if hpa.InitialReadinessDelay != nil && hpa.InitialReadinessDelay.Duration <= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("initialReadinessDelay"), *hpa.InitialReadinessDelay, "initial readiness delay must be greater than 0"))
+			}
+			if hpa.CPUInitializationPeriod != nil && hpa.CPUInitializationPeriod.Duration < 1*time.Second {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
 			}
 		}
 	}
@@ -963,7 +979,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	}
 
 	if worker.DataVolumes != nil {
-		var volumeNames = make(map[string]int)
+		volumeNames := make(map[string]int)
 		if len(worker.DataVolumes) > 0 && worker.Volume == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), "a worker volume must be defined if data volumes are defined"))
 		}

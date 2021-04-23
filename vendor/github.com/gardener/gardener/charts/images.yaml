@@ -75,7 +75,7 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v0.14.0"
+  tag: "v0.15.0"
   targetVersion: ">= 1.16"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
@@ -124,12 +124,6 @@ images:
   sourceRepository: github.com/kubernetes-incubator/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
   tag: v0.4.2
-  targetVersion: ">= 1.11"
-- name: metrics-server
-  sourceRepository: github.com/kubernetes-incubator/metrics-server
-  repository: k8s.gcr.io/metrics-server-amd64
-  tag: v0.3.1
-  targetVersion: 1.10.x
 
 # Shoot core addons
 - name: vpn-shoot

@@ -65,6 +65,13 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 		}
 	}
 
+	for i, pool := range cloudProfile.Constraints.FloatingPools {
+		lbClassPath := floatingPoolPath.Index(i).Child("loadBalancerClasses")
+		for j, class := range pool.LoadBalancerClasses {
+			allErrs = append(allErrs, ValidateLoadBalancerClasses(class, lbClassPath.Index(j))...)
+		}
+	}
+
 	loadBalancerProviderPath := fldPath.Child("constraints", "loadBalancerProviders")
 	if len(cloudProfile.Constraints.LoadBalancerProviders) == 0 {
 		allErrs = append(allErrs, field.Required(loadBalancerProviderPath, "must provide at least one load balancer provider"))
@@ -157,6 +164,30 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 		if len(policy) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath, "policy cannot be empty"))
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateLoadBalancerClasses validates LoadBalancerClass object.
+func ValidateLoadBalancerClasses(lbClass api.LoadBalancerClass, fldPath *field.Path) field.ErrorList {
+	var allErrs = field.ErrorList{}
+
+	if lbClass.Purpose != nil && *lbClass.Purpose != api.DefaultLoadBalancerClass && *lbClass.Purpose != api.PrivateLoadBalancerClass && *lbClass.Purpose != api.VPNLoadBalancerClass {
+		allErrs = append(allErrs, field.Invalid(fldPath, *lbClass.Purpose, fmt.Sprintf("Invalid LoadBalancerClass purpose. Valid values are %q or %q", api.DefaultLoadBalancerClass, api.PrivateLoadBalancerClass)))
+	}
+
+	if lbClass.FloatingSubnetID != nil && lbClass.FloatingSubnetName != nil && lbClass.FloatingSubnetTags != nil {
+		return append(allErrs, field.Forbidden(fldPath, "cannot select floating subnet by id, name and tags in parallel"))
+	}
+	if lbClass.FloatingSubnetID != nil && (lbClass.FloatingSubnetName != nil || lbClass.FloatingSubnetTags != nil) {
+		return append(allErrs, field.Forbidden(fldPath, "specify floating subnet id and name or tags is not possible"))
+	}
+	if lbClass.FloatingSubnetName != nil && (lbClass.FloatingSubnetID != nil || lbClass.FloatingSubnetTags != nil) {
+		return append(allErrs, field.Forbidden(fldPath, "specify floating subnet name and id or tags is not possible"))
+	}
+	if lbClass.FloatingSubnetTags != nil && (lbClass.FloatingSubnetID != nil || lbClass.FloatingSubnetName != nil) {
+		return append(allErrs, field.Forbidden(fldPath, "specify floating subnet tags and id or name is not possible"))
 	}
 
 	return allErrs

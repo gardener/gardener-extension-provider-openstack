@@ -9,6 +9,9 @@ region: eu
 # [LoadBalancer]
 lbProvider: foobar
 # floatingNetworkID: foo-bar-123
+# floatingSubnetID: asd12345
+# floatingSubnetName: "*abc*"
+# floatingSubnetTags: tag1,tag2
 # subnetID: foo-bar-123
 # [Metadata]
 dhcpDomain: foobar
@@ -24,3 +27,9 @@ rescanBlockStorageOnResize: false
 # - name: B
 #   floatingSubnetID: asd12345
 #   subnetID: asd464545
+# - name: C
+#   floatingNetworkID: "1234"
+#   floatingSubnetName: "*abc*"
+# - name: D
+#   floatingNetworkID: "1234"
+#   floatingSubnetTags: tag1,tag2

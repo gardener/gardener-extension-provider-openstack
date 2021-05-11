@@ -105,9 +105,18 @@ type KeyStoneURL struct {
 type LoadBalancerClass struct {
 	// Name is the name of the LB class
 	Name string `json:"name"`
+	// Purpose is reflecting if the loadbalancer class has a special purpose e.g. default, internal.
+	// +optional
+	Purpose *string `json:"purpose"`
 	// FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.
 	// +optional
 	FloatingSubnetID *string `json:"floatingSubnetID,omitempty"`
+	// FloatingSubnetTags is a list of tags which can be used to select subnets in the floating network pool.
+	// +optional
+	FloatingSubnetTags *string `json:"floatingSubnetTags,omitempty"`
+	// FloatingSubnetName is can either be a name or a name pattern of a subnet in the floating network pool.
+	// +optional
+	FloatingSubnetName *string `json:"floatingSubnetName,omitempty"`
 	// FloatingNetworkID is the network ID of the floating network pool.
 	// +optional
 	FloatingNetworkID *string `json:"floatingNetworkID,omitempty"`

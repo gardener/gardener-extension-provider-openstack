@@ -466,47 +466,107 @@ func getConfigChartValues(
 		"nodeVolumeAttachLimit":      cloudProfileConfig.NodeVolumeAttachLimit,
 	}
 
-	if cpConfig.LoadBalancerClasses == nil {
-		if floatingPool, err := helper.FindFloatingPool(cloudProfileConfig.Constraints.FloatingPools, infraStatus.Networks.FloatingPool.Name, cp.Spec.Region, nil); err == nil {
-			cpConfig.LoadBalancerClasses = floatingPool.LoadBalancerClasses
+	var loadBalancerClassesFromCloudProfile = []api.LoadBalancerClass{}
+	if floatingPool, err := helper.FindFloatingPool(cloudProfileConfig.Constraints.FloatingPools, infraStatus.Networks.FloatingPool.Name, cp.Spec.Region, nil); err == nil {
+		shootVersion, err := helper.DetermineShootVersionFromCluster(cluster)
+		if err != nil {
+			return nil, err
 		}
+		loadBalancerClassesFromCloudProfile = helper.FilterLoadBalancerClassByVersionContraints(floatingPool.LoadBalancerClasses, shootVersion)
 	}
 
-	for i, class := range cpConfig.LoadBalancerClasses {
-		if i == 0 || class.Name == api.DefaultLoadBalancerClass {
-			utils.SetStringValue(values, "floatingSubnetID", class.FloatingSubnetID)
-			utils.SetStringValue(values, "subnetID", class.SubnetID)
-		}
+	// The LoadBalancerClasses from the CloudProfile will be configured by default.
+	// In case the user specifies own LoadBalancerClasses via via the ControlPlaneConfig
+	// then the ones from the CloudProfile will be overridden.
+	var loadBalancerClasses = loadBalancerClassesFromCloudProfile
+	if cpConfig.LoadBalancerClasses != nil {
+		loadBalancerClasses = cpConfig.LoadBalancerClasses
 	}
 
-	for _, class := range cpConfig.LoadBalancerClasses {
-		if class.Name == api.PrivateLoadBalancerClass {
-			utils.SetStringValue(values, "subnetID", class.SubnetID)
-			break
-		}
+	// If a private LoadBalancerClass is provided then set its configuration for
+	// the global loadbalancer configuration in the cloudprovider config.
+	if privateLoadBalancerClass := lookupLoadBalancerClass(loadBalancerClasses, api.PrivateLoadBalancerClass); privateLoadBalancerClass != nil {
+		utils.SetStringValue(values, "subnetID", privateLoadBalancerClass.SubnetID)
 	}
 
-	var floatingClasses []map[string]interface{}
-	for _, class := range cpConfig.LoadBalancerClasses {
-		floatingClass := map[string]interface{}{"name": class.Name}
-
-		if !utils.IsEmptyString(class.FloatingSubnetID) && utils.IsEmptyString(class.FloatingNetworkID) {
-			floatingClass["floatingNetworkID"] = infraStatus.Networks.FloatingPool.ID
-		} else {
-			utils.SetStringValue(floatingClass, "floatingNetworkID", class.FloatingNetworkID)
-		}
-
-		utils.SetStringValue(floatingClass, "floatingSubnetID", class.FloatingSubnetID)
-		utils.SetStringValue(floatingClass, "subnetID", class.SubnetID)
-
-		floatingClasses = append(floatingClasses, floatingClass)
+	// If a default LoadBalancerClass is provided then set its configuration for
+	// the global loadbalancer configuration in the cloudprovider config.
+	if defaultLoadBalancerClass := lookupLoadBalancerClass(loadBalancerClasses, api.DefaultLoadBalancerClass); defaultLoadBalancerClass != nil {
+		utils.SetStringValue(values, "floatingNetworkID", defaultLoadBalancerClass.FloatingNetworkID)
+		utils.SetStringValue(values, "floatingSubnetID", defaultLoadBalancerClass.FloatingSubnetID)
+		utils.SetStringValue(values, "floatingSubnetName", defaultLoadBalancerClass.FloatingSubnetName)
+		utils.SetStringValue(values, "floatingSubnetTags", defaultLoadBalancerClass.FloatingSubnetTags)
+		utils.SetStringValue(values, "subnetID", defaultLoadBalancerClass.SubnetID)
 	}
 
-	if floatingClasses != nil {
-		values["floatingClasses"] = floatingClasses
+	// Check if there is a dedicated vpn LoadBalancerClass in the CloudProfile and
+	// add its to the list of available LoadBalancerClasses.
+	if vpnLoadBalancerClass := lookupLoadBalancerClass(loadBalancerClassesFromCloudProfile, api.VPNLoadBalancerClass); vpnLoadBalancerClass != nil {
+		loadBalancerClasses = append(loadBalancerClasses, *vpnLoadBalancerClass)
+	}
+
+	if loadBalancerClassValues := generateLoadBalancerClassValues(loadBalancerClasses, infraStatus); len(loadBalancerClassValues) > 0 {
+		values["floatingClasses"] = loadBalancerClassValues
 	}
 
 	return values, nil
+}
+
+func generateLoadBalancerClassValues(lbClasses []api.LoadBalancerClass, infrastructureStatus *api.InfrastructureStatus) []map[string]interface{} {
+	var loadBalancerClassValues = []map[string]interface{}{}
+
+	for _, lbClass := range lbClasses {
+		values := map[string]interface{}{"name": lbClass.Name}
+
+		utils.SetStringValue(values, "floatingNetworkID", lbClass.FloatingNetworkID)
+		if !utils.IsEmptyString(lbClass.FloatingNetworkID) && infrastructureStatus.Networks.FloatingPool.ID != "" {
+			values["floatingNetworkID"] = infrastructureStatus.Networks.FloatingPool.ID
+		}
+		utils.SetStringValue(values, "floatingSubnetID", lbClass.FloatingSubnetID)
+		utils.SetStringValue(values, "floatingSubnetName", lbClass.FloatingSubnetName)
+		utils.SetStringValue(values, "floatingSubnetTags", lbClass.FloatingSubnetTags)
+		utils.SetStringValue(values, "subnetID", lbClass.SubnetID)
+
+		loadBalancerClassValues = append(loadBalancerClassValues, values)
+	}
+
+	return loadBalancerClassValues
+}
+
+func lookupLoadBalancerClass(lbClasses []api.LoadBalancerClass, lbClassPurpose string) *api.LoadBalancerClass {
+	var firstLoadBalancerClass *api.LoadBalancerClass
+
+	// First: Check if the requested LoadBalancerClass can be looked up by purpose.
+	for i, class := range lbClasses {
+		if i == 0 {
+			classRef := &class
+			firstLoadBalancerClass = classRef
+		}
+
+		if class.Purpose != nil && *class.Purpose == lbClassPurpose {
+			return &class
+		}
+	}
+
+	// The vpn class can only be selected by purpose and not by name.
+	if lbClassPurpose == api.VPNLoadBalancerClass {
+		return nil
+	}
+
+	// Second: Check if the requested LoadBalancerClass can be looked up by name.
+	for _, class := range lbClasses {
+		if class.Name == lbClassPurpose {
+			return &class
+		}
+	}
+
+	// If a default LoadBalancerClass was requested, but not found then the first
+	// configured one will be trated as default LoadBalancerClass.
+	if lbClassPurpose == api.DefaultLoadBalancerClass && firstLoadBalancerClass != nil {
+		return firstLoadBalancerClass
+	}
+
+	return nil
 }
 
 // getControlPlaneChartValues collects and returns the control plane chart values.

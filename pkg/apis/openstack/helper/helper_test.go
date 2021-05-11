@@ -15,13 +15,17 @@
 package helper_test
 
 import (
+	"github.com/Masterminds/semver"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"k8s.io/utils/pointer"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Helper", func() {
@@ -137,6 +141,50 @@ var _ = Describe("Helper", func() {
 		Entry("return fip even if there is a non-constraing fip with better score", []api.FloatingPool{{Name: "fip-*", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.BoolPtr(true)}}, "fip-1", regionName, nil, pointer.StringPtr("fip-*")),
 		Entry("return non-constraing fip as there is no other matching fip", []api.FloatingPool{{Name: "nofip-1", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.BoolPtr(true)}}, "fip-1", regionName, nil, pointer.StringPtr("fip-1")),
 	)
+
+	DescribeTable("#FilterLoadBalancerClassByVersionContraints",
+		func(k8sVersion string, lbClasses, expectedLbClasses []api.LoadBalancerClass) {
+			version, err := semver.NewVersion(k8sVersion)
+			Expect(err).NotTo(HaveOccurred())
+
+			filterLbClassList := FilterLoadBalancerClassByVersionContraints(lbClasses, version)
+
+			Expect(filterLbClassList).To(Equal(expectedLbClasses))
+		},
+		Entry("should return input list for k8s version >= v1.21", "v1.21.0",
+			[]api.LoadBalancerClass{{Name: "default", FloatingSubnetTags: pointer.StringPtr("test1,test2"), FloatingSubnetName: pointer.StringPtr("*pattern*")}},
+			[]api.LoadBalancerClass{{Name: "default", FloatingSubnetTags: pointer.StringPtr("test1,test2"), FloatingSubnetName: pointer.StringPtr("*pattern*")}},
+		),
+		Entry("should return input list for k8s version < v1.21 as there are no entries with unsupporeted fields", "v1.20.0",
+			[]api.LoadBalancerClass{{Name: "default", FloatingNetworkID: pointer.StringPtr("fip-1")}},
+			[]api.LoadBalancerClass{{Name: "default", FloatingNetworkID: pointer.StringPtr("fip-1")}},
+		),
+		Entry("should return empty list for k8s version < v1.21 as entries with not supported field floatingSubnetName are filtered", "v1.20.0",
+			[]api.LoadBalancerClass{
+				{Name: "default", FloatingSubnetName: pointer.StringPtr("*pattern*")}},
+			[]api.LoadBalancerClass{},
+		),
+		Entry("should return empty list for k8s version < v1.21 as entries with not supported field floatingSubnetTags are filtered", "v1.20.0",
+			[]api.LoadBalancerClass{{Name: "default", FloatingSubnetTags: pointer.StringPtr("test1,test2")}},
+			[]api.LoadBalancerClass{},
+		),
+	)
+
+	DescribeTable("DetermineShootVersionFromCluster",
+		func(cluster *extensionscontroller.Cluster, expectError bool, expectedVersion string) {
+			version, err := DetermineShootVersionFromCluster(cluster)
+			if expectError {
+				Expect(err).To(HaveOccurred())
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version.String()).To(Equal(expectedVersion))
+		},
+		Entry("should return shoot version", makeCluster("v1.20.0"), false, "1.20.0"),
+		Entry("should return error as shoot verison is invalid", makeCluster("x.x.x"), true, ""),
+		Entry("should return error as cluster resource is empty", nil, true, ""),
+		Entry("should return error as cluster shoot resource is empty", &extensionscontroller.Cluster{}, true, ""),
+	)
 })
 
 func makeProfileMachineImages(name, version, image string) []api.MachineImages {
@@ -174,6 +222,18 @@ func makeProfileRegionMachineImages(name, version, image, region string) []api.M
 		{
 			Name:     name,
 			Versions: versions,
+		},
+	}
+}
+
+func makeCluster(version string) *extensionscontroller.Cluster {
+	return &extensionscontroller.Cluster{
+		Shoot: &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: version,
+				},
+			},
 		},
 	}
 }

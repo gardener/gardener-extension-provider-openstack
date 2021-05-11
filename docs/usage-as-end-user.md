@@ -74,6 +74,17 @@ An example `ControlPlaneConfig` for the OpenStack extension looks as follows:
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 kind: ControlPlaneConfig
 loadBalancerProvider: haproxy
+loadBalancerClasses:
+- name: lbclass-1
+  purpose: default
+  floatingNetworkID: fips-1-id
+  floatingSubnetName: internet-*
+- name: lbclass-2
+  floatingNetworkID: fips-1-id
+  floatingSubnetTags: internal,private
+- name: lbclass-3
+  purpose: private
+  subnetID: internal-id
 cloudControllerManager:
   featureGates:
     CustomResourceValidation: true
@@ -81,6 +92,18 @@ cloudControllerManager:
 
 The `loadBalancerProvider` is the provider name you want to use for load balancers in your shoot.
 If you don't know which types are available look it up in the respective `CloudProfile`.
+
+The `loadBalancerClasses` field contains an optional list of load balancer classes which will be available in the cluster. Each entry can have the following fields:
+- `name` to select the load balancer class via the kubernetes [service annotations](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/expose-applications-using-loadbalancer-type-service.md#switching-between-floating-subnets-by-using-preconfigured-classes) `loadbalancer.openstack.org/class=name`
+- `purpose` with values `default` or `private`
+  - The configuration of the `default` load balancer class will be used as default for all other kubernetes loadbalancer services without a class annotation
+  - The configuration of the `private` load balancer class will be also set to the global loadbalancer configuration of the cluster, but will be overridden by the `default` purpose
+- `floatingNetworkID` can be specified to receive an ip from an floating/external network, additionally the subnet in this network can be selected via
+  - `floatingSubnetName` can be either a full subnet name or a regex/glob to match subnet name
+  - `floatingSubnetTags` a comma seperated list of subnet tags
+  - `floatingSubnetTags` the id of a specific subnet
+- `subnetID` can be specified by to receive an ip from an internal subnet (will not have an effect in combination with floating/external network configuration)
+
 
 The `cloudControllerManager.featureGates` contains a map of explicitly enabled or disabled feature gates.
 For production usage it's not recommended to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.

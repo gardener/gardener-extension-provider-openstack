@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -41,6 +42,7 @@ func NewShootValidator() extensionswebhook.Validator {
 
 type shoot struct {
 	client         client.Client
+	apiReader      client.Reader
 	decoder        runtime.Decoder
 	lenientDecoder runtime.Decoder
 }
@@ -69,6 +71,12 @@ func (s *shoot) InjectClient(client client.Client) error {
 	return nil
 }
 
+// InjectAPIReader injects the given apiReader into the validator.
+func (s *shoot) InjectAPIReader(apiReader client.Reader) error {
+	s.apiReader = apiReader
+	return nil
+}
+
 // InjectScheme injects the given scheme into the validator.
 func (s *shoot) InjectScheme(scheme *runtime.Scheme) error {
 	s.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
@@ -83,10 +91,14 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 		return fmt.Errorf("wrong object type %T", new)
 	}
 
-	// Get credentials
-	credentials, err := openstack.GetCredentialsBySecretBinding(ctx, s.client, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Spec.SecretBindingName})
+	secret, err := s.getCloudProviderSecretForShoot(ctx, shoot)
 	if err != nil {
-		return fmt.Errorf("could not get credentials from SecretBindingName %s: %w", shoot.Spec.SecretBindingName, err)
+		return fmt.Errorf("failed to get cloud provider credentials: %v", err)
+	}
+
+	credentials, err := openstack.ExtractCredentials(secret)
+	if err != nil {
+		return fmt.Errorf("invalid cloud credentials: %v", err)
 	}
 
 	if old != nil {
@@ -207,4 +219,26 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 		cloudProfileConfig: cloudProfileConfig,
 		shootVersion:       k8sVersion,
 	}, nil
+}
+
+func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.Shoot) (*corev1.Secret, error) {
+	var (
+		secretBinding    = &gardencorev1beta1.SecretBinding{}
+		secretBindingKey = kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName)
+	)
+	if err := kutil.LookupObject(ctx, s.client, s.apiReader, secretBindingKey, secretBinding); err != nil {
+		return nil, err
+	}
+
+	var (
+		secret    = &corev1.Secret{}
+		secretKey = kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
+	)
+	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets
+	// under the hood. The latter increases the memory usage of the component.
+	if err := s.apiReader.Get(ctx, secretKey, secret); err != nil {
+		return nil, err
+	}
+
+	return secret, nil
 }

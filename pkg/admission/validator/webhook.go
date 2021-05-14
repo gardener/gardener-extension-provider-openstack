@@ -20,11 +20,14 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+const SecretsValidatorName = "secrets." + extensionswebhook.ValidatorName
 
 var logger = log.Log.WithName("openstack-validator-webhook")
 
@@ -40,6 +43,20 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Validators: map[extensionswebhook.Validator][]client.Object{
 			NewShootValidator():        {&core.Shoot{}},
 			NewCloudProfileValidator(): {&core.CloudProfile{}},
+		},
+	})
+}
+
+// NewSecretsWebhook creates a new validation webhook for Secrets.
+func NewSecretsWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
+	logger.Info("Setting up webhook", "name", SecretsValidatorName)
+
+	return extensionswebhook.New(mgr, extensionswebhook.Args{
+		Provider: openstack.Type,
+		Name:     SecretsValidatorName,
+		Path:     extensionswebhook.ValidatorPath + "/secrets",
+		Validators: map[extensionswebhook.Validator][]client.Object{
+			NewSecretValidator(): {&corev1.Secret{}},
 		},
 	})
 }

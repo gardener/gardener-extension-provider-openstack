@@ -34,3 +34,30 @@ webhooks:
       path: /webhooks/validate
     {{- end }}
     caBundle: {{ required ".Values.webhookConfig.caBundle is required" (b64enc .Values.global.webhookConfig.caBundle) }}
+- name: secrets.validation.openstack.provider.extensions.gardener.cloud
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - secrets
+  failurePolicy: Fail
+  objectSelector: {}
+  namespaceSelector: {}
+  sideEffects: None
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    {{- if .Values.global.virtualGarden.enabled }}
+    url: {{ printf "https://%s.%s/webhooks/validate/secrets" (include "name" .) (.Release.Namespace) }}
+    {{- else }}
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: {{ include "name" . }}
+      path: /webhooks/validate/secrets
+    {{- end }}
+    caBundle: {{ required ".Values.webhookConfig.caBundle is required" (b64enc .Values.global.webhookConfig.caBundle) }}

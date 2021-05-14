@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package validation
 
 import (
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/validator"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	corev1 "k8s.io/api/core/v1"
 )
 
-// GardenWebhookSwitchOptions are the webhookcmd.SwitchOptions for the admission webhooks.
-func GardenWebhookSwitchOptions() *webhookcmd.SwitchOptions {
-	return webhookcmd.NewSwitchOptions(
-		webhookcmd.Switch(extensionswebhook.ValidatorName, validator.New),
-		webhookcmd.Switch(validator.SecretsValidatorName, validator.NewSecretsWebhook),
-	)
+// ValidateCloudProviderSecret checks whether the given secret contains a valid OpenStack credentials.
+func ValidateCloudProviderSecret(secret *corev1.Secret) error {
+	_, err := openstack.ExtractCredentials(secret)
+	return err
 }

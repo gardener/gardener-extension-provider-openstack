@@ -84,6 +84,8 @@ github.com/gardener/gardener/extensions/pkg/log
 github.com/gardener/gardener/extensions/pkg/predicate
 github.com/gardener/gardener/extensions/pkg/terraformer
 github.com/gardener/gardener/extensions/pkg/util
+github.com/gardener/gardener/extensions/pkg/util/index
+github.com/gardener/gardener/extensions/pkg/util/secret
 github.com/gardener/gardener/extensions/pkg/webhook
 github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider
 github.com/gardener/gardener/extensions/pkg/webhook/cmd

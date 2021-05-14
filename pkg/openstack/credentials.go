@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -31,16 +30,6 @@ type Credentials struct {
 	Username   string
 	Password   string
 	AuthURL    string
-}
-
-// GetCredentials computes for a given context and infrastructure the corresponding credentials object.
-func GetCredentialsBySecretBinding(ctx context.Context, c client.Client, secretBindingKey client.ObjectKey) (*Credentials, error) {
-	binding := &gardencorev1beta1.SecretBinding{}
-	if err := c.Get(ctx, secretBindingKey, binding); err != nil {
-		return nil, err
-	}
-
-	return GetCredentials(ctx, c, binding.SecretRef)
 }
 
 // GetCredentials computes for a given context and infrastructure the corresponding credentials object.

@@ -57,19 +57,19 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 	if secret.Data == nil {
 		return nil, fmt.Errorf("secret does not contain any data")
 	}
-	domainName, err := getRequired(secret.Data, DomainName)
+	domainName, err := getRequired(secret, DomainName)
 	if err != nil {
 		return nil, err
 	}
-	tenantName, err := getRequired(secret.Data, TenantName)
+	tenantName, err := getRequired(secret, TenantName)
 	if err != nil {
 		return nil, err
 	}
-	userName, err := getRequired(secret.Data, UserName)
+	userName, err := getRequired(secret, UserName)
 	if err != nil {
 		return nil, err
 	}
-	password, err := getRequired(secret.Data, Password)
+	password, err := getRequired(secret, Password)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +85,13 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 }
 
 // getRequired checks if the provided map has a valid value for a corresponding key.
-func getRequired(data map[string][]byte, key string) (string, error) {
-	value, ok := data[key]
+func getRequired(secret *corev1.Secret, key string) (string, error) {
+	value, ok := secret.Data[key]
 	if !ok {
-		return "", fmt.Errorf("map %v does not contain key %s", data, key)
+		return "", fmt.Errorf("missing %q data key in secret %s/%s", key, secret.Namespace, secret.Name)
 	}
 	if len(value) == 0 {
-		return "", fmt.Errorf("key %s may not be empty", key)
+		return "", fmt.Errorf("key %q in secret %s/%s cannot be empty", key, secret.Namespace, secret.Name)
 	}
 	return string(value), nil
 }

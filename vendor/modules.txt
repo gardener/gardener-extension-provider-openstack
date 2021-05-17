@@ -7,6 +7,7 @@ github.com/Masterminds/goutils
 ## explicit
 github.com/Masterminds/semver
 # github.com/Masterminds/sprig v2.22.0+incompatible
+## explicit
 github.com/Masterminds/sprig
 # github.com/PuerkitoBio/purell v1.1.1
 github.com/PuerkitoBio/purell

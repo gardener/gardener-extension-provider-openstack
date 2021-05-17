@@ -33,8 +33,7 @@ import (
 
 type actuator struct {
 	logger logr.Logger
-
-	common.ChartRendererContext
+	common.RESTConfigContext
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.

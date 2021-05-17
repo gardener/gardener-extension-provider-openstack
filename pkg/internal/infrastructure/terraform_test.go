@@ -105,7 +105,7 @@ var _ = Describe("Terraform", func() {
 		}
 	})
 
-	Describe("#ComputeTerraformerChartValues", func() {
+	Describe("#ComputeTerraformerTemplateValues", func() {
 		var (
 			expectedOpenStackValues  map[string]interface{}
 			expectedCreateValues     map[string]interface{}
@@ -116,9 +116,10 @@ var _ = Describe("Terraform", func() {
 
 		BeforeEach(func() {
 			expectedOpenStackValues = map[string]interface{}{
-				"authURL":          keystoneURL,
-				"region":           infra.Spec.Region,
-				"floatingPoolName": config.FloatingPoolName,
+				"authURL":           keystoneURL,
+				"region":            infra.Spec.Region,
+				"floatingPoolName":  config.FloatingPoolName,
+				"maxApiCallRetries": MaxApiCallRetries,
 			}
 			expectedCreateValues = map[string]interface{}{
 				"router": false,
@@ -141,7 +142,7 @@ var _ = Describe("Terraform", func() {
 		})
 
 		It("should correctly compute the terraformer chart values", func() {
-			values, err := ComputeTerraformerChartValues(infra, config, cluster)
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
 			Expect(err).To(BeNil())
 
 			Expect(values).To(Equal(map[string]interface{}{
@@ -166,7 +167,7 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["enableSNAT"] = true
 
-			values, err := ComputeTerraformerChartValues(infra, config, cluster)
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,
@@ -190,7 +191,7 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["floatingPoolSubnet"] = fipSubnetID
 
-			values, err := ComputeTerraformerChartValues(infra, config, cluster)
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,

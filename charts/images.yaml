@@ -41,7 +41,7 @@ images:
 - name: machine-controller-manager-provider-openstack
   sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
   repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-openstack
-  tag: "v0.2.0"
+  tag: "v0.3.0"
 
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack

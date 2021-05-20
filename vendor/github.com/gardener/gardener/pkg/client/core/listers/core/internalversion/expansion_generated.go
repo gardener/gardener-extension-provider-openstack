@@ -34,6 +34,10 @@ type BackupEntryNamespaceListerExpansion interface{}
 // CloudProfileLister.
 type CloudProfileListerExpansion interface{}
 
+// ControllerDeploymentListerExpansion allows custom methods to be added to
+// ControllerDeploymentLister.
+type ControllerDeploymentListerExpansion interface{}
+
 // ControllerInstallationListerExpansion allows custom methods to be added to
 // ControllerInstallationLister.
 type ControllerInstallationListerExpansion interface{}
@@ -81,6 +85,14 @@ type ShootListerExpansion interface{}
 // ShootNamespaceListerExpansion allows custom methods to be added to
 // ShootNamespaceLister.
 type ShootNamespaceListerExpansion interface{}
+
+// ShootExtensionStatusListerExpansion allows custom methods to be added to
+// ShootExtensionStatusLister.
+type ShootExtensionStatusListerExpansion interface{}
+
+// ShootExtensionStatusNamespaceListerExpansion allows custom methods to be added to
+// ShootExtensionStatusNamespaceLister.
+type ShootExtensionStatusNamespaceListerExpansion interface{}
 
 // ShootStateListerExpansion allows custom methods to be added to
 // ShootStateLister.

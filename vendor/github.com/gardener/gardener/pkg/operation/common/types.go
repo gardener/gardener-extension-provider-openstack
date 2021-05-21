@@ -110,6 +110,8 @@ const (
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
 
+	// ControllerDeploymentHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
+	ControllerDeploymentHash = "deployment-hash"
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
 
@@ -143,4 +145,11 @@ const (
 
 	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
 	GardenLokiPriorityClassName = "garden-loki"
+
+	// MonitoringIngressCredentials is a constant for the name of a secret containing the monitoring credentials for
+	// operators monitoring for shoots.
+	MonitoringIngressCredentials = "monitoring-ingress-credentials"
+	// MonitoringIngressCredentialsUsers is a constant for the name of a secret containing the monitoring credentials
+	// for users monitoring for shoots.
+	MonitoringIngressCredentialsUsers = "monitoring-ingress-credentials-users"
 )

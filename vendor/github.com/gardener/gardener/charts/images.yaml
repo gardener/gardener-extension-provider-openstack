@@ -20,7 +20,7 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.4.1"
+  tag: "v0.5.0"
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener-resource-manager
   repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
@@ -75,7 +75,7 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v0.16.0"
+  tag: "v0.16.1"
   targetVersion: ">= 1.16"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
@@ -253,11 +253,11 @@ images:
 # Istio
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
-  repository: docker.io/istio/proxyv2
+  repository: gcr.io/istio-release/proxyv2
   tag: "1.8.0"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
-  repository: docker.io/istio/pilot
+  repository: gcr.io/istio-release/pilot
   tag: "1.8.0"
 
 # API Server SNI

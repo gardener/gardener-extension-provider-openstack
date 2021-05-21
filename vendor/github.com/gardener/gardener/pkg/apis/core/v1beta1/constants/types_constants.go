@@ -137,6 +137,9 @@ const (
 	// GardenerOperationWaitForState is a constant for the value of the operation annotation describing a wait
 	// operation.
 	GardenerOperationWaitForState = "wait-for-state"
+	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
+	// operation that extends the lifetime of the object having the operation annotation.
+	GardenerOperationKeepalive = "keepalive"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	//
@@ -209,6 +212,11 @@ const (
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
+	// ShootAlphaControlPlaneScaleDownDisabled is a constant for an annotation on the Shoot resource staiting that the
+	// automatic scale-down shall be disabled for the etcd, kube-apiserver, kube-controller-manager.
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.

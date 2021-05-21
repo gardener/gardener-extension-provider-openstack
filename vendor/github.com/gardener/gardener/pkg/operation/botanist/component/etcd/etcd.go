@@ -81,11 +81,11 @@ var (
 	TimeNow = time.Now
 
 	// PortEtcdServer is the port exposed by etcd for server-to-server communication.
-	PortEtcdServer = 2380
+	PortEtcdServer = int32(2380)
 	// PortEtcdClient is the port exposed by etcd for client communication.
-	PortEtcdClient = 2379
+	PortEtcdClient = int32(2379)
 	// PortBackupRestore is the client port exposed by the backup-restore sidecar container.
-	PortBackupRestore = 8080
+	PortBackupRestore = int32(8080)
 )
 
 // Name returns the name of the Etcd object for the given role.
@@ -185,14 +185,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		replicas = e.computeReplicas(foundEtcd, existingEtcd)
 
 		protocolTCP             = corev1.ProtocolTCP
-		intStrPortEtcdClient    = intstr.FromInt(PortEtcdClient)
-		intStrPortBackupRestore = intstr.FromInt(PortBackupRestore)
+		intStrPortEtcdClient    = intstr.FromInt(int(PortEtcdClient))
+		intStrPortBackupRestore = intstr.FromInt(int(PortBackupRestore))
 
 		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(foundSts, existingSts)
 		quota                                 = resource.MustParse("8Gi")
 		storageCapacity                       = resource.MustParse(e.storageCapacity)
 		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
+		compressionPolicy                     = druidv1alpha1.GzipCompression
+		compressionSpec                       = druidv1alpha1.CompressionSpec{
+			Enabled: true,
+			Policy:  &compressionPolicy,
+		}
 
 		annotations = map[string]string{
 			"checksum/secret-etcd-ca":          e.secrets.CA.Checksum,
@@ -314,7 +319,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			},
 			ServerPort:              &PortEtcdServer,
 			ClientPort:              &PortEtcdClient,
-			Metrics:                 metrics,
+			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(foundEtcd, existingEtcd),
 			Quota:                   &quota,
 		}
@@ -323,6 +328,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Resources:               resourcesBackupRestore,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
 			GarbageCollectionPeriod: &garbageCollectionPeriod,
+			SnapshotCompression:     &compressionSpec,
 		}
 
 		if e.backupConfig != nil {
@@ -352,12 +358,16 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if e.hvpaConfig != nil && e.hvpaConfig.Enabled {
 		var (
-			hpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
-			vpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
-			updateModeAuto              = hvpav1alpha1.UpdateModeAuto
-			updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
-			containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
+			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
+			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
+			updateModeAuto     = hvpav1alpha1.UpdateModeAuto
+			containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 		)
+
+		scaleDownUpdateMode := e.hvpaConfig.ScaleDownUpdateMode
+		if scaleDownUpdateMode == nil {
+			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		}
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, e.client, hvpa, func() error {
 			hvpa.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
@@ -418,7 +428,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeMaintenanceWindow,
+						UpdateMode: scaleDownUpdateMode,
 					},
 					StabilizationDuration: pointer.StringPtr("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{
@@ -690,4 +700,6 @@ type HVPAConfig struct {
 	// MaintenanceTimeWindow contains begin and end of a time window that allows down-scaling the etcd in case its
 	// resource requests/limits are unnecessarily high.
 	MaintenanceTimeWindow gardencorev1beta1.MaintenanceTimeWindow
+	// The update mode to use for scale down.
+	ScaleDownUpdateMode *string
 }

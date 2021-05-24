@@ -41,7 +41,7 @@ spec:
         {{- range $userAgentHeader := .Values.userAgentHeaders }}
         - --user-agent={{ $userAgentHeader }}
         {{- end }}
-        - --v=5
+        - --v=4
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}

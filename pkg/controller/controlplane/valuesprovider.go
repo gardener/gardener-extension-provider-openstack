@@ -480,11 +480,7 @@ func getConfigChartValues(
 
 	var loadBalancerClassesFromCloudProfile = []api.LoadBalancerClass{}
 	if floatingPool, err := helper.FindFloatingPool(cloudProfileConfig.Constraints.FloatingPools, infraStatus.Networks.FloatingPool.Name, cp.Spec.Region, nil); err == nil {
-		shootVersion, err := helper.DetermineShootVersionFromCluster(cluster)
-		if err != nil {
-			return nil, err
-		}
-		loadBalancerClassesFromCloudProfile = helper.FilterLoadBalancerClassByVersionContraints(floatingPool.LoadBalancerClasses, shootVersion)
+		loadBalancerClassesFromCloudProfile = floatingPool.LoadBalancerClasses
 	}
 
 	// The LoadBalancerClasses from the CloudProfile will be configured by default.

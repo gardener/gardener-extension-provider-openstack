@@ -18,15 +18,13 @@ import (
 	"fmt"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 
-	"github.com/Masterminds/semver"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateControlPlaneConfig validates a ControlPlaneConfig object.
-func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(controlPlaneConfig.LoadBalancerProvider) == 0 {
@@ -36,16 +34,6 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, k8sV
 	for i, class := range controlPlaneConfig.LoadBalancerClasses {
 		lbClassPath := fldPath.Child("loadBalancerClasses").Index(i)
 		allErrs = append(allErrs, ValidateLoadBalancerClasses(class, lbClassPath)...)
-
-		// Selection of the floating subnet via name or by tags is only possible for k8s clusters >= v1.21
-		if k8sVersion.LessThan(helper.K8sVersionV121) {
-			if class.FloatingSubnetName != nil {
-				allErrs = append(allErrs, field.Forbidden(lbClassPath.Child("floatingSubnetName"), "cannot select floating subnet by name for clusters below k8s < v1.21"))
-			}
-			if class.FloatingSubnetTags != nil {
-				allErrs = append(allErrs, field.Forbidden(lbClassPath.Child("floatingSubnetTags"), "cannot select floating subnet by tags for clusters below k8s < v1.21"))
-			}
-		}
 
 		// Do not allow that the user specify a vpn LoadBalancerClass in the controlplane config.
 		// It need to come from the CloudProfile.
@@ -66,7 +54,7 @@ func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConf
 }
 
 // ValidateControlPlaneConfigAgainstCloudProfile validates the given ControlPlaneConfig against constraints in the given CloudProfile.
-func ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, shootVersion *semver.Version, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig *api.ControlPlaneConfig, domain, shootRegion, floatingPoolName string, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if oldCpConfig == nil || oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider {
@@ -76,7 +64,7 @@ func ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig *api.Co
 	}
 
 	if oldCpConfig == nil || !equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) {
-		allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, domain, shootRegion, floatingPoolName, shootVersion, fldPath.Child("loadBalancerClasses"))...)
+		allErrs = append(allErrs, validateLoadBalancerClassesConstraints(cloudProfileConfig.Constraints.FloatingPools, cpConfig.LoadBalancerClasses, domain, shootRegion, floatingPoolName, fldPath.Child("loadBalancerClasses"))...)
 	}
 
 	return allErrs
@@ -118,7 +106,7 @@ func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvide
 	return false, validValues
 }
 
-func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, shootLBClasses []api.LoadBalancerClass, domain, shootRegion, floatingPoolName string, shootVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, shootLBClasses []api.LoadBalancerClass, domain, shootRegion, floatingPoolName string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(shootLBClasses) == 0 {
 		return allErrs
@@ -134,14 +122,13 @@ func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, sh
 		return allErrs
 	}
 
-	usableFloatingPoolLbClasses := helper.FilterLoadBalancerClassByVersionContraints(fp.LoadBalancerClasses, shootVersion)
 	for i, shootLBClass := range shootLBClasses {
 		var (
 			valid       bool
 			validValues []string
 		)
 
-		for _, lbClass := range usableFloatingPoolLbClasses {
+		for _, lbClass := range fp.LoadBalancerClasses {
 			if equality.Semantic.DeepEqual(shootLBClass, lbClass) {
 				valid = true
 				break

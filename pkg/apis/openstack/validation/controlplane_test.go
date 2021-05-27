@@ -15,7 +15,6 @@
 package validation_test
 
 import (
-	"github.com/Masterminds/semver"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 
@@ -32,26 +31,24 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		lbProvider1  = "foo"
 		nilPath      *field.Path
 		controlPlane *api.ControlPlaneConfig
-		k8sVersion   *semver.Version
 	)
 
 	BeforeEach(func() {
 		controlPlane = &api.ControlPlaneConfig{
 			LoadBalancerProvider: lbProvider1,
 		}
-		k8sVersion = semver.MustParse("v1.20")
 	})
 
 	Describe("#ValidateControlPlaneConfig", func() {
 
 		It("should return no errors for a valid configuration", func() {
-			Expect(ValidateControlPlaneConfig(controlPlane, k8sVersion, nilPath)).To(BeEmpty())
+			Expect(ValidateControlPlaneConfig(controlPlane, nilPath)).To(BeEmpty())
 		})
 
 		It("should require the name of a load balancer provider", func() {
 			controlPlane.LoadBalancerProvider = ""
 
-			errorList := ValidateControlPlaneConfig(controlPlane, k8sVersion, nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
@@ -118,7 +115,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		It("should require a name of a load balancer provider that is part of the constraints", func() {
 			controlPlane.LoadBalancerProvider = "bar"
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -150,7 +147,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}
 			controlPlane.LoadBalancerProvider = lbProvider1
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, "", k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, "", cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -183,7 +180,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}
 			controlPlane.LoadBalancerProvider = lbProvider1
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -216,7 +213,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}
 			controlPlane.LoadBalancerProvider = lbProvider2
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, "", k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, "", cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -224,7 +221,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		It("should pass because no load balancer class is configured in cloud profile", func() {
 			cloudProfileConfig.Constraints.FloatingPools[0].LoadBalancerClasses = nil
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -232,7 +229,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		It("should pass because load balancer class is configured correctly in control plane", func() {
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{loadBalancerClass}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -251,7 +248,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[1], lbClasses[0]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -290,7 +287,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[1]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, fpName, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, differentRegion, fpName, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -311,7 +308,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[1]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, fpName, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, fpName, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -329,7 +326,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClasses[0]}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -351,7 +348,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = append(controlPlane.LoadBalancerClasses, lbClasses[0])
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -380,9 +377,9 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			controlPlane.LoadBalancerClasses = append(controlPlane.LoadBalancerClasses, lbClasses[0])
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
-			errorList = ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, differentDomain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList = ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, differentDomain, region, floatingPool, cloudProfileConfig, nilPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("loadBalancerClasses[0]"),
@@ -393,7 +390,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{loadBalancerClass}
 			cloudProfileConfig.Constraints.FloatingPools = nil
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
@@ -406,7 +403,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			lbClass.FloatingNetworkID = nil
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{lbClass}
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -418,7 +415,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			controlPlane.LoadBalancerProvider = "does-for-sure-not-exist-in-cloudprofile"
 			oldControlPlane := controlPlane.DeepCopy()
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(oldControlPlane, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(oldControlPlane, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
 		})
 
@@ -429,7 +426,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{*loadBalancerClassNotInCloudProfile}
 			oldControlPlane := controlPlane.DeepCopy()
 
-			errorList := ValidateControlPlaneConfigAgainstCloudProfile(oldControlPlane, controlPlane, domain, region, floatingPool, k8sVersion, cloudProfileConfig, nilPath)
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(oldControlPlane, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
 			Expect(errorList).To(BeEmpty())
 		})
 	})

@@ -60,3 +60,8 @@ data:
   dashboard_users: |
     cloud-controller-manager-dashboard.json: |-
 {{- .Files.Get "ccm-observability-dashboard.json" | nindent 6 }}
+
+  observedComponents: |
+    observedPods:
+    - podPrefix: cloud-controller-manager
+      isExposedToUser: true

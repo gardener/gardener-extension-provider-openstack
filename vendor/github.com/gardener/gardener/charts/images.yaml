@@ -20,7 +20,7 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.5.1"
+  tag: "v0.5.2"
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener-resource-manager
   repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
@@ -119,7 +119,7 @@ images:
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
-  tag: "7.5.4"
+  tag: "7.5.7"
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
@@ -145,11 +145,11 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.7.0"
+  tag: "1.8.4"
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
-  repository: k8s.gcr.io/k8s-dns-node-cache
-  tag: "1.15.13"
+  repository: k8s.gcr.io/dns/k8s-dns-node-cache
+  tag: "1.17.4"
 - name: node-problem-detector
   sourceRepository: github.com/kubernetes/node-problem-detector
   repository: k8s.gcr.io/node-problem-detector/node-problem-detector
@@ -216,7 +216,7 @@ images:
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.34.0"
+  tag: "v0.35.0"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -224,21 +224,21 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.34.0"
+  tag: "v0.35.0"
 
 # VPA
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-admission-controller
-  tag: "0.9.0"
+  tag: "0.9.2"
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-recommender
-  tag: "0.9.0"
+  tag: "0.9.2"
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-updater
-  tag: "0.9.0"
+  tag: "0.9.2"
 - name: vpa-exporter
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
@@ -254,11 +254,11 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.8.0"
+  tag: "1.9.5"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.8.0"
+  tag: "1.9.5"
 
 # API Server SNI
 - name: apiserver-proxy

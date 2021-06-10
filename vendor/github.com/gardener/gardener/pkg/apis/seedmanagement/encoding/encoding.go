@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+package encoding
 
 import (
 	"bytes"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
@@ -36,8 +35,8 @@ var scheme *runtime.Scheme
 func init() {
 	scheme = runtime.NewScheme()
 	// core schemes are needed here to properly decode the embedded SeedTemplate objects
-	utilruntime.Must(core.AddToScheme(scheme))
-	utilruntime.Must(corev1beta1.AddToScheme(scheme))
+	utilruntime.Must(gardencore.AddToScheme(scheme))
+	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
 	utilruntime.Must(config.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
 }
@@ -105,12 +104,4 @@ func getEncoder(gv runtime.GroupVersioner, mediaType string) (runtime.Encoder, e
 		return nil, fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
 	}
 	return codec.EncoderForVersion(si.Serializer, gv), nil
-}
-
-// GetBootstrap returns the value of the given Bootstrap, or None if nil.
-func GetBootstrap(bootstrap *seedmanagement.Bootstrap) seedmanagement.Bootstrap {
-	if bootstrap != nil {
-		return *bootstrap
-	}
-	return seedmanagement.BootstrapNone
 }

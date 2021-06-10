@@ -63,7 +63,7 @@ func ValidateCloudProviderSecret(secret *corev1.Secret) error {
 	// authURL must be a valid URL if present
 	if credentials.AuthURL != "" {
 		if _, err := url.Parse(credentials.AuthURL); err != nil {
-			return fmt.Errorf("field %q in secret %s must be a valid URL if present", openstack.AuthURL, secretKey)
+			return fmt.Errorf("field %q in secret %s must be a valid URL when present: %v", openstack.AuthURL, secretKey, err)
 		}
 	}
 

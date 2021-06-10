@@ -15,6 +15,8 @@
 package validation_test
 
 import (
+	"strings"
+
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
@@ -56,6 +58,16 @@ var _ = Describe("Secret validation", func() {
 			HaveOccurred(),
 		),
 
+		Entry("should return error when the domain name contains a trailing space",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain "),
+				openstack.TenantName: []byte("tenant"),
+				openstack.UserName:   []byte("user"),
+				openstack.Password:   []byte("password"),
+			},
+			HaveOccurred(),
+		),
+
 		Entry("should return error when the tenant name field is missing",
 			map[string][]byte{
 				openstack.DomainName: []byte("domain"),
@@ -75,6 +87,26 @@ var _ = Describe("Secret validation", func() {
 			HaveOccurred(),
 		),
 
+		Entry("should return error when the tenant name contains a trailing space",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte("tenant "),
+				openstack.UserName:   []byte("user"),
+				openstack.Password:   []byte("password"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when the tenant name is too long",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte(strings.Repeat("a", 65)),
+				openstack.UserName:   []byte("user"),
+				openstack.Password:   []byte("password"),
+			},
+			HaveOccurred(),
+		),
+
 		Entry("should return error when the user name field is missing",
 			map[string][]byte{
 				openstack.DomainName: []byte("domain"),
@@ -83,11 +115,22 @@ var _ = Describe("Secret validation", func() {
 			},
 			HaveOccurred(),
 		),
+
 		Entry("should return error when the user name is empty",
 			map[string][]byte{
 				openstack.DomainName: []byte("domain"),
 				openstack.TenantName: []byte("tenant"),
 				openstack.UserName:   {},
+				openstack.Password:   []byte("password"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when the user name contains a trailing space",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte("tenant"),
+				openstack.UserName:   []byte("user "),
 				openstack.Password:   []byte("password"),
 			},
 			HaveOccurred(),
@@ -112,12 +155,44 @@ var _ = Describe("Secret validation", func() {
 			HaveOccurred(),
 		),
 
-		Entry("should succeed when the client credentials are valid",
+		Entry("should return error when the password contains a trailing new line",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte("tenant"),
+				openstack.UserName:   []byte("user"),
+				openstack.Password:   []byte("password\n"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when the auth URL is not a valid URL",
 			map[string][]byte{
 				openstack.DomainName: []byte("domain"),
 				openstack.TenantName: []byte("tenant"),
 				openstack.UserName:   []byte("user"),
 				openstack.Password:   []byte("password"),
+				openstack.AuthURL:    []byte("foo#%(bar"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should succeed when the client credentials are valid (without AuthURL)",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte("tenant"),
+				openstack.UserName:   []byte("user"),
+				openstack.Password:   []byte("password"),
+			},
+			BeNil(),
+		),
+
+		Entry("should succeed when the client credentials are valid (with AuthURL)",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte("tenant"),
+				openstack.UserName:   []byte("user"),
+				openstack.Password:   []byte("password"),
+				openstack.AuthURL:    []byte("https://foo.bar"),
 			},
 			BeNil(),
 		),

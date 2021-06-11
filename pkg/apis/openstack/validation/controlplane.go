@@ -19,12 +19,13 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
+	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateControlPlaneConfig validates a ControlPlaneConfig object.
-func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(controlPlaneConfig.LoadBalancerProvider) == 0 {
@@ -40,7 +41,10 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, fldP
 		if class.Purpose != nil && *class.Purpose == api.VPNLoadBalancerClass {
 			allErrs = append(allErrs, field.Invalid(lbClassPath, class.Purpose, fmt.Sprintf("not allowed to specify a LoadBalancerClass with purpose %q", api.VPNLoadBalancerClass)))
 		}
+	}
 
+	if controlPlaneConfig.CloudControllerManager != nil {
+		allErrs = append(allErrs, corevalidation.ValidateFeatureGates(controlPlaneConfig.CloudControllerManager.FeatureGates, version, fldPath.Child("cloudControllerManager", "featureGates"))...)
 	}
 
 	return allErrs

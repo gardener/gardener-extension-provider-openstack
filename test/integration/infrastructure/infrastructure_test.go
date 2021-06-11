@@ -251,14 +251,12 @@ func runTest(
 		Expect(client.IgnoreNotFound(c.Delete(ctx, infra))).To(Succeed())
 
 		By("wait until infrastructure is deleted")
-		err := extensions.WaitUntilExtensionCRDeleted(
+		err := extensions.WaitUntilExtensionObjectDeleted(
 			ctx,
 			c,
 			logger,
-			func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
+			infra.DeepCopy(),
 			"Infrastructure",
-			infra.Namespace,
-			infra.Name,
 			10*time.Second,
 			16*time.Minute,
 		)
@@ -353,14 +351,12 @@ func runTest(
 	}
 
 	By("wait until infrastructure is created")
-	if err := extensions.WaitUntilExtensionCRReady(
+	if err := extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c,
 		logger,
-		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
+		infra.DeepCopy(),
 		extensionsv1alpha1.InfrastructureResource,
-		infra.Namespace,
-		infra.Name,
 		10*time.Second,
 		30*time.Second,
 		16*time.Minute,

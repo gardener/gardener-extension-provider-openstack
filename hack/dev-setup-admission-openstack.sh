@@ -18,13 +18,25 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# Make it able to work on minikube and nodeless
+is_nodeless() {
+    nodes_len=$(kubectl get node -o json | jq '.items | length')
+    if [[ "$nodes_len" == "0" ]]; then
+      return 0
+    fi
+
+    return 1
+}
 
 IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
 ADMISSION_SERVICE_NAME="gardener-extension-admission-openstack"
 ADMISSION_ENDPOINT_NAME="gardener-extension-admission-openstack"
+
+ADMISSION_EXTERNAL_NAME=gardener.localhost
+if [[ "$(uname -s)" == *"Darwin"* ]] || [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]] ; then
+  ADMISSION_EXTERNAL_NAME=host.docker.internal
+fi
 
 if kubectl -n garden get service "$ADMISSION_SERVICE_NAME" &> /dev/null; then
   kubectl -n garden delete service $ADMISSION_SERVICE_NAME
@@ -33,7 +45,19 @@ if kubectl -n garden get endpoints "$ADMISSION_ENDPOINT_NAME" &> /dev/null; then
   kubectl -n garden delete endpoints $ADMISSION_ENDPOINT_NAME
 fi
 
-cat <<EOF | kubectl apply -f -
+if is_nodeless; then
+  cat <<EOF | kubectl apply -f -
+kind: Service
+apiVersion: v1
+metadata:
+  name: $ADMISSION_SERVICE_NAME
+  namespace: garden
+spec:
+  type: ExternalName
+  externalName: $ADMISSION_EXTERNAL_NAME
+EOF
+else
+  cat <<EOF | kubectl apply -f -
 kind: Service
 apiVersion: v1
 metadata:
@@ -42,11 +66,8 @@ metadata:
 spec:
   ports:
   - protocol: TCP
-    port: 443
+    port: 9443
     targetPort: 9443
-EOF
-
-cat <<EOF | kubectl apply -f -
 ---
 kind: Endpoints
 apiVersion: v1
@@ -59,5 +80,6 @@ subsets:
   ports:
   - port: 9443
 EOF
+fi
 
 kubectl apply -f $(dirname $0)/../example/40-validatingwebhookconfiguration.yaml

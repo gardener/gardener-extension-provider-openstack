@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for control plane CRDs resources that are installed in the Shoot cluster
+name: shoot-crds
+version: 0.1.0

@@ -526,6 +526,20 @@ var _ = Describe("ValuesProvider", func() {
 		})
 	})
 
+	Describe("#GetControlPlaneShootCRDsChartValues", func() {
+		It("should return correct control plane shoot CRDs chart values (k8s < 1.19)", func() {
+			values, err := vp.GetControlPlaneShootCRDsChartValues(ctx, cp, clusterK8sLessThan119)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(map[string]interface{}{"volumesnapshots": map[string]interface{}{"enabled": false}}))
+		})
+
+		It("should return correct control plane shoot CRDs chart values (k8s >= 1.19)", func() {
+			values, err := vp.GetControlPlaneShootCRDsChartValues(ctx, cp, clusterK8sAtLeast119)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(map[string]interface{}{"volumesnapshots": map[string]interface{}{"enabled": true}}))
+		})
+	})
+
 	Describe("#GetStorageClassesChartValues", func() {
 		It("should return correct storage class chart values (k8s < 1.19)", func() {
 			values, err := vp.GetStorageClassesChartValues(ctx, cp, clusterK8sLessThan119)

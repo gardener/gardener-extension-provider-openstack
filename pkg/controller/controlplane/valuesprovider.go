@@ -248,9 +248,6 @@ var (
 					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotControllerName},
 					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotControllerName},
 					// csi-snapshotter
-					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshotclasses.snapshot.storage.k8s.io"},
-					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshotcontents.snapshot.storage.k8s.io"},
-					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshots.snapshot.storage.k8s.io"},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotterName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotterName},
 					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotterName},
@@ -260,6 +257,21 @@ var (
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
+				},
+			},
+		},
+	}
+
+	controlPlaneShootCRDsChart = &chart.Chart{
+		Name: "shoot-crds",
+		Path: filepath.Join(openstack.InternalChartsPath, "shoot-crds"),
+		SubCharts: []*chart.Chart{
+			{
+				Name: "volumesnapshots",
+				Objects: []*chart.Object{
+					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshotclasses.snapshot.storage.k8s.io"},
+					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshotcontents.snapshot.storage.k8s.io"},
+					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshots.snapshot.storage.k8s.io"},
 				},
 			},
 		},
@@ -391,9 +403,18 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 func (vp *valuesProvider) GetControlPlaneShootCRDsChartValues(
 	_ context.Context,
 	_ *extensionsv1alpha1.ControlPlane,
-	_ *extensionscontroller.Cluster,
+	cluster *extensionscontroller.Cluster,
 ) (map[string]interface{}, error) {
-	return map[string]interface{}{}, nil
+	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", "1.19")
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"volumesnapshots": map[string]interface{}{
+			"enabled": !k8sVersionLessThan119,
+		},
+	}, nil
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.

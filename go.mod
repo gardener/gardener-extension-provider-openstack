@@ -9,10 +9,10 @@ require (
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/frankban/quicktest v1.9.0 // indirect
 	github.com/gardener/etcd-druid v0.5.0
-	github.com/gardener/gardener v1.24.1-0.20210608063816-580010846480
+	github.com/gardener/gardener v1.25.0
 	github.com/gardener/machine-controller-manager v0.36.0
 	github.com/go-logr/logr v0.3.0
-	github.com/golang/mock v1.5.0
+	github.com/golang/mock v1.6.0
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/gophercloud/gophercloud v0.7.0
 	github.com/gophercloud/utils v0.0.0-20200204043447-9864b6f1f12f

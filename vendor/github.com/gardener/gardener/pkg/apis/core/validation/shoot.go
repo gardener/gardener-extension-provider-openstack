@@ -67,8 +67,24 @@ var (
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
-	avaliableWorkerCRINames = sets.NewString(
+	availableWorkerCRINames = sets.NewString(
 		string(core.CRINameContainerD),
+	)
+	// https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
+	availableOIDCSigningAlgs = sets.NewString(
+		"HS256",
+		"HS384",
+		"HS512",
+		"RS256",
+		"RS384",
+		"RS512",
+		"ES256",
+		"ES384",
+		"ES512",
+		"PS256",
+		"PS384",
+		"PS512",
+		"none",
 	)
 )
 
@@ -207,45 +223,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 // ValidateProviderUpdate validates the specification of a Provider object.
 func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, ValidateWorkersUpdate(newProvider.Workers, oldProvider.Workers, fldPath.Child("workers"))...)
-
-	return allErrs
-}
-
-// ValidateWorkersUpdate validates the specification of a Provider object.
-func ValidateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	oldWorkersMap := make(map[string]core.Worker)
-	for _, w := range oldWorkers {
-		oldWorkersMap[w.Name] = w
-	}
-	for i, w := range newWorkers {
-		if _, ok := oldWorkersMap[w.Name]; ok {
-			oldWorker := oldWorkersMap[w.Name]
-			allErrs = append(allErrs, ValidateWorkerUpdate(&w, &oldWorker, fldPath.Index(i))...)
-		}
-	}
-	return allErrs
-}
-
-// ValidateWorkerUpdate validates the specification of a Provider object.
-func ValidateWorkerUpdate(newWorker, oldWorker *core.Worker, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateCRIUpdate(newWorker.CRI, oldWorker.CRI, fldPath.Child("cri"))...)
-
-	return allErrs
-}
-
-func validateCRIUpdate(newCri *core.CRI, oldCri *core.CRI, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if (newCri == nil && oldCri != nil) || (newCri != nil && oldCri == nil) || (newCri != nil && oldCri != nil && newCri.Name != oldCri.Name) {
-		allErrs = append(allErrs, field.Invalid(fldPath, newCri, "can't update cri configurations"))
-	}
-	return allErrs
+	return apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))
 }
 
 // ValidateShootStatusUpdate validates the status field of a Shoot object.
@@ -624,8 +602,10 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
 			}
-			if oidc.SigningAlgs != nil && len(oidc.SigningAlgs) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signingAlgs cannot be empty when key is provided"))
+			for i, alg := range oidc.SigningAlgs {
+				if !availableOIDCSigningAlgs.Has(alg) {
+					allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, availableOIDCSigningAlgs.List()))
+				}
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
@@ -1435,8 +1415,8 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !avaliableWorkerCRINames.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, avaliableWorkerCRINames.List()))
+	if !availableWorkerCRINames.Has(string(CRI.Name)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, availableWorkerCRINames.List()))
 	}
 
 	if CRI.ContainerRuntimes != nil {

@@ -23,9 +23,9 @@ import (
 
 var _ = Describe("Terraform", func() {
 	Describe("#TerraformerEnvVars", func() {
-		It("should correctly create the environment variables", func() {
+		It("should correctly create the environment variables for username/password", func() {
 			secretRef := corev1.SecretReference{Name: "cloud"}
-			Expect(TerraformerEnvVars(secretRef)).To(ConsistOf(
+			Expect(TerraformerEnvVars(secretRef, false)).To(ConsistOf(
 				corev1.EnvVar{
 					Name: "TF_VAR_DOMAIN_NAME",
 					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
@@ -60,6 +60,46 @@ var _ = Describe("Terraform", func() {
 							Name: secretRef.Name,
 						},
 						Key: "password",
+					}},
+				}))
+		})
+		It("should correctly create the environment variables for application credentials", func() {
+			secretRef := corev1.SecretReference{Name: "cloud"}
+			Expect(TerraformerEnvVars(secretRef, true)).To(ConsistOf(
+				corev1.EnvVar{
+					Name: "TF_VAR_DOMAIN_NAME",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secretRef.Name,
+						},
+						Key: "domainName",
+					}},
+				},
+				corev1.EnvVar{
+					Name: "TF_VAR_TENANT_NAME",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secretRef.Name,
+						},
+						Key: "tenantName",
+					}},
+				},
+				corev1.EnvVar{
+					Name: "TF_VAR_APPLICATION_CREDENTIAL_ID",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secretRef.Name,
+						},
+						Key: "applicationCredentialID",
+					}},
+				},
+				corev1.EnvVar{
+					Name: "TF_VAR_APPLICATION_CREDENTIAL_SECRET",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: secretRef.Name,
+						},
+						Key: "applicationCredentialSecret",
 					}},
 				}))
 		})

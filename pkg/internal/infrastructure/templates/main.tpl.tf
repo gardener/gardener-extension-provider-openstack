@@ -5,6 +5,8 @@ provider "openstack" {
   region      = "{{ .openstack.region }}"
   user_name   = var.USER_NAME
   password    = var.PASSWORD
+  application_credential_id     = var.APPLICATION_CREDENTIAL_ID
+  application_credential_secret = var.APPLICATION_CREDENTIAL_SECRET
   insecure    = true
   max_retries = "{{ .openstack.maxApiCallRetries }}"
 }

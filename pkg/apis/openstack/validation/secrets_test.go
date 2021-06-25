@@ -196,5 +196,63 @@ var _ = Describe("Secret validation", func() {
 			},
 			BeNil(),
 		),
+
+		Entry("should return error when the application credential id contains a trailing new line",
+			map[string][]byte{
+				openstack.DomainName:                  []byte("domain"),
+				openstack.TenantName:                  []byte("tenant"),
+				openstack.ApplicationCredentialID:     []byte("app-id\n"),
+				openstack.ApplicationCredentialSecret: []byte("app-secret"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when the application credential secret contains a trailing new line",
+			map[string][]byte{
+				openstack.DomainName:                  []byte("domain"),
+				openstack.TenantName:                  []byte("tenant"),
+				openstack.ApplicationCredentialID:     []byte("app-id"),
+				openstack.ApplicationCredentialSecret: []byte("app-secret\n"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when neither username nor application credential id is given",
+			map[string][]byte{
+				openstack.DomainName: []byte("domain"),
+				openstack.TenantName: []byte("tenant"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when both username and application credential id is given",
+			map[string][]byte{
+				openstack.DomainName:              []byte("domain"),
+				openstack.TenantName:              []byte("tenant"),
+				openstack.UserName:                []byte("user"),
+				openstack.ApplicationCredentialID: []byte("app-id"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should return error when application credential secret is missing",
+			map[string][]byte{
+				openstack.DomainName:              []byte("domain"),
+				openstack.TenantName:              []byte("tenant"),
+				openstack.ApplicationCredentialID: []byte("app-id"),
+			},
+			HaveOccurred(),
+		),
+
+		Entry("should succeed when the client application credentials are valid (with AuthURL)",
+			map[string][]byte{
+				openstack.DomainName:                  []byte("domain"),
+				openstack.TenantName:                  []byte("tenant"),
+				openstack.ApplicationCredentialID:     []byte("app-id"),
+				openstack.ApplicationCredentialSecret: []byte("app-secret"),
+				openstack.AuthURL:                     []byte("https://foo.bar"),
+			},
+			BeNil(),
+		),
 	)
 })

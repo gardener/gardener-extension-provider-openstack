@@ -32,12 +32,18 @@ import (
 func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, error) {
 	opts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     credentials.AuthURL,
-			Username:    credentials.Username,
-			Password:    credentials.Password,
-			ProjectName: credentials.TenantName,
-			DomainName:  credentials.DomainName,
+			AuthURL:                     credentials.AuthURL,
+			Username:                    credentials.Username,
+			Password:                    credentials.Password,
+			ProjectName:                 credentials.TenantName,
+			DomainName:                  credentials.DomainName,
+			ApplicationCredentialID:     credentials.ApplicationCredentialID,
+			ApplicationCredentialSecret: credentials.ApplicationCredentialSecret,
 		},
+	}
+
+	if opts.AuthInfo.ApplicationCredentialID != "" {
+		opts.AuthType = clientconfig.AuthV3ApplicationCredential
 	}
 
 	authOpts, err := clientconfig.AuthOptions(opts)

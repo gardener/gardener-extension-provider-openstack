@@ -56,6 +56,10 @@ const (
 	UserName = "username"
 	// Password is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack password.
 	Password = "password"
+	// ApplicationCredentialID is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack application credential id.
+	ApplicationCredentialID = "applicationCredentialID"
+	// ApplicationCredentialSecret is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack application credential secret.
+	ApplicationCredentialSecret = "applicationCredentialSecret"
 	// Region is a constant for the key in a backup secret that holds the Openstack region.
 	Region = "region"
 	// Insecure is a constant for the key in a cloud provider secret that configures whether the OpenStack client verifies the server's certificate.

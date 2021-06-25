@@ -19,11 +19,22 @@ type: Opaque
 data:
   domainName: base64(domain-name)
   tenantName: base64(tenant-name)
+  
+  # either use username/password
   username: base64(user-name)
   password: base64(password)
+
+  # or application credentials
+  #applicationCredentialID: base64(app-credential-id)
+  #applicationCredentialSecret: base64(app-credential-secret)
 ```
 
 Please look up https://docs.openstack.org/keystone/pike/admin/identity-concepts.html as well.
+
+For authentication with username/password see [Keystone username/password](https://docs.openstack.org/keystone/latest/user/supported_clients.html)
+
+Alternatively, for authentication with application credentials see [Keystone Application Credentials](https://docs.openstack.org/keystone/latest/user/application_credentials.html)
+
 
 ⚠️ Depending on your API usage it can be problematic to reuse the same provider credentials for different Shoot clusters due to rate limits.
 Please consider spreading your Shoots over multiple credentials from different tenants if you are hitting those limits.

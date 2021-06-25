@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -45,7 +46,14 @@ func (a *actuator) reconcile(ctx context.Context, logger logr.Logger, infra *ext
 		return err
 	}
 
-	tf, err := internal.NewTerraformerWithAuth(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra)
+	// need to known if application credentials are used
+	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef)
+	if err != nil {
+		return err
+	}
+	useApplicationCredentials := credentials.ApplicationCredentialID != ""
+
+	tf, err := internal.NewTerraformerWithAuth(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, useApplicationCredentials)
 	if err != nil {
 		return err
 	}

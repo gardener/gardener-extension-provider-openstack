@@ -106,6 +106,7 @@ revendor:
 	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/*
 	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/.ci/*
 	@$(REPO_ROOT)/hack/update-github-templates.sh
+	@ln -sf ../vendor/github.com/gardener/gardener/hack/cherry-pick-pull.sh $(HACK_DIR)/cherry-pick-pull.sh
 
 .PHONY: clean
 clean:

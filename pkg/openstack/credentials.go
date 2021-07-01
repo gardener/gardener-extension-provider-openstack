@@ -34,6 +34,7 @@ type Credentials struct {
 
 	// or application credentials
 	ApplicationCredentialID     string
+	ApplicationCredentialName   string
 	ApplicationCredentialSecret string
 
 	AuthURL string
@@ -62,25 +63,28 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 		return nil, err
 	}
 	userName := getOptional(secret, UserName)
+	password := getOptional(secret, Password)
 	applicationCredentialID := getOptional(secret, ApplicationCredentialID)
+	applicationCredentialName := getOptional(secret, ApplicationCredentialName)
+	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret)
 	authURL := getOptional(secret, AuthURL)
 
-	var password, applicationCredentialSecret string
-	if userName != "" {
-		if applicationCredentialID != "" {
-			return nil, fmt.Errorf("cannot specify both '%s' and '%s' in secret %s/%s", UserName, ApplicationCredentialID, secret.Namespace, secret.Name)
+	if password != "" {
+		if applicationCredentialSecret != "" {
+			return nil, fmt.Errorf("cannot specify both '%s' and '%s' in secret %s/%s", Password, ApplicationCredentialSecret, secret.Namespace, secret.Name)
 		}
-		password, err = getRequired(secret, Password)
-		if err != nil {
-			return nil, err
+		if userName == "" {
+			return nil, fmt.Errorf("'%s' is required if '%s' is given in %s/%s", UserName, Password, secret.Namespace, secret.Name)
 		}
 	} else {
-		if applicationCredentialID == "" {
-			return nil, fmt.Errorf("must either specify '%s' or '%s' in secret %s/%s", UserName, ApplicationCredentialID, secret.Namespace, secret.Name)
+		if applicationCredentialSecret == "" {
+			return nil, fmt.Errorf("must either specify '%s' or '%s' in secret %s/%s", Password, ApplicationCredentialSecret, secret.Namespace, secret.Name)
 		}
-		applicationCredentialSecret, err = getRequired(secret, ApplicationCredentialSecret)
-		if err != nil {
-			return nil, err
+		if applicationCredentialID == "" {
+			if userName == "" || applicationCredentialName == "" {
+				return nil, fmt.Errorf("'%s' and '%s' are required if application credentials are used without '%s' in secret %s/%s", ApplicationCredentialName, UserName,
+					ApplicationCredentialID, secret.Namespace, secret.Name)
+			}
 		}
 	}
 
@@ -90,6 +94,7 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 		Username:                    userName,
 		Password:                    password,
 		ApplicationCredentialID:     applicationCredentialID,
+		ApplicationCredentialName:   applicationCredentialName,
 		ApplicationCredentialSecret: applicationCredentialSecret,
 		AuthURL:                     string(authURL),
 	}, nil

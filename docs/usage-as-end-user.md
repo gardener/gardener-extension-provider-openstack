@@ -26,6 +26,7 @@ data:
 
   # or application credentials
   #applicationCredentialID: base64(app-credential-id)
+  #applicationCredentialName: base64(app-credential-name) # optional
   #applicationCredentialSecret: base64(app-credential-secret)
 ```
 

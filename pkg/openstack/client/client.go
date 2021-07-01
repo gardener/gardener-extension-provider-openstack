@@ -38,11 +38,12 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 			ProjectName:                 credentials.TenantName,
 			DomainName:                  credentials.DomainName,
 			ApplicationCredentialID:     credentials.ApplicationCredentialID,
+			ApplicationCredentialName:   credentials.ApplicationCredentialName,
 			ApplicationCredentialSecret: credentials.ApplicationCredentialSecret,
 		},
 	}
 
-	if opts.AuthInfo.ApplicationCredentialID != "" {
+	if opts.AuthInfo.ApplicationCredentialSecret != "" {
 		opts.AuthType = clientconfig.AuthV3ApplicationCredential
 	}
 

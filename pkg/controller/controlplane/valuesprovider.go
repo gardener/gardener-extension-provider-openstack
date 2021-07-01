@@ -488,6 +488,7 @@ func getConfigChartValues(
 		"username":                    c.Username,
 		"password":                    c.Password,
 		"applicationCredentialID":     c.ApplicationCredentialID,
+		"applicationCredentialName":   c.ApplicationCredentialName,
 		"applicationCredentialSecret": c.ApplicationCredentialSecret,
 		"region":                      cp.Spec.Region,
 		"lbProvider":                  cpConfig.LoadBalancerProvider,

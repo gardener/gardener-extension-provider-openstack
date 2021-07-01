@@ -51,9 +51,8 @@ func (a *actuator) reconcile(ctx context.Context, logger logr.Logger, infra *ext
 	if err != nil {
 		return err
 	}
-	useApplicationCredentials := credentials.ApplicationCredentialID != ""
 
-	tf, err := internal.NewTerraformerWithAuth(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, useApplicationCredentials)
+	tf, err := internal.NewTerraformerWithAuth(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, credentials)
 	if err != nil {
 		return err
 	}

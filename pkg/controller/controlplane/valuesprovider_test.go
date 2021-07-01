@@ -273,6 +273,7 @@ var _ = Describe("ValuesProvider", func() {
 			"nodeVolumeAttachLimit":       pointer.Int32Ptr(nodeVoluemAttachLimit),
 			"applicationCredentialID":     "",
 			"applicationCredentialSecret": "",
+			"applicationCredentialName":   "",
 		}
 
 		It("should return correct config chart values", func() {

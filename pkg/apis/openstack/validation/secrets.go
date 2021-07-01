@@ -43,6 +43,7 @@ func ValidateCloudProviderSecret(secret *corev1.Secret) error {
 		openstack.TenantName:                  credentials.TenantName,
 		openstack.UserName:                    credentials.Username,
 		openstack.ApplicationCredentialID:     credentials.ApplicationCredentialID,
+		openstack.ApplicationCredentialName:   credentials.ApplicationCredentialName,
 		openstack.ApplicationCredentialSecret: credentials.ApplicationCredentialSecret,
 	} {
 		if strings.TrimSpace(value) != value {

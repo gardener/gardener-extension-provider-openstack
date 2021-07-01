@@ -39,29 +39,44 @@ const (
 	TerraformVarNamePassword = "TF_VAR_PASSWORD"
 	// TerraformVarNameApplicationCredentialId maps to terraform internal var representation.
 	TerraformVarNameApplicationCredentialId = "TF_VAR_APPLICATION_CREDENTIAL_ID"
+	// TerraformVarNameApplicationCredentialName maps to terraform internal var representation.
+	TerraformVarNameApplicationCredentialName = "TF_VAR_APPLICATION_CREDENTIAL_NAME"
 	// TerraformVarNameApplicationCredentialSecret maps to terraform internal var representation.
 	TerraformVarNameApplicationCredentialSecret = "TF_VAR_APPLICATION_CREDENTIAL_SECRET"
 )
 
-// TerraformerEnvVars computes the Terraformer environment variables from the given secret reference.
-func TerraformerEnvVars(secretRef corev1.SecretReference, useApplicationCredentials bool) []corev1.EnvVar {
-	name1 := TerraformVarNameUserName
-	key1 := openstack.UserName
-	name2 := TerraformVarNamePassword
-	key2 := openstack.Password
+const (
+	TerraformAuthUsernamePassword = 0
+	TerraformAuthApplicationCredentialID
+	TerraformAuthApplicationCredentialName
+)
 
-	if useApplicationCredentials {
-		name1 = TerraformVarNameApplicationCredentialId
-		key1 = openstack.ApplicationCredentialID
-		name2 = TerraformVarNameApplicationCredentialSecret
-		key2 = openstack.ApplicationCredentialSecret
+// TerraformerEnvVars computes the Terraformer environment variables from the given secret reference.
+func TerraformerEnvVars(secretRef corev1.SecretReference, credentials *openstack.Credentials) []corev1.EnvVar {
+
+	if credentials.ApplicationCredentialSecret != "" {
+		envVars := []corev1.EnvVar{
+			createEnvVar(secretRef, TerraformVarNameDomainName, openstack.DomainName),
+			createEnvVar(secretRef, TerraformVarNameProjectName, openstack.TenantName),
+			createEnvVar(secretRef, TerraformVarNameApplicationCredentialSecret, openstack.ApplicationCredentialSecret),
+		}
+		if credentials.ApplicationCredentialID != "" {
+			envVars = append(envVars, createEnvVar(secretRef, TerraformVarNameApplicationCredentialId, openstack.ApplicationCredentialID))
+		}
+		if credentials.ApplicationCredentialName != "" {
+			envVars = append(envVars, createEnvVar(secretRef, TerraformVarNameApplicationCredentialName, openstack.ApplicationCredentialName))
+		}
+		if credentials.Username != "" {
+			envVars = append(envVars, createEnvVar(secretRef, TerraformVarNameUserName, openstack.UserName))
+		}
+		return envVars
 	}
 
 	return []corev1.EnvVar{
 		createEnvVar(secretRef, TerraformVarNameDomainName, openstack.DomainName),
 		createEnvVar(secretRef, TerraformVarNameProjectName, openstack.TenantName),
-		createEnvVar(secretRef, name1, key1),
-		createEnvVar(secretRef, name2, key2),
+		createEnvVar(secretRef, TerraformVarNameUserName, openstack.UserName),
+		createEnvVar(secretRef, TerraformVarNamePassword, openstack.Password),
 	}
 }
 
@@ -92,14 +107,14 @@ func NewTerraformerWithAuth(
 	restConfig *rest.Config,
 	purpose string,
 	infra *extensionsv1alpha1.Infrastructure,
-	useApplicationCredentials bool,
+	credentials *openstack.Credentials,
 ) (terraformer.Terraformer, error) {
 	tf, err := NewTerraformer(logger, restConfig, purpose, infra)
 	if err != nil {
 		return nil, err
 	}
 
-	return tf.SetEnvVars(TerraformerEnvVars(infra.Spec.SecretRef, useApplicationCredentials)...), nil
+	return tf.SetEnvVars(TerraformerEnvVars(infra.Spec.SecretRef, credentials)...), nil
 }
 
 func createEnvVar(secretRef corev1.SecretReference, name, key string) corev1.EnvVar {

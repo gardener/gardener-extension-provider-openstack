@@ -58,6 +58,8 @@ const (
 	Password = "password"
 	// ApplicationCredentialID is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack application credential id.
 	ApplicationCredentialID = "applicationCredentialID"
+	// ApplicationCredentialName is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack application credential name.
+	ApplicationCredentialName = "applicationCredentialName"
 	// ApplicationCredentialSecret is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack application credential secret.
 	ApplicationCredentialSecret = "applicationCredentialSecret"
 	// Region is a constant for the key in a backup secret that holds the Openstack region.

@@ -52,9 +52,8 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 	if err != nil {
 		return err
 	}
-	useApplicationCredentials := credentials.ApplicationCredentialID != ""
 
 	return tf.
-		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, useApplicationCredentials)...).
+		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...).
 		Destroy(ctx)
 }

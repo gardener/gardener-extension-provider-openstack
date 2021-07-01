@@ -5,6 +5,9 @@ domainName: fooDomain
 tenantName: fooTenant
 username: barUser
 password: barPass
+# applicationCredentialID: barID
+# applicationCredentialName: barName
+# applicationCredentialSecret: barSecret
 region: eu
 # [LoadBalancer]
 lbProvider: foobar

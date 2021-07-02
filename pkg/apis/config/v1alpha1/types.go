@@ -41,6 +41,9 @@ type ControllerConfiguration struct {
 	// BastionConfig the config for the Bastion
 	// +optional
 	BastionConfig *BastionConfig `json:"bastionConfig,omitempty"`
+	// CSI is the config for the csi components
+	// +optional
+	CSI *CSI `json:"csi,omitempty"`
 }
 
 // ETCD is an etcd configuration.
@@ -49,6 +52,100 @@ type ETCD struct {
 	Storage ETCDStorage `json:"storage"`
 	// ETCDBackup is the etcd backup configuration.
 	Backup ETCDBackup `json:"backup"`
+}
+
+type CSI struct {
+	// CSIAttacher is the configuration for the csi-attacher
+	// +optional
+	CSIAttacher *CSIAttacher `json:"csiAttacher,omitempty"`
+	// CSIDriverCinder is the configuration for the csi-driver-cinder
+	// +optional
+	CSIDriverCinder *CSIDriverCinder `json:"csiDriverCinder,omitempty"`
+	// CSIProvisioner is the configuration for the csi-provisioner
+	// +optional
+	CSIProvisioner *CSIProvisioner `json:"csiProvisioner,omitempty"`
+	// CSIResizer is the configuration for the csi-resizer
+	// +optional
+	CSIResizer *CSIResizer `json:"csiResizer,omitempty"`
+	// CSISnapshotController is the configuration for the csi-shapshot-controller
+	// +optional
+	CSISnapshotController *CSISnapshotController `json:"csiSnapshotController,omitempty"`
+	// CSISnapshotter is the configuration for the csi-snapshotter
+	// +optional
+	CSISnapshotter *CSISnapshotter `json:"csiSnapshotter,omitempty"`
+	// CSILivenessProbe is the configuration for the csi-liveness-probe
+	// +optional
+	CSILivenessProbe *CSILivenessProbe `json:"csiLivenessProbe,omitempty"`
+}
+
+type CSIAttacher struct {
+	// RetryIntervalStart The exponential backoff for failures.
+	// +optional
+	RetryIntervalStart *string `json:"retryIntervalStart,omitempty"`
+	// RetryIntervalMax The exponential backoff maximum value.
+	// +optional
+	RetryIntervalMax *string `json:"retryIntervalMax,omitempty"`
+	// ReconcileSync Resync frequency of the attached volumes with the driver.
+	// +optional
+	ReconcileSync *string `json:"reconcileSync,omitempty"`
+	// Timeout Timeout of all calls to the container storage interface driver.
+	// +optional
+	Timeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	// +optional
+	Verbose *string `json:"verbose,omitempty"`
+}
+
+type CSIDriverCinder struct {
+	// Timeout Timeout of all calls to the container storage interface driver.
+	// +optional
+	Timeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	// +optional
+	Verbose *string `json:"verbose,omitempty"`
+}
+
+type CSILivenessProbe struct {
+	// Timeout Timeout of all calls to the container storage interface driver.
+	// +optional
+	Timeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	// +optional
+	Verbose *string `json:"verbose,omitempty"`
+}
+
+type CSIProvisioner struct {
+	// Timeout Timeout of all calls to the container storage interface driver.
+	// +optional
+	Timeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	// +optional
+	Verbose *string `json:"verbose,omitempty"`
+}
+
+type CSISnapshotter struct {
+	// Timeout Timeout of all calls to the container storage interface driver.
+	Timeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	Verbose *string `json:"verbose,omitempty"`
+}
+
+type CSIResizer struct {
+	// CSITimeout Timeout of all calls to the container storage interface driver.
+	// +optional
+	CSITimeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	// +optional
+	Verbose *string `json:"verbose,omitempty"`
+}
+
+type CSISnapshotController struct {
+	// Timeout Timeout of all calls to the container storage interface driver.
+	// +optional
+	Timeout *string `json:"timeout,omitempty"`
+	// Verbose The verbosity level.
+	// +optional
+	Verbose *string `json:"verbose,omitempty"`
 }
 
 // ETCDStorage is an etcd storage configuration.

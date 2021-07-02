@@ -24,7 +24,6 @@ spec:
       annotations:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
-      creationTimestamp: null
       labels:
         app: csi
         role: controller
@@ -53,10 +52,8 @@ spec:
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.driver }}
         resources:
-{{ toYaml .Values.resources.driver | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiDriverCinder.resources | nindent 10 }}
         ports:
         - name: healthz
           containerPort: 9808
@@ -94,15 +91,17 @@ spec:
         - --default-fstype=ext4
         - --leader-election
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
-        - --v=5
+        {{- if .Values.csiProvisioner.args.timeout }}
+        - --timeout={{ .Values.csiProvisioner.args.timeout }}
+        {{- end }}
+        {{- if .Values.csiProvisioner.args.verbosity }}
+        - --v={{ .Values.csiProvisioner.args.verbosity }}
+        {{- end }}
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.provisioner }}
         resources:
-{{ toYaml .Values.resources.provisioner | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiProvisioner.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -118,15 +117,26 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
-        - --v=5
+        {{- if .Values.csiAttacher.args.timeout }}
+        - --timeout={{ .Values.csiAttacher.args.timeout }}
+        {{- end }}
+        {{- if .Values.csiAttacher.args.retryIntervalStart }}
+        - --retry-interval-start={{ .Values.csiAttacher.args.retryIntervalStart }}
+        {{- end }}
+        {{- if .Values.csiAttacher.args.retryIntervalMax }}
+        - --retry-interval-max={{ .Values.csiAttacher.args.retryIntervalMax }}
+        {{- end }}
+        {{- if .Values.csiAttacher.args.reconcileSync }}
+        - --reconcile-sync={{ .Values.csiAttacher.args.reconcileSync }}
+        {{- end }}
+        {{- if .Values.csiAttacher.args.verbosity }}
+        - --v={{ .Values.csiAttacher.args.verbosity }}
+        {{- end }}
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.attacher }}
         resources:
-{{ toYaml .Values.resources.attacher | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiAttacher.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -142,15 +152,15 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
+        {{- if .Values.csiSnapshotter.args.timeout }}
+        - --timeout={{ .Values.csiSnapshotter.args.timeout }}
+        {{- end }}
         - --snapshot-name-prefix={{ .Release.Namespace }}
         env:
         - name: CSI_ENDPOINT
           value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.snapshotter }}
         resources:
-{{ toYaml .Values.resources.snapshotter | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiSnapshotter.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -166,15 +176,17 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
-        - --csiTimeout={{ .Values.timeout }}
-        - --v=5
+        {{- if .Values.csiResizer.args.csiTimeout }}
+        - --csiTimeout={{ .Values.csiResizer.args.csiTimeout }}
+        {{- end }}
+        {{- if .Values.csiResizer.args.verbosity }}
+        - --v={{ .Values.csiResizer.args.verbosity }}
+        {{- end }}
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.resizer }}
         resources:
-{{ toYaml .Values.resources.resizer | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiResizer.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -186,10 +198,8 @@ spec:
         image: {{ index .Values.images "csi-liveness-probe" }}
         args:
         - --csi-address=/csi/csi.sock
-{{- if .Values.resources.livenessProbe }}
         resources:
-{{ toYaml .Values.resources.livenessProbe | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiLivenessProbe.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi

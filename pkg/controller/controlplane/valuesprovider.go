@@ -17,6 +17,7 @@ package controlplane
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	"path/filepath"
 	"strings"
 
@@ -241,9 +242,10 @@ var (
 )
 
 // NewValuesProvider creates a new ValuesProvider for the generic actuator.
-func NewValuesProvider(logger logr.Logger) genericactuator.ValuesProvider {
+func NewValuesProvider(logger logr.Logger, csi *config.CSI) genericactuator.ValuesProvider {
 	return &valuesProvider{
 		logger: logger.WithName("openstack-values-provider"),
+		csi:                    csi,
 	}
 }
 
@@ -252,6 +254,7 @@ type valuesProvider struct {
 	genericactuator.NoopValuesProvider
 	common.ClientContext
 	logger logr.Logger
+	csi *config.CSI
 }
 
 // GetConfigChartValues returns the values for the config chart applied by the generic actuator.
@@ -327,7 +330,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
 
-	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	return getControlPlaneChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, vp.csi)
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
@@ -557,6 +560,7 @@ func getControlPlaneChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
+	csi *config.CSI,
 ) (
 	map[string]interface{},
 	error,
@@ -566,7 +570,7 @@ func getControlPlaneChartValues(
 		return nil, err
 	}
 
-	csi, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	csiChart, err := getCSIControllerChartValues(cluster, userAgentHeaders, checksums, scaledDown, csi)
 	if err != nil {
 		return nil, err
 	}
@@ -576,7 +580,7 @@ func getControlPlaneChartValues(
 			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
 		},
 		openstack.CloudControllerManagerName: ccm,
-		openstack.CSIControllerName:          csi,
+		openstack.CSIControllerName:          csiChart,
 	}, nil
 }
 
@@ -637,6 +641,7 @@ func getCSIControllerChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
+	csi *config.CSI,
 ) (map[string]interface{}, error) {
 	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
 	if err != nil {
@@ -668,10 +673,137 @@ func getCSIControllerChartValues(
 			},
 		},
 	}
+
+	if csi != nil {
+		if csi.CSIAttacher != nil {
+			values["csiAttacher"] = getCSIAttacherArgs(csi.CSIAttacher)
+		}
+		if csi.CSIResizer != nil {
+			values["csiResizer"] = getCSIResizerArgs(csi.CSIResizer)
+		}
+		if csi.CSIDriverCinder != nil {
+			values["csiDriverCinder"] = getCSIDriverCinderArgs(csi.CSIDriverCinder)
+		}
+		if csi.CSISnapshotController != nil {
+			values["csiSnapshotController"] = getCSISnapshotControllerArgs(csi.CSISnapshotController)
+		}
+		if csi.CSILivenessProbe != nil {
+			values["csiLivenessProbe"] = getCSILivenessProbeArgs(csi.CSILivenessProbe)
+		}
+		if csi.CSIProvisioner != nil {
+			values["csiProvisioner"] = getCSIProvisionerArgs(csi.CSIProvisioner)
+		}
+		if csi.CSISnapshotter != nil {
+			values["csiSnapshotter"] = getCSISnapshotterArgs(csi.CSISnapshotter)
+		}
+	}
+
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders
 	}
 	return values, nil
+}
+
+func getCSISnapshotterArgs(snapshotter *config.CSISnapshotter) map[string]interface{} {
+	csiSnapshotter := make(map[string]interface{})
+	csiSnapshotterArgs := make(map[string]interface{})
+	if snapshotter.Verbose != nil {
+		csiSnapshotterArgs["verbosity"] = snapshotter.Verbose
+	}
+	if snapshotter.Timeout != nil {
+		csiSnapshotterArgs["timeout"] = snapshotter.Timeout
+	}
+	csiSnapshotter["args"] = csiSnapshotterArgs
+	return csiSnapshotter
+}
+
+func getCSIProvisionerArgs(provisioner *config.CSIProvisioner) map[string]interface{} {
+	csiProvisioner := make(map[string]interface{})
+	csiProvisionerArgs := make(map[string]interface{})
+	if provisioner.Verbose != nil {
+		csiProvisionerArgs["verbosity"] = provisioner.Verbose
+	}
+	if provisioner.Timeout != nil {
+		csiProvisionerArgs["timeout"] = provisioner.Timeout
+	}
+	csiProvisioner["args"] = csiProvisionerArgs
+	return csiProvisioner
+}
+
+func getCSILivenessProbeArgs(livenessProbe *config.CSILivenessProbe) map[string]interface{} {
+	csiLivenessProbe := make(map[string]interface{})
+	csiLivenessProbeArgs := make(map[string]interface{})
+	if livenessProbe.Verbose != nil {
+		csiLivenessProbeArgs["verbosity"] = livenessProbe.Verbose
+	}
+	if livenessProbe.Timeout != nil {
+		csiLivenessProbeArgs["timeout"] = livenessProbe.Timeout
+	}
+	csiLivenessProbe["args"] = csiLivenessProbeArgs
+	return csiLivenessProbe
+}
+
+func getCSISnapshotControllerArgs(snapshotController *config.CSISnapshotController) map[string]interface{} {
+	csiSnapshotController := make(map[string]interface{})
+	csiSnapshotControllerArgs := make(map[string]interface{})
+	if snapshotController.Verbose != nil {
+		csiSnapshotControllerArgs["verbosity"] = snapshotController.Verbose
+	}
+	if snapshotController.Timeout != nil {
+		csiSnapshotControllerArgs["timeout"] = snapshotController.Timeout
+	}
+	csiSnapshotController["args"] = csiSnapshotControllerArgs
+	return csiSnapshotController
+}
+
+func getCSIDriverCinderArgs(driverCinder *config.CSIDriverCinder) map[string]interface{} {
+	csiDriverCinder := make(map[string]interface{})
+	csiDriverCinderArgs := make(map[string]interface{})
+	if driverCinder.Verbose != nil {
+		csiDriverCinderArgs["verbosity"] = driverCinder.Verbose
+	}
+	if driverCinder.Timeout != nil {
+		csiDriverCinderArgs["timeout"] = driverCinder.Timeout
+	}
+	csiDriverCinder["args"] = csiDriverCinderArgs
+	return csiDriverCinder
+
+}
+
+func getCSIResizerArgs(resizer *config.CSIResizer) map[string]interface{} {
+	csiResizer := make(map[string]interface{})
+	csiAttacherArgs := make(map[string]interface{})
+	if resizer.Verbose != nil {
+		csiAttacherArgs["verbosity"] = resizer.Verbose
+	}
+	if resizer.CSITimeout != nil {
+		csiAttacherArgs["csiTimeout"] = resizer.CSITimeout
+	}
+	csiResizer["args"] = csiAttacherArgs
+	return csiResizer
+
+}
+
+func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
+	csiAttacher := make(map[string]interface{})
+	csiAttacherArgs := make(map[string]interface{})
+	if attacher.Verbose != nil {
+		csiAttacherArgs["verbosity"] = attacher.Verbose
+	}
+	if attacher.RetryIntervalStart != nil {
+		csiAttacherArgs["retryIntervalStart"] = attacher.RetryIntervalStart
+	}
+	if attacher.ReconcileSync != nil {
+		csiAttacherArgs["reconcileSync"] = attacher.ReconcileSync
+	}
+	if attacher.RetryIntervalMax != nil {
+		csiAttacherArgs["retryIntervalMax"] = attacher.RetryIntervalMax
+	}
+	if attacher.Timeout != nil {
+		csiAttacherArgs["timeout"] = attacher.Timeout
+	}
+	csiAttacher["args"] = csiAttacherArgs
+	return csiAttacher
 }
 
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.

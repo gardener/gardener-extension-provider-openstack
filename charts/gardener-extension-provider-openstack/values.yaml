@@ -80,6 +80,13 @@ config:
   bastionConfig:
     imageRef: ""
     flavorRef: ""
+  csi: {}
+#    csiAttacher:
+#      args:
+#        verbosity: 3
+#        retryIntervalStart: 1m
+#        retryIntervalMax: 15m
+#        reconcileSync: 5m
 
 gardener:
   version: ""

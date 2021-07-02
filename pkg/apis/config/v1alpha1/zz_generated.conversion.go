@@ -41,13 +41,83 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
-	if err := s.AddGeneratedConversionFunc((*BastionConfig)(nil), (*config.BastionConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_BastionConfig_To_config_BastionConfig(a.(*BastionConfig), b.(*config.BastionConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*CSI)(nil), (*config.CSI)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSI_To_config_CSI(a.(*CSI), b.(*config.CSI), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*config.BastionConfig)(nil), (*BastionConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_BastionConfig_To_v1alpha1_BastionConfig(a.(*config.BastionConfig), b.(*BastionConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*config.CSI)(nil), (*CSI)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSI_To_v1alpha1_CSI(a.(*config.CSI), b.(*CSI), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSIAttacher)(nil), (*config.CSIAttacher)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSIAttacher_To_config_CSIAttacher(a.(*CSIAttacher), b.(*config.CSIAttacher), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSIAttacher)(nil), (*CSIAttacher)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSIAttacher_To_v1alpha1_CSIAttacher(a.(*config.CSIAttacher), b.(*CSIAttacher), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSIDriverCinder)(nil), (*config.CSIDriverCinder)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSIDriverCinder_To_config_CSIDriverCinder(a.(*CSIDriverCinder), b.(*config.CSIDriverCinder), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSIDriverCinder)(nil), (*CSIDriverCinder)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSIDriverCinder_To_v1alpha1_CSIDriverCinder(a.(*config.CSIDriverCinder), b.(*CSIDriverCinder), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSILivenessProbe)(nil), (*config.CSILivenessProbe)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSILivenessProbe_To_config_CSILivenessProbe(a.(*CSILivenessProbe), b.(*config.CSILivenessProbe), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSILivenessProbe)(nil), (*CSILivenessProbe)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSILivenessProbe_To_v1alpha1_CSILivenessProbe(a.(*config.CSILivenessProbe), b.(*CSILivenessProbe), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSIProvisioner)(nil), (*config.CSIProvisioner)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSIProvisioner_To_config_CSIProvisioner(a.(*CSIProvisioner), b.(*config.CSIProvisioner), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSIProvisioner)(nil), (*CSIProvisioner)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSIProvisioner_To_v1alpha1_CSIProvisioner(a.(*config.CSIProvisioner), b.(*CSIProvisioner), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSIResizer)(nil), (*config.CSIResizer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSIResizer_To_config_CSIResizer(a.(*CSIResizer), b.(*config.CSIResizer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSIResizer)(nil), (*CSIResizer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSIResizer_To_v1alpha1_CSIResizer(a.(*config.CSIResizer), b.(*CSIResizer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSISnapshotController)(nil), (*config.CSISnapshotController)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSISnapshotController_To_config_CSISnapshotController(a.(*CSISnapshotController), b.(*config.CSISnapshotController), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSISnapshotController)(nil), (*CSISnapshotController)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSISnapshotController_To_v1alpha1_CSISnapshotController(a.(*config.CSISnapshotController), b.(*CSISnapshotController), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CSISnapshotter)(nil), (*config.CSISnapshotter)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CSISnapshotter_To_config_CSISnapshotter(a.(*CSISnapshotter), b.(*config.CSISnapshotter), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CSISnapshotter)(nil), (*CSISnapshotter)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CSISnapshotter_To_v1alpha1_CSISnapshotter(a.(*config.CSISnapshotter), b.(*CSISnapshotter), scope)
 	}); err != nil {
 		return err
 	}
@@ -94,26 +164,196 @@ func RegisterConversions(s *runtime.Scheme) error {
 	return nil
 }
 
-func autoConvert_v1alpha1_BastionConfig_To_config_BastionConfig(in *BastionConfig, out *config.BastionConfig, s conversion.Scope) error {
-	out.ImageRef = in.ImageRef
-	out.FlavorRef = in.FlavorRef
+func autoConvert_v1alpha1_CSI_To_config_CSI(in *CSI, out *config.CSI, s conversion.Scope) error {
+	out.CSIAttacher = (*config.CSIAttacher)(unsafe.Pointer(in.CSIAttacher))
+	out.CSIDriverCinder = (*config.CSIDriverCinder)(unsafe.Pointer(in.CSIDriverCinder))
+	out.CSIProvisioner = (*config.CSIProvisioner)(unsafe.Pointer(in.CSIProvisioner))
+	out.CSIResizer = (*config.CSIResizer)(unsafe.Pointer(in.CSIResizer))
+	out.CSISnapshotController = (*config.CSISnapshotController)(unsafe.Pointer(in.CSISnapshotController))
+	out.CSISnapshotter = (*config.CSISnapshotter)(unsafe.Pointer(in.CSISnapshotter))
+	out.CSILivenessProbe = (*config.CSILivenessProbe)(unsafe.Pointer(in.CSILivenessProbe))
 	return nil
 }
 
-// Convert_v1alpha1_BastionConfig_To_config_BastionConfig is an autogenerated conversion function.
-func Convert_v1alpha1_BastionConfig_To_config_BastionConfig(in *BastionConfig, out *config.BastionConfig, s conversion.Scope) error {
-	return autoConvert_v1alpha1_BastionConfig_To_config_BastionConfig(in, out, s)
+// Convert_v1alpha1_CSI_To_config_CSI is an autogenerated conversion function.
+func Convert_v1alpha1_CSI_To_config_CSI(in *CSI, out *config.CSI, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSI_To_config_CSI(in, out, s)
 }
 
-func autoConvert_config_BastionConfig_To_v1alpha1_BastionConfig(in *config.BastionConfig, out *BastionConfig, s conversion.Scope) error {
-	out.ImageRef = in.ImageRef
-	out.FlavorRef = in.FlavorRef
+func autoConvert_config_CSI_To_v1alpha1_CSI(in *config.CSI, out *CSI, s conversion.Scope) error {
+	out.CSIAttacher = (*CSIAttacher)(unsafe.Pointer(in.CSIAttacher))
+	out.CSIDriverCinder = (*CSIDriverCinder)(unsafe.Pointer(in.CSIDriverCinder))
+	out.CSIProvisioner = (*CSIProvisioner)(unsafe.Pointer(in.CSIProvisioner))
+	out.CSIResizer = (*CSIResizer)(unsafe.Pointer(in.CSIResizer))
+	out.CSISnapshotController = (*CSISnapshotController)(unsafe.Pointer(in.CSISnapshotController))
+	out.CSISnapshotter = (*CSISnapshotter)(unsafe.Pointer(in.CSISnapshotter))
+	out.CSILivenessProbe = (*CSILivenessProbe)(unsafe.Pointer(in.CSILivenessProbe))
 	return nil
 }
 
-// Convert_config_BastionConfig_To_v1alpha1_BastionConfig is an autogenerated conversion function.
-func Convert_config_BastionConfig_To_v1alpha1_BastionConfig(in *config.BastionConfig, out *BastionConfig, s conversion.Scope) error {
-	return autoConvert_config_BastionConfig_To_v1alpha1_BastionConfig(in, out, s)
+// Convert_config_CSI_To_v1alpha1_CSI is an autogenerated conversion function.
+func Convert_config_CSI_To_v1alpha1_CSI(in *config.CSI, out *CSI, s conversion.Scope) error {
+	return autoConvert_config_CSI_To_v1alpha1_CSI(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSIAttacher_To_config_CSIAttacher(in *CSIAttacher, out *config.CSIAttacher, s conversion.Scope) error {
+	out.RetryIntervalStart = (*string)(unsafe.Pointer(in.RetryIntervalStart))
+	out.RetryIntervalMax = (*string)(unsafe.Pointer(in.RetryIntervalMax))
+	out.ReconcileSync = (*string)(unsafe.Pointer(in.ReconcileSync))
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSIAttacher_To_config_CSIAttacher is an autogenerated conversion function.
+func Convert_v1alpha1_CSIAttacher_To_config_CSIAttacher(in *CSIAttacher, out *config.CSIAttacher, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSIAttacher_To_config_CSIAttacher(in, out, s)
+}
+
+func autoConvert_config_CSIAttacher_To_v1alpha1_CSIAttacher(in *config.CSIAttacher, out *CSIAttacher, s conversion.Scope) error {
+	out.RetryIntervalStart = (*string)(unsafe.Pointer(in.RetryIntervalStart))
+	out.RetryIntervalMax = (*string)(unsafe.Pointer(in.RetryIntervalMax))
+	out.ReconcileSync = (*string)(unsafe.Pointer(in.ReconcileSync))
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSIAttacher_To_v1alpha1_CSIAttacher is an autogenerated conversion function.
+func Convert_config_CSIAttacher_To_v1alpha1_CSIAttacher(in *config.CSIAttacher, out *CSIAttacher, s conversion.Scope) error {
+	return autoConvert_config_CSIAttacher_To_v1alpha1_CSIAttacher(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSIDriverCinder_To_config_CSIDriverCinder(in *CSIDriverCinder, out *config.CSIDriverCinder, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSIDriverCinder_To_config_CSIDriverCinder is an autogenerated conversion function.
+func Convert_v1alpha1_CSIDriverCinder_To_config_CSIDriverCinder(in *CSIDriverCinder, out *config.CSIDriverCinder, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSIDriverCinder_To_config_CSIDriverCinder(in, out, s)
+}
+
+func autoConvert_config_CSIDriverCinder_To_v1alpha1_CSIDriverCinder(in *config.CSIDriverCinder, out *CSIDriverCinder, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSIDriverCinder_To_v1alpha1_CSIDriverCinder is an autogenerated conversion function.
+func Convert_config_CSIDriverCinder_To_v1alpha1_CSIDriverCinder(in *config.CSIDriverCinder, out *CSIDriverCinder, s conversion.Scope) error {
+	return autoConvert_config_CSIDriverCinder_To_v1alpha1_CSIDriverCinder(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSILivenessProbe_To_config_CSILivenessProbe(in *CSILivenessProbe, out *config.CSILivenessProbe, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSILivenessProbe_To_config_CSILivenessProbe is an autogenerated conversion function.
+func Convert_v1alpha1_CSILivenessProbe_To_config_CSILivenessProbe(in *CSILivenessProbe, out *config.CSILivenessProbe, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSILivenessProbe_To_config_CSILivenessProbe(in, out, s)
+}
+
+func autoConvert_config_CSILivenessProbe_To_v1alpha1_CSILivenessProbe(in *config.CSILivenessProbe, out *CSILivenessProbe, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSILivenessProbe_To_v1alpha1_CSILivenessProbe is an autogenerated conversion function.
+func Convert_config_CSILivenessProbe_To_v1alpha1_CSILivenessProbe(in *config.CSILivenessProbe, out *CSILivenessProbe, s conversion.Scope) error {
+	return autoConvert_config_CSILivenessProbe_To_v1alpha1_CSILivenessProbe(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSIProvisioner_To_config_CSIProvisioner(in *CSIProvisioner, out *config.CSIProvisioner, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSIProvisioner_To_config_CSIProvisioner is an autogenerated conversion function.
+func Convert_v1alpha1_CSIProvisioner_To_config_CSIProvisioner(in *CSIProvisioner, out *config.CSIProvisioner, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSIProvisioner_To_config_CSIProvisioner(in, out, s)
+}
+
+func autoConvert_config_CSIProvisioner_To_v1alpha1_CSIProvisioner(in *config.CSIProvisioner, out *CSIProvisioner, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSIProvisioner_To_v1alpha1_CSIProvisioner is an autogenerated conversion function.
+func Convert_config_CSIProvisioner_To_v1alpha1_CSIProvisioner(in *config.CSIProvisioner, out *CSIProvisioner, s conversion.Scope) error {
+	return autoConvert_config_CSIProvisioner_To_v1alpha1_CSIProvisioner(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSIResizer_To_config_CSIResizer(in *CSIResizer, out *config.CSIResizer, s conversion.Scope) error {
+	out.CSITimeout = (*string)(unsafe.Pointer(in.CSITimeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSIResizer_To_config_CSIResizer is an autogenerated conversion function.
+func Convert_v1alpha1_CSIResizer_To_config_CSIResizer(in *CSIResizer, out *config.CSIResizer, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSIResizer_To_config_CSIResizer(in, out, s)
+}
+
+func autoConvert_config_CSIResizer_To_v1alpha1_CSIResizer(in *config.CSIResizer, out *CSIResizer, s conversion.Scope) error {
+	out.CSITimeout = (*string)(unsafe.Pointer(in.CSITimeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSIResizer_To_v1alpha1_CSIResizer is an autogenerated conversion function.
+func Convert_config_CSIResizer_To_v1alpha1_CSIResizer(in *config.CSIResizer, out *CSIResizer, s conversion.Scope) error {
+	return autoConvert_config_CSIResizer_To_v1alpha1_CSIResizer(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSISnapshotController_To_config_CSISnapshotController(in *CSISnapshotController, out *config.CSISnapshotController, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSISnapshotController_To_config_CSISnapshotController is an autogenerated conversion function.
+func Convert_v1alpha1_CSISnapshotController_To_config_CSISnapshotController(in *CSISnapshotController, out *config.CSISnapshotController, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSISnapshotController_To_config_CSISnapshotController(in, out, s)
+}
+
+func autoConvert_config_CSISnapshotController_To_v1alpha1_CSISnapshotController(in *config.CSISnapshotController, out *CSISnapshotController, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSISnapshotController_To_v1alpha1_CSISnapshotController is an autogenerated conversion function.
+func Convert_config_CSISnapshotController_To_v1alpha1_CSISnapshotController(in *config.CSISnapshotController, out *CSISnapshotController, s conversion.Scope) error {
+	return autoConvert_config_CSISnapshotController_To_v1alpha1_CSISnapshotController(in, out, s)
+}
+
+func autoConvert_v1alpha1_CSISnapshotter_To_config_CSISnapshotter(in *CSISnapshotter, out *config.CSISnapshotter, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_v1alpha1_CSISnapshotter_To_config_CSISnapshotter is an autogenerated conversion function.
+func Convert_v1alpha1_CSISnapshotter_To_config_CSISnapshotter(in *CSISnapshotter, out *config.CSISnapshotter, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CSISnapshotter_To_config_CSISnapshotter(in, out, s)
+}
+
+func autoConvert_config_CSISnapshotter_To_v1alpha1_CSISnapshotter(in *config.CSISnapshotter, out *CSISnapshotter, s conversion.Scope) error {
+	out.Timeout = (*string)(unsafe.Pointer(in.Timeout))
+	out.Verbose = (*string)(unsafe.Pointer(in.Verbose))
+	return nil
+}
+
+// Convert_config_CSISnapshotter_To_v1alpha1_CSISnapshotter is an autogenerated conversion function.
+func Convert_config_CSISnapshotter_To_v1alpha1_CSISnapshotter(in *config.CSISnapshotter, out *CSISnapshotter, s conversion.Scope) error {
+	return autoConvert_config_CSISnapshotter_To_v1alpha1_CSISnapshotter(in, out, s)
 }
 
 func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(in *ControllerConfiguration, out *config.ControllerConfiguration, s conversion.Scope) error {
@@ -122,7 +362,7 @@ func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfigurat
 		return err
 	}
 	out.HealthCheckConfig = (*healthcheckconfig.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
-	out.BastionConfig = (*config.BastionConfig)(unsafe.Pointer(in.BastionConfig))
+	out.CSI = (*config.CSI)(unsafe.Pointer(in.CSI))
 	return nil
 }
 
@@ -137,7 +377,7 @@ func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfigurat
 		return err
 	}
 	out.HealthCheckConfig = (*healthcheckconfigv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
-	out.BastionConfig = (*BastionConfig)(unsafe.Pointer(in.BastionConfig))
+	out.CSI = (*CSI)(unsafe.Pointer(in.CSI))
 	return nil
 }
 

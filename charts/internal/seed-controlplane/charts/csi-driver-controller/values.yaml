@@ -12,46 +12,74 @@ images:
   csi-snapshot-validation-webhook: image-repository:image-tag
 
 socketPath: /var/lib/csi/sockets/pluginproxy
-timeout: 3m
 userAgentHeaders: []
 
-resources:
-  driver:
+csiDriverCinder:
+  resources:
     requests:
       cpu: 20m
       memory: 50Mi
     limits:
-      memory: 360Mi
-  provisioner:
+      cpu: 50m
+      memory: 80Mi
+  args:
+    timeout: 3m
+
+csiProvisioner:
+  resources:
     requests:
       cpu: 11m
       memory: 38Mi
     limits:
-      memory: 400Mi
-  attacher:
+      cpu: 30m
+      memory: 50Mi
+  args:
+    timeout: 3m
+
+csiAttacher:
+  resources:
     requests:
       cpu: 11m
       memory: 36Mi
     limits:
-      memory: 320Mi
-  snapshotter:
+      cpu: 30m
+      memory: 50Mi
+  args:
+    timeout: 3m
+
+csiSnapshotter:
+  resources:
     requests:
       cpu: 11m
       memory: 36Mi
     limits:
-      memory: 220Mi
-  resizer:
+      cpu: 30m
+      memory: 50Mi
+  args:
+    timeout: 3m
+
+csiResizer:
+  resources:
     requests:
       cpu: 11m
       memory: 32Mi
     limits:
-      memory: 220Mi
-  livenessProbe:
+      cpu: 30m
+      memory: 50Mi
+  args:
+    csiTimeout: 3m
+
+
+csiLivenessProbe:
+  resources:
     requests:
       cpu: 11m
       memory: 32Mi
     limits:
-      memory: 220Mi
+      cpu: 30m
+      memory: 50Mi
+  args: {}
+
 
 csiSnapshotController:
   replicas: 1
@@ -61,7 +89,9 @@ csiSnapshotController:
       cpu: 11m
       memory: 32Mi
     limits:
-      memory: 2.2Gi
+      cpu: 30m
+      memory: 50Mi
+  args: {}
 
 csiSnapshotValidationWebhook:
   replica: 1
@@ -72,5 +102,3 @@ csiSnapshotValidationWebhook:
     requests:
       cpu: 10m
       memory: 32Mi
-    limits:
-      memory: 200Mi

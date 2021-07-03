@@ -56,6 +56,9 @@ webhookConfig:
   servicePort: 443
   serverPort: 10250
 
+leaderElection:
+  resourceLock: leases
+
 config:
   clientConnection:
     acceptContentTypes: application/json

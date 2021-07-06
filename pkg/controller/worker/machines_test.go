@@ -104,6 +104,7 @@ var _ = Describe("Machines", func() {
 				userData          []byte
 				networkID         string
 				podCIDR           string
+				subnetID          string
 				securityGroupName string
 
 				namePool1           string
@@ -156,6 +157,7 @@ var _ = Describe("Machines", func() {
 				userData = []byte("some-user-data")
 				networkID = "network-id"
 				podCIDR = "1.2.3.4/5"
+				subnetID = "subnetID"
 				securityGroupName = "nodes-sec-group"
 
 				namePool1 = "pool-1"
@@ -264,7 +266,14 @@ var _ = Describe("Machines", func() {
 									KeyName: keyName,
 								},
 								Networks: api.NetworkStatus{
-									ID: networkID,
+									ID:                    networkID,
+									ManagedPrivateNetwork: true,
+									Subnets: []api.Subnet{
+										{
+											Purpose: api.PurposeNodes,
+											ID:      subnetID,
+										},
+									},
 								},
 							}),
 						},
@@ -327,7 +336,7 @@ var _ = Describe("Machines", func() {
 					clusterWithRegion   *extensionscontroller.Cluster
 				)
 
-				setup := func(region, name, id string) {
+				setup := func(region, name, imageID, subnetID string) {
 					workerWithRegion = w.DeepCopy()
 					workerWithRegion.Spec.Region = region
 
@@ -353,10 +362,14 @@ var _ = Describe("Machines", func() {
 							"cloudConfig": string(userData),
 						},
 					}
-					if id == "" {
+					if imageID == "" {
 						defaultMachineClass["imageName"] = name
 					} else {
-						defaultMachineClass["imageID"] = id
+						defaultMachineClass["imageID"] = imageID
+					}
+
+					if subnetID != "" {
+						defaultMachineClass["subnetID"] = subnetID
 					}
 
 					var (
@@ -432,8 +445,55 @@ var _ = Describe("Machines", func() {
 					}
 				}
 
+				It("should deploy the correct machine classes when using a user-managed network", func() {
+					setup(region, machineImage, "", subnetID)
+
+					w.Spec.InfrastructureProviderStatus = &runtime.RawExtension{
+						Raw: encode(&api.InfrastructureStatus{
+							SecurityGroups: []api.SecurityGroup{
+								{
+									Purpose: api.PurposeNodes,
+									Name:    securityGroupName,
+								},
+							},
+							Node: api.NodeStatus{
+								KeyName: keyName,
+							},
+							Networks: api.NetworkStatus{
+								ID:                    networkID,
+								ManagedPrivateNetwork: false,
+								Subnets: []api.Subnet{
+									{
+										Purpose: api.PurposeNodes,
+										ID:      subnetID,
+									},
+								},
+							},
+						}),
+					}
+					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
+
+					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
+
+					// Test workerDelegate.DeployMachineClasses()
+
+					chartApplier.
+						EXPECT().
+						Apply(
+							context.TODO(),
+							filepath.Join(openstack.InternalChartsPath, "machineclass"),
+							namespace,
+							"machineclass",
+							kubernetes.Values(machineClasses),
+						).
+						Return(nil)
+
+					err := workerDelegate.DeployMachineClasses(context.TODO())
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				It("should return the expected machine deployments for profile image types", func() {
-					setup(region, machineImage, "")
+					setup(region, machineImage, "", "")
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
@@ -491,7 +551,7 @@ var _ = Describe("Machines", func() {
 				})
 
 				It("should return the expected machine deployments for profile image types with id", func() {
-					setup(regionWithImages, "", machineImageID)
+					setup(regionWithImages, "", machineImageID, "")
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.BoolPtr(true)}
 
@@ -560,7 +620,7 @@ var _ = Describe("Machines", func() {
 							serverGroupID2   = "id2"
 						)
 
-						setup(region, machineImage, "")
+						setup(region, machineImage, "", "")
 						c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
 
 						workerWithServerGroup := w.DeepCopy()
@@ -663,7 +723,7 @@ var _ = Describe("Machines", func() {
 					})
 
 					It("should delete the old OpenStackMachineClass", func() {
-						setup(region, machineImage, "")
+						setup(region, machineImage, "", "")
 						workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
 						c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
@@ -685,7 +745,7 @@ var _ = Describe("Machines", func() {
 				})
 
 				It("should fail if the server group dependencies do not exist", func() {
-					setup(region, machineImage, "")
+					setup(region, machineImage, "", "")
 
 					workerWithServerGroup := w.DeepCopy()
 					workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{

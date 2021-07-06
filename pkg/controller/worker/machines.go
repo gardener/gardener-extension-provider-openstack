@@ -100,6 +100,11 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		return err
 	}
 
+	subnet, err := helper.FindSubnetByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
+	if err != nil {
+		return err
+	}
+
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones))
 
@@ -156,6 +161,10 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				"secret": map[string]interface{}{
 					"cloudConfig": string(pool.UserData),
 				},
+			}
+
+			if !infrastructureStatus.Networks.ManagedPrivateNetwork {
+				machineClassSpec["subnetID"] = subnet.ID
 			}
 
 			if volumeSize > 0 {

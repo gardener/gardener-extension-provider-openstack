@@ -19,7 +19,9 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -138,6 +140,28 @@ var _ = Describe("InfrastructureConfig validation", func() {
 				"Field":  Equal("networks.workers"),
 				"Detail": Equal("must be valid canonical CIDR"),
 			}))
+		})
+
+		It("should forbid an invalid network id configuration", func() {
+			invalidID := "thisiswrong"
+			infrastructureConfig.Networks.ID = &invalidID
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.id"),
+			}))
+		})
+
+		It("should allow an valid OpenStack UUID as network ID", func() {
+			id, err := uuid.NewUUID()
+			Expect(err).NotTo(HaveOccurred())
+			infrastructureConfig.Networks.ID = pointer.StringPtr(id.String())
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 

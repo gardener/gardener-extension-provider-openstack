@@ -44,6 +44,9 @@ type Networks struct {
 	Worker string `json:"worker"`
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	Workers string `json:"workers"`
+	// ID is the ID of an existing private network.
+	// +optional
+	ID *string `json:"id,omitempty"`
 }
 
 // Router indicates whether to use an existing router or create a new one.
@@ -75,6 +78,8 @@ type NodeStatus struct {
 type NetworkStatus struct {
 	// ID is the Network id.
 	ID string `json:"id"`
+	// ManagedPrivateNetwork indicates whether the network is managed by Gardener.
+	ManagedPrivateNetwork bool `json:"managed"`
 	// FloatingPool contains information about the floating pool.
 	FloatingPool FloatingPoolStatus `json:"floatingPool"`
 	// Router contains information about the Router and related resources.

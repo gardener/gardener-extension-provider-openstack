@@ -37,6 +37,9 @@ providerSpec:
     availabilityZone: {{ $machineClass.availabilityZone }}
     flavorName: {{ $machineClass.machineType }}
     keyName: {{ $machineClass.keyName }}
+{{- if $machineClass.subnetID }}
+    subnetID: {{ $machineClass.subnetID }}
+{{- end }}
 {{- if $machineClass.imageID }}
     imageID: {{ $machineClass.imageID }}
 {{- else }}

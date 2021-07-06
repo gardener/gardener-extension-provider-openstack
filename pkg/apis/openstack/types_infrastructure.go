@@ -41,6 +41,8 @@ type Networks struct {
 	Worker string
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	Workers string
+	// ID is the ID of an existing private network.
+	ID *string
 }
 
 // Router indicates whether to use an existing router or create a new one.
@@ -72,6 +74,8 @@ type NodeStatus struct {
 type NetworkStatus struct {
 	// ID is the Network id.
 	ID string
+	// ManagedPrivateNetwork indicates whether the network is managed by Gardener.
+	ManagedPrivateNetwork bool
 	// FloatingPool contains information about the floating pool.
 	FloatingPool FloatingPoolStatus
 	// Router contains information about the Router and related resources.

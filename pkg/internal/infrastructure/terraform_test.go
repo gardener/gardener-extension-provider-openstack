@@ -122,7 +122,8 @@ var _ = Describe("Terraform", func() {
 				"maxApiCallRetries": MaxApiCallRetries,
 			}
 			expectedCreateValues = map[string]interface{}{
-				"router": false,
+				"router":  false,
+				"network": true,
 			}
 			expectedRouterValues = map[string]interface{}{
 				"id": strconv.Quote("1"),
@@ -166,6 +167,27 @@ var _ = Describe("Terraform", func() {
 			expectedCreateValues["router"] = true
 			expectedRouterValues["id"] = DefaultRouterID
 			expectedRouterValues["enableSNAT"] = true
+
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
+			Expect(err).To(BeNil())
+			Expect(values).To(Equal(map[string]interface{}{
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
+				"dnsServers":   dnsServers,
+				"sshPublicKey": string(infra.Spec.SSHPublicKey),
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
+			}))
+		})
+
+		It("should correctly compute the terraformer chart values when reusing vpc", func() {
+			networkID := "networkID"
+
+			config.Networks.ID = &networkID
+			expectedCreateValues["network"] = false
+			expectedNetworkValues["id"] = networkID
 
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
 			Expect(err).To(BeNil())

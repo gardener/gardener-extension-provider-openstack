@@ -1059,6 +1059,17 @@ string
 </tr>
 <tr>
 <td>
+<code>managed</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>ManagedPrivateNetwork indicates whether the network is managed by Gardener.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>floatingPool</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPoolStatus">
@@ -1150,6 +1161,18 @@ string
 </td>
 <td>
 <p>Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>id</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ID is the ID of an existing private network.</p>
 </td>
 </tr>
 </tbody>

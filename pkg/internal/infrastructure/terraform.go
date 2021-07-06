@@ -65,8 +65,9 @@ func ComputeTerraformerTemplateValues(
 	cluster *controller.Cluster,
 ) (map[string]interface{}, error) {
 	var (
-		createRouter = true
-		routerConfig = map[string]interface{}{
+		createRouter  = true
+		createNetwork = true
+		routerConfig  = map[string]interface{}{
 			"id": DefaultRouterID,
 		}
 		outputKeysConfig = map[string]interface{}{
@@ -109,6 +110,14 @@ func ComputeTerraformerTemplateValues(
 		workersCIDR = config.Networks.Worker
 	}
 
+	networksConfig := map[string]interface{}{
+		"workers": workersCIDR,
+	}
+	if config.Networks.ID != nil {
+		createNetwork = false
+		networksConfig["id"] = *config.Networks.ID
+	}
+
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
 			"maxApiCallRetries": MaxApiCallRetries,
@@ -117,16 +126,15 @@ func ComputeTerraformerTemplateValues(
 			"floatingPoolName":  config.FloatingPoolName,
 		},
 		"create": map[string]interface{}{
-			"router": createRouter,
+			"router":  createRouter,
+			"network": createNetwork,
 		},
 		"dnsServers":   cloudProfileConfig.DNSServers,
 		"sshPublicKey": string(infra.Spec.SSHPublicKey),
 		"router":       routerConfig,
 		"clusterName":  infra.Namespace,
-		"networks": map[string]interface{}{
-			"workers": workersCIDR,
-		},
-		"outputKeys": outputKeysConfig,
+		"networks":     networksConfig,
+		"outputKeys":   outputKeysConfig,
 	}, nil
 }
 
@@ -269,5 +277,6 @@ func ComputeStatus(ctx context.Context, tf terraformer.Terraformer, config *api.
 
 	status := StatusFromTerraformState(state)
 	status.Networks.FloatingPool.Name = config.FloatingPoolName
+	status.Networks.ManagedPrivateNetwork = config.Networks.ID == nil
 	return status, nil
 }

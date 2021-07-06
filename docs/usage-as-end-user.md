@@ -101,7 +101,7 @@ The `loadBalancerClasses` field contains an optional list of load balancer class
 - `floatingNetworkID` can be specified to receive an ip from an floating/external network, additionally the subnet in this network can be selected via
   - `floatingSubnetName` can be either a full subnet name or a regex/glob to match subnet name
   - `floatingSubnetTags` a comma seperated list of subnet tags
-  - `floatingSubnetTags` the id of a specific subnet
+  - `floatingSubnetID` the id of a specific subnet
 - `subnetID` can be specified by to receive an ip from an internal subnet (will not have an effect in combination with floating/external network configuration)
 
 

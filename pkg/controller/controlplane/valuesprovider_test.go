@@ -256,21 +256,24 @@ var _ = Describe("ValuesProvider", func() {
 
 	Describe("#GetConfigChartValues", func() {
 		configChartValues := map[string]interface{}{
-			"kubernetesVersion":          "1.13.4",
-			"domainName":                 "domain-name",
-			"tenantName":                 "tenant-name",
-			"username":                   "username",
-			"password":                   "password",
-			"region":                     region,
-			"subnetID":                   "subnet-acbd1234",
-			"lbProvider":                 "load-balancer-provider",
-			"floatingNetworkID":          "floating-network-id",
-			"authUrl":                    authURL,
-			"dhcpDomain":                 dhcpDomain,
-			"requestTimeout":             requestTimeout,
-			"useOctavia":                 useOctavia,
-			"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
-			"nodeVolumeAttachLimit":      pointer.Int32Ptr(nodeVoluemAttachLimit),
+			"kubernetesVersion":           "1.13.4",
+			"domainName":                  "domain-name",
+			"tenantName":                  "tenant-name",
+			"username":                    "username",
+			"password":                    "password",
+			"region":                      region,
+			"subnetID":                    "subnet-acbd1234",
+			"lbProvider":                  "load-balancer-provider",
+			"floatingNetworkID":           "floating-network-id",
+			"authUrl":                     authURL,
+			"dhcpDomain":                  dhcpDomain,
+			"requestTimeout":              requestTimeout,
+			"useOctavia":                  useOctavia,
+			"rescanBlockStorageOnResize":  rescanBlockStorageOnResize,
+			"nodeVolumeAttachLimit":       pointer.Int32Ptr(nodeVoluemAttachLimit),
+			"applicationCredentialID":     "",
+			"applicationCredentialSecret": "",
+			"applicationCredentialName":   "",
 		}
 
 		It("should return correct config chart values", func() {
@@ -420,6 +423,29 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(expectedValues))
 		})
+
+		It("should return correct config chart values with application credentials", func() {
+			secret2 := *cpSecret
+			secret2.Data = map[string][]byte{
+				"domainName":                  []byte(domainName),
+				"tenantName":                  []byte(tenantName),
+				"applicationCredentialID":     []byte(`app-id`),
+				"applicationCredentialSecret": []byte(`app-secret`),
+			}
+
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(&secret2))
+
+			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
+				"username":                    "",
+				"password":                    "",
+				"applicationCredentialID":     "app-id",
+				"applicationCredentialSecret": "app-secret",
+			})
+			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sLessThan119)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(expectedValues))
+		})
+
 	})
 
 	Describe("#GetControlPlaneChartValues", func() {

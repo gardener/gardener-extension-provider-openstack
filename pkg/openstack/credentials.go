@@ -27,9 +27,17 @@ import (
 type Credentials struct {
 	DomainName string
 	TenantName string
-	Username   string
-	Password   string
-	AuthURL    string
+
+	// either authenticate with username/password credentials
+	Username string
+	Password string
+
+	// or application credentials
+	ApplicationCredentialID     string
+	ApplicationCredentialName   string
+	ApplicationCredentialSecret string
+
+	AuthURL string
 }
 
 // GetCredentials computes for a given context and infrastructure the corresponding credentials object.
@@ -54,23 +62,50 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 	if err != nil {
 		return nil, err
 	}
-	userName, err := getRequired(secret, UserName)
-	if err != nil {
-		return nil, err
+	userName := getOptional(secret, UserName)
+	password := getOptional(secret, Password)
+	applicationCredentialID := getOptional(secret, ApplicationCredentialID)
+	applicationCredentialName := getOptional(secret, ApplicationCredentialName)
+	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret)
+	authURL := getOptional(secret, AuthURL)
+
+	if password != "" {
+		if applicationCredentialSecret != "" {
+			return nil, fmt.Errorf("cannot specify both '%s' and '%s' in secret %s/%s", Password, ApplicationCredentialSecret, secret.Namespace, secret.Name)
+		}
+		if userName == "" {
+			return nil, fmt.Errorf("'%s' is required if '%s' is given in %s/%s", UserName, Password, secret.Namespace, secret.Name)
+		}
+	} else {
+		if applicationCredentialSecret == "" {
+			return nil, fmt.Errorf("must either specify '%s' or '%s' in secret %s/%s", Password, ApplicationCredentialSecret, secret.Namespace, secret.Name)
+		}
+		if applicationCredentialID == "" {
+			if userName == "" || applicationCredentialName == "" {
+				return nil, fmt.Errorf("'%s' and '%s' are required if application credentials are used without '%s' in secret %s/%s", ApplicationCredentialName, UserName,
+					ApplicationCredentialID, secret.Namespace, secret.Name)
+			}
+		}
 	}
-	password, err := getRequired(secret, Password)
-	if err != nil {
-		return nil, err
-	}
-	authURL := secret.Data[AuthURL]
 
 	return &Credentials{
-		DomainName: domainName,
-		TenantName: tenantName,
-		Username:   userName,
-		Password:   password,
-		AuthURL:    string(authURL),
+		DomainName:                  domainName,
+		TenantName:                  tenantName,
+		Username:                    userName,
+		Password:                    password,
+		ApplicationCredentialID:     applicationCredentialID,
+		ApplicationCredentialName:   applicationCredentialName,
+		ApplicationCredentialSecret: applicationCredentialSecret,
+		AuthURL:                     string(authURL),
 	}, nil
+}
+
+// getOptional returns optional value for a corresponding key or empty string
+func getOptional(secret *corev1.Secret, key string) string {
+	if value, ok := secret.Data[key]; ok {
+		return string(value)
+	}
+	return ""
 }
 
 // getRequired checks if the provided map has a valid value for a corresponding key.

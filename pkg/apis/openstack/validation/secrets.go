@@ -39,9 +39,12 @@ func ValidateCloudProviderSecret(secret *corev1.Secret) error {
 
 	// domainName, tenantName, and userName must not contain leading or trailing whitespace
 	for key, value := range map[string]string{
-		openstack.DomainName: credentials.DomainName,
-		openstack.TenantName: credentials.TenantName,
-		openstack.UserName:   credentials.Username,
+		openstack.DomainName:                  credentials.DomainName,
+		openstack.TenantName:                  credentials.TenantName,
+		openstack.UserName:                    credentials.Username,
+		openstack.ApplicationCredentialID:     credentials.ApplicationCredentialID,
+		openstack.ApplicationCredentialName:   credentials.ApplicationCredentialName,
+		openstack.ApplicationCredentialSecret: credentials.ApplicationCredentialSecret,
 	} {
 		if strings.TrimSpace(value) != value {
 			return fmt.Errorf("field %q in secret %s must not contain leading or traling whitespace", key, secretKey)

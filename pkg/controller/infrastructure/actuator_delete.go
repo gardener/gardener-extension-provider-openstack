@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -46,7 +47,13 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 		return tf.CleanupConfiguration(ctx)
 	}
 
+	// need to known if application credentials are used
+	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef)
+	if err != nil {
+		return err
+	}
+
 	return tf.
-		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef)...).
+		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...).
 		Destroy(ctx)
 }

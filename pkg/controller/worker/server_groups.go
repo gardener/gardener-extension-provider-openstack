@@ -26,17 +26,17 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 )
 
+func isServerGroupRequired(config *api.WorkerConfig) bool {
+	return config != nil && config.ServerGroup != nil && config.ServerGroup.Policy != ""
+}
+
 func generateServerGroupName(clusterName, poolName string) (string, error) {
 	suffix, err := utils.GenerateRandomString(10)
 	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s-%s", getServerGroupNamePrefixForPool(clusterName, poolName), suffix), nil
-}
-
-func getServerGroupNamePrefixForPool(clusterName, poolName string) string {
-	return fmt.Sprintf("%s-%s", clusterName, poolName)
+	return fmt.Sprintf("%s-%s-%s", clusterName, poolName, suffix), nil
 }
 
 func filterServerGroupsByPrefix(sgs []servergroups.ServerGroup, prefix string) []servergroups.ServerGroup {

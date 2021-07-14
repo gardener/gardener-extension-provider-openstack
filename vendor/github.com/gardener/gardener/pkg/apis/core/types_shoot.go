@@ -539,6 +539,10 @@ type KubeProxyConfig struct {
 	// Mode specifies which proxy mode to use.
 	// defaults to IPTables.
 	Mode *ProxyMode
+	// Enabled indicates whether kube-proxy should be deployed or not.
+	// Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field.
+	// defaults to true if not specified.
+	Enabled *bool
 }
 
 // ProxyMode available in Linux platform: 'userspace' (older, going to be EOL), 'iptables'
@@ -777,7 +781,8 @@ type Worker struct {
 	Annotations map[string]string
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	CABundle *string
-	// CRI contains configurations of CRI support of every machine in the worker pool
+	// CRI contains configurations of CRI support of every machine in the worker pool.
+	// Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
 	CRI *CRI
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	Kubernetes *WorkerKubernetes
@@ -899,6 +904,7 @@ type CRIName string
 
 const (
 	CRINameContainerD CRIName = "containerd"
+	CRINameDocker     CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime

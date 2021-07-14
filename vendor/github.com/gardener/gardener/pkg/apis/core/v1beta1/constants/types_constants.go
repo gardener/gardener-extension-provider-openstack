@@ -350,11 +350,31 @@ const (
 	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
 	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
 	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"
+	// AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds is a key for an annotation on a Shoot resource that
+	// declares the grace period in seconds for finalizing the resources handled in the 'cleanup webhooks' step.
+	// Concretely, after the specified seconds, all the finalizers of the affected resources are forcefully removed.
+	AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"
+	// AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds is a key for an annotation on a Shoot resource that
+	// declares the grace period in seconds for finalizing the resources handled in the 'cleanup extended APIs' step.
+	// Concretely, after the specified seconds, all the finalizers of the affected resources are forcefully removed.
+	AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"
+	// AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds is a key for an annotation on a Shoot
+	// resource that declares the grace period in seconds for finalizing the resources handled in the 'cleanup
+	// Kubernetes resources' step. Concretely, after the specified seconds, all the finalizers of the affected resources
+	// are forcefully removed.
+	AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"
+	// AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds is a key for an annotation on a Shoot
+	// resource that declares the grace period in seconds for finalizing the resources handled in the 'cleanup shoot
+	// namespaces' step. Concretely, after the specified seconds, all the finalizers of the affected resources are
+	// forcefully removed.
+	AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-namespaces-finalize-grace-period-seconds"
 	// AnnotationShootKonnectivityTunnel is the key for an annotation of a Shoot cluster whose value indicates
 	// if a konnectivity-tunnel should be deployed into the shoot cluster or not.
 	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
 	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
+	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.
+	AnnotationNodeLocalDNS = "alpha.featuregates.shoot.gardener.cloud/node-local-dns"
 
 	// AnnotationShootAPIServerSNIPodInjector is the key for an annotation of a Shoot cluster whose value indicates
 	// if pod injection of 'KUBERNETES_SERVICE_HOST' environment variable should happen for clusters where APIServerSNI

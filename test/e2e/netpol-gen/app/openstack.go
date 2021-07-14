@@ -26,8 +26,6 @@ type openStackNetworkPolicy struct {
 	np.Agnostic
 	// metadata points to AWS metadata service.
 	metadata *np.Host
-	// cloudControllerManagerNotSecured points to OpenStack specific cloud-controller-manager running on HTTP port.
-	cloudControllerManagerNotSecured *np.SourcePod
 	// cloudControllerManagerSecured points to OpenStack specific cloud-controller-manager running on HTTPS port.
 	cloudControllerManagerSecured *np.SourcePod
 }
@@ -41,27 +39,12 @@ func NewCloudAware() np.CloudAware {
 			HostName:    "169.254.169.254",
 			Port:        80,
 		},
-		cloudControllerManagerNotSecured: &np.SourcePod{
-			Ports: np.NewSinglePort(10253),
-			Pod: np.NewPod("cloud-controller-manager-http", labels.Set{
-				"app":  "kubernetes",
-				"role": "cloud-controller-manager",
-			}, "< 1.13"),
-			ExpectedPolicies: sets.NewString(
-				"allow-from-prometheus",
-				"allow-to-dns",
-				"allow-to-private-networks",
-				"allow-to-public-networks",
-				"allow-to-shoot-apiserver",
-				"deny-all",
-			),
-		},
 		cloudControllerManagerSecured: &np.SourcePod{
 			Ports: np.NewSinglePort(10258),
 			Pod: np.NewPod("cloud-controller-manager-https", labels.Set{
 				"app":  "kubernetes",
 				"role": "cloud-controller-manager",
-			}, ">= 1.13"),
+			}),
 			ExpectedPolicies: sets.NewString(
 				"allow-from-prometheus",
 				"allow-to-dns",
@@ -81,7 +64,6 @@ func (a *openStackNetworkPolicy) Rules() []np.Rule {
 		a.newSource(ag.KubeAPIServer()).AllowPod(ag.EtcdMain(), ag.EtcdEvents()).AllowHost(ag.SeedKubeAPIServer(), ag.External()).Build(),
 		a.newSource(ag.EtcdMain()).AllowHost(ag.External()).Build(),
 		a.newSource(ag.EtcdEvents()).AllowHost(ag.External()).Build(),
-		a.newSource(a.cloudControllerManagerNotSecured).AllowPod(ag.KubeAPIServer()).AllowHost(ag.External()).Build(),
 		a.newSource(a.cloudControllerManagerSecured).AllowPod(ag.KubeAPIServer()).AllowHost(ag.External()).Build(),
 		a.newSource(ag.Loki()).Build(),
 		a.newSource(ag.Grafana()).AllowPod(ag.Prometheus(), ag.Loki()).Build(),
@@ -91,7 +73,6 @@ func (a *openStackNetworkPolicy) Rules() []np.Rule {
 		a.newSource(ag.KubeStateMetricsShoot()).AllowPod(ag.KubeAPIServer()).Build(),
 		a.newSource(ag.MachineControllerManager()).AllowPod(ag.KubeAPIServer()).AllowHost(ag.SeedKubeAPIServer(), ag.External()).Build(),
 		a.newSource(ag.Prometheus()).AllowPod(
-			a.cloudControllerManagerNotSecured,
 			a.cloudControllerManagerSecured,
 			ag.EtcdEvents(),
 			ag.EtcdMain(),
@@ -118,7 +99,6 @@ func (a *openStackNetworkPolicy) Sources() []*np.SourcePod {
 	ag := a.Agnostic
 	return []*np.SourcePod{
 		ag.AddonManager(),
-		a.cloudControllerManagerNotSecured,
 		a.cloudControllerManagerSecured,
 		ag.Loki(),
 		ag.EtcdEvents(),

@@ -50,11 +50,6 @@ const (
 	// beta: v1.19.0
 	ManagedIstio featuregate.Feature = "ManagedIstio"
 
-	// KonnectivityTunnel enables inverting the connection direction to be shoot->seed instead of seed->shoot (only for Shoots with Kubernetes version >= 1.18).
-	// owner @DockToFuture @mvladev
-	// alpha: v1.6.0
-	KonnectivityTunnel featuregate.Feature = "KonnectivityTunnel"
-
 	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
 	// for all Shoot clusters. Requires Istio to be installed in the cluster or
 	// ManagedIstio feature gate to be enabled.
@@ -74,6 +69,7 @@ const (
 	// owner @danielfoehrKn
 	// alpha: v1.11.0
 	// beta: v1.26.0
+	// GA: v1.27.0
 	MountHostCADirectories featuregate.Feature = "MountHostCADirectories"
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
@@ -96,4 +92,9 @@ const (
 	// owner: @mvladev
 	// alpha: v1.23.0
 	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
+
+	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.
+	// owner: @stoyanr
+	// alpha: v1.27.0
+	UseDNSRecords featuregate.Feature = "UseDNSRecords"
 )

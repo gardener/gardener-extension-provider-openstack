@@ -70,6 +70,10 @@ type Interface interface {
 	SetKubeletCACertificate(string)
 	// SetSSHPublicKey sets the SSHPublicKey value.
 	SetSSHPublicKey(string)
+	// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
+	SetPromtailRBACAuthToken(string)
+	// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
+	SetLokiIngressHostName(string)
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 	// containing both the downloader as well as the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
@@ -119,6 +123,10 @@ type OriginalValues struct {
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is a public SSH key.
 	SSHPublicKey string
+	// PromtailRBACAuthToken is the token needed by Promtial to auth agains Loki sidecar proxy
+	PromtailRBACAuthToken string
+	// LokiIngressHostName is the ingress host name of the shoot's Loki
+	LokiIngressHostName string
 }
 
 // New creates a new instance of Interface.
@@ -327,7 +335,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscName := Key(worker.Name, o.values.KubernetesVersion) + purposeToKeySuffix(purpose)
+			oscName := Key(worker.Name, o.values.KubernetesVersion, worker.CRI) + purposeToKeySuffix(purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -378,6 +386,16 @@ func (o *operatingSystemConfig) SetSSHPublicKey(key string) {
 	o.values.SSHPublicKey = key
 }
 
+// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
+func (o *operatingSystemConfig) SetPromtailRBACAuthToken(token string) {
+	o.values.PromtailRBACAuthToken = token
+}
+
+// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
+func (o *operatingSystemConfig) SetLokiIngressHostName(hostName string) {
+	o.values.LokiIngressHostName = hostName
+}
+
 // WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 // containing both the downloader as well as the original operating system config data.
 func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
@@ -412,7 +430,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		osc:                     osc,
 		worker:                  worker,
 		purpose:                 purpose,
-		key:                     Key(worker.Name, o.values.KubernetesVersion),
+		key:                     Key(worker.Name, o.values.KubernetesVersion, worker.CRI),
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
 		clusterDNSAddress:       o.values.ClusterDNSAddress,
@@ -425,6 +443,8 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
 		kubernetesVersion:       o.values.KubernetesVersion,
 		sshPublicKey:            o.values.SSHPublicKey,
+		lokiIngressHostName:     o.values.LokiIngressHostName,
+		promtailRBACAuthToken:   o.values.PromtailRBACAuthToken,
 	}
 }
 
@@ -481,6 +501,8 @@ type deployer struct {
 	kubeletDataVolumeName   *string
 	kubernetesVersion       *semver.Version
 	sshPublicKey            string
+	lokiIngressHostName     string
+	promtailRBACAuthToken   string
 }
 
 // exposed for testing
@@ -526,6 +548,8 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKey:            d.sshPublicKey,
+			PromtailRBACAuthToken:   d.promtailRBACAuthToken,
+			LokiIngress:             d.lokiIngressHostName,
 		})
 		if err != nil {
 			return nil, err
@@ -591,14 +615,19 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
-// Key returns the key that can be used as secret name based on the provided worker name and Kubernetes version.
-func Key(workerName string, kubernetesVersion *semver.Version) string {
+// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI configuration.
+func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
 	}
 
 	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
-	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion))[:5])
+
+	var criName gardencorev1beta1.CRIName
+	if criConfig != nil && criConfig.Name != gardencorev1beta1.CRINameDocker {
+		criName = criConfig.Name
+	}
+	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
 func purposeToKeySuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {

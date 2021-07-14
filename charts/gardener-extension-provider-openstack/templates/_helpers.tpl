@@ -27,11 +27,5 @@ apps/v1
 {{- end -}}
 
 {{- define "priorityclassversion" -}}
-{{- if semverCompare ">= 1.14-0" .Capabilities.KubeVersion.GitVersion -}}
 scheduling.k8s.io/v1
-{{- else if semverCompare ">= 1.11-0" .Capabilities.KubeVersion.GitVersion -}}
-scheduling.k8s.io/v1beta1
-{{- else -}}
-scheduling.k8s.io/v1alpha1
-{{- end -}}
 {{- end -}}

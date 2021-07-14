@@ -6,13 +6,9 @@ images:
 
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: k8s.gcr.io/hyperkube
-  targetVersion: "< 1.15"
-- name: cloud-controller-manager
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager
   tag: "v1.17.0"
-  targetVersion: ">= 1.15, < 1.18"
+  targetVersion: "< 1.18"
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager

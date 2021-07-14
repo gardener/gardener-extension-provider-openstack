@@ -3030,6 +3030,7 @@ func autoConvert_v1alpha1_KubeProxyConfig_To_core_KubeProxyConfig(in *KubeProxyC
 		return err
 	}
 	out.Mode = (*core.ProxyMode)(unsafe.Pointer(in.Mode))
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	return nil
 }
 
@@ -3043,6 +3044,7 @@ func autoConvert_core_KubeProxyConfig_To_v1alpha1_KubeProxyConfig(in *core.KubeP
 		return err
 	}
 	out.Mode = (*ProxyMode)(unsafe.Pointer(in.Mode))
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	return nil
 }
 
@@ -4504,7 +4506,7 @@ func Convert_core_SeedProvider_To_v1alpha1_SeedProvider(in *core.SeedProvider, o
 }
 
 func autoConvert_v1alpha1_SeedSelector_To_core_SeedSelector(in *SeedSelector, out *core.SeedSelector, s conversion.Scope) error {
-	out.LabelSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.LabelSelector))
+	out.LabelSelector = in.LabelSelector
 	out.ProviderTypes = *(*[]string)(unsafe.Pointer(&in.ProviderTypes))
 	return nil
 }
@@ -4515,7 +4517,7 @@ func Convert_v1alpha1_SeedSelector_To_core_SeedSelector(in *SeedSelector, out *c
 }
 
 func autoConvert_core_SeedSelector_To_v1alpha1_SeedSelector(in *core.SeedSelector, out *SeedSelector, s conversion.Scope) error {
-	out.LabelSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.LabelSelector))
+	out.LabelSelector = in.LabelSelector
 	out.ProviderTypes = *(*[]string)(unsafe.Pointer(&in.ProviderTypes))
 	return nil
 }

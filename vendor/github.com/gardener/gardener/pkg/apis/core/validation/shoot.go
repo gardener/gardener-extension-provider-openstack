@@ -69,6 +69,7 @@ var (
 	)
 	availableWorkerCRINames = sets.NewString(
 		string(core.CRINameContainerD),
+		string(core.CRINameDocker),
 	)
 	// https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
 	availableOIDCSigningAlgs = sets.NewString(
@@ -134,7 +135,7 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes, spec.Purpose, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
@@ -158,7 +159,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
 	}
 	if spec.SeedSelector != nil {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.SeedSelector.LabelSelector, fldPath.Child("seedSelector"))...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, fldPath.Child("seedSelector"))...)
 	}
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
@@ -203,7 +204,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateAddonsUpdate(newSpec.Addons, oldSpec.Addons, metav1.HasAnnotation(newObjectMeta, v1beta1constants.AnnotationShootUseAsSeed), fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, seedGotAssigned, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
-	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
+	allErrs = append(allErrs, validateKubeProxyUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
@@ -296,8 +297,13 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, kubeAPIServerConfig *core.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *core.ShootPurpose, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	versionGreaterOrEqual122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
+	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && versionGreaterOrEqual122 && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "addons can only be enabled on evaluation shoots for versions >= 1.22"))
+	}
 
 	if helper.NginxIngressEnabled(addons) {
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
@@ -313,7 +319,7 @@ func validateAddons(addons *core.Addons, kubeAPIServerConfig *core.KubeAPIServer
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
 			}
 
-			if *authMode == core.KubernetesDashboardAuthModeBasic && !helper.ShootWantsBasicAuthentication(kubeAPIServerConfig) {
+			if *authMode == core.KubernetesDashboardAuthModeBasic && !helper.ShootWantsBasicAuthentication(kubernetes.KubeAPIServer) {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, "cannot use basic auth mode when basic auth is not enabled in kube-apiserver configuration"))
 			}
 		}
@@ -357,19 +363,29 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	return allErrs
 }
 
-func validateKubeProxyModeUpdate(newConfig, oldConfig *core.KubeProxyConfig, version string, fldPath *field.Path) field.ErrorList {
+func validateKubeProxyUpdate(newConfig, oldConfig *core.KubeProxyConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	newMode := core.ProxyModeIPTables
 	oldMode := core.ProxyModeIPTables
-	if newConfig != nil {
+	if newConfig != nil && newConfig.Mode != nil {
 		newMode = *newConfig.Mode
 	}
-	if oldConfig != nil {
+	if oldConfig != nil && oldConfig.Mode != nil {
 		oldMode = *oldConfig.Mode
 	}
 	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
+	// The enabled flag is immutable for now to ensure that the networking extensions have time to adapt to it.
+	newEnabled := true
+	oldEnabled := true
+	if newConfig != nil && newConfig.Enabled != nil {
+		newEnabled = *newConfig.Enabled
+	}
+	if oldConfig != nil && oldConfig.Enabled != nil {
+		oldEnabled = *oldConfig.Enabled
+	}
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEnabled, oldEnabled, fldPath.Child("enabled"))...)
 	return allErrs
 }
 

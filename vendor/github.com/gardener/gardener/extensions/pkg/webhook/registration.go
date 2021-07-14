@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/pkg/errors"
@@ -29,7 +30,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -62,7 +62,7 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			Name:              fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
 			NamespaceSelector: webhook.Selector,
 			Rules:             rules,
-			TimeoutSeconds:    pointer.Int32Ptr(10),
+			TimeoutSeconds:    pointer.Int32(10),
 		}
 
 		switch webhook.Target {
@@ -92,10 +92,10 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 				return nil, nil, err
 			}
 			ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-			ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
+			ownerReference.BlockOwnerDeletion = pointer.Bool(false)
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, c, mutatingWebhookConfigurationSeed, func() error {
+		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, mutatingWebhookConfigurationSeed, func() error {
 			if ownerReference != nil {
 				mutatingWebhookConfigurationSeed.SetOwnerReferences(kubernetes.MergeOwnerReferences(mutatingWebhookConfigurationSeed.GetOwnerReferences(), *ownerReference))
 			}

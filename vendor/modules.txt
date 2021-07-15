@@ -66,6 +66,7 @@ github.com/gardener/gardener/extensions/pkg/controller/common
 github.com/gardener/gardener/extensions/pkg/controller/controlplane
 github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator
 github.com/gardener/gardener/extensions/pkg/controller/csimigration
+github.com/gardener/gardener/extensions/pkg/controller/dnsrecord
 github.com/gardener/gardener/extensions/pkg/controller/error
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config
@@ -326,6 +327,8 @@ github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups
 github.com/gophercloud/gophercloud/openstack/compute/v2/flavors
 github.com/gophercloud/gophercloud/openstack/compute/v2/images
 github.com/gophercloud/gophercloud/openstack/compute/v2/servers
+github.com/gophercloud/gophercloud/openstack/dns/v2/recordsets
+github.com/gophercloud/gophercloud/openstack/dns/v2/zones
 github.com/gophercloud/gophercloud/openstack/identity/v2/tenants
 github.com/gophercloud/gophercloud/openstack/identity/v2/tokens
 github.com/gophercloud/gophercloud/openstack/identity/v3/tokens

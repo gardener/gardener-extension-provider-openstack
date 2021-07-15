@@ -70,7 +70,7 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 // NewOpenStackClientFromSecretRef returns a Factory implementation that can be used to create clients for OpenStack services.
 // The credentials are fetched from the Kubernetes secret referenced by <secretRef>.
 func NewOpenStackClientFromSecretRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, keyStoneUrl *string) (Factory, error) {
-	creds, err := os.GetCredentials(ctx, c, secretRef)
+	creds, err := os.GetCredentials(ctx, c, secretRef, false)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +118,23 @@ func (oc *OpenstackClientFactory) Compute(options ...Option) (Compute, error) {
 	}
 
 	return &ComputeClient{
+		client: client,
+	}, nil
+}
+
+// DNS returns a DNS client. The client uses Designate v2 API for issuing calls.
+func (oc *OpenstackClientFactory) DNS(options ...Option) (DNS, error) {
+	eo := gophercloud.EndpointOpts{}
+	for _, opt := range options {
+		eo = opt(eo)
+	}
+
+	client, err := openstack.NewDNSV2(oc.providerClient, eo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DNSClient{
 		client: client,
 	}, nil
 }

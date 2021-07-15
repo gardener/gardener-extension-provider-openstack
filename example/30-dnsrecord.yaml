@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dnsrecord-external
+  namespace: shoot--foobar--openstack
+type: Opaque
+data:
+  OS_DOMAIN_NAME: base64(domain-name)
+  OS_PROJECT_NAME: base64(tenant-name)
+  OS_USERNAME: base64(username)
+  OS_PASSWORD: base64(password)
+  OS_AUTH_URL: base64(auth-url)
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Cluster
+metadata:
+  name: shoot--foobar--openstack
+spec:
+  cloudProfile:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: CloudProfile
+  seed:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Seed
+  shoot:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Shoot
+    status:
+      lastOperation:
+        state: Succeeded
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: DNSRecord
+metadata:
+  name: dnsrecord-external
+  namespace: shoot--foobar--openstack
+spec:
+  type: openstack-designate
+  secretRef:
+    name: dnsrecord-external
+    namespace: shoot--foobar--openstack
+# zone: 9a96681a-2494-4bc7-8a90-05952c1ee7a5
+  name: api.openstack.foobar.shoot.example.com
+  recordType: A # Use A, CNAME, or TXT
+  values: # list of IP addresses for A records, a single hostname for CNAME records, or a list of texts for TXT records.
+  - 1.2.3.4
+# ttl: 120

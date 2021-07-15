@@ -30,7 +30,7 @@ const (
 
 // ValidateCloudProviderSecret checks whether the given secret contains a valid OpenStack credentials.
 func ValidateCloudProviderSecret(secret *corev1.Secret) error {
-	credentials, err := openstack.ExtractCredentials(secret)
+	credentials, err := openstack.ExtractCredentials(secret, false)
 	if err != nil {
 		return err
 	}

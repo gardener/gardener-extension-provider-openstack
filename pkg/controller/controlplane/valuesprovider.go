@@ -320,7 +320,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	}
 
 	// Get credentials
-	credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef)
+	credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef, false)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get service account from secret '%s/%s'", cp.Spec.SecretRef.Namespace, cp.Spec.SecretRef.Name)
 	}
@@ -442,7 +442,7 @@ func (vp *valuesProvider) getUserAgentHeaders(
 
 	// Add the domain and project/tenant to the useragent headers if the secret
 	// could be read and the respective fields in secret are not empty.
-	if credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef); err == nil && credentials != nil {
+	if credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef, false); err == nil && credentials != nil {
 		if credentials.DomainName != "" {
 			headers = append(headers, credentials.DomainName)
 		}

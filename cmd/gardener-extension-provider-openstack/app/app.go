@@ -25,6 +25,7 @@ import (
 	openstackbackupentry "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupentry"
 	openstackcontrolplane "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
 	openstackcsimigration "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/csimigration"
+	openstackdnsrecord "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
 	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
@@ -90,6 +91,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			MaxConcurrentReconciles: 5,
 		}
 
+		// options for the dnsrecord controller
+		dnsRecordCtrlOpts = &controllercmd.ControllerOptions{
+			MaxConcurrentReconciles: 5,
+		}
+
 		// options for the worker controller
 		workerCtrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
@@ -115,6 +121,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("backupentry-", backupEntryCtrlOpts),
 			controllercmd.PrefixOption("controlplane-", controlPlaneCtrlOpts),
 			controllercmd.PrefixOption("csimigration-", csiMigrationCtrlOpts),
+			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
 			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
 			controllercmd.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
 			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
@@ -172,6 +179,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			backupBucketCtrlOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.Controller)
 			backupEntryCtrlOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.Controller)
 			controlPlaneCtrlOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.Controller)
+			dnsRecordCtrlOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.Controller)
 			reconcileOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)

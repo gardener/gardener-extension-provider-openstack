@@ -66,10 +66,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	}
 
 	for i, pool := range cloudProfile.Constraints.FloatingPools {
-		lbClassPath := floatingPoolPath.Index(i).Child("loadBalancerClasses")
-		for j, class := range pool.LoadBalancerClasses {
-			allErrs = append(allErrs, ValidateLoadBalancerClasses(class, lbClassPath.Index(j))...)
-		}
+		allErrs = append(allErrs, ValidateLoadBalancerClasses(pool.LoadBalancerClasses, floatingPoolPath.Index(i).Child("loadBalancerClasses"))...)
 	}
 
 	loadBalancerProviderPath := fldPath.Child("constraints", "loadBalancerProviders")
@@ -169,12 +166,12 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	return allErrs
 }
 
-// ValidateLoadBalancerClasses validates LoadBalancerClass object.
-func ValidateLoadBalancerClasses(lbClass api.LoadBalancerClass, fldPath *field.Path) field.ErrorList {
+// validateLoadBalancerClass validates LoadBalancerClass object.
+func validateLoadBalancerClass(lbClass api.LoadBalancerClass, fldPath *field.Path) field.ErrorList {
 	var allErrs = field.ErrorList{}
 
 	if lbClass.Purpose != nil && *lbClass.Purpose != api.DefaultLoadBalancerClass && *lbClass.Purpose != api.PrivateLoadBalancerClass && *lbClass.Purpose != api.VPNLoadBalancerClass {
-		allErrs = append(allErrs, field.Invalid(fldPath, *lbClass.Purpose, fmt.Sprintf("Invalid LoadBalancerClass purpose. Valid values are %q or %q", api.DefaultLoadBalancerClass, api.PrivateLoadBalancerClass)))
+		allErrs = append(allErrs, field.Invalid(fldPath, *lbClass.Purpose, fmt.Sprintf("invalid LoadBalancerClass purpose. Valid values are %q or %q", api.DefaultLoadBalancerClass, api.PrivateLoadBalancerClass)))
 	}
 
 	if lbClass.FloatingSubnetID != nil && lbClass.FloatingSubnetName != nil && lbClass.FloatingSubnetTags != nil {
@@ -188,6 +185,50 @@ func ValidateLoadBalancerClasses(lbClass api.LoadBalancerClass, fldPath *field.P
 	}
 	if lbClass.FloatingSubnetTags != nil && (lbClass.FloatingSubnetID != nil || lbClass.FloatingSubnetName != nil) {
 		return append(allErrs, field.Forbidden(fldPath, "specify floating subnet tags and id or name is not possible"))
+	}
+
+	return allErrs
+}
+
+func ValidateLoadBalancerClasses(loadBalancerClasses []api.LoadBalancerClass, fldPath *field.Path) field.ErrorList {
+	var (
+		defaultClassExists bool
+		privateClassExists bool
+
+		allErrs      = field.ErrorList{}
+		lbClassNames = sets.NewString()
+	)
+
+	for i, class := range loadBalancerClasses {
+		lbClassPath := fldPath.Index(i)
+
+		// Validate first the load balancer class itself.
+		allErrs = append(allErrs, validateLoadBalancerClass(class, lbClassPath)...)
+
+		// All load balancer classes need to have an unique name. Check for duplicates.
+		if lbClassNames.Has(class.Name) {
+			allErrs = append(allErrs, field.Duplicate(lbClassPath.Child("name"), class.Name))
+		} else {
+			lbClassNames.Insert(class.Name)
+		}
+
+		// There can only be one default load balancer class. Check for multiple default classes.
+		if (class.Purpose != nil && *class.Purpose == api.DefaultLoadBalancerClass) || class.Name == api.DefaultLoadBalancerClass {
+			if defaultClassExists {
+				allErrs = append(allErrs, field.Invalid(fldPath, loadBalancerClasses, "not allowed to configure multiple default load balancer classes"))
+			} else {
+				defaultClassExists = true
+			}
+		}
+
+		// There can only be one private load balancer class. Check for multiple private classes.
+		if (class.Purpose != nil && *class.Purpose == api.PrivateLoadBalancerClass) || class.Name == api.PrivateLoadBalancerClass {
+			if privateClassExists {
+				allErrs = append(allErrs, field.Invalid(fldPath, loadBalancerClasses, "not allowed to configure multiple private load balancer classes"))
+			} else {
+				privateClassExists = true
+			}
+		}
 	}
 
 	return allErrs

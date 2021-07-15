@@ -32,14 +32,13 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, vers
 		allErrs = append(allErrs, field.Required(fldPath.Child("loadBalancerProvider"), "must provide the name of a load balancer provider"))
 	}
 
+	loadBalancerClassPath := fldPath.Child("loadBalancerClasses")
+	allErrs = append(allErrs, ValidateLoadBalancerClasses(controlPlaneConfig.LoadBalancerClasses, loadBalancerClassPath)...)
 	for i, class := range controlPlaneConfig.LoadBalancerClasses {
-		lbClassPath := fldPath.Child("loadBalancerClasses").Index(i)
-		allErrs = append(allErrs, ValidateLoadBalancerClasses(class, lbClassPath)...)
-
 		// Do not allow that the user specify a vpn LoadBalancerClass in the controlplane config.
 		// It need to come from the CloudProfile.
 		if class.Purpose != nil && *class.Purpose == api.VPNLoadBalancerClass {
-			allErrs = append(allErrs, field.Invalid(lbClassPath, class.Purpose, fmt.Sprintf("not allowed to specify a LoadBalancerClass with purpose %q", api.VPNLoadBalancerClass)))
+			allErrs = append(allErrs, field.Invalid(loadBalancerClassPath.Index(i), class.Purpose, fmt.Sprintf("not allowed to specify a LoadBalancerClass with purpose %q", api.VPNLoadBalancerClass)))
 		}
 	}
 
@@ -133,7 +132,7 @@ func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, sh
 		)
 
 		for _, lbClass := range fp.LoadBalancerClasses {
-			if equality.Semantic.DeepEqual(shootLBClass, lbClass) {
+			if shootLBClass.IsSemanticallyEqual(lbClass) {
 				valid = true
 				break
 			}

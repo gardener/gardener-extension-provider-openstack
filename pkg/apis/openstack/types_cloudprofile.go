@@ -17,6 +17,8 @@ package openstack
 import (
 	"fmt"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -104,6 +106,27 @@ type LoadBalancerClass struct {
 	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
 	// configuration is done.
 	SubnetID *string
+}
+
+// IsSemanticallyEqual checks if the load balancer class is semantically equal to
+// another given load balancer class. Name and Purpose fields are allowed to be different.
+func (l LoadBalancerClass) IsSemanticallyEqual(e LoadBalancerClass) bool {
+	if !utils.StringEqual(l.FloatingNetworkID, e.FloatingNetworkID) {
+		return false
+	}
+	if !utils.StringEqual(l.FloatingSubnetID, e.FloatingSubnetID) {
+		return false
+	}
+	if !utils.StringEqual(l.FloatingSubnetName, e.FloatingSubnetName) {
+		return false
+	}
+	if !utils.StringEqual(l.FloatingSubnetTags, e.FloatingSubnetTags) {
+		return false
+	}
+	if !utils.StringEqual(l.SubnetID, e.SubnetID) {
+		return false
+	}
+	return true
 }
 
 func (in LoadBalancerClass) String() string {

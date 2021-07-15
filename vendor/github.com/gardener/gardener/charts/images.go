@@ -67,10 +67,6 @@ const (
 	ImageNameIstioIstiod = "istio-istiod"
 	// ImageNameIstioProxy is a constant for an image in the image vector with name 'istio-proxy'.
 	ImageNameIstioProxy = "istio-proxy"
-	// ImageNameKonnectivityAgent is a constant for an image in the image vector with name 'konnectivity-agent'.
-	ImageNameKonnectivityAgent = "konnectivity-agent"
-	// ImageNameKonnectivityServer is a constant for an image in the image vector with name 'konnectivity-server'.
-	ImageNameKonnectivityServer = "konnectivity-server"
 	// ImageNameKubeApiserver is a constant for an image in the image vector with name 'kube-apiserver'.
 	ImageNameKubeApiserver = "kube-apiserver"
 	// ImageNameKubeControllerManager is a constant for an image in the image vector with name 'kube-controller-manager'.
@@ -89,6 +85,12 @@ const (
 	ImageNameLoki = "loki"
 	// ImageNameLokiCurator is a constant for an image in the image vector with name 'loki-curator'.
 	ImageNameLokiCurator = "loki-curator"
+	// ImageNameKubeRBACKProxy is a constant for an image in the image vector with name 'kube-rbac-proxy'.
+	ImageNameKubeRBACKProxy = "kube-rbac-proxy"
+	// PromtailImageName is the image of grafana/promtail image
+	PromtailImageName = "promtail"
+	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
+	ImageNameTelegraf = "telegraf"
 	// ImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.

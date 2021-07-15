@@ -48,7 +48,7 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 	}
 
 	// need to known if application credentials are used
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef)
+	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
 	if err != nil {
 		return err
 	}

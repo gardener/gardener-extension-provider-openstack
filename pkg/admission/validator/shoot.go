@@ -94,7 +94,7 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 		return fmt.Errorf("failed to get cloud provider credentials: %v", err)
 	}
 
-	credentials, err := openstack.ExtractCredentials(secret)
+	credentials, err := openstack.ExtractCredentials(secret, false)
 	if err != nil {
 		return fmt.Errorf("invalid cloud credentials: %v", err)
 	}

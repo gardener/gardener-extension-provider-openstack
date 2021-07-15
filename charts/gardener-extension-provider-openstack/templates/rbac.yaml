@@ -16,6 +16,8 @@ rules:
   - clusters
   - controlplanes
   - controlplanes/status
+  - dnsrecords
+  - dnsrecords/status
   - infrastructures
   - infrastructures/status
   - workers

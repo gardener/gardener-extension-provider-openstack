@@ -47,7 +47,7 @@ func (a *actuator) reconcile(ctx context.Context, logger logr.Logger, infra *ext
 	}
 
 	// need to known if application credentials are used
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef)
+	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
 	if err != nil {
 		return err
 	}

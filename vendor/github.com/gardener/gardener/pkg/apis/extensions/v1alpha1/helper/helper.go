@@ -14,7 +14,11 @@
 
 package helper
 
-import extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+import (
+	"net"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+)
 
 // ClusterAutoscalerRequired returns whether the given worker pool configuration indicates that a cluster-autoscaler
 // is needed.
@@ -25,4 +29,21 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 		}
 	}
 	return false
+}
+
+// GetDNSRecordType returns the appropriate DNS record type (A or CNAME) for the given address.
+func GetDNSRecordType(address string) extensionsv1alpha1.DNSRecordType {
+	if ip := net.ParseIP(address); ip != nil && ip.To4() != nil {
+		return extensionsv1alpha1.DNSRecordTypeA
+	} else {
+		return extensionsv1alpha1.DNSRecordTypeCNAME
+	}
+}
+
+// GetDNSRecordTTL returns the value of the given ttl, or 120 if nil.
+func GetDNSRecordTTL(ttl *int64) int64 {
+	if ttl != nil {
+		return *ttl
+	}
+	return 120
 }

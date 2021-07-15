@@ -20,6 +20,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -41,33 +42,43 @@ type Credentials struct {
 }
 
 // GetCredentials computes for a given context and infrastructure the corresponding credentials object.
-func GetCredentials(ctx context.Context, c client.Client, secretRef corev1.SecretReference) (*Credentials, error) {
+func GetCredentials(ctx context.Context, c client.Client, secretRef corev1.SecretReference, allowDNSKeys bool) (*Credentials, error) {
 	secret, err := extensionscontroller.GetSecretByReference(ctx, c, &secretRef)
 	if err != nil {
 		return nil, err
 	}
-	return ExtractCredentials(secret)
+	return ExtractCredentials(secret, allowDNSKeys)
 }
 
 // ExtractCredentials generates a credentials object for a given provider secret.
-func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
+func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials, error) {
+
+	var altDomainNameKey, altTenantNameKey, altUserNameKey, altPasswordKey, altAuthURLKey *string
+	if allowDNSKeys {
+		altDomainNameKey = pointer.String(DNSDomainName)
+		altTenantNameKey = pointer.String(DNSTenantName)
+		altUserNameKey = pointer.String(DNSUserName)
+		altPasswordKey = pointer.String(DNSPassword)
+		altAuthURLKey = pointer.String(DNSAuthURL)
+	}
+
 	if secret.Data == nil {
 		return nil, fmt.Errorf("secret does not contain any data")
 	}
-	domainName, err := getRequired(secret, DomainName)
+	domainName, err := getRequired(secret, DomainName, altDomainNameKey)
 	if err != nil {
 		return nil, err
 	}
-	tenantName, err := getRequired(secret, TenantName)
+	tenantName, err := getRequired(secret, TenantName, altTenantNameKey)
 	if err != nil {
 		return nil, err
 	}
-	userName := getOptional(secret, UserName)
-	password := getOptional(secret, Password)
-	applicationCredentialID := getOptional(secret, ApplicationCredentialID)
-	applicationCredentialName := getOptional(secret, ApplicationCredentialName)
-	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret)
-	authURL := getOptional(secret, AuthURL)
+	userName := getOptional(secret, UserName, altUserNameKey)
+	password := getOptional(secret, Password, altPasswordKey)
+	applicationCredentialID := getOptional(secret, ApplicationCredentialID, nil)
+	applicationCredentialName := getOptional(secret, ApplicationCredentialName, nil)
+	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret, nil)
+	authURL := getOptional(secret, AuthURL, altAuthURLKey)
 
 	if password != "" {
 		if applicationCredentialSecret != "" {
@@ -101,20 +112,35 @@ func ExtractCredentials(secret *corev1.Secret) (*Credentials, error) {
 }
 
 // getOptional returns optional value for a corresponding key or empty string
-func getOptional(secret *corev1.Secret, key string) string {
+func getOptional(secret *corev1.Secret, key string, altKey *string) string {
 	if value, ok := secret.Data[key]; ok {
 		return string(value)
+	}
+	if altKey != nil {
+		if value, ok := secret.Data[*altKey]; ok {
+			return string(value)
+		}
 	}
 	return ""
 }
 
 // getRequired checks if the provided map has a valid value for a corresponding key.
-func getRequired(secret *corev1.Secret, key string) (string, error) {
+func getRequired(secret *corev1.Secret, key string, altKey *string) (string, error) {
 	value, ok := secret.Data[key]
 	if !ok {
-		return "", fmt.Errorf("missing %q data key in secret %s/%s", key, secret.Namespace, secret.Name)
+		if altKey != nil {
+			value, ok = secret.Data[*altKey]
+			if !ok {
+				return "", fmt.Errorf("missing %q (or %q) data key in secret %s/%s", key, *altKey, secret.Namespace, secret.Name)
+			}
+		} else {
+			return "", fmt.Errorf("missing %q data key in secret %s/%s", key, secret.Namespace, secret.Name)
+		}
 	}
 	if len(value) == 0 {
+		if altKey != nil {
+			return "", fmt.Errorf("key %q (or %q) in secret %s/%s cannot be empty", key, *altKey, secret.Namespace, secret.Name)
+		}
 		return "", fmt.Errorf("key %q in secret %s/%s cannot be empty", key, secret.Namespace, secret.Name)
 	}
 	return string(value), nil

@@ -66,15 +66,9 @@ type GardenletConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
-	// SeedConfig contains configuration for the seed cluster. Must not be set if seed selector is set.
-	// In this case the gardenlet creates the `Seed` object itself based on the provided config.
+	// SeedConfig contains configuration for the seed cluster.
 	// +optional
 	SeedConfig *SeedConfig `json:"seedConfig,omitempty"`
-	// SeedSelector contains an optional list of labels on `Seed` resources that shall be managed by
-	// this gardenlet instance. In this case the `Seed` object is not managed by the Gardenlet and must
-	// be created by an operator/administrator.
-	// +optional
-	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty"`
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	// +optional
@@ -406,6 +400,13 @@ type GardenLoki struct {
 	Priority *int `json:"priority,omitempty" yaml:"priority,omitempty"`
 }
 
+// ShootNodeLogging contains configuration for the shoot node logging.
+type ShootNodeLogging struct {
+	// ShootPurposes determines which shoots can have node logging by their purpose
+	// +optional
+	ShootPurposes []gardencorev1beta1.ShootPurpose `json:"shootPurposes,omitempty" yaml:"shootPurposes,omitempty"`
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
@@ -414,6 +415,9 @@ type Logging struct {
 	// Loki contains configuration for the Loki
 	// +optional
 	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
+	// ShootNodeLogging contains configurations for the shoot node logging
+	// +optional
+	ShootNodeLogging *ShootNodeLogging `json:"shootNodeLogging,omitempty" yaml:"shootNodeLogging,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
@@ -462,6 +466,11 @@ type SNIIngress struct {
 	// Defaults to "istio-ingressgateway".
 	// +optional
 	ServiceName *string `json:"serviceName,omitempty"`
+	// ServiceExternalIP is the external ip which should be assigned to the
+	// load balancer service of the ingress gateway.
+	// Compatibility is depending on the respective provider cloud-controller-manager.
+	// +optional
+	ServiceExternalIP *string `json:"serviceExternalIP,omitempty"`
 	// Namespace is the namespace in which the ingressgateway is deployed in.
 	// Defaults to "istio-ingress".
 	// +optional
@@ -529,6 +538,9 @@ const (
 
 	// DefaultSNIIngresServiceName is the default sni ingress service name.
 	DefaultSNIIngresServiceName = "istio-ingressgateway"
+
+	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
+	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
 )
 
 // DefaultControllerSyncPeriod is a default value for sync period for controllers.

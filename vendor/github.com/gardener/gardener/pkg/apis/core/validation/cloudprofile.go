@@ -140,7 +140,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
 	if spec.SeedSelector != nil {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.SeedSelector.LabelSelector, fldPath.Child("seedSelector"))...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, fldPath.Child("seedSelector"))...)
 	}
 
 	if spec.CABundle != nil {
@@ -158,7 +158,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	if len(kubernetes.Versions) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
 	}
-	latestKubernetesVersion, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
+	latestKubernetesVersion, _, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions"), latestKubernetesVersion.Version, "failed to determine the latest kubernetes version from the cloud profile"))
 	}

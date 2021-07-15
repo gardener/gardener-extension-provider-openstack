@@ -15,6 +15,7 @@
 package config
 
 import (
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
@@ -54,13 +55,8 @@ type GardenletConfiguration struct {
 	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
-	// SeedConfig contains configuration for the seed cluster. Must not be set if seed selector is set.
-	// In this case the gardenlet creates the `Seed` object itself based on the provided config.
+	// SeedConfig contains configuration for the seed cluster.
 	SeedConfig *SeedConfig
-	// SeedSelector contains an optional list of labels on `Seed` resources that shall be managed by
-	// this gardenlet instance. In this case the `Seed` object is not managed by the Gardenlet and must
-	// be created by an operator/administrator.
-	SeedSelector *metav1.LabelSelector
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging
@@ -336,12 +332,20 @@ type GardenLoki struct {
 	Priority *int32
 }
 
+// ShootNodeLogging contains configuration for the shoot node logging.
+type ShootNodeLogging struct {
+	// ShootPurposes determines which shoots can have node logging by their purpose
+	ShootPurposes []core.ShootPurpose
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
 	FluentBit *FluentBit
 	// Loki contains configuration for the Loki
 	Loki *Loki
+	// ShootNodeLogging contains configurations for the shoot node logging
+	ShootNodeLogging *ShootNodeLogging
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
@@ -387,6 +391,10 @@ type SNIIngress struct {
 	// ServiceName is the name of the ingressgateway Service.
 	// Defaults to "istio-ingressgateway".
 	ServiceName *string
+	// ServiceExternalIP is the external ip which should be assigned to the
+	// load balancer service of the ingress gateway.
+	// Compatibility is depending on the respective provider cloud-controller-manager.
+	ServiceExternalIP *string
 	// Namespace is the namespace in which the ingressgateway is deployed in.
 	// Defaults to "istio-ingress".
 	Namespace *string

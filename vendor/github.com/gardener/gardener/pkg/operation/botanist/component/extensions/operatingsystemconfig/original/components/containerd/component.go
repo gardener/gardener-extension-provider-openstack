@@ -19,7 +19,7 @@ import (
 	_ "embed"
 	"text/template"
 
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate"
@@ -49,7 +49,7 @@ func init() {
 
 const (
 	// UnitName is the name of the containerd service unit.
-	UnitName = gardencorev1beta1constants.OperatingSystemConfigUnitNameContainerDService
+	UnitName = v1beta1constants.OperatingSystemConfigUnitNameContainerDService
 	// UnitNameMonitor is the name of the containerd monitor service unit.
 	UnitNameMonitor = "containerd-monitor.service"
 	// PathSocketEndpoint is the path to the containerd unix domain socket.
@@ -69,7 +69,7 @@ func (containerd) Name() string {
 
 func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	const (
-		pathHealthMonitor   = "/opt/bin/health-monitor-containerd"
+		pathHealthMonitor   = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/health-monitor-containerd"
 		pathLogRotateConfig = "/etc/systemd/containerd.conf"
 	)
 
@@ -83,9 +83,9 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 	return append([]extensionsv1alpha1.Unit{
 			{
 				Name:    UnitNameMonitor,
-				Command: pointer.StringPtr("start"),
-				Enable:  pointer.BoolPtr(true),
-				Content: pointer.StringPtr(`[Unit]
+				Command: pointer.String("start"),
+				Enable:  pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Containerd-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -99,7 +99,7 @@ ExecStart=` + pathHealthMonitor),
 		append([]extensionsv1alpha1.File{
 			{
 				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32Ptr(0755),
+				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

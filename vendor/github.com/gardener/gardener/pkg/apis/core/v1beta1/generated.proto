@@ -833,6 +833,12 @@ message KubeProxyConfig {
   // defaults to IPTables.
   // +optional
   optional string mode = 2;
+
+  // Enabled indicates whether kube-proxy should be deployed or not.
+  // Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field.
+  // defaults to true if not specified.
+  // +optional
+  optional bool enabled = 3;
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
@@ -932,6 +938,16 @@ message KubeletConfig {
   // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
   // +optional
   optional KubeletConfigReserved systemReserved = 15;
+
+  // ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+  // +optional
+  // Default: 50
+  optional int32 imageGCHighThresholdPercent = 16;
+
+  // ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+  // +optional
+  // Default: 40
+  optional int32 imageGCLowThresholdPercent = 17;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -2278,7 +2294,8 @@ message Worker {
   // +optional
   optional string caBundle = 2;
 
-  // CRI contains configurations of CRI support of every machine in the worker pool
+  // CRI contains configurations of CRI support of every machine in the worker pool.
+  // Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
   // +optional
   optional CRI cri = 3;
 

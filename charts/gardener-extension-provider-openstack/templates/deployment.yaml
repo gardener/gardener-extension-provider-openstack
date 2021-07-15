@@ -43,6 +43,7 @@ spec:
         - --config-file=/etc/{{ include "name" . }}/config/config.yaml
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
         - --csimigration-max-concurrent-reconciles={{ .Values.controllers.csimigration.concurrentSyncs }}
+        - --dnsrecord-max-concurrent-reconciles={{ .Values.controllers.dnsrecord.concurrentSyncs }}
         - --healthcheck-max-concurrent-reconciles={{ .Values.controllers.healthcheck.concurrentSyncs }}
         - --infrastructure-max-concurrent-reconciles={{ .Values.controllers.infrastructure.concurrentSyncs }}
         - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../vendor/github.com/gardener/gardener/hack/generate-controller-registration.sh provider-openstack . ../../VERSION ../../example/controller-registration.yaml BackupBucket:openstack BackupEntry:openstack ControlPlane:openstack Infrastructure:openstack Worker:openstack
+//go:generate ../../vendor/github.com/gardener/gardener/hack/generate-controller-registration.sh provider-openstack . ../../VERSION ../../example/controller-registration.yaml BackupBucket:openstack BackupEntry:openstack ControlPlane:openstack DNSRecord:openstack-designate Infrastructure:openstack Worker:openstack
 
 // Package chart enables go:generate support for generating the correct controller registration.
 package chart

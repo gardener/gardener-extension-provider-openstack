@@ -38,12 +38,7 @@ spec:
         image: {{ index .Values.images "cloud-controller-manager" }}
         imagePullPolicy: IfNotPresent
         command:
-        {{- if semverCompare ">= 1.15" .Values.kubernetesVersion }}
         - /bin/openstack-cloud-controller-manager
-        {{- else }}
-        - /hyperkube
-        - cloud-controller-manager
-        {{- end}}
         - --allocate-node-cidrs=true
         - --cloud-provider=openstack
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
@@ -54,30 +49,22 @@ spec:
         {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --leader-elect=true
-        {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
         - --secure-port={{ include "cloud-controller-manager.port" . }}
         - --port=0
-        {{- end }}
-        {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
         - --authentication-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --authorization-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --tls-cert-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.crt
         - --tls-private-key-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.key
-        {{- end }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
         - --use-service-account-credentials
-        {{- if semverCompare ">= 1.15" .Values.kubernetesVersion }}{{- range $userAgentHeader := .Values.userAgentHeaders }}
+        {{- range $userAgentHeader := .Values.userAgentHeaders }}
         - --user-agent={{ $userAgentHeader }}
-        {{- end }}{{- end }}
+        {{- end }}
         - --v=2
         livenessProbe:
           httpGet:
             path: /healthz
-            {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
             scheme: HTTPS
-            {{- else }}
-            scheme: HTTP
-            {{- end }}
             port: {{ include "cloud-controller-manager.port" . }}
           successThreshold: 1
           failureThreshold: 2

@@ -144,7 +144,7 @@ var _ = Describe("ValuesProvider", func() {
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.13.4",
+						Version: "1.15.4",
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -256,7 +256,7 @@ var _ = Describe("ValuesProvider", func() {
 
 	Describe("#GetConfigChartValues", func() {
 		configChartValues := map[string]interface{}{
-			"kubernetesVersion":           "1.13.4",
+			"kubernetesVersion":           "1.15.4",
 			"domainName":                  "domain-name",
 			"tenantName":                  "tenant-name",
 			"username":                    "username",
@@ -451,7 +451,7 @@ var _ = Describe("ValuesProvider", func() {
 	Describe("#GetControlPlaneChartValues", func() {
 		ccmChartValues := utils.MergeMaps(enabledTrue, map[string]interface{}{
 			"replicas":          1,
-			"kubernetesVersion": "1.13.4",
+			"kubernetesVersion": "1.15.4",
 			"clusterName":       namespace,
 			"podNetwork":        cidr,
 			"podAnnotations": map[string]interface{}{

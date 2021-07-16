@@ -19,13 +19,31 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/utils/version"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
+
+func ValidateShootCredentialsForK8sVersion(k8sVersion string, credentials openstack.Credentials, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// The Kubernetes version is the version of the CSI migration, where we stopped using the in-tree providers.
+	// see: pkg/webhook/controlplane/ensurer.go
+	k8sVersionLessThan19, err := version.CompareVersions(k8sVersion, "<", "1.19")
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, k8sVersion, "not a valid version"))
+	}
+
+	if k8sVersionLessThan19 && credentials.IsUsingApplicationCredentials() {
+		allErrs = append(allErrs, field.Invalid(fldPath, k8sVersion, "application credentials are not supported for Kubernetes versions < v1.19"))
+	}
+
+	return allErrs
+}
 
 // ValidateNetworking validates the network settings of a Shoot.
 func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {

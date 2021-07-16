@@ -119,3 +119,7 @@ func getRequired(secret *corev1.Secret, key string) (string, error) {
 	}
 	return string(value), nil
 }
+
+func (c *Credentials) IsUsingApplicationCredentials() bool {
+	return c.ApplicationCredentialSecret != ""
+}

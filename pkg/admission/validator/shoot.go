@@ -18,20 +18,21 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/version"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // NewShootValidator returns a new instance of a shoot validator.
@@ -97,6 +98,17 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 	credentials, err := openstack.ExtractCredentials(secret)
 	if err != nil {
 		return fmt.Errorf("invalid cloud credentials: %v", err)
+	}
+
+	// The Kubernetes version is the version of the CSI migration, where we stopped using the in-tree providers.
+	// see: pkg/webhook/controlplane/ensurer.go
+	k8sVersionLessThan19, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.19")
+	if err != nil {
+		return err
+	}
+
+	if k8sVersionLessThan19 && s.isUsingApplicationCredentials(secret) {
+		return fmt.Errorf("application credentials are not supported for kubernetes version < v1.19")
 	}
 
 	if old != nil {
@@ -233,4 +245,14 @@ func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.
 	}
 
 	return secret, nil
+}
+
+func (s *shoot) isUsingApplicationCredentials(secret *corev1.Secret) bool {
+	for _, key := range []string{openstack.ApplicationCredentialName, openstack.ApplicationCredentialSecret, openstack.ApplicationCredentialID} {
+		if _, ok := secret.Data[key]; ok {
+			return true
+		}
+	}
+
+	return false
 }

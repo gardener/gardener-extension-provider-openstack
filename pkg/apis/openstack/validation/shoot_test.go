@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	credentials "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -31,6 +32,40 @@ import (
 )
 
 var _ = Describe("Shoot validation", func() {
+	Describe("#ValidateShootCredentialsForK8sVersion", func() {
+		var (
+			versionPath = field.NewPath("spec", "kubernetes", "version")
+		)
+
+		It("should allow using application credentials for k8s version >=1.19", func() {
+			errorList := ValidateShootCredentialsForK8sVersion("1.19.0", credentials.Credentials{ApplicationCredentialSecret: "secret"}, versionPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid using application credentials for k8s version <1.19", func() {
+			lowerThan119 := "1.18.20"
+
+			errorList := ValidateShootCredentialsForK8sVersion(lowerThan119, credentials.Credentials{ApplicationCredentialSecret: "secret"}, versionPath)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.kubernetes.version"),
+					"BadValue": Equal(lowerThan119),
+				})),
+			))
+		})
+
+		It("should using user credentials for k8s version >=1.19", func() {
+			errorList := ValidateShootCredentialsForK8sVersion("1.19.0", credentials.Credentials{Username: "user", Password: "pwd"}, versionPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow using user credentials for k8s version < 1.19", func() {
+			errorList := ValidateShootCredentialsForK8sVersion("1.18.20", credentials.Credentials{Username: "user", Password: "pwd"}, versionPath)
+			Expect(errorList).To(BeEmpty())
+		})
+	})
+
 	Describe("#ValidateNetworking", func() {
 		var networkingPath = field.NewPath("spec", "networking")
 
@@ -57,7 +92,6 @@ var _ = Describe("Shoot validation", func() {
 			))
 		})
 	})
-
 	Describe("#ValidateWorkerConfig", func() {
 		var (
 			nilPath *field.Path

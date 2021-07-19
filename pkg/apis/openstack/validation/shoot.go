@@ -17,15 +17,39 @@ package validation
 import (
 	"fmt"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/utils/version"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
+
+// ValidateShootCredentialsForK8sVersion validates that the authentication method used by the user's credentials is supported for the requested
+// Kubernetes version. All Kubernetes (CCM, kubelet, CSI) and Gardener (MCM) components that communicate with OpenStack's API must be able to use
+// the provided credentials
+// For K8s version <1.19, the kubelet is configured to use the in-tree cloud-provider, which doesn't support authentication with application credentials.
+func ValidateShootCredentialsForK8sVersion(k8sVersion string, credentials openstack.Credentials, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// The Kubernetes version is the version of the CSI migration, where we stopped using the in-tree providers.
+	// see: pkg/webhook/controlplane/ensurer.go
+	k8sVersionLessThan19, err := version.CompareVersions(k8sVersion, "<", "1.19")
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, k8sVersion, "not a valid version"))
+	}
+
+	// if credentials.ApplicationCredentialSecret is defined then authentication is done with OpenStack's application credentials.
+	if k8sVersionLessThan19 && credentials.ApplicationCredentialSecret != "" {
+		allErrs = append(allErrs, field.Invalid(fldPath, k8sVersion, "application credentials are not supported for Kubernetes versions < v1.19"))
+	}
+
+	return allErrs
+}
 
 // ValidateNetworking validates the network settings of a Shoot.
 func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {

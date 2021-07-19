@@ -21,7 +21,8 @@ gardener-extension-provider-openstack:
   jobs:
     head-update:
       traits:
-        component_descriptor: ~
+        component_descriptor:
+          snapshot_ctx_repository: 'gardener-public'
         draft_release: ~
         options:
           public_build_logs: true

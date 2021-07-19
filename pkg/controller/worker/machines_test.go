@@ -551,114 +551,161 @@ var _ = Describe("Machines", func() {
 					Expect(result).To(Equal(machineDeployments))
 				})
 
-				It("should create the expected machine classes with server group configurations", func() {
-					var (
-						serverGroupName1 = "servergroup1"
-						serverGroupName2 = "servergroup2"
-						serverGroupID1   = "id1"
-						serverGroupID2   = "id2"
-					)
+				Context("Server Groups", func() {
+					It("should create the expected machine classes with server group configurations", func() {
+						var (
+							serverGroupName1 = "servergroup1"
+							serverGroupName2 = "servergroup2"
+							serverGroupID1   = "id1"
+							serverGroupID2   = "id2"
+						)
 
+						setup(region, machineImage, "")
+						c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
+
+						workerWithServerGroup := w.DeepCopy()
+						workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
+							Object: &apiv1alpha1.WorkerConfig{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       "WorkerConfig",
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								},
+								ServerGroup: &apiv1alpha1.ServerGroup{
+									Policy: "policy",
+								},
+							},
+						}
+						workerWithServerGroup.Spec.Pools[1].ProviderConfig = &runtime.RawExtension{
+							Object: &apiv1alpha1.WorkerConfig{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       "WorkerConfig",
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								},
+								ServerGroup: &apiv1alpha1.ServerGroup{
+									Policy: "policy",
+								},
+							},
+						}
+						workerWithServerGroup.Status.ProviderStatus = &runtime.RawExtension{
+							Object: &apiv1alpha1.WorkerStatus{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       "WorkerStatus",
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								},
+								ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+									{
+										PoolName: namePool1,
+										Name:     serverGroupName1,
+										ID:       serverGroupID1,
+									},
+									{
+										PoolName: namePool2,
+										Name:     serverGroupName2,
+										ID:       serverGroupID2,
+									},
+								},
+							},
+						}
+
+						workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithServerGroup, cluster, nil)
+
+						// Test workerDelegate.DeployMachineClasses()
+						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, serverGroupID1)
+						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, serverGroupID2)
+						machineClassPool1Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+							"availabilityZone": zone1,
+							"serverGroupID":    serverGroupID1,
+						})
+						machineClassPool1Zone2 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+							"availabilityZone": zone2,
+							"serverGroupID":    serverGroupID1,
+						})
+						machineClassPool2Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+							"availabilityZone": zone1,
+							"serverGroupID":    serverGroupID2,
+						})
+						machineClassPool2Zone2 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
+							"availabilityZone": zone2,
+							"serverGroupID":    serverGroupID2,
+						})
+						machineClassNamePool1Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool1)
+						machineClassNamePool1Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool1)
+						machineClassNamePool2Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool2)
+						machineClassNamePool2Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool2)
+						machineClassWithHashPool1Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone1, workerPoolHash1)
+						machineClassWithHashPool1Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone2, workerPoolHash1)
+						machineClassWithHashPool2Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone1, workerPoolHash2)
+						machineClassWithHashPool2Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone2, workerPoolHash2)
+						addNameAndSecretToMachineClass(machineClassPool1Zone1, machineClassWithHashPool1Zone1, w.Spec.SecretRef)
+						addNameAndSecretToMachineClass(machineClassPool1Zone2, machineClassWithHashPool1Zone2, w.Spec.SecretRef)
+						addNameAndSecretToMachineClass(machineClassPool2Zone1, machineClassWithHashPool2Zone1, w.Spec.SecretRef)
+						addNameAndSecretToMachineClass(machineClassPool2Zone2, machineClassWithHashPool2Zone2, w.Spec.SecretRef)
+						machineClasses := map[string]interface{}{"machineClasses": []map[string]interface{}{
+							machineClassPool1Zone1,
+							machineClassPool1Zone2,
+							machineClassPool2Zone1,
+							machineClassPool2Zone2,
+						}}
+
+						chartApplier.
+							EXPECT().
+							Apply(
+								context.TODO(),
+								filepath.Join(openstack.InternalChartsPath, "machineclass"),
+								namespace,
+								"machineclass",
+								kubernetes.Values(machineClasses),
+							).
+							Return(nil)
+
+						err := workerDelegate.DeployMachineClasses(context.TODO())
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should delete the old OpenStackMachineClass", func() {
+						setup(region, machineImage, "")
+						workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
+
+						c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
+
+						chartApplier.
+							EXPECT().
+							Apply(
+								context.TODO(),
+								filepath.Join(openstack.InternalChartsPath, "machineclass"),
+								namespace,
+								"machineclass",
+								kubernetes.Values(machineClasses),
+							).
+							Return(nil)
+
+						err := workerDelegate.DeployMachineClasses(context.TODO())
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				It("should fail if the server group dependencies do not exist", func() {
 					setup(region, machineImage, "")
-					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
 
 					workerWithServerGroup := w.DeepCopy()
-					workerWithServerGroup.Status.ProviderStatus = &runtime.RawExtension{
-						Object: &apiv1alpha1.WorkerStatus{
+					workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
 							TypeMeta: metav1.TypeMeta{
-								Kind:       "WorkerStatus",
+								Kind:       "WorkerConfig",
 								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 							},
-							ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-								{
-									PoolName: namePool1,
-									Name:     serverGroupName1,
-									ID:       serverGroupID1,
-								},
-								{
-									PoolName: namePool2,
-									Name:     serverGroupName2,
-									ID:       serverGroupID2,
-								},
+							ServerGroup: &apiv1alpha1.ServerGroup{
+								Policy: "policy",
 							},
 						},
 					}
 
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithServerGroup, cluster, nil)
-
-					// Test workerDelegate.DeployMachineClasses()
-					workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, serverGroupID1)
-					workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, serverGroupID2)
-					machineClassPool1Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
-						"availabilityZone": zone1,
-						"serverGroupID":    serverGroupID1,
-					})
-					machineClassPool1Zone2 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
-						"availabilityZone": zone2,
-						"serverGroupID":    serverGroupID1,
-					})
-					machineClassPool2Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
-						"availabilityZone": zone1,
-						"serverGroupID":    serverGroupID2,
-					})
-					machineClassPool2Zone2 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
-						"availabilityZone": zone2,
-						"serverGroupID":    serverGroupID2,
-					})
-					machineClassNamePool1Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool1)
-					machineClassNamePool1Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool1)
-					machineClassNamePool2Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool2)
-					machineClassNamePool2Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool2)
-					machineClassWithHashPool1Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone1, workerPoolHash1)
-					machineClassWithHashPool1Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone2, workerPoolHash1)
-					machineClassWithHashPool2Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone1, workerPoolHash2)
-					machineClassWithHashPool2Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone2, workerPoolHash2)
-					addNameAndSecretToMachineClass(machineClassPool1Zone1, machineClassWithHashPool1Zone1, w.Spec.SecretRef)
-					addNameAndSecretToMachineClass(machineClassPool1Zone2, machineClassWithHashPool1Zone2, w.Spec.SecretRef)
-					addNameAndSecretToMachineClass(machineClassPool2Zone1, machineClassWithHashPool2Zone1, w.Spec.SecretRef)
-					addNameAndSecretToMachineClass(machineClassPool2Zone2, machineClassWithHashPool2Zone2, w.Spec.SecretRef)
-					machineClasses := map[string]interface{}{"machineClasses": []map[string]interface{}{
-						machineClassPool1Zone1,
-						machineClassPool1Zone2,
-						machineClassPool2Zone1,
-						machineClassPool2Zone2,
-					}}
-
-					chartApplier.
-						EXPECT().
-						Apply(
-							context.TODO(),
-							filepath.Join(openstack.InternalChartsPath, "machineclass"),
-							namespace,
-							"machineclass",
-							kubernetes.Values(machineClasses),
-						).
-						Return(nil)
-
 					err := workerDelegate.DeployMachineClasses(context.TODO())
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(`server group is required for pool "pool-1", but no server group dependency found`))
 				})
 
-				It("should delete the old OpenStackMachineClass", func() {
-					setup(region, machineImage, "")
-					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
-
-					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
-
-					chartApplier.
-						EXPECT().
-						Apply(
-							context.TODO(),
-							filepath.Join(openstack.InternalChartsPath, "machineclass"),
-							namespace,
-							"machineclass",
-							kubernetes.Values(machineClasses),
-						).
-						Return(nil)
-
-					err := workerDelegate.DeployMachineClasses(context.TODO())
-					Expect(err).NotTo(HaveOccurred())
-				})
 			})
 
 			It("should fail because the version is invalid", func() {

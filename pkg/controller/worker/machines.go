@@ -117,7 +117,19 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			}
 		}
 
-		serverGroupDep := serverGroupDepSet.getByPoolName(pool.Name)
+		poolProviderConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
+		if err != nil {
+			return err
+		}
+
+		var serverGroupDep *api.ServerGroupDependency
+		if isServerGroupRequired(poolProviderConfig) {
+			serverGroupDep = serverGroupDepSet.getByPoolName(pool.Name)
+			if serverGroupDep == nil {
+				return fmt.Errorf("server group is required for pool %q, but no server group dependency found", pool.Name)
+			}
+		}
+
 		workerPoolHash, err := w.generateWorkerPoolHash(pool, serverGroupDep)
 		if err != nil {
 			return err

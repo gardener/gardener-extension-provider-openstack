@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	osclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 func (w *workerDelegate) DeployMachineDependencies(ctx context.Context) error {
@@ -59,7 +61,7 @@ func (w *workerDelegate) reconcilePoolServerGroup(computeClient osclient.Compute
 		return nil, err
 	}
 
-	if poolProviderConfig == nil || poolProviderConfig.ServerGroup == nil || poolProviderConfig.ServerGroup.Policy == "" {
+	if !isServerGroupRequired(poolProviderConfig) {
 		return nil, nil
 	}
 
@@ -122,7 +124,7 @@ func (w *workerDelegate) cleanupServerGroupDependencies(computeClient osclient.C
 		return err
 	}
 
-	workerManagedServerGroups := filterServerGroupsByPrefix(groups, w.ClusterTechnicalName())
+	workerManagedServerGroups := filterServerGroupsByPrefix(groups, fmt.Sprintf("%s-", w.ClusterTechnicalName()))
 
 	// handles case [c]
 	for _, group := range workerManagedServerGroups {
@@ -150,23 +152,23 @@ func (w *workerDelegate) cleanupServerGroupDependencies(computeClient osclient.C
 	}
 
 	// Find out which worker pools use server groups. Deps whose worker pool is not present in the map will be deleted.
-	configs := make(map[string]struct{})
+	configs := sets.NewString()
 	for _, pool := range w.worker.Spec.Pools {
 		poolConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
 		if err != nil {
 			return err
 		}
 
-		if pool.ProviderConfig == nil || poolConfig.ServerGroup == nil || poolConfig.ServerGroup.Policy == "" {
+		if !isServerGroupRequired(poolConfig) {
 			continue
 		}
 
-		configs[pool.Name] = struct{}{}
+		configs.Insert(pool.Name)
 	}
 
 	// handles cases [b,d]
 	return set.forEach(func(d api.ServerGroupDependency) error {
-		if _, ok := configs[d.PoolName]; ok {
+		if configs.Has(d.PoolName) {
 			return nil
 		}
 

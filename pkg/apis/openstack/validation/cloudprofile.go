@@ -190,6 +190,7 @@ func validateLoadBalancerClass(lbClass api.LoadBalancerClass, fldPath *field.Pat
 	return allErrs
 }
 
+// ValidateLoadBalancerClasses validates a given list of LoadBalancerClass objects.
 func ValidateLoadBalancerClasses(loadBalancerClasses []api.LoadBalancerClass, fldPath *field.Path) field.ErrorList {
 	var (
 		defaultClassExists bool

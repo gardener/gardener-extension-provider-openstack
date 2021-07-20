@@ -34,7 +34,7 @@ Please look up https://docs.openstack.org/keystone/pike/admin/identity-concepts.
 
 For authentication with username/password see [Keystone username/password](https://docs.openstack.org/keystone/latest/user/supported_clients.html)
 
-Alternatively, for authentication with application credentials see [Keystone Application Credentials](https://docs.openstack.org/keystone/latest/user/application_credentials.html)
+Alternatively, for authentication with application credentials see [Keystone Application Credentials](https://docs.openstack.org/keystone/latest/user/application_credentials.html). Application Credentials are **not** supported for shoots with kubernetes versions **less than v1.19**.
 
 
 ⚠️ Depending on your API usage it can be problematic to reuse the same provider credentials for different Shoot clusters due to rate limits.

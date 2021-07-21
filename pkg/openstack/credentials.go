@@ -54,11 +54,15 @@ func GetCredentials(ctx context.Context, c client.Client, secretRef corev1.Secre
 func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials, error) {
 
 	var altDomainNameKey, altTenantNameKey, altUserNameKey, altPasswordKey, altAuthURLKey *string
+	var altApplicationCredentialID, altApplicationCredentialName, altApplicationCredentialSecret *string
 	if allowDNSKeys {
 		altDomainNameKey = pointer.String(DNSDomainName)
 		altTenantNameKey = pointer.String(DNSTenantName)
 		altUserNameKey = pointer.String(DNSUserName)
 		altPasswordKey = pointer.String(DNSPassword)
+		altApplicationCredentialID = pointer.String(DNSApplicationCredentialID)
+		altApplicationCredentialName = pointer.String(DNSApplicationCredentialName)
+		altApplicationCredentialSecret = pointer.String(DNSApplicationCredentialSecret)
 		altAuthURLKey = pointer.String(DNSAuthURL)
 	}
 
@@ -75,9 +79,9 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 	}
 	userName := getOptional(secret, UserName, altUserNameKey)
 	password := getOptional(secret, Password, altPasswordKey)
-	applicationCredentialID := getOptional(secret, ApplicationCredentialID, nil)
-	applicationCredentialName := getOptional(secret, ApplicationCredentialName, nil)
-	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret, nil)
+	applicationCredentialID := getOptional(secret, ApplicationCredentialID, altApplicationCredentialID)
+	applicationCredentialName := getOptional(secret, ApplicationCredentialName, altApplicationCredentialName)
+	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret, altApplicationCredentialSecret)
 	authURL := getOptional(secret, AuthURL, altAuthURLKey)
 
 	if password != "" {

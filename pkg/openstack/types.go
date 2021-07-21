@@ -77,6 +77,12 @@ const (
 	DNSUserName = "OS_USERNAME"
 	// DNSPassword is a constant for the key in a DNS secret that holds the OpenStack password.
 	DNSPassword = "OS_PASSWORD"
+	// DNSApplicationCredentialID is a constant for the key in a DNS secret hat holds the OpenStack application credential id.
+	DNSApplicationCredentialID = "OS_APPLICATION_CREDENTIAL_ID"
+	// DNSApplicationCredentialName is a constant for the key in a DNS secret  that holds the OpenStack application credential name.
+	DNSApplicationCredentialName = "OS_APPLICATION_CREDENTIAL_NAME"
+	// DNSApplicationCredentialSecret is a constant for the key in a DNS secret  that holds the OpenStack application credential secret.
+	DNSApplicationCredentialSecret = "OS_APPLICATION_CREDENTIAL_SECRET"
 
 	// CloudProviderConfigName is the name of the secret containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"

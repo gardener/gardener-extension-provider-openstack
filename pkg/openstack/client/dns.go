@@ -59,17 +59,16 @@ func (c *DNSClient) CreateOrUpdateRecordSet(ctx context.Context, zoneID, name, r
 			_, err := recordsets.Update(c.client, zoneID, rs.ID, updateOpts).Extract()
 			return err
 		}
-	} else {
-		createOpts := recordsets.CreateOpts{
-			Name:    ensureTrailingDot(name),
-			Type:    recordType,
-			Records: records,
-			TTL:     ttl,
-		}
-		_, err := recordsets.Create(c.client, zoneID, createOpts).Extract()
-		return err
+		return nil
 	}
-	return nil
+	createOpts := recordsets.CreateOpts{
+		Name:    ensureTrailingDot(name),
+		Type:    recordType,
+		Records: records,
+		TTL:     ttl,
+	}
+	_, err = recordsets.Create(c.client, zoneID, createOpts).Extract()
+	return err
 }
 
 // DeleteRecordSet deletes the recordset with the given name and record type in the zone with the given zone ID.

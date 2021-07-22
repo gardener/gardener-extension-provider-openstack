@@ -33,3 +33,9 @@ data:
         Match               kubernetes.*
         Rule                $tag ^kubernetes\.var\.log\.containers\.(cloud-controller-manager-.+?_.+?_openstack-cloud-controller-manager|csi-driver-controller-.+?_.+?_openstack-csi) user-exposed.$TAG true
         Emitter_Name        re_emitted-provider-openstack
+
+    [FILTER]
+        Name                rewrite_tag
+        Match               kubernetes.*
+        Rule                $tag ^kubernetes\.var\.log\.containers\.machine-controller-manager-.+?_.+?_(openstack-machine-controller-manager|provider-openstack) user-exposed.$TAG true
+        Emitter_Name        re_emitted-provider-openstack-mcm

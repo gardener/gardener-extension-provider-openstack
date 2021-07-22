@@ -19,7 +19,6 @@ import (
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -352,31 +351,150 @@ var _ = Describe("CloudProfileConfig validation", func() {
 })
 
 var _ = Describe("LoadBalancerClass validation", func() {
-	DescribeTable("LoadBalancerClass",
-		func(lbClass api.LoadBalancerClass, expectError bool) {
-			errorList := ValidateLoadBalancerClasses(lbClass, field.NewPath("loadBalancerClassTest"))
-			if !expectError {
-				Expect(errorList).To(BeEmpty())
-			}
-		},
-		Entry("pass as LoadBalancerClass class is valid", api.LoadBalancerClass{Name: "A"}, false),
-		Entry("fail as LoadBalancerClass has invalid purpose", api.LoadBalancerClass{Purpose: pointer.StringPtr("invalid")}, true),
-		Entry("fail as LoadBalancerClass specifies floating subnet by id, name and tags in parallel", api.LoadBalancerClass{
-			FloatingSubnetID:   pointer.StringPtr("floating-subnet-id"),
-			FloatingSubnetName: pointer.StringPtr("floating-subnet-name"),
-			FloatingSubnetTags: pointer.StringPtr("floating-subnet-tags"),
-		}, true),
-		Entry("fail as LoadBalancerClass specifies floating subnet by id and name", api.LoadBalancerClass{
-			FloatingSubnetID:   pointer.StringPtr("floating-subnet-id"),
-			FloatingSubnetName: pointer.StringPtr("floating-subnet-name"),
-		}, true),
-		Entry("fail as LoadBalancerClass specifies floating subnet by id and tags", api.LoadBalancerClass{
-			FloatingSubnetID:   pointer.StringPtr("floating-subnet-id"),
-			FloatingSubnetTags: pointer.StringPtr("floating-subnet-tags"),
-		}, true),
-		Entry("fail as LoadBalancerClass specifies floating subnet by name and tags", api.LoadBalancerClass{
-			FloatingSubnetName: pointer.StringPtr("floating-subnet-id"),
-			FloatingSubnetTags: pointer.StringPtr("floating-subnet-tags"),
-		}, true),
+	var (
+		loadBalancerClasses []api.LoadBalancerClass
+		fieldPath           *field.Path
 	)
+
+	BeforeEach(func() {
+		fieldPath = field.NewPath("loadBalancerClasses")
+
+		loadBalancerClasses = []api.LoadBalancerClass{{
+			Name: "test1",
+		}}
+	})
+
+	Context("LoadBalancerClass", func() {
+		It("should pass as LoadBalancerClass is valid", func() {
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail as LoadBalancerClass has an invalid purpose", func() {
+			loadBalancerClasses[0].Purpose = pointer.StringPtr("invalid")
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("loadBalancerClasses[0]"),
+			}))))
+		})
+
+		It("should fail as LoadBalancerClass specifies floating subnet by id, name and tags in parallel", func() {
+			loadBalancerClasses[0].FloatingSubnetID = pointer.StringPtr("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetName = pointer.StringPtr("floating-subnet-name")
+			loadBalancerClasses[0].FloatingSubnetTags = pointer.StringPtr("floating-subnet-tags")
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("loadBalancerClasses[0]"),
+			}))))
+		})
+
+		It("should fail as LoadBalancerClass specifies floating subnet by id and name", func() {
+			loadBalancerClasses[0].FloatingSubnetID = pointer.StringPtr("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetName = pointer.StringPtr("floating-subnet-name")
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("loadBalancerClasses[0]"),
+			}))))
+		})
+
+		It("should fail as LoadBalancerClass specifies floating subnet by id and tags", func() {
+			loadBalancerClasses[0].FloatingSubnetID = pointer.StringPtr("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetTags = pointer.StringPtr("floating-subnet-tags")
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("loadBalancerClasses[0]"),
+			}))))
+		})
+
+		It("should fail as LoadBalancerClass specifies floating subnet by name and tags", func() {
+			loadBalancerClasses[0].FloatingSubnetName = pointer.StringPtr("floating-subnet-name")
+			loadBalancerClasses[0].FloatingSubnetTags = pointer.StringPtr("floating-subnet-tags")
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("loadBalancerClasses[0]"),
+			}))))
+		})
+	})
+
+	Context("LoadBalancerClassList", func() {
+		BeforeEach(func() {
+			loadBalancerClasses = append(loadBalancerClasses, api.LoadBalancerClass{
+				Name: "test2",
+			})
+		})
+
+		It("should pass as no name clashes, no duplicate default or private LoadBalancerClasses", func() {
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail as names of LoadBalancerClasses are not unique", func() {
+			loadBalancerClasses[0].Name = "test"
+			loadBalancerClasses[1].Name = "test"
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("loadBalancerClasses[1].name"),
+			}))))
+		})
+
+		Context("Default LoadBalancerClasses", func() {
+			It("should fail as there are multiple LoadBalancerClasses with purpose default", func() {
+				loadBalancerClasses[0].Purpose = pointer.StringPtr("default")
+				loadBalancerClasses[1].Purpose = pointer.StringPtr("default")
+
+				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("loadBalancerClasses"),
+				}))))
+			})
+
+			It("should fail as there are multiple default LoadBalancerClasses", func() {
+				loadBalancerClasses[0].Purpose = pointer.StringPtr("default")
+				loadBalancerClasses[1].Name = "default"
+
+				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("loadBalancerClasses"),
+				}))))
+			})
+		})
+
+		Context("Private LoadBalancerClasses", func() {
+			It("should fail as there are multiple LoadBalancerClasses with purpose private", func() {
+				loadBalancerClasses[0].Purpose = pointer.StringPtr("private")
+				loadBalancerClasses[1].Purpose = pointer.StringPtr("private")
+
+				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("loadBalancerClasses"),
+				}))))
+			})
+
+			It("should fail as there are multiple private LoadBalancerClasses", func() {
+				loadBalancerClasses[0].Purpose = pointer.StringPtr("private")
+				loadBalancerClasses[1].Name = "private"
+
+				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("loadBalancerClasses"),
+				}))))
+			})
+		})
+	})
 })

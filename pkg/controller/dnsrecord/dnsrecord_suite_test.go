@@ -12,9 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package konnectivity
+package dnsrecord_test
 
-const (
-	// AgentName is the name of kubernetes resources associated with konnectivity-agent.
-	AgentName = "konnectivity-agent"
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
+
+func TestDNSRecord(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "DNSRecord Suite")
+}

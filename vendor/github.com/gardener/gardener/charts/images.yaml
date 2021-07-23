@@ -90,10 +90,6 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
   tag: "0.4.0"
-- name: konnectivity-server
-  sourceRepository: github.com/gardener/replica-reloader
-  repository: eu.gcr.io/gardener-project/gardener/replica-reloader
-  tag: "v0.2.0-konnectivity-server-v0.0.15"
 
 # Monitoring
 - name: alertmanager
@@ -138,10 +134,6 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
   tag: "0.4.0"
-- name: konnectivity-agent
-  sourceRepository: github.com/kubernetes-sigs/apiserver-network-proxy
-  repository: k8s.gcr.io/kas-network-proxy/proxy-agent
-  tag: "v0.0.15"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
@@ -225,6 +217,18 @@ images:
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
   tag: "v0.35.0"
+- name: kube-rbac-proxy
+  sourceRepository: https://github.com/brancz/kube-rbac-proxy
+  repository: quay.io/brancz/kube-rbac-proxy
+  tag: v0.8.0
+- name: promtail
+  sourceRepository: github.com/grafana/loki
+  repository: "docker.io/grafana/promtail"
+  tag: "2.1.0"
+- name: telegraf
+  sourceRepository: https://github.com/influxdata/telegraf
+  repository: eu.gcr.io/gardener-project/3rd/telegraf
+  tag: 1.18.0-alpine-iptables
 
 # VPA
 - name: vpa-admission-controller
@@ -254,17 +258,17 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.10.1"
+  tag: "1.10.2-distroless"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.10.1"
+  tag: "1.10.2-distroless"
 
 # API Server SNI
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
-  repository: envoyproxy/envoy
-  tag: "v1.16.0"
+  repository: envoyproxy/envoy-alpine
+  tag: "v1.18.3"
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy

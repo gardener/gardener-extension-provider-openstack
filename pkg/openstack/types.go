@@ -67,6 +67,23 @@ const (
 	// Insecure is a constant for the key in a cloud provider secret that configures whether the OpenStack client verifies the server's certificate.
 	Insecure = "insecure"
 
+	// DNSAuthURL is a constant for the key in a DNS secret that holds the OpenStack auth url.
+	DNSAuthURL = "OS_AUTH_URL"
+	// DNSDomainName is a constant for the key in a DNS secret that holds the OpenStack domain name.
+	DNSDomainName = "OS_DOMAIN_NAME"
+	// DNSTenantName is a constant for the key in a DNS secret that holds the OpenStack tenant name.
+	DNSTenantName = "OS_PROJECT_NAME"
+	// DNSUserName is a constant for the key in a DNS secret that holds the OpenStack username.
+	DNSUserName = "OS_USERNAME"
+	// DNSPassword is a constant for the key in a DNS secret that holds the OpenStack password.
+	DNSPassword = "OS_PASSWORD"
+	// DNSApplicationCredentialID is a constant for the key in a DNS secret hat holds the OpenStack application credential id.
+	DNSApplicationCredentialID = "OS_APPLICATION_CREDENTIAL_ID"
+	// DNSApplicationCredentialName is a constant for the key in a DNS secret  that holds the OpenStack application credential name.
+	DNSApplicationCredentialName = "OS_APPLICATION_CREDENTIAL_NAME"
+	// DNSApplicationCredentialSecret is a constant for the key in a DNS secret  that holds the OpenStack application credential secret.
+	DNSApplicationCredentialSecret = "OS_APPLICATION_CREDENTIAL_SECRET"
+
 	// CloudProviderConfigName is the name of the secret containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"
 	// CloudProviderDiskConfigName is the name of the secret containing the cloud provider config for disk/volume handling. It is used by kube-controller-manager.

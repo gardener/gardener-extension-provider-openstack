@@ -16,3 +16,6 @@ package openstack
 
 // Type is the type of resources managed by the OpenStack actuator.
 const Type = "openstack"
+
+// DNSType is the type of resources managed by the OpenStack DNS actuator.
+const DNSType = "openstack-designate"

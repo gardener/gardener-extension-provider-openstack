@@ -44,13 +44,15 @@ github.com/fatih/color
 ## explicit
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
+# github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
+github.com/gardener/dependency-watchdog/pkg/restarter/api
 # github.com/gardener/etcd-druid v0.5.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.26.0
+# github.com/gardener/gardener v1.26.1-0.20210712101613-e8eb807d790f
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -64,6 +66,7 @@ github.com/gardener/gardener/extensions/pkg/controller/common
 github.com/gardener/gardener/extensions/pkg/controller/controlplane
 github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator
 github.com/gardener/gardener/extensions/pkg/controller/csimigration
+github.com/gardener/gardener/extensions/pkg/controller/dnsrecord
 github.com/gardener/gardener/extensions/pkg/controller/error
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config
@@ -161,6 +164,7 @@ github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity
 github.com/gardener/gardener/pkg/operation/botanist/component/etcd
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane
+github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig
@@ -174,14 +178,14 @@ github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operati
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kernelconfig
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
+github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker
-github.com/gardener/gardener/pkg/operation/botanist/component/istio
-github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity
 github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager
 github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler
+github.com/gardener/gardener/pkg/operation/botanist/component/logging
 github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver
 github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager
 github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver
@@ -323,6 +327,8 @@ github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups
 github.com/gophercloud/gophercloud/openstack/compute/v2/flavors
 github.com/gophercloud/gophercloud/openstack/compute/v2/images
 github.com/gophercloud/gophercloud/openstack/compute/v2/servers
+github.com/gophercloud/gophercloud/openstack/dns/v2/recordsets
+github.com/gophercloud/gophercloud/openstack/dns/v2/zones
 github.com/gophercloud/gophercloud/openstack/identity/v2/tenants
 github.com/gophercloud/gophercloud/openstack/identity/v2/tokens
 github.com/gophercloud/gophercloud/openstack/identity/v3/tokens

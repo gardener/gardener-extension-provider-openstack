@@ -26,6 +26,8 @@ controllers:
     concurrentSyncs: 5
   csimigration:
     concurrentSyncs: 5
+  dnsrecord:
+    concurrentSyncs: 5
   healthcheck:
     concurrentSyncs: 5
   infrastructure:

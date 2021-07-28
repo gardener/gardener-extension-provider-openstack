@@ -163,9 +163,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				},
 			}
 
-			if !infrastructureStatus.Networks.ManagedPrivateNetwork {
-				machineClassSpec["subnetID"] = subnet.ID
-			}
+			machineClassSpec["subnetID"] = subnet.ID
 
 			if volumeSize > 0 {
 				machineClassSpec["rootDiskSize"] = volumeSize

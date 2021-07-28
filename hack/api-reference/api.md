@@ -1059,17 +1059,6 @@ string
 </tr>
 <tr>
 <td>
-<code>managed</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>ManagedPrivateNetwork indicates whether the network is managed by Gardener.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>floatingPool</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPoolStatus">

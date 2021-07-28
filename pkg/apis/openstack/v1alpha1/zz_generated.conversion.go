@@ -674,7 +674,6 @@ func Convert_openstack_MachineImages_To_v1alpha1_MachineImages(in *openstack.Mac
 
 func autoConvert_v1alpha1_NetworkStatus_To_openstack_NetworkStatus(in *NetworkStatus, out *openstack.NetworkStatus, s conversion.Scope) error {
 	out.ID = in.ID
-	out.ManagedPrivateNetwork = in.ManagedPrivateNetwork
 	if err := Convert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(&in.FloatingPool, &out.FloatingPool, s); err != nil {
 		return err
 	}
@@ -692,7 +691,6 @@ func Convert_v1alpha1_NetworkStatus_To_openstack_NetworkStatus(in *NetworkStatus
 
 func autoConvert_openstack_NetworkStatus_To_v1alpha1_NetworkStatus(in *openstack.NetworkStatus, out *NetworkStatus, s conversion.Scope) error {
 	out.ID = in.ID
-	out.ManagedPrivateNetwork = in.ManagedPrivateNetwork
 	if err := Convert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(&in.FloatingPool, &out.FloatingPool, s); err != nil {
 		return err
 	}

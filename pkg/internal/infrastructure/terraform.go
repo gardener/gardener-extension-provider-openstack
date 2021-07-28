@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"strconv"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
 const (
@@ -277,6 +278,5 @@ func ComputeStatus(ctx context.Context, tf terraformer.Terraformer, config *api.
 
 	status := StatusFromTerraformState(state)
 	status.Networks.FloatingPool.Name = config.FloatingPoolName
-	status.Networks.ManagedPrivateNetwork = config.Networks.ID == nil
 	return status, nil
 }

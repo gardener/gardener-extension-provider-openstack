@@ -74,8 +74,6 @@ type NodeStatus struct {
 type NetworkStatus struct {
 	// ID is the Network id.
 	ID string
-	// ManagedPrivateNetwork indicates whether the network is managed by Gardener.
-	ManagedPrivateNetwork bool
 	// FloatingPool contains information about the floating pool.
 	FloatingPool FloatingPoolStatus
 	// Router contains information about the Router and related resources.

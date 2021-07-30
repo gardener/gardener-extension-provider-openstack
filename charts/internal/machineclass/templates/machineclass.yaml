@@ -37,15 +37,13 @@ providerSpec:
     availabilityZone: {{ $machineClass.availabilityZone }}
     flavorName: {{ $machineClass.machineType }}
     keyName: {{ $machineClass.keyName }}
-{{- if $machineClass.subnetID }}
-    subnetID: {{ $machineClass.subnetID }}
-{{- end }}
 {{- if $machineClass.imageID }}
     imageID: {{ $machineClass.imageID }}
 {{- else }}
     imageName: {{ $machineClass.imageName }}
 {{- end }}
     networkID: {{ $machineClass.networkID }}
+    subnetID: {{ $machineClass.subnetID }}
     podNetworkCidr: {{ $machineClass.podNetworkCidr }}
 {{- if $machineClass.rootDiskSize }}
     rootDiskSize: {{ $machineClass.rootDiskSize }}

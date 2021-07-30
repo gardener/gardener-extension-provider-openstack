@@ -499,6 +499,7 @@ func getConfigChartValues(
 		"requestTimeout":              cloudProfileConfig.RequestTimeout,
 		"useOctavia":                  cloudProfileConfig.UseOctavia != nil && *cloudProfileConfig.UseOctavia,
 		"rescanBlockStorageOnResize":  cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
+		"ignoreVolumeAZ":              cloudProfileConfig.IgnoreVolumeAZ != nil && *cloudProfileConfig.IgnoreVolumeAZ,
 		"nodeVolumeAttachLimit":       cloudProfileConfig.NodeVolumeAttachLimit,
 	}
 

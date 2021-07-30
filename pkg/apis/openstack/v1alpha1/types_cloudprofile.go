@@ -50,6 +50,10 @@ type CloudProfileConfig struct {
 	// the filesystem.
 	// +optional
 	RescanBlockStorageOnResize *bool `json:"rescanBlockStorageOnResize,omitempty"`
+	// IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,
+	// to allow for differences between volume and compute zone naming.
+	// +optional
+	IgnoreVolumeAZ *bool `json:"ignoreVolumeAZ,omitempty"`
 	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
 	// +optional
 	NodeVolumeAttachLimit *int32 `json:"nodeVolumeAttachLimit,omitempty"`

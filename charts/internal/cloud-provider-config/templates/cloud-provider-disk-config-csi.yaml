@@ -5,6 +5,7 @@
 
 [BlockStorage]
 rescan-on-resize={{ .Values.rescanBlockStorageOnResize }}
+ignore-volume-az={{ .Values.ignoreVolumeAZ }}
 {{- if .Values.nodeVolumeAttachLimit }}
 node-volume-attach-limit={{ .Values.nodeVolumeAttachLimit }}
 {{- end -}}

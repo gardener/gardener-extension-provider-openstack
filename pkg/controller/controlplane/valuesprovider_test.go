@@ -117,6 +117,7 @@ var _ = Describe("ValuesProvider", func() {
 		cidr                             = "10.250.0.0/19"
 		useOctavia                       = true
 		rescanBlockStorageOnResize       = true
+		ignoreVolumeAZ                   = true
 		nodeVoluemAttachLimit      int32 = 25
 		technicalID                      = "shoot--dev--test"
 
@@ -126,6 +127,7 @@ var _ = Describe("ValuesProvider", func() {
 			RequestTimeout:             requestTimeout,
 			UseOctavia:                 pointer.BoolPtr(useOctavia),
 			RescanBlockStorageOnResize: pointer.BoolPtr(rescanBlockStorageOnResize),
+			IgnoreVolumeAZ:             pointer.BoolPtr(ignoreVolumeAZ),
 			NodeVolumeAttachLimit:      pointer.Int32Ptr(nodeVoluemAttachLimit),
 		}
 		cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
@@ -270,6 +272,7 @@ var _ = Describe("ValuesProvider", func() {
 			"requestTimeout":              requestTimeout,
 			"useOctavia":                  useOctavia,
 			"rescanBlockStorageOnResize":  rescanBlockStorageOnResize,
+			"ignoreVolumeAZ":              ignoreVolumeAZ,
 			"nodeVolumeAttachLimit":       pointer.Int32Ptr(nodeVoluemAttachLimit),
 			"applicationCredentialID":     "",
 			"applicationCredentialSecret": "",

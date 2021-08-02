@@ -7,7 +7,7 @@
 rescan-on-resize={{ .Values.rescanBlockStorageOnResize }}
 {{- if semverCompare ">= 1.20-0" .Values.kubernetesVersion -}}
 ignore-volume-az={{ .Values.ignoreVolumeAZ }}
-{{ - end -}}
+{{- end -}}
 {{- if .Values.nodeVolumeAttachLimit }}
 node-volume-attach-limit={{ .Values.nodeVolumeAttachLimit }}
 {{- end -}}

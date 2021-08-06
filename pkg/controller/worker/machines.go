@@ -100,6 +100,11 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		return err
 	}
 
+	subnet, err := helper.FindSubnetByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
+	if err != nil {
+		return err
+	}
+
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones))
 
@@ -157,6 +162,8 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 					"cloudConfig": string(pool.UserData),
 				},
 			}
+
+			machineClassSpec["subnetID"] = subnet.ID
 
 			if volumeSize > 0 {
 				machineClassSpec["rootDiskSize"] = volumeSize

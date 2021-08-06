@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	"github.com/google/uuid"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -59,6 +60,12 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 
 	if nodes != nil {
 		allErrs = append(allErrs, nodes.ValidateSubset(workerCIDR)...)
+	}
+
+	if infra.Networks.ID != nil {
+		if _, err := uuid.Parse(*infra.Networks.ID); err != nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("id"), infra.Networks.ID, "if network ID is provided it must be a valid OpenStack UUID"))
+		}
 	}
 
 	if infra.Networks.Router != nil && len(infra.Networks.Router.ID) == 0 {

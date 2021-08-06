@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"strconv"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
 const (
@@ -65,8 +66,9 @@ func ComputeTerraformerTemplateValues(
 	cluster *controller.Cluster,
 ) (map[string]interface{}, error) {
 	var (
-		createRouter = true
-		routerConfig = map[string]interface{}{
+		createRouter  = true
+		createNetwork = true
+		routerConfig  = map[string]interface{}{
 			"id": DefaultRouterID,
 		}
 		outputKeysConfig = map[string]interface{}{
@@ -109,6 +111,14 @@ func ComputeTerraformerTemplateValues(
 		workersCIDR = config.Networks.Worker
 	}
 
+	networksConfig := map[string]interface{}{
+		"workers": workersCIDR,
+	}
+	if config.Networks.ID != nil {
+		createNetwork = false
+		networksConfig["id"] = *config.Networks.ID
+	}
+
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
 			"maxApiCallRetries": MaxApiCallRetries,
@@ -117,16 +127,15 @@ func ComputeTerraformerTemplateValues(
 			"floatingPoolName":  config.FloatingPoolName,
 		},
 		"create": map[string]interface{}{
-			"router": createRouter,
+			"router":  createRouter,
+			"network": createNetwork,
 		},
 		"dnsServers":   cloudProfileConfig.DNSServers,
 		"sshPublicKey": string(infra.Spec.SSHPublicKey),
 		"router":       routerConfig,
 		"clusterName":  infra.Namespace,
-		"networks": map[string]interface{}{
-			"workers": workersCIDR,
-		},
-		"outputKeys": outputKeysConfig,
+		"networks":     networksConfig,
+		"outputKeys":   outputKeysConfig,
 	}, nil
 }
 

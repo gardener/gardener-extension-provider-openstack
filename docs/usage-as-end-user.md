@@ -52,6 +52,7 @@ kind: InfrastructureConfig
 floatingPoolName: MY-FLOATING-POOL
 # floatingPoolSubnetName: my-floating-pool-subnet-name
 networks:
+# id: 12345678-abcd-efef-08af-0123456789ab
 # router:
 #   id: 1234
   workers: 10.250.0.0/19
@@ -61,6 +62,8 @@ The `floatingPoolName` is the name of the floating pool you want to use for your
 If you don't know which floating pools are available look it up in the respective `CloudProfile`.
 
 With `floatingPoolSubnetName` you can explicitly define to which subnet in the floating pool network (defined via `floatingPoolName`) the router should be attached to.
+
+If `networks.id` is an optional field. If it is given, you can specify the uuid of an existing private Neutron network (created manually, by other tooling, ...) that should be reused. A new subnet for the Shoot will be created in it.
 
 The `networks.router` section describes whether you want to create the shoot cluster in an already existing router or whether to create a new one:
 

@@ -14,6 +14,7 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/mock v1.6.0
 	github.com/golang/snappy v0.0.2 // indirect
+	github.com/google/uuid v1.1.2
 	github.com/gophercloud/gophercloud v0.7.0
 	github.com/gophercloud/utils v0.0.0-20200204043447-9864b6f1f12f
 	github.com/mitchellh/copystructure v1.1.1 // indirect

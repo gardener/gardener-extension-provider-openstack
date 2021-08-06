@@ -104,6 +104,7 @@ var _ = Describe("Machines", func() {
 				userData          []byte
 				networkID         string
 				podCIDR           string
+				subnetID          string
 				securityGroupName string
 
 				namePool1           string
@@ -156,6 +157,7 @@ var _ = Describe("Machines", func() {
 				userData = []byte("some-user-data")
 				networkID = "network-id"
 				podCIDR = "1.2.3.4/5"
+				subnetID = "subnetID"
 				securityGroupName = "nodes-sec-group"
 
 				namePool1 = "pool-1"
@@ -265,6 +267,12 @@ var _ = Describe("Machines", func() {
 								},
 								Networks: api.NetworkStatus{
 									ID: networkID,
+									Subnets: []api.Subnet{
+										{
+											Purpose: api.PurposeNodes,
+											ID:      subnetID,
+										},
+									},
 								},
 							}),
 						},
@@ -327,7 +335,7 @@ var _ = Describe("Machines", func() {
 					clusterWithRegion   *extensionscontroller.Cluster
 				)
 
-				setup := func(region, name, id string) {
+				setup := func(region, name, imageID string) {
 					workerWithRegion = w.DeepCopy()
 					workerWithRegion.Spec.Region = region
 
@@ -343,6 +351,7 @@ var _ = Describe("Machines", func() {
 						"machineType":    machineType,
 						"keyName":        keyName,
 						"networkID":      networkID,
+						"subnetID":       subnetID,
 						"podNetworkCidr": podCIDR,
 						"securityGroups": []string{securityGroupName},
 						"tags": map[string]string{
@@ -353,10 +362,10 @@ var _ = Describe("Machines", func() {
 							"cloudConfig": string(userData),
 						},
 					}
-					if id == "" {
+					if imageID == "" {
 						defaultMachineClass["imageName"] = name
 					} else {
-						defaultMachineClass["imageID"] = id
+						defaultMachineClass["imageID"] = imageID
 					}
 
 					var (

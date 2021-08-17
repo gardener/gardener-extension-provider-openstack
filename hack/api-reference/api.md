@@ -154,6 +154,20 @@ the filesystem.</p>
 </tr>
 <tr>
 <td>
+<code>ignoreVolumeAZ</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,
+to allow for differences between volume and compute zone naming. This setting only works for
+shoots with kubernetes version 1.20.x or newer.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodeVolumeAttachLimit</code></br>
 <em>
 int32

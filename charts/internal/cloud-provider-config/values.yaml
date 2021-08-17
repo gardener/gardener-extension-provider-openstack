@@ -21,6 +21,7 @@ dhcpDomain: foobar
 requestTimeout: 2s
 useOctavia: false
 rescanBlockStorageOnResize: false
+ignoreVolumeAZ: false
 # nodeVolumeAttachLimit: 25
 # floatingClasses:
 # - name: A

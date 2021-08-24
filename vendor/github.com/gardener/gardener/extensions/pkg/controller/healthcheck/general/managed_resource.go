@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -73,7 +73,7 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 			}, nil
 		}
 
-		err := fmt.Errorf("check Managed Resource failed. Unable to retrieve managed resource %q in namespace %q: %v", healthChecker.managedResourceName, request.Namespace, err)
+		err := fmt.Errorf("check Managed Resource failed. Unable to retrieve managed resource %q in namespace %q: %w", healthChecker.managedResourceName, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}

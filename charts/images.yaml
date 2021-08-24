@@ -2,7 +2,7 @@ images:
 - name: terraformer
   sourceRepository: github.com/gardener/terraformer
   repository: eu.gcr.io/gardener-project/gardener/terraformer-openstack
-  tag: "v2.9.0"
+  tag: "v2.10.0"
 
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack

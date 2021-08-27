@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,FactoryFactory,Compute,DNS
+//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,FactoryFactory,Compute,DNS,Networking
 package client
 
 import (
@@ -43,6 +43,11 @@ type DNSClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// NetworkingClient is a client for the Neutron service.
+type NetworkingClient struct {
+	client *gophercloud.ServiceClient
+}
+
 // Option can be passed to Factory implementations to modify the produced clients.
 type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
 
@@ -51,6 +56,7 @@ type Factory interface {
 	Compute(options ...Option) (Compute, error)
 	Storage(options ...Option) (Storage, error)
 	DNS(options ...Option) (DNS, error)
+	Networking(options ...Option) (Networking, error)
 }
 
 // Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
@@ -73,6 +79,11 @@ type DNS interface {
 	GetZones(ctx context.Context) (map[string]string, error)
 	CreateOrUpdateRecordSet(ctx context.Context, zoneID, name, recordType string, records []string, ttl int) error
 	DeleteRecordSet(ctx context.Context, zoneID, name, recordType string) error
+}
+
+// Networking describes the operations of a client interacting with OpenStack's Networking service.
+type Networking interface {
+	GetExternalNetworkNames(ctx context.Context) ([]string, error)
 }
 
 // FactoryFactory creates instances of Factory.

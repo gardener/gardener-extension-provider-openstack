@@ -51,7 +51,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.29.0
+# github.com/gardener/gardener v1.30.1-0.20210827103926-aa88e5700bb0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -162,6 +162,7 @@ github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operati
 github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager
 github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler
 github.com/gardener/gardener/pkg/operation/botanist/component/logging
+github.com/gardener/gardener/pkg/operation/botanist/component/monitoring
 github.com/gardener/gardener/pkg/operation/common
 github.com/gardener/gardener/pkg/predicate
 github.com/gardener/gardener/pkg/scheduler/apis/config

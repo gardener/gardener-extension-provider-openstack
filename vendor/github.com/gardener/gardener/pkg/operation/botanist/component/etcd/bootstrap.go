@@ -22,13 +22,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,12 +49,12 @@ const (
 	// Druid is a constant for the name of the etcd-druid.
 	Druid = "etcd-druid"
 
-	druidRBACName                          = "gardener.cloud:system:" + Druid
-	druidServiceAccountName                = Druid
-	druidVPAName                           = Druid + "-vpa"
-	druidConfigMapImageVectorOverwriteName = Druid + "-imagevector-overwrite"
-	druidDeploymentName                    = Druid
-	managedResourceControlName             = Druid
+	druidRBACName                                = "gardener.cloud:system:" + Druid
+	druidServiceAccountName                      = Druid
+	druidVPAName                                 = Druid + "-vpa"
+	druidConfigMapImageVectorOverwriteNamePrefix = Druid + "-imagevector-overwrite"
+	druidDeploymentName                          = Druid
+	managedResourceControlName                   = Druid
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
@@ -61,18 +62,11 @@ const (
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
-func NewBootstrapper(
-	client client.Client,
-	namespace string,
-	image string,
-	kubernetesVersion *semver.Version,
-	imageVectorOverwrite *string,
-) component.DeployWaiter {
+func NewBootstrapper(c client.Client, namespace string, image string, imageVectorOverwrite *string) component.DeployWaiter {
 	return &bootstrapper{
-		client:               client,
+		client:               c,
 		namespace:            namespace,
 		image:                image,
-		kubernetesVersion:    kubernetesVersion,
 		imageVectorOverwrite: imageVectorOverwrite,
 	}
 }
@@ -81,7 +75,6 @@ type bootstrapper struct {
 	client               client.Client
 	namespace            string
 	image                string
-	kubernetesVersion    *semver.Version
 	imageVectorOverwrite *string
 }
 
@@ -174,7 +167,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 		configMapImageVectorOverwrite = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidConfigMapImageVectorOverwriteName,
+				Name:      druidConfigMapImageVectorOverwriteNamePrefix,
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
@@ -267,15 +260,15 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}
+		utilruntime.Must(kutil.MakeUnique(configMapImageVectorOverwrite))
 		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
 
-		metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/configmap-imagevector-overwrite", utils.ComputeChecksum(configMapImageVectorOverwrite.Data))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: druidDeploymentVolumeNameImageVectorOverwrite,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: druidConfigMapImageVectorOverwriteName,
+						Name: configMapImageVectorOverwrite.Name,
 					},
 				},
 			},
@@ -289,6 +282,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			Name:  imagevector.OverrideEnv,
 			Value: druidDeploymentVolumeMountPathImageVectorOverwrite + "/" + druidConfigMapImageVectorOverwriteDataKey,
 		})
+
+		utilruntime.Must(references.InjectAnnotations(deployment))
 	}
 
 	resources, err := registry.AddAllAndSerialize(append(resourcesToAdd, deployment)...)

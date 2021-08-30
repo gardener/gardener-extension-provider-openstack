@@ -139,6 +139,23 @@ func (oc *OpenstackClientFactory) DNS(options ...Option) (DNS, error) {
 	}, nil
 }
 
+// Networking returns a Networking client. The client uses Neutron v2 API for issuing calls.
+func (oc *OpenstackClientFactory) Networking(options ...Option) (Networking, error) {
+	eo := gophercloud.EndpointOpts{}
+	for _, opt := range options {
+		eo = opt(eo)
+	}
+
+	client, err := openstack.NewNetworkV2(oc.providerClient, eo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &NetworkingClient{
+		client: client,
+	}, nil
+}
+
 // IsNotFoundError checks if an error returned by OpenStack is caused by HTTP 404 status code.
 func IsNotFoundError(err error) bool {
 	if err == nil {

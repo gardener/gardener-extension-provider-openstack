@@ -17,6 +17,13 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.1"
+  labels:
+  - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
+    value:
+      policy: skip
+      comment: >
+        pause-container is not accessible from outside k8s clusters and not
+        interacted with from other containers or other systems
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
@@ -95,11 +102,11 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.18.0
+  tag: v0.22.2
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.23.0
+  tag: v2.29.1
 - name: configmap-reloader
   sourceRepository: github.com/jimmidyson/configmap-reload
   repository: quay.io/coreos/configmap-reload
@@ -123,7 +130,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
-  tag: v0.4.3
+  tag: v0.5.0
 
 # Shoot core addons
 - name: vpn-shoot
@@ -173,6 +180,13 @@ images:
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
   tag: "0.22.0"
   targetVersion: "< 1.20"
+  labels:
+  - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
+    value:
+      policy: skip
+      comment: >
+        not deployed as part of gardener infrastructure. Offered to users for development
+        purposes only, accompanied w/ warning that no support be provided.
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller
@@ -188,10 +202,6 @@ images:
   tag: "0.9.0"
 
 # Miscellaenous
-- name: busybox
-  sourceRepository: github.com/mirror/busybox
-  repository: busybox
-  tag: "1.29.2"
 - name: alpine
   repository: alpine
   tag: "3.10.3"
@@ -208,7 +218,7 @@ images:
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.36.1"
+  tag: "v0.36.2"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -216,7 +226,7 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.36.1"
+  tag: "v0.36.2"
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
@@ -228,7 +238,7 @@ images:
 - name: telegraf
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.36.1"
+  tag: "v0.36.2"
 
 # VPA
 - name: vpa-admission-controller

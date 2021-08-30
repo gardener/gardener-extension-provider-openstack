@@ -62,7 +62,7 @@ images:
 - name: csi-attacher
   sourceRepository: github.com/kubernetes-csi/external-attacher
   repository: k8s.gcr.io/sig-storage/csi-attacher
-  tag: "v3.0.2"
+  tag: "v3.3.0"
 - name: csi-snapshotter
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: k8s.gcr.io/sig-storage/csi-snapshotter

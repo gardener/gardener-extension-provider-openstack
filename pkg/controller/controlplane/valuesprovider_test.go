@@ -526,7 +526,8 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(values).To(Equal(map[string]interface{}{
 				openstack.CloudControllerManagerName: enabledTrue,
 				openstack.CSINodeName: utils.MergeMaps(enabledFalse, map[string]interface{}{
-					"vpaEnabled": false,
+					"vpaEnabled":        false,
+					"kubernetesVersion": "1.15.4",
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: "",
 					},
@@ -544,7 +545,8 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(values).To(Equal(map[string]interface{}{
 				openstack.CloudControllerManagerName: enabledTrue,
 				openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"vpaEnabled": true,
+					"vpaEnabled":        true,
+					"kubernetesVersion": "1.19.4",
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},

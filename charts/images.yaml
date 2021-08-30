@@ -28,7 +28,12 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager
   tag: "v1.21.0"
-  targetVersion: ">= 1.21"
+  targetVersion: "1.21.x"
+- name: cloud-controller-manager
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: k8scloudprovider/openstack-cloud-controller-manager
+  tag: "v1.22.0"
+  targetVersion: ">= 1.22"
 
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager

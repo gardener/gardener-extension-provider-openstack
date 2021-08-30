@@ -17,3 +17,7 @@ TODO
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*
+
+# GitGuardian
+.cache_ggshield
+.gitguardian.yaml

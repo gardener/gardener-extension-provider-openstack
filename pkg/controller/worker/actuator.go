@@ -16,9 +16,9 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/pkg/errors"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -88,7 +88,7 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 
 	openstackClient, err := client.NewOpenStackClientFromSecretRef(ctx, d.Client(), worker.Spec.SecretRef, &keyStoneURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create openstack client")
+		return nil, fmt.Errorf("failed to create openstack client: %w", err)
 	}
 
 	return NewWorkerDelegate(

@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -305,13 +304,13 @@ func (vp *valuesProvider) GetConfigChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", kutil.ObjectName(cp))
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
 		}
 	}
 
 	infraStatus := &api.InfrastructureStatus{}
 	if _, _, err := vp.Decoder().Decode(cp.Spec.InfrastructureProviderStatus.Raw, nil, infraStatus); err != nil {
-		return nil, errors.Wrapf(err, "could not decode infrastructureProviderStatus of controlplane '%s'", kutil.ObjectName(cp))
+		return nil, fmt.Errorf("could not decode infrastructureProviderStatus of controlplane '%s': %w", kutil.ObjectName(cp), err)
 	}
 
 	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
@@ -322,7 +321,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	// Get credentials
 	credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef, false)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get service account from secret '%s/%s'", cp.Spec.SecretRef.Namespace, cp.Spec.SecretRef.Name)
+		return nil, fmt.Errorf("could not get service account from secret '%s/%s': %w", cp.Spec.SecretRef.Namespace, cp.Spec.SecretRef.Name, err)
 	}
 
 	return getConfigChartValues(cpConfig, infraStatus, cloudProfileConfig, cp, credentials, cluster)
@@ -340,7 +339,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", kutil.ObjectName(cp))
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
 		}
 	}
 
@@ -469,7 +468,7 @@ func getConfigChartValues(
 ) (map[string]interface{}, error) {
 	subnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not determine subnet from infrastructureProviderStatus of controlplane '%s'", kutil.ObjectName(cp))
+		return nil, fmt.Errorf("could not determine subnet from infrastructureProviderStatus of controlplane '%s': %w", kutil.ObjectName(cp), err)
 	}
 
 	if cloudProfileConfig == nil {

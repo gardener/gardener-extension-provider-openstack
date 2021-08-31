@@ -17,6 +17,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"reflect"
 
@@ -24,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/test/tm/generator"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -100,16 +100,16 @@ func main() {
 
 func validate() error {
 	if err := generator.ValidateString(&cfg.infrastructureProviderConfigPath); err != nil {
-		return errors.Wrap(err, "error validating infrastructure provider config path")
+		return fmt.Errorf("error validating infrastructure provider config path: %w", err)
 	}
 	if err := generator.ValidateString(&cfg.controlplaneProviderConfigPath); err != nil {
-		return errors.Wrap(err, "error validating controlplane provider config path")
+		return fmt.Errorf("error validating controlplane provider config path: %w", err)
 	}
 	if err := generator.ValidateString(&cfg.floatingPoolName); err != nil {
-		return errors.Wrap(err, "error floating pool name")
+		return fmt.Errorf("error floating pool name: %w", err)
 	}
 	if err := generator.ValidateString(&cfg.loadBalancerProvider); err != nil {
-		return errors.Wrap(err, "error loadbalancer provider")
+		return fmt.Errorf("error loadbalancer provider: %w", err)
 	}
 	//Optional Parameters
 	if err := generator.ValidateString(&cfg.networkWorkerCidr); err != nil {

@@ -16,31 +16,30 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/pkg/errors"
 )
 
 func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	if w.machineImages == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
-			return errors.Wrapf(err, "unable to generate the machine config")
+			return fmt.Errorf("unable to generate the machine config: %w", err)
 		}
 	}
 
 	// Decode the current worker provider status.
 	workerStatus, err := w.decodeWorkerProviderStatus()
 	if err != nil {
-		return errors.Wrapf(err, "unable to decode the worker provider status")
+		return fmt.Errorf("unable to decode the worker provider status: %w", err)
 	}
 
 	workerStatus.MachineImages = w.machineImages
 	if err := w.updateWorkerProviderStatus(ctx, workerStatus); err != nil {
-		return errors.Wrapf(err, "unable to update worker provider status")
+		return fmt.Errorf("unable to update worker provider status: %w", err)
 	}
 
 	return nil
@@ -56,7 +55,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 	if providerStatus := w.worker.Status.ProviderStatus; providerStatus != nil {
 		workerStatus := &api.WorkerStatus{}
 		if _, _, err := w.Decoder().Decode(providerStatus.Raw, nil, workerStatus); err != nil {
-			return nil, errors.Wrapf(err, "could not decode worker status of worker '%s'", kutil.ObjectName(w.worker))
+			return nil, fmt.Errorf("could not decode worker status of worker '%s': %w", kutil.ObjectName(w.worker), err)
 		}
 
 		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version)

@@ -16,6 +16,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
@@ -30,7 +31,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -441,7 +441,7 @@ func (e *ensurer) EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 			e.logger.Info("secret not found", "name", openstack.CloudProviderDiskConfigName, "namespace", namespace)
 			return nil
 		}
-		return errors.Wrapf(err, "could not get secret '%s/%s'", namespace, openstack.CloudProviderDiskConfigName)
+		return fmt.Errorf("could not get secret '%s/%s': %w", namespace, openstack.CloudProviderDiskConfigName, err)
 	}
 
 	if secret.Data == nil || secret.Data[openstack.CloudProviderConfigDataKey] == nil {

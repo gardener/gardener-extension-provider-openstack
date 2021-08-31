@@ -16,12 +16,12 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -39,7 +39,7 @@ func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error)
 		return nil, err
 	}
 	if _, _, err := w.Decoder().Decode(marshalled, nil, workerStatus); err != nil {
-		return nil, errors.Wrapf(err, "could not decode WorkerStatus %q", kutil.ObjectName(w.worker))
+		return nil, fmt.Errorf("could not decode WorkerStatus %q: %w", kutil.ObjectName(w.worker), err)
 	}
 
 	return workerStatus, nil
@@ -67,7 +67,7 @@ func (w *workerDelegate) updateMachineDependenciesStatus(ctx context.Context, wo
 	workerStatus.ServerGroupDependencies = serverGroupDependencies
 	if statusUpdateErr := w.updateWorkerProviderStatus(ctx, workerStatus); statusUpdateErr != nil {
 		if err != nil {
-			err = errors.Wrapf(statusUpdateErr, err.Error())
+			err = fmt.Errorf("%s: %w", err.Error(), statusUpdateErr)
 		} else {
 			err = statusUpdateErr
 		}

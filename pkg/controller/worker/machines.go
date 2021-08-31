@@ -30,7 +30,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,7 +59,7 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	// Delete any older version machine class CRs.
 	// TODO: This can safely be removed after a few releases. It only facilitates the transition between OpenStackMachineClass -> MachineClass for existing shoots.
 	if err := w.Client().DeleteAllOf(ctx, &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(w.worker.Namespace)); err != nil {
-		return errors.Wrapf(err, "cleaning up old OpenstackMachineClass resources failed")
+		return fmt.Errorf("cleaning up old OpenstackMachineClass resources failed: %w", err)
 	}
 
 	return w.seedChartApplier.Apply(ctx, filepath.Join(openstack.InternalChartsPath, "machineclass"), w.worker.Namespace, "machineclass", kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}))

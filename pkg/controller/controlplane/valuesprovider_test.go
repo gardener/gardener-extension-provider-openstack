@@ -469,6 +469,14 @@ var _ = Describe("ValuesProvider", func() {
 			"featureGates": map[string]bool{
 				"CustomResourceValidation": true,
 			},
+			"tlsCipherSuites": []string{
+				"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+				"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+				"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
+				"TLS_RSA_WITH_AES_128_CBC_SHA",
+				"TLS_RSA_WITH_AES_256_CBC_SHA",
+				"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+			},
 		})
 
 		BeforeEach(func() {
@@ -526,7 +534,8 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(values).To(Equal(map[string]interface{}{
 				openstack.CloudControllerManagerName: enabledTrue,
 				openstack.CSINodeName: utils.MergeMaps(enabledFalse, map[string]interface{}{
-					"vpaEnabled": false,
+					"vpaEnabled":        false,
+					"kubernetesVersion": "1.15.4",
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: "",
 					},
@@ -544,7 +553,8 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(values).To(Equal(map[string]interface{}{
 				openstack.CloudControllerManagerName: enabledTrue,
 				openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"vpaEnabled": true,
+					"vpaEnabled":        true,
+					"kubernetesVersion": "1.19.4",
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},

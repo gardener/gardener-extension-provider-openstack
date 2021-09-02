@@ -82,7 +82,7 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v0.16.2"
+  tag: "v0.18.0"
   targetVersion: ">= 1.16"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
@@ -204,11 +204,11 @@ images:
 # Miscellaenous
 - name: alpine
   repository: alpine
-  tag: "3.10.3"
+  tag: "3.13.5"
 - name: alpine-iptables
   sourceRepository: github.com/DockToFuture/alpine-iptables
   repository: eu.gcr.io/gardener-project/alpine-iptables
-  tag: "3.10.3"
+  tag: "3.13.5"
 
 # Logging
 - name: fluent-bit

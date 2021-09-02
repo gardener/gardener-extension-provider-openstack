@@ -35,13 +35,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 )
@@ -224,7 +225,7 @@ var (
 				Objects: []*chart.Object{
 					// csi-driver
 					{Type: &appsv1.DaemonSet{}, Name: openstack.CSINodeName},
-					{Type: &storagev1beta1.CSIDriver{}, Name: "cinder.csi.openstack.org"},
+					{Type: &storagev1.CSIDriver{}, Name: "cinder.csi.openstack.org"},
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIDriverName},
 					{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
@@ -268,9 +269,9 @@ var (
 			{
 				Name: "volumesnapshots",
 				Objects: []*chart.Object{
-					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshotclasses.snapshot.storage.k8s.io"},
-					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshotcontents.snapshot.storage.k8s.io"},
-					{Type: &apiextensionsv1beta1.CustomResourceDefinition{}, Name: "volumesnapshots.snapshot.storage.k8s.io"},
+					{Type: &apiextensionsv1.CustomResourceDefinition{}, Name: "volumesnapshotclasses.snapshot.storage.k8s.io"},
+					{Type: &apiextensionsv1.CustomResourceDefinition{}, Name: "volumesnapshotcontents.snapshot.storage.k8s.io"},
+					{Type: &apiextensionsv1.CustomResourceDefinition{}, Name: "volumesnapshots.snapshot.storage.k8s.io"},
 				},
 			},
 		},
@@ -635,6 +636,11 @@ func getCCMChartValues(
 	checksums map[string]string,
 	scaledDown bool,
 ) (map[string]interface{}, error) {
+	kubeVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+
 	values := map[string]interface{}{
 		"enabled":           true,
 		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
@@ -650,6 +656,7 @@ func getCCMChartValues(
 		"podLabels": map[string]interface{}{
 			v1beta1constants.LabelPodMaintenanceRestart: "true",
 		},
+		"tlsCipherSuites": kutil.TLSCipherSuites(kubeVersion),
 	}
 
 	if userAgentHeaders != nil {
@@ -711,8 +718,9 @@ func getControlPlaneShootChartValues(
 	userAgentHeader []string,
 ) (map[string]interface{}, error) {
 	var csiNodeDriverValues = map[string]interface{}{
-		"enabled":    !k8sVersionLessThan119,
-		"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
+		"enabled":           !k8sVersionLessThan119,
+		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+		"vpaEnabled":        gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},

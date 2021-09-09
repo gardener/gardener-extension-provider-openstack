@@ -43,7 +43,8 @@ const (
 	// CSISnapshotControllerImageName is the name of the csi-snapshot-controller image.
 	CSISnapshotControllerImageName = "csi-snapshot-controller"
 	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
-	MachineControllerManagerImageName                  = "machine-controller-manager"
+	MachineControllerManagerImageName = "machine-controller-manager"
+	// MachineControllerManagerProviderOpenStackImageName is the name of the MachineControllerManager OpenStack image.
 	MachineControllerManagerProviderOpenStackImageName = "machine-controller-manager-provider-openstack"
 
 	// AuthURL is a constant for the key in a cloud provider secret that holds the OpenStack auth url.

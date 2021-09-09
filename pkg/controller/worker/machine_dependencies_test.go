@@ -106,7 +106,7 @@ var _ = Describe("#MachineDependencies", func() {
 			)
 
 			ctx := context.Background()
-			expectStatusUpdateToSucceed(cl, statusCl, ctx)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err := workerDelegate.DeployMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -145,7 +145,7 @@ var _ = Describe("#MachineDependencies", func() {
 			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool2)), policy).Return(&servergroups.ServerGroup{
 				ID: serverGroupID2,
 			}, nil)
-			expectStatusUpdateToSucceed(cl, statusCl, ctx)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err := workerDelegate.DeployMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -187,7 +187,7 @@ var _ = Describe("#MachineDependencies", func() {
 			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), policy).Return(&servergroups.ServerGroup{
 				ID: "id",
 			}, nil)
-			expectStatusUpdateToSucceed(cl, statusCl, ctx)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err := workerDelegate.DeployMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -208,7 +208,7 @@ var _ = Describe("#MachineDependencies", func() {
 			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), newPolicy).Return(&servergroups.ServerGroup{
 				ID: "new-id",
 			}, nil)
-			expectStatusUpdateToSucceed(cl, statusCl, ctx)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err = workerDelegate.DeployMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -260,7 +260,7 @@ var _ = Describe("#MachineDependencies", func() {
 				},
 			}, nil)
 			computeClient.EXPECT().DeleteServerGroup(serverGroupID).Return(nil)
-			expectStatusUpdateToSucceed(cl, statusCl, ctx)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err := workerDelegate.CleanupMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -318,7 +318,7 @@ var _ = Describe("#MachineDependencies", func() {
 				},
 			}, nil)
 			computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
-			expectStatusUpdateToNotContainChanges(cl, statusCl, ctx)
+			expectStatusUpdateToNotContainChanges(ctx, cl, statusCl)
 
 			err := workerDelegate.CleanupMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -381,7 +381,7 @@ var _ = Describe("#MachineDependencies", func() {
 			}, nil)
 			computeClient.EXPECT().DeleteServerGroup(serverGroupID1).Return(nil)
 			computeClient.EXPECT().DeleteServerGroup(serverGroupID2).Return(nil)
-			expectStatusUpdateToSucceed(cl, statusCl, ctx)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err := workerDelegate.CleanupMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -442,7 +442,7 @@ func newClusterWithDefaultCloudProfileConfig(name string) *controller.Cluster {
 	}
 }
 
-func expectStatusUpdateToSucceed(c *k8smocks.MockClient, statusWriter *k8smocks.MockStatusWriter, ctx context.Context) {
+func expectStatusUpdateToSucceed(ctx context.Context, c *k8smocks.MockClient, statusWriter *k8smocks.MockStatusWriter) {
 	c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
 		DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
 			return nil
@@ -450,7 +450,7 @@ func expectStatusUpdateToSucceed(c *k8smocks.MockClient, statusWriter *k8smocks.
 	statusWriter.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(nil)
 }
 
-func expectStatusUpdateToNotContainChanges(c *k8smocks.MockClient, statusWriter *k8smocks.MockStatusWriter, ctx context.Context) {
+func expectStatusUpdateToNotContainChanges(ctx context.Context, c *k8smocks.MockClient, statusWriter *k8smocks.MockStatusWriter) {
 	c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
 		DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
 			return nil

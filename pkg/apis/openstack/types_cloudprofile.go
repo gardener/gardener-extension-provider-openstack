@@ -132,25 +132,25 @@ func (l LoadBalancerClass) IsSemanticallyEqual(e LoadBalancerClass) bool {
 	return true
 }
 
-func (in LoadBalancerClass) String() string {
-	result := fmt.Sprintf("Name: %q", in.Name)
-	if in.Purpose != nil {
-		result += fmt.Sprintf(", Purpose: %q", *in.Purpose)
+func (l LoadBalancerClass) String() string {
+	result := fmt.Sprintf("Name: %q", l.Name)
+	if l.Purpose != nil {
+		result += fmt.Sprintf(", Purpose: %q", *l.Purpose)
 	}
-	if in.FloatingSubnetID != nil {
-		result += fmt.Sprintf(", FloatingSubnetID: %q", *in.FloatingSubnetID)
+	if l.FloatingSubnetID != nil {
+		result += fmt.Sprintf(", FloatingSubnetID: %q", *l.FloatingSubnetID)
 	}
-	if in.FloatingSubnetTags != nil {
-		result += fmt.Sprintf(", FloatingSubnetTags: %q", *in.FloatingSubnetTags)
+	if l.FloatingSubnetTags != nil {
+		result += fmt.Sprintf(", FloatingSubnetTags: %q", *l.FloatingSubnetTags)
 	}
-	if in.FloatingSubnetName != nil {
-		result += fmt.Sprintf(", FloatingSubnetName: %q", *in.FloatingSubnetName)
+	if l.FloatingSubnetName != nil {
+		result += fmt.Sprintf(", FloatingSubnetName: %q", *l.FloatingSubnetName)
 	}
-	if in.FloatingNetworkID != nil {
-		result += fmt.Sprintf(", FloatingNetworkID: %q", *in.FloatingNetworkID)
+	if l.FloatingNetworkID != nil {
+		result += fmt.Sprintf(", FloatingNetworkID: %q", *l.FloatingNetworkID)
 	}
-	if in.SubnetID != nil {
-		result += fmt.Sprintf(", SubnetID: %q", *in.SubnetID)
+	if l.SubnetID != nil {
+		result += fmt.Sprintf(", SubnetID: %q", *l.SubnetID)
 	}
 	return result
 }

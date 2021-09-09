@@ -58,6 +58,7 @@ type ServerGroupDependency struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // WorkerConfig contains configuration data for a worker pool.
 type WorkerConfig struct {
 	metav1.TypeMeta

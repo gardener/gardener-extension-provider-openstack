@@ -5,3 +5,15 @@ run:
 linters:
   disable:
   - unused
+  enable:
+  - revive
+
+issues:
+  exclude-use-default: false
+  exclude:
+  # revive
+  - var-naming # ((var|const|struct field|func) .* should be .*
+  - dot-imports # should not use dot imports
+  - package-comments # package comment should be of the form
+  - indent-error-flow # if block ends with a return statement, so drop this else and outdent its block
+  - "exported: (type|func) name will be used as .* by other packages, and that stutters;"

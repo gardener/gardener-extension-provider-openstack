@@ -87,7 +87,7 @@ func NewShootMigrationTest(f *GardenerFramework, cfg *ShootMigrationConfig) *Sho
 func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	// Dump gardener state if delete shoot is in exit handler
 	if os.Getenv("TM_PHASE") == "Exit" {
-		if shootFramework, err := t.GardenerFramework.NewShootFramework(&t.Shoot); err == nil {
+		if shootFramework, err := t.GardenerFramework.NewShootFramework(ctx, &t.Shoot); err == nil {
 			shootFramework.DumpState(ctx)
 		} else {
 			t.GardenerFramework.DumpState(ctx)
@@ -203,7 +203,7 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 
 // Check the timestamp of all objects that the resource-manager creates in the Shoot cluster.
 // The timestamp should not be after the ShootMigrationTest.MigrationTime
-func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList []string) error {
+func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList, resourcesWithGeneratedName []string) error {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := t.TargetSeedClient.Client().List(
 		ctx,
@@ -218,6 +218,10 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
 				t.GardenerFramework.Logger.Infof("=== Managed Resource: %s/%s ===", mr.Namespace, mr.Name)
 				for _, r := range mr.Status.Resources {
+					if len(r.Name) > 9 && utils.ValueExists(r.Name[:len(r.Name)-9], resourcesWithGeneratedName) {
+						continue
+					}
+
 					obj := &unstructured.Unstructured{}
 					obj.SetAPIVersion(r.APIVersion)
 					obj.SetKind(r.Kind)
@@ -226,11 +230,11 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 						return err
 					}
 
-					createionTimestamp := obj.GetCreationTimestamp()
-					t.GardenerFramework.Logger.Infof("Object: %s %s/%s Created At: %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp)
-					if t.MigrationTime.Before(&createionTimestamp) {
-						t.GardenerFramework.Logger.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
-						return fmt.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
+					creationTimestamp := obj.GetCreationTimestamp()
+					t.GardenerFramework.Logger.Infof("Object: %s %s/%s Created At: %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp)
+					if t.MigrationTime.Before(&creationTimestamp) {
+						t.GardenerFramework.Logger.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp, t.MigrationTime)
+						return fmt.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp, t.MigrationTime)
 					}
 				}
 			}

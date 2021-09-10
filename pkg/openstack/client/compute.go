@@ -21,8 +21,10 @@ import (
 )
 
 const (
+	// ServerGroupPolicyAntiAffinity is a constant for the anti-affinity server group policy.
 	ServerGroupPolicyAntiAffinity = "anti-affinity"
-	ServerGroupPolicyAffinity     = "affinity"
+	// ServerGroupPolicyAffinity is a constant for the affinity server group policy.
+	ServerGroupPolicyAffinity = "affinity"
 
 	// softPolicyMicroversion defines the minimum API microversion for Nova that can support soft-* policy variants for server groups.
 	// We set the minimum supported microversion, since later versions (>=2.64) have non-backwards-compatible changes forcing the use of

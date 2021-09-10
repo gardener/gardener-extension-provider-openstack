@@ -46,6 +46,7 @@ type actuator struct {
 	logger                 logr.Logger
 }
 
+// NewActuator creates a new dnsrecord.Actuator.
 func NewActuator(openstackClientFactory openstackclient.FactoryFactory, logger logr.Logger) dnsrecord.Actuator {
 	return &actuator{
 		openstackClientFactory: openstackClientFactory,

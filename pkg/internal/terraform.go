@@ -45,12 +45,6 @@ const (
 	TerraformVarNameApplicationCredentialSecret = "TF_VAR_APPLICATION_CREDENTIAL_SECRET"
 )
 
-const (
-	TerraformAuthUsernamePassword = 0
-	TerraformAuthApplicationCredentialID
-	TerraformAuthApplicationCredentialName
-)
-
 // TerraformerEnvVars computes the Terraformer environment variables from the given secret reference.
 func TerraformerEnvVars(secretRef corev1.SecretReference, credentials *openstack.Credentials) []corev1.EnvVar {
 

@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
+// SecretsValidatorName is the name of the secrets validator.
 const SecretsValidatorName = "secrets." + extensionswebhook.ValidatorName
 
 var logger = log.Log.WithName("openstack-validator-webhook")

@@ -44,15 +44,13 @@ github.com/fatih/color
 ## explicit
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
-# github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
-github.com/gardener/dependency-watchdog/pkg/restarter/api
 # github.com/gardener/etcd-druid v0.5.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.31.0
+# github.com/gardener/gardener v1.32.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -94,9 +92,6 @@ github.com/gardener/gardener/extensions/pkg/webhook/controlplane
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test
 github.com/gardener/gardener/extensions/pkg/webhook/shoot
-github.com/gardener/gardener/extensions/test/e2e/framework/executor
-github.com/gardener/gardener/extensions/test/e2e/framework/networkpolicies
-github.com/gardener/gardener/extensions/test/e2e/framework/networkpolicies/generators
 github.com/gardener/gardener/extensions/test/integration/healthcheck
 github.com/gardener/gardener/extensions/test/integration/operation
 github.com/gardener/gardener/extensions/test/tm/generator
@@ -145,17 +140,13 @@ github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1
 github.com/gardener/gardener/pkg/logger
 github.com/gardener/gardener/pkg/mock/controller-runtime/client
 github.com/gardener/gardener/pkg/operation/botanist/component
-github.com/gardener/gardener/pkg/operation/botanist/component/etcd
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
-github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager
-github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler
 github.com/gardener/gardener/pkg/operation/botanist/component/logging
-github.com/gardener/gardener/pkg/operation/botanist/component/monitoring
 github.com/gardener/gardener/pkg/operation/common
 github.com/gardener/gardener/pkg/predicate
 github.com/gardener/gardener/pkg/scheduler/apis/config
@@ -513,7 +504,7 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
+# golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 golang.org/x/lint
 golang.org/x/lint/golint
 # golang.org/x/mod v0.4.2
@@ -567,7 +558,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
 golang.org/x/time/rate
-# golang.org/x/tools v0.1.2
+# golang.org/x/tools v0.1.5
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/gcexportdata
@@ -584,6 +575,7 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
@@ -937,7 +929,6 @@ k8s.io/component-base/config/v1alpha1
 k8s.io/component-base/featuregate
 k8s.io/component-base/version
 # k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027
-## explicit
 k8s.io/gengo/args
 k8s.io/gengo/examples/deepcopy-gen/generators
 k8s.io/gengo/examples/defaulter-gen/generators
@@ -971,7 +962,6 @@ k8s.io/helm/pkg/tlsutil
 k8s.io/helm/pkg/urlutil
 k8s.io/helm/pkg/version
 # k8s.io/klog v1.0.0
-## explicit
 k8s.io/klog
 # k8s.io/klog/v2 v2.9.0
 k8s.io/klog/v2

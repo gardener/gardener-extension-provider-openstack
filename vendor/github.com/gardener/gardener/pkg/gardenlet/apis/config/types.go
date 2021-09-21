@@ -53,7 +53,7 @@ type GardenletConfiguration struct {
 	// Server defines the configuration of the HTTP server.
 	Server *ServerConfiguration
 	// Debugging holds configuration for Debugging related features.
-	Debugging componentbaseconfig.DebuggingConfiguration
+	Debugging *componentbaseconfig.DebuggingConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
@@ -419,7 +419,7 @@ type ExposureClassHandler struct {
 	SNI *SNI
 }
 
-// LoadBalancerService contains configuration which is used to configure the underlying
+// LoadBalancerServiceConfig contains configuration which is used to configure the underlying
 // load balancer to apply the control plane endpoint exposure strategy.
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.

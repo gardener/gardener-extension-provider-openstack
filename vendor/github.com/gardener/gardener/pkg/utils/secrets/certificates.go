@@ -37,17 +37,18 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-type certType string
+// CertType is a string alias for certificate types.
+type CertType string
 
 const (
 	// CACert indicates that the certificate should be a certificate authority.
-	CACert certType = "ca"
+	CACert CertType = "ca"
 	// ServerCert indicates that the certificate should have the ExtKeyUsageServerAuth usage.
-	ServerCert certType = "server"
+	ServerCert CertType = "server"
 	// ClientCert indicates that the certificate should have the ExtKeyUsageClientAuth usage.
-	ClientCert certType = "client"
+	ClientCert CertType = "client"
 	// ServerClientCert indicates that the certificate should have both the ExtKeyUsageServerAuth and ExtKeyUsageClientAuth usage.
-	ServerClientCert certType = "both"
+	ServerClientCert CertType = "both"
 
 	// DataKeyCertificate is the key in a secret data holding the certificate.
 	DataKeyCertificate = "tls.crt"
@@ -76,7 +77,7 @@ type CertificateSecretConfig struct {
 	DNSNames     []string
 	IPAddresses  []net.IP
 
-	CertType  certType
+	CertType  CertType
 	SigningCA *Certificate
 	PKCS      int
 

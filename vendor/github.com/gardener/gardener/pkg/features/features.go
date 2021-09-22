@@ -83,7 +83,7 @@ const (
 
 	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
 	// owner: @mvladev
-	// alpha: v1.23.0
+	// alpha: v1.24.0
 	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
 
 	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.
@@ -95,6 +95,7 @@ const (
 	// for shoots that are already in the deletion phase, i.e. `metadata.deletionTimestamp` is set
 	// owner: @vpnachev
 	// alpha: v1.28.0
+	// beta: v1.32.0
 	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.

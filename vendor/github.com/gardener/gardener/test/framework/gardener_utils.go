@@ -355,11 +355,7 @@ func (f *GardenerFramework) AnnotateShoot(ctx context.Context, shoot *gardencore
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, annotationKey, annotationValue)
 	}
 
-	if err := f.GardenClient.Client().Patch(ctx, shoot, patch); err != nil {
-		return err
-	}
-
-	return nil
+	return f.GardenClient.Client().Patch(ctx, shoot, patch)
 }
 
 // RemoveShootAnnotation removes an annotation with key <annotationKey> from a shoot object
@@ -564,13 +560,13 @@ func ParseSchedulerConfiguration(configuration *corev1.ConfigMap) (*config.Sched
 }
 
 // ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
-func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-scheduler", v1beta1constants.GardenNamespace)
+func ScaleGardenerScheduler(ctx context.Context, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return ScaleDeployment(ctx, client, desiredReplicas, "gardener-scheduler", v1beta1constants.GardenNamespace)
 }
 
 // ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
-func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", v1beta1constants.GardenNamespace)
+func ScaleGardenerControllerManager(ctx context.Context, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return ScaleDeployment(ctx, client, desiredReplicas, "gardener-controller-manager", v1beta1constants.GardenNamespace)
 }
 
 // CreateSeed creates a seed from a seed Object and waits until it is successfully reconciled
@@ -685,7 +681,7 @@ func (f *GardenerFramework) WaitForManagedSeedToBeCreated(ctx context.Context, m
 	})
 }
 
-// DeleteSeed deletes the given managed seed and waits for it to be deleted.
+// DeleteManagedSeed deletes the given managed seed and waits for it to be deleted.
 func (f *GardenerFramework) DeleteManagedSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// Delete the managed seed
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {

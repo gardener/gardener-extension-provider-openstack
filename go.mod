@@ -9,7 +9,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/frankban/quicktest v1.9.0 // indirect
 	github.com/gardener/etcd-druid v0.5.0
-	github.com/gardener/gardener v1.31.0
+	github.com/gardener/gardener v1.32.0
 	github.com/gardener/machine-controller-manager v0.36.0
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/mock v1.6.0
@@ -33,8 +33,6 @@ require (
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/code-generator v0.21.2
 	k8s.io/component-base v0.21.2
-	k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027
-	k8s.io/klog v1.0.0
 	k8s.io/kubelet v0.21.2
 	k8s.io/utils v0.0.0-20210527160623-6fdb442a123b
 	sigs.k8s.io/controller-runtime v0.9.1

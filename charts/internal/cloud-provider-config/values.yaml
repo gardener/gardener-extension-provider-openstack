@@ -1,5 +1,5 @@
 kubernetesVersion: 0.0.1
-#[Global]
+# [Global]
 authUrl: fooURL
 domainName: fooDomain
 tenantName: fooTenant
@@ -16,13 +16,7 @@ lbProvider: foobar
 # floatingSubnetName: "*abc*"
 # floatingSubnetTags: tag1,tag2
 # subnetID: foo-bar-123
-# [Metadata]
-dhcpDomain: foobar
-requestTimeout: 2s
 useOctavia: false
-rescanBlockStorageOnResize: false
-ignoreVolumeAZ: false
-# nodeVolumeAttachLimit: 25
 # floatingClasses:
 # - name: A
 #   floatingNetworkID: "1234"
@@ -37,3 +31,9 @@ ignoreVolumeAZ: false
 # - name: D
 #   floatingNetworkID: "1234"
 #   floatingSubnetTags: tag1,tag2
+# [BlockStorage]
+rescanBlockStorageOnResize: false
+ignoreVolumeAZ: false
+# nodeVolumeAttachLimit: 25
+# [Metadata]
+# requestTimeout: 1m

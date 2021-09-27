@@ -24,6 +24,7 @@ import (
 	unsafe "unsafe"
 
 	openstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -327,7 +328,7 @@ func autoConvert_v1alpha1_CloudProfileConfig_To_openstack_CloudProfileConfig(in 
 	out.KeyStoneURL = in.KeyStoneURL
 	out.KeyStoneURLs = *(*[]openstack.KeyStoneURL)(unsafe.Pointer(&in.KeyStoneURLs))
 	out.MachineImages = *(*[]openstack.MachineImages)(unsafe.Pointer(&in.MachineImages))
-	out.RequestTimeout = (*string)(unsafe.Pointer(in.RequestTimeout))
+	out.RequestTimeout = (*v1.Duration)(unsafe.Pointer(in.RequestTimeout))
 	out.RescanBlockStorageOnResize = (*bool)(unsafe.Pointer(in.RescanBlockStorageOnResize))
 	out.IgnoreVolumeAZ = (*bool)(unsafe.Pointer(in.IgnoreVolumeAZ))
 	out.NodeVolumeAttachLimit = (*int32)(unsafe.Pointer(in.NodeVolumeAttachLimit))
@@ -351,7 +352,7 @@ func autoConvert_openstack_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in 
 	out.KeyStoneURL = in.KeyStoneURL
 	out.KeyStoneURLs = *(*[]KeyStoneURL)(unsafe.Pointer(&in.KeyStoneURLs))
 	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
-	out.RequestTimeout = (*string)(unsafe.Pointer(in.RequestTimeout))
+	out.RequestTimeout = (*v1.Duration)(unsafe.Pointer(in.RequestTimeout))
 	out.RescanBlockStorageOnResize = (*bool)(unsafe.Pointer(in.RescanBlockStorageOnResize))
 	out.IgnoreVolumeAZ = (*bool)(unsafe.Pointer(in.IgnoreVolumeAZ))
 	out.NodeVolumeAttachLimit = (*int32)(unsafe.Pointer(in.NodeVolumeAttachLimit))

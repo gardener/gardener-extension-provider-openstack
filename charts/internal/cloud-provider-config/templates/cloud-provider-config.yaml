@@ -1,6 +1,7 @@
 {{- define "cloud-provider-config" -}}
 [Global]
 {{ include "cloud-provider-config-credentials" . }}
+{{ include "cloud-provider-config-meta" . }}
 {{ include "cloud-provider-config-loadbalancer" . }}
 {{- end -}}
 ---

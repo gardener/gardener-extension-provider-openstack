@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -76,7 +77,7 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 	}
 	if in.RequestTimeout != nil {
 		in, out := &in.RequestTimeout, &out.RequestTimeout
-		*out = new(string)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.RescanBlockStorageOnResize != nil {

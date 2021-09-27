@@ -17,9 +17,11 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,7 +29,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,8 +48,11 @@ const (
 )
 
 var (
-	dhcpDomain     = pointer.StringPtr("dhcp-domain")
-	requestTimeout = pointer.StringPtr("2s")
+	dhcpDomain           = pointer.StringPtr("dhcp-domain")
+	requestTimeoutString = "2s"
+	requestTimeout       = &metav1.Duration{
+		Duration: func() time.Duration { d, _ := time.ParseDuration(requestTimeoutString); return d }(),
+	}
 )
 
 func defaultControlPlane() *extensionsv1alpha1.ControlPlane {

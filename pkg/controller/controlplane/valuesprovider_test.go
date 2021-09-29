@@ -48,10 +48,9 @@ const (
 )
 
 var (
-	dhcpDomain           = pointer.StringPtr("dhcp-domain")
-	requestTimeoutString = "2s"
-	requestTimeout       = &metav1.Duration{
-		Duration: func() time.Duration { d, _ := time.ParseDuration(requestTimeoutString); return d }(),
+	dhcpDomain     = pointer.StringPtr("dhcp-domain")
+	requestTimeout = &metav1.Duration{
+		Duration: func() time.Duration { d, _ := time.ParseDuration("5m"); return d }(),
 	}
 )
 

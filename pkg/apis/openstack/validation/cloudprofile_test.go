@@ -276,19 +276,6 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 		})
 
-		Context("requestTimeout validation", func() {
-			It("should reject invalid durations", func() {
-				cloudProfileConfig.RequestTimeout = pointer.StringPtr("1GiB")
-
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("root.requestTimeout"),
-				}))))
-			})
-		})
-
 		Context("machine image validation", func() {
 			It("should enforce that at least one machine image has been defined", func() {
 				cloudProfileConfig.MachineImages = []api.MachineImages{}

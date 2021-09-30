@@ -45,7 +45,7 @@ type CloudProfileConfig struct {
 	MachineImages []MachineImages `json:"machineImages"`
 	// RequestTimeout specifies the HTTP timeout against the OpenStack API.
 	// +optional
-	RequestTimeout *string `json:"requestTimeout,omitempty"`
+	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty"`
 	// RescanBlockStorageOnResize specifies whether the storage plugin scans and checks new block device size before it resizes
 	// the filesystem.
 	// +optional

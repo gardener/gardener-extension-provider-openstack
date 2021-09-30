@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/utils/openstack/clientconfig"
@@ -29,6 +30,8 @@ import (
 )
 
 // NewOpenstackClientFromCredentials returns a Factory implementation that can be used to create clients for OpenStack services.
+// TODO: respect CloudProfile's requestTimeout for the OpenStack client.
+// see https://github.com/kubernetes/cloud-provider-openstack/blob/c44d941cdb5c7fe651f5cb9191d0af23e266c7cb/pkg/openstack/openstack.go#L257
 func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, error) {
 	opts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{

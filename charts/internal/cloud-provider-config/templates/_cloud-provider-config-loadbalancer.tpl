@@ -20,7 +20,6 @@ floating-subnet-tags="{{ .Values.floatingSubnetTags }}"
 {{- if .Values.subnetID }}
 subnet-id="{{ .Values.subnetID }}"
 {{- end }}
-{{- include "cloud-provider-config-meta" . | indent 4 }}
 {{- range $i, $class := .Values.floatingClasses }}
 [LoadBalancerClass {{ $class.name | quote }}]
 {{- if $class.floatingNetworkID }}

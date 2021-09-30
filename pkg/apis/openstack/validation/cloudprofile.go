@@ -17,7 +17,6 @@ package validation
 import (
 	"fmt"
 	"net"
-	"time"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
@@ -146,12 +145,6 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 
 	if cloudProfile.DHCPDomain != nil && len(*cloudProfile.DHCPDomain) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("dhcpDomain"), "must provide a dhcp domain when the key is specified"))
-	}
-
-	if cloudProfile.RequestTimeout != nil {
-		if _, err := time.ParseDuration(*cloudProfile.RequestTimeout); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("requestTimeout"), *cloudProfile.RequestTimeout, fmt.Sprintf("invalid duration: %v", err)))
-		}
 	}
 
 	serverGroupPath := fldPath.Child("serverGroupPolicies")

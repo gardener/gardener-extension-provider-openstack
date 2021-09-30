@@ -131,7 +131,9 @@ logical names and versions to provider-specific identifiers.</p>
 <td>
 <code>requestTimeout</code></br>
 <em>
-string
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
 </em>
 </td>
 <td>

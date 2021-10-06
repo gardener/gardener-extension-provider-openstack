@@ -58,6 +58,8 @@ type CloudProfileConfig struct {
 	UseSNAT *bool
 	// ServerGroupPolicies specify the allowed server group policies for worker groups.
 	ServerGroupPolicies []string
+	// ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers
+	ResolvConfOptions *string
 }
 
 // Constraints is an object containing constraints for the shoots.

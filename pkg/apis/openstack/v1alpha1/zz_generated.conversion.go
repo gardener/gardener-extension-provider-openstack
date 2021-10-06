@@ -335,6 +335,7 @@ func autoConvert_v1alpha1_CloudProfileConfig_To_openstack_CloudProfileConfig(in 
 	out.UseOctavia = (*bool)(unsafe.Pointer(in.UseOctavia))
 	out.UseSNAT = (*bool)(unsafe.Pointer(in.UseSNAT))
 	out.ServerGroupPolicies = *(*[]string)(unsafe.Pointer(&in.ServerGroupPolicies))
+	out.ResolvConfOptions = (*string)(unsafe.Pointer(in.ResolvConfOptions))
 	return nil
 }
 
@@ -359,6 +360,7 @@ func autoConvert_openstack_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in 
 	out.UseOctavia = (*bool)(unsafe.Pointer(in.UseOctavia))
 	out.UseSNAT = (*bool)(unsafe.Pointer(in.UseSNAT))
 	out.ServerGroupPolicies = *(*[]string)(unsafe.Pointer(&in.ServerGroupPolicies))
+	out.ResolvConfOptions = (*string)(unsafe.Pointer(in.ResolvConfOptions))
 	return nil
 }
 

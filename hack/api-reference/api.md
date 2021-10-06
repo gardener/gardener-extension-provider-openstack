@@ -216,6 +216,18 @@ bool
 <p>ServerGroupPolicies specify the allowed server group policies for worker groups.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resolvConfOptions</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig

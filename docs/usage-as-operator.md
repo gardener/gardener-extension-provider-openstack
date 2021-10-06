@@ -65,6 +65,7 @@ machineImages:
 # serverGroupPolicies:
 # - soft-anti-affinity
 # - anti-affinity
+# resolvConfOptions: "rotate timeout:1"
 constraints:
   floatingPools:
   - name: fp-pool-1
@@ -120,6 +121,10 @@ If your OpenStack environment only has regional values and it doesn't make sense
 omit `keystoneURL` and always specify `region`.
 
 If Gardener creates and manages the router of a shoot cluster, it is additionally possible to specify that the [enable_snat](https://registry.terraform.io/providers/terraform-provider-openstack/openstack/latest/docs/resources/networking_router_v2#enable_snat) field is set to `true` via `useSNAT: true` in the `CloudProfileConfig`.
+
+On some OpenStack enviroments, there may be the need to set options in the file `/etc/resolv.conf` on worker nodes.
+If the field `resolvConfOptions` is set, a systemd service will be installed which copies `/run/systemd/resolve/resolv.conf`
+on every change to `/etc/resolv.conf` and appends the given options.
 
 ## Example `CloudProfile` manifest
 

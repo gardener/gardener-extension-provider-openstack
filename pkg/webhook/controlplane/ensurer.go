@@ -461,18 +461,15 @@ func (e *ensurer) EnsureAdditionalUnits(ctx context.Context, gctx gcontext.Garde
 	if err != nil {
 		return err
 	}
-	if cloudProfileConfig.ResolvConfOptions != nil && *cloudProfileConfig.ResolvConfOptions != "" {
-		err = e.ensureAdditionalUnitsForResolvConfOptions(new)
-		if err != nil {
-			return err
-		}
+	if getResolveConfOptions(cloudProfileConfig) != "" {
+		e.addAdditionalUnitsForResolvConfOptions(new)
 	}
 	return nil
 }
 
-// ensureAdditionalUnitsForResolvConfOptions installs a systemd service to update `resolv.conf`
+// addAdditionalUnitsForResolvConfOptions installs a systemd service to update `resolv.conf`
 // after each change of `/run/systemd/resolve/resolv.conf`.
-func (e *ensurer) ensureAdditionalUnitsForResolvConfOptions(new *[]extensionsv1alpha1.Unit) error {
+func (e *ensurer) addAdditionalUnitsForResolvConfOptions(new *[]extensionsv1alpha1.Unit) {
 	var (
 		trueVar           = true
 		customPathContent = `[Path]
@@ -488,7 +485,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
-ExecStart=/var/lib/gardener/update-resolv-conf.sh
+ExecStart=/opt/bin/update-resolv-conf.sh
 `
 	)
 
@@ -502,7 +499,6 @@ ExecStart=/var/lib/gardener/update-resolv-conf.sh
 		Enable:  &trueVar,
 		Content: &customUnitContent,
 	})
-	return nil
 }
 
 // EnsureAdditionalFiles ensures that additional required system files are added.
@@ -511,18 +507,15 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 	if err != nil {
 		return err
 	}
-	if cloudProfileConfig.ResolvConfOptions != nil && *cloudProfileConfig.ResolvConfOptions != "" {
-		err = e.ensureAdditionalFilesForResolvConfOptions(*cloudProfileConfig.ResolvConfOptions, new)
-		if err != nil {
-			return err
-		}
+	if options := getResolveConfOptions(cloudProfileConfig); options != "" {
+		e.addAdditionalFilesForResolvConfOptions(options, new)
 	}
 	return nil
 }
 
-// ensureAdditionalFilesForResolvConfOptions writes the script to update `/etc/resolv.conf` from
+// addAdditionalFilesForResolvConfOptions writes the script to update `/etc/resolv.conf` from
 // `/run/systemd/resolve/resolv.conf` and adds a options line to it.
-func (e *ensurer) ensureAdditionalFilesForResolvConfOptions(options string, new *[]extensionsv1alpha1.File) error {
+func (e *ensurer) addAdditionalFilesForResolvConfOptions(options string, new *[]extensionsv1alpha1.File) {
 	var (
 		permissions int32 = 0755
 		template          = `#!/bin/sh
@@ -542,7 +535,7 @@ fi`
 
 	content := fmt.Sprintf(template, fmt.Sprintf("options %s", options))
 	file := extensionsv1alpha1.File{
-		Path:        "/var/lib/gardener/update-resolv-conf.sh",
+		Path:        "/opt/bin/update-resolv-conf.sh",
 		Permissions: &permissions,
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
@@ -552,8 +545,6 @@ fi`
 		},
 	}
 	appendUniqueFile(new, file)
-
-	return nil
 }
 
 func getCloudProfileConfig(ctx context.Context, gctx gcontext.GardenContext) (*apisopenstack.CloudProfileConfig, error) {
@@ -566,6 +557,13 @@ func getCloudProfileConfig(ctx context.Context, gctx gcontext.GardenContext) (*a
 		return nil, err
 	}
 	return cloudProfileConfig, nil
+}
+
+func getResolveConfOptions(cloudProfileConfig *apisopenstack.CloudProfileConfig) string {
+	if cloudProfileConfig == nil || cloudProfileConfig.ResolvConfOptions == nil {
+		return ""
+	}
+	return *cloudProfileConfig.ResolvConfOptions
 }
 
 // appendUniqueFile appends a unit file only if it does not exist, otherwise overwrite content of previous files

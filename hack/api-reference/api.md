@@ -220,7 +220,7 @@ bool
 <td>
 <code>resolvConfOptions</code></br>
 <em>
-string
+[]string
 </em>
 </td>
 <td>

@@ -69,7 +69,7 @@ type CloudProfileConfig struct {
 	ServerGroupPolicies []string `json:"serverGroupPolicies,omitempty"`
 	// ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers
 	// +optional
-	ResolvConfOptions *string `json:"resolvConfOptions,omitempty"`
+	ResolvConfOptions []string `json:"resolvConfOptions,omitempty"`
 }
 
 // Constraints is an object containing constraints for the shoots.

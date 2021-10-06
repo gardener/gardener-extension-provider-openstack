@@ -134,7 +134,6 @@ var _ = Describe("Ensurer", func() {
 				},
 			},
 		)
-		resolvConfOptions                   = "rotate timeout:1"
 		eContextK8s121WithResolvConfOptions = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				CloudProfile: &gardencorev1beta1.CloudProfile{
@@ -145,7 +144,7 @@ var _ = Describe("Ensurer", func() {
 									FloatingPools:         []api.FloatingPool{},
 									LoadBalancerProviders: []api.LoadBalancerProvider{},
 								},
-								ResolvConfOptions: &resolvConfOptions,
+								ResolvConfOptions: []string{"rotate", "timeout:1"},
 							}),
 						},
 					},
@@ -657,7 +656,8 @@ line="options rotate timeout:1"
 
 if [ -f "$file" ]; then
   cp "$file" "$tmp"
-  echo "\n# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+  echo "" >> "$tmp"
+  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
   echo "$line" >> "$tmp"
   mv "$tmp" "$dest"
 fi`
@@ -700,7 +700,8 @@ line="options rotate timeout:1"
 
 if [ -f "$file" ]; then
   cp "$file" "$tmp"
-  echo "\n# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+  echo "" >> "$tmp"
+  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
   echo "$line" >> "$tmp"
   mv "$tmp" "$dest"
 fi`

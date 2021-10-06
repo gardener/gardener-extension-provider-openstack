@@ -17,6 +17,7 @@ package controlplane
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -461,7 +462,7 @@ func (e *ensurer) EnsureAdditionalUnits(ctx context.Context, gctx gcontext.Garde
 	if err != nil {
 		return err
 	}
-	if getResolveConfOptions(cloudProfileConfig) != "" {
+	if len(getResolveConfOptions(cloudProfileConfig)) > 0 {
 		e.addAdditionalUnitsForResolvConfOptions(new)
 	}
 	return nil
@@ -507,7 +508,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 	if err != nil {
 		return err
 	}
-	if options := getResolveConfOptions(cloudProfileConfig); options != "" {
+	if options := getResolveConfOptions(cloudProfileConfig); len(options) > 0 {
 		e.addAdditionalFilesForResolvConfOptions(options, new)
 	}
 	return nil
@@ -515,7 +516,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 
 // addAdditionalFilesForResolvConfOptions writes the script to update `/etc/resolv.conf` from
 // `/run/systemd/resolve/resolv.conf` and adds a options line to it.
-func (e *ensurer) addAdditionalFilesForResolvConfOptions(options string, new *[]extensionsv1alpha1.File) {
+func (e *ensurer) addAdditionalFilesForResolvConfOptions(options []string, new *[]extensionsv1alpha1.File) {
 	var (
 		permissions int32 = 0755
 		template          = `#!/bin/sh
@@ -527,13 +528,14 @@ line=%q
 
 if [ -f "$file" ]; then
   cp "$file" "$tmp"
-  echo "\n# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+  echo "" >> "$tmp"
+  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
   echo "$line" >> "$tmp"
   mv "$tmp" "$dest"
 fi`
 	)
 
-	content := fmt.Sprintf(template, fmt.Sprintf("options %s", options))
+	content := fmt.Sprintf(template, fmt.Sprintf("options %s", strings.Join(options, " ")))
 	file := extensionsv1alpha1.File{
 		Path:        "/opt/bin/update-resolv-conf.sh",
 		Permissions: &permissions,
@@ -559,11 +561,11 @@ func getCloudProfileConfig(ctx context.Context, gctx gcontext.GardenContext) (*a
 	return cloudProfileConfig, nil
 }
 
-func getResolveConfOptions(cloudProfileConfig *apisopenstack.CloudProfileConfig) string {
-	if cloudProfileConfig == nil || cloudProfileConfig.ResolvConfOptions == nil {
-		return ""
+func getResolveConfOptions(cloudProfileConfig *apisopenstack.CloudProfileConfig) []string {
+	if cloudProfileConfig == nil {
+		return nil
 	}
-	return *cloudProfileConfig.ResolvConfOptions
+	return cloudProfileConfig.ResolvConfOptions
 }
 
 // appendUniqueFile appends a unit file only if it does not exist, otherwise overwrite content of previous files

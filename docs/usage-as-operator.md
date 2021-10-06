@@ -65,7 +65,9 @@ machineImages:
 # serverGroupPolicies:
 # - soft-anti-affinity
 # - anti-affinity
-# resolvConfOptions: "rotate timeout:1"
+# resolvConfOptions:
+# - rotate
+# - timeout:1
 constraints:
   floatingPools:
   - name: fp-pool-1

@@ -112,8 +112,8 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 	}
 	if in.ResolvConfOptions != nil {
 		in, out := &in.ResolvConfOptions, &out.ResolvConfOptions
-		*out = new(string)
-		**out = **in
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

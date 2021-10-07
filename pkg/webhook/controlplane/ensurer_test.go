@@ -16,9 +16,12 @@ package controlplane
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/coreos/go-systemd/v22/unit"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -120,6 +123,30 @@ var _ = Describe("Ensurer", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						csimigration.AnnotationKeyNeedsComplete: "true",
+					},
+				},
+				Shoot: &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							Version: "1.21.0",
+						},
+					},
+				},
+			},
+		)
+		eContextK8s121WithResolvConfOptions = gcontext.NewInternalGardenContext(
+			&extensionscontroller.Cluster{
+				CloudProfile: &gardencorev1beta1.CloudProfile{
+					Spec: gardencorev1beta1.CloudProfileSpec{
+						ProviderConfig: &runtime.RawExtension{
+							Raw: encode(&api.CloudProfileConfig{
+								Constraints: api.Constraints{
+									FloatingPools:         []api.FloatingPool{},
+									LoadBalancerProviders: []api.LoadBalancerProvider{},
+								},
+								ResolvConfOptions: []string{"rotate", "timeout:1"},
+							}),
+						},
 					},
 				},
 				Shoot: &gardencorev1beta1.Shoot{
@@ -550,6 +577,162 @@ var _ = Describe("Ensurer", func() {
 			Expect(*existingData).To(Equal(string(cloudProviderConfigContent)))
 		})
 	})
+
+	Describe("#EnsureAdditionalUnits", func() {
+		It("should add no additional units if resolvConfOptions field is not set", func() {
+			var (
+				oldUnit = extensionsv1alpha1.Unit{Name: "oldunit"}
+				units   = []extensionsv1alpha1.Unit{oldUnit}
+			)
+			// Create ensurer
+			ensurer := NewEnsurer(logger)
+
+			// Call EnsureAdditionalUnits method and check the result
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s121, &units, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(units).To(ConsistOf(oldUnit))
+		})
+
+		It("should add additional units to the current ones if resolvConfOptions field is set", func() {
+			var (
+				customUnitContent = `[Unit]
+Description=add options to /etc/resolv.conf after every change of /run/systemd/resolve/resolv.conf
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/opt/bin/update-resolv-conf.sh
+`
+
+				customPathContent = `[Path]
+PathChanged=/run/systemd/resolve/resolv.conf
+
+[Install]
+WantedBy=multi-user.target
+`
+				trueVar = true
+
+				oldUnit        = extensionsv1alpha1.Unit{Name: "oldunit"}
+				additionalPath = extensionsv1alpha1.Unit{Name: "update-resolv-conf.path", Enable: &trueVar, Content: &customPathContent}
+				additionalUnit = extensionsv1alpha1.Unit{Name: "update-resolv-conf.service", Enable: &trueVar, Content: &customUnitContent}
+
+				units = []extensionsv1alpha1.Unit{oldUnit}
+			)
+
+			// Create ensurer
+			ensurer := NewEnsurer(logger)
+
+			// Call EnsureAdditionalUnits method and check the result
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s121WithResolvConfOptions, &units, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(units).To(ConsistOf(oldUnit, additionalPath, additionalUnit))
+		})
+	})
+
+	Describe("#EnsureAdditionalFiles", func() {
+		It("should add no additional files to the current ones if resolvConfOptions field is not set", func() {
+			var (
+				oldFile = extensionsv1alpha1.File{Path: "oldpath"}
+				files   = []extensionsv1alpha1.File{oldFile}
+			)
+			// Create ensurer
+			ensurer := NewEnsurer(logger)
+
+			// Call EnsureAdditionalFiles method and check the result
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121, &files, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(files).To(ConsistOf(oldFile))
+		})
+		It("should add additional files to the current ones if resolvConfOptions field is set", func() {
+			var (
+				permissions       int32 = 0755
+				customFileContent       = `#!/bin/sh
+
+file=/run/systemd/resolve/resolv.conf
+tmp=/etc/resolv.conf.new
+dest=/etc/resolv.conf
+line="options rotate timeout:1"
+
+if [ -f "$file" ]; then
+  cp "$file" "$tmp"
+  echo "" >> "$tmp"
+  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+  echo "$line" >> "$tmp"
+  mv "$tmp" "$dest"
+fi`
+
+				filePath = "/opt/bin/update-resolv-conf.sh"
+
+				oldFile        = extensionsv1alpha1.File{Path: "oldpath"}
+				additionalFile = extensionsv1alpha1.File{
+					Path:        filePath,
+					Permissions: &permissions,
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "",
+							Data:     customFileContent,
+						},
+					},
+				}
+
+				files = []extensionsv1alpha1.File{oldFile}
+			)
+
+			// Create ensurer
+			ensurer := NewEnsurer(logger)
+
+			// Call EnsureAdditionalFiles method and check the result
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121WithResolvConfOptions, &files, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(files).To(ConsistOf(oldFile, additionalFile))
+		})
+
+		It("should overwrite existing files of the current ones", func() {
+			var (
+				permissions       int32 = 0755
+				customFileContent       = `#!/bin/sh
+
+file=/run/systemd/resolve/resolv.conf
+tmp=/etc/resolv.conf.new
+dest=/etc/resolv.conf
+line="options rotate timeout:1"
+
+if [ -f "$file" ]; then
+  cp "$file" "$tmp"
+  echo "" >> "$tmp"
+  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+  echo "$line" >> "$tmp"
+  mv "$tmp" "$dest"
+fi`
+
+				filePath = "/opt/bin/update-resolv-conf.sh"
+
+				oldFile        = extensionsv1alpha1.File{Path: "oldpath"}
+				additionalFile = extensionsv1alpha1.File{
+					Path:        filePath,
+					Permissions: &permissions,
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "",
+							Data:     customFileContent,
+						},
+					},
+				}
+
+				files = []extensionsv1alpha1.File{oldFile, additionalFile}
+			)
+
+			// Create ensurer
+			ensurer := NewEnsurer(logger)
+
+			// Call EnsureAdditionalFiles method and check the result
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121WithResolvConfOptions, &files, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(files).To(ConsistOf(oldFile, additionalFile))
+			Expect(files).To(HaveLen(2))
+		})
+	})
 })
 
 func checkKubeAPIServerDeployment(dep *appsv1.Deployment, annotations map[string]string, k8sVersion string, needsCSIMigrationCompletedFeatureGates bool) {
@@ -665,4 +848,9 @@ func clientGet(result runtime.Object) interface{} {
 		}
 		return nil
 	}
+}
+
+func encode(obj runtime.Object) []byte {
+	data, _ := json.Marshal(obj)
+	return data
 }

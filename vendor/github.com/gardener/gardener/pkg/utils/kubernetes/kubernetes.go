@@ -259,21 +259,27 @@ func LookupObject(ctx context.Context, c client.Client, apiReader client.Reader,
 // FeatureGatesToCommandLineParameter transforms feature gates given as string/bool map to a command line parameter that
 // is understood by Kubernetes components.
 func FeatureGatesToCommandLineParameter(fg map[string]bool) string {
-	if len(fg) == 0 {
+	return MapStringBoolToCommandLineParameter(fg, "--feature-gates=")
+}
+
+// MapStringBoolToCommandLineParameter transforms a string/bool map to a command line parameter that is understood by
+// Kubernetes components.
+func MapStringBoolToCommandLineParameter(m map[string]bool, param string) string {
+	if len(m) == 0 {
 		return ""
 	}
 
-	keys := make([]string, 0, len(fg))
-	for k := range fg {
+	keys := make([]string, 0, len(m))
+	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	out := "--feature-gates="
+	out := param
 	for _, key := range keys {
-		out += fmt.Sprintf("%s=%s,", key, strconv.FormatBool(fg[key]))
+		out += fmt.Sprintf("%s=%s,", key, strconv.FormatBool(m[key]))
 	}
-	return out
+	return strings.TrimSuffix(out, ",")
 }
 
 // ReconcileServicePorts reconciles the existing service ports with the desired ports. This means that it takes the
@@ -345,7 +351,7 @@ func FetchEventMessages(ctx context.Context, scheme *runtime.Scheme, reader clie
 		"type":                      eventType,
 	}
 	eventList := &corev1.EventList{}
-	if err := reader.List(ctx, eventList, fieldSelector); err != nil {
+	if err := reader.List(ctx, eventList, fieldSelector, client.InNamespace(obj.GetNamespace())); err != nil {
 		return "", fmt.Errorf("error '%w' occurred while fetching more details", err)
 	}
 

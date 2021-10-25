@@ -179,7 +179,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, isDockerConfigured(spec.Provider.Workers), fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -214,6 +214,15 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
 
 	return allErrs
+}
+
+func isDockerConfigured(workers []core.Worker) bool {
+	for _, worker := range workers {
+		if worker.CRI == nil || worker.CRI.Name == core.CRINameDocker {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateShootSpecUpdate validates the specification of a Shoot object.
@@ -597,7 +606,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -711,6 +720,16 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			}
 		}
 
+		if kubeAPIServer.ServiceAccountConfig != nil {
+			if kubeAPIServer.ServiceAccountConfig.ExtendTokenExpiration != nil && !geqKubernetes119 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "extendTokenExpiration"), "this field is only available in Kubernetes v1.19+"))
+			}
+
+			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil && kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+			}
+		}
+
 		allErrs = append(allErrs, ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 
@@ -718,7 +737,7 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 	allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
 	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
 	if kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, fldPath.Child("kubelet"))...)
+		allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, dockerConfigured, fldPath.Child("kubelet"))...)
 	}
 
 	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
@@ -801,6 +820,9 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 	}
 	if maxNodeProvisionTime := autoScaler.MaxNodeProvisionTime; maxNodeProvisionTime != nil && maxNodeProvisionTime.Duration < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodeProvisionTime"), *maxNodeProvisionTime, "can not be negative"))
+	}
+	if maxGracefulTerminationSeconds := autoScaler.MaxGracefulTerminationSeconds; maxGracefulTerminationSeconds != nil && *maxGracefulTerminationSeconds < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxGracefulTerminationSeconds"), *maxGracefulTerminationSeconds, "can not be negative"))
 	}
 
 	if expander := autoScaler.Expander; expander != nil && !availableClusterAutoscalerExpanderModes.Has(string(*expander)) {
@@ -1029,7 +1051,7 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
 	}
 	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, fldPath.Child("kubernetes", "kubelet"))...)
+		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
 	}
 
 	if worker.CABundle != nil {
@@ -1096,7 +1118,7 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 const PodPIDsLimitMinimum int64 = 100
 
 // ValidateKubeletConfig validates the KubeletConfig object.
-func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fldPath *field.Path) field.ErrorList {
+func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeletConfig.MaxPods != nil {
@@ -1108,6 +1130,9 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 		}
 	}
 	if kubeletConfig.ImagePullProgressDeadline != nil {
+		if !dockerConfigured {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("imagePullProgressDeadline"), "can only be configured when a worker pool is configured with 'docker'. This setting has no effect for other container runtimes."))
+		}
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.ImagePullProgressDeadline, fldPath.Child("imagePullProgressDeadline"))...)
 	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {

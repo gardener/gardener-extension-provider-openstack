@@ -636,6 +636,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.MaxGracefulTerminationSeconds != nil {
+		in, out := &in.MaxGracefulTerminationSeconds, &out.MaxGracefulTerminationSeconds
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 
@@ -3733,6 +3738,16 @@ func (in *ServiceAccountConfig) DeepCopyInto(out *ServiceAccountConfig) {
 	if in.SigningKeySecret != nil {
 		in, out := &in.SigningKeySecret, &out.SigningKeySecret
 		*out = new(v1.LocalObjectReference)
+		**out = **in
+	}
+	if in.ExtendTokenExpiration != nil {
+		in, out := &in.ExtendTokenExpiration, &out.ExtendTokenExpiration
+		*out = new(bool)
+		**out = **in
+	}
+	if in.MaxTokenExpiration != nil {
+		in, out := &in.MaxTokenExpiration, &out.MaxTokenExpiration
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	return

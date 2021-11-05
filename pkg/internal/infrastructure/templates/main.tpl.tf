@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    openstack = {
+      source  = "terraform-provider-openstack/openstack"
+    }
+  }
+}
+
 provider "openstack" {
   auth_url    = "{{ .openstack.authURL }}"
   domain_name = var.DOMAIN_NAME

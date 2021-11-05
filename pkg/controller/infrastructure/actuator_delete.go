@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -29,6 +31,7 @@ import (
 
 func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	logger := a.logger.WithValues("infrastructure", client.ObjectKeyFromObject(infra), "operation", "delete")
+
 	tf, err := internal.NewTerraformer(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra)
 	if err != nil {
 		return fmt.Errorf("could not create the Terraformer: %+v", err)
@@ -47,13 +50,25 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 		return tf.CleanupConfiguration(ctx)
 	}
 
+	config, err := helper.InfrastructureConfigFromInfrastructure(infra)
+	if err != nil {
+		return err
+	}
+
+	terraformFiles, err := infrastructure.RenderTerraformerTemplate(infra, config, cluster)
+	if err != nil {
+		return err
+	}
+
 	// need to known if application credentials are used
 	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
 	if err != nil {
 		return err
 	}
 
+	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
 	return tf.
+		InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
 		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...).
 		Destroy(ctx)
 }

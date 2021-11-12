@@ -33,7 +33,7 @@ webhooks:
       name: {{ include "name" . }}
       path: /webhooks/validate
     {{- end }}
-    caBundle: {{ required ".Values.webhookConfig.caBundle is required" (b64enc .Values.global.webhookConfig.caBundle) }}
+    caBundle: {{ required ".Values.global.webhookConfig.caBundle is required" .Values.global.webhookConfig.caBundle | b64enc }}
 - name: secrets.validation.openstack.provider.extensions.gardener.cloud
   rules:
   - apiGroups:
@@ -60,4 +60,4 @@ webhooks:
       name: {{ include "name" . }}
       path: /webhooks/validate/secrets
     {{- end }}
-    caBundle: {{ required ".Values.webhookConfig.caBundle is required" (b64enc .Values.global.webhookConfig.caBundle) }}
+    caBundle: {{ required ".Values.global.webhookConfig.caBundle is required" .Values.global.webhookConfig.caBundle | b64enc }}

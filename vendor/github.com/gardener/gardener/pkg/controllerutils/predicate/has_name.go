@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v1alpha1 is the v1alpha1 version of the API.
-// +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.com/gardener/gardener/pkg/apis/seedmanagement
-// +k8s:openapi-gen=true
-// +k8s:defaulter-gen=TypeMeta
-// +k8s:protobuf-gen=package
+package predicate
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/seedmanagement-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/seedmanagement.md
+import (
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+)
 
-// Package v1alpha1 is a version of the API.
-// +groupName=seedmanagement.gardener.cloud
-package v1alpha1
+// HasName returns a predicate that matches the given name of a resource.
+func HasName(name string) predicate.Predicate {
+	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
+		return e.Object.GetName() == name
+	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
+}

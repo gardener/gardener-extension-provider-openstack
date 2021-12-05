@@ -21,12 +21,17 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
@@ -98,7 +103,25 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))
+	// .spec.selector of a StatefulSet is immutable. If StatefulSet's .spec.selector contains
+	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
+	// TODO (ialidzhikov): remove in a future version
+	stsKeys := []client.ObjectKey{
+		kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.StatefulSetNameLoki),
+	}
+	if err := common.DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), stsKeys); err != nil {
+		return err
+	}
+
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues)); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "telegraf-config"}},
+	)
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {

@@ -233,8 +233,8 @@ github.com/gardener/gardener v1.6.5/go.mod h1:w5IHIQDccvSxZJFOtBa8YConyyFgt07DBH
 github.com/gardener/gardener v1.11.3/go.mod h1:5DzqfOm+G8UftKu5zUbYJ+9Cnfd4XrvRNDabkM9AIp4=
 github.com/gardener/gardener v1.17.1/go.mod h1:uucRHq0xV46xd9MpJJjRswx/Slq3+ipbbJg09FVUtvM=
 github.com/gardener/gardener v1.23.0/go.mod h1:xS/sYyzYsq2W0C79mT98G/qoOTvy/hHTfApHIVF3v2o=
-github.com/gardener/gardener v1.34.1 h1:mmxzsbkYb0Xx+nJ2Ca5/x2HscF9ojfTNexUlbkYibt0=
-github.com/gardener/gardener v1.34.1/go.mod h1:lewyr2G0+54CIF31fAVenKdyzVLYb6o0/90bptJzXIo=
+github.com/gardener/gardener v1.35.1 h1:DtTaaSX9SxXW6V60qQjRAOrfECacR1ekfAwnm/2cz+w=
+github.com/gardener/gardener v1.35.1/go.mod h1:bDq8sjGX5qChUnIikpc/G+r/fmfW/EJYDjzuEqdskaM=
 github.com/gardener/gardener-resource-manager v0.10.0/go.mod h1:0pKTHOhvU91eQB0EYr/6Ymd7lXc/5Hi8P8tF/gpV0VQ=
 github.com/gardener/gardener-resource-manager v0.13.1/go.mod h1:0No/XttYRUwDn5lSppq9EqlKdo/XJQ44aCZz5BVu3Vw=
 github.com/gardener/gardener-resource-manager v0.18.0/go.mod h1:k53Yw2iDAIpTxnChQY9qFHrRtuPQWJDNnCP9eE6TnWQ=

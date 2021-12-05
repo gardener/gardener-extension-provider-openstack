@@ -52,7 +52,7 @@ github.com/gardener/etcd-druid/api/validation
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.34.1
+# github.com/gardener/gardener v1.35.1
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -67,20 +67,15 @@ github.com/gardener/gardener/extensions/pkg/controller/controlplane
 github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator
 github.com/gardener/gardener/extensions/pkg/controller/csimigration
 github.com/gardener/gardener/extensions/pkg/controller/dnsrecord
-github.com/gardener/gardener/extensions/pkg/controller/error
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/general
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker
 github.com/gardener/gardener/extensions/pkg/controller/infrastructure
-github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit
 github.com/gardener/gardener/extensions/pkg/controller/worker
 github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator
 github.com/gardener/gardener/extensions/pkg/controller/worker/helper
-github.com/gardener/gardener/extensions/pkg/handler
-github.com/gardener/gardener/extensions/pkg/inject
-github.com/gardener/gardener/extensions/pkg/log
 github.com/gardener/gardener/extensions/pkg/predicate
 github.com/gardener/gardener/extensions/pkg/terraformer
 github.com/gardener/gardener/extensions/pkg/util
@@ -140,6 +135,9 @@ github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned
 github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme
 github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
 github.com/gardener/gardener/pkg/controllerutils
+github.com/gardener/gardener/pkg/controllerutils/mapper
+github.com/gardener/gardener/pkg/controllerutils/predicate
+github.com/gardener/gardener/pkg/controllerutils/reconciler
 github.com/gardener/gardener/pkg/extensions
 github.com/gardener/gardener/pkg/features
 github.com/gardener/gardener/pkg/gardenlet/apis/config
@@ -158,6 +156,7 @@ github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity
 github.com/gardener/gardener/pkg/operation/botanist/component/coredns
 github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog
 github.com/gardener/gardener/pkg/operation/botanist/component/etcd
+github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds
@@ -207,9 +206,7 @@ github.com/gardener/gardener/pkg/operation/garden
 github.com/gardener/gardener/pkg/operation/seed
 github.com/gardener/gardener/pkg/operation/shoot
 github.com/gardener/gardener/pkg/operation/shootsecrets
-github.com/gardener/gardener/pkg/predicate
 github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
-github.com/gardener/gardener/pkg/resourcemanager/manager
 github.com/gardener/gardener/pkg/scheduler/apis/config
 github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1
 github.com/gardener/gardener/pkg/scheduler/controller/common
@@ -227,11 +224,11 @@ github.com/gardener/gardener/pkg/utils/gardener
 github.com/gardener/gardener/pkg/utils/imagevector
 github.com/gardener/gardener/pkg/utils/infodata
 github.com/gardener/gardener/pkg/utils/kubernetes
-github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken
 github.com/gardener/gardener/pkg/utils/kubernetes/client
 github.com/gardener/gardener/pkg/utils/kubernetes/health
 github.com/gardener/gardener/pkg/utils/kubernetes/unstructured
 github.com/gardener/gardener/pkg/utils/managedresources
+github.com/gardener/gardener/pkg/utils/managedresources/builder
 github.com/gardener/gardener/pkg/utils/retry
 github.com/gardener/gardener/pkg/utils/secrets
 github.com/gardener/gardener/pkg/utils/test/matchers
@@ -955,7 +952,6 @@ k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
 # k8s.io/cluster-bootstrap v0.22.2 => k8s.io/cluster-bootstrap v0.22.2
 k8s.io/cluster-bootstrap/token/api
-k8s.io/cluster-bootstrap/token/util
 # k8s.io/code-generator v0.22.2 => k8s.io/code-generator v0.22.2
 ## explicit
 k8s.io/code-generator

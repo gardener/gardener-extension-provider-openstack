@@ -361,7 +361,7 @@ message ClusterInfo {
 
 // Condition holds the information about the state of a resource.
 message Condition {
-  // Type of the Shoot condition.
+  // Type of the condition.
   optional string type = 1;
 
   // Status of the condition, one of True, False, Unknown.
@@ -805,6 +805,11 @@ message KubeAPIServerConfig {
   // See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
   // +optional
   optional bool enableAnonymousAuthentication = 11;
+
+  // EventTTL controls the amount of time to retain events.
+  // Defaults to 1h.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
@@ -1943,6 +1948,10 @@ message SeedStatus {
   // Defaults to Capacity.
   // +optional
   map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> allocatable = 7;
+
+  // ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 8;
 }
 
 // SeedTaint describes a taint on a seed.

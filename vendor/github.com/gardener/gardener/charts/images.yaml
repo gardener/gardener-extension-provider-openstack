@@ -11,6 +11,9 @@ images:
 - name: gardener-seed-admission-controller
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+- name: gardener-resource-manager
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/resource-manager
 
 # Seed bootstrap
 - name: pause-container
@@ -28,10 +31,6 @@ images:
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
   tag: "v0.5.2"
-- name: gardener-resource-manager
-  sourceRepository: github.com/gardener/gardener-resource-manager
-  repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
-  tag: "v0.25.1"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -130,7 +129,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
-  tag: v0.5.0
+  tag: v0.5.1
 
 # Shoot core addons
 - name: vpn-shoot
@@ -229,7 +228,7 @@ images:
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.37.2"
+  tag: "v0.38.0"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -237,7 +236,7 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.37.2"
+  tag: "v0.38.0"
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
@@ -249,7 +248,7 @@ images:
 - name: telegraf
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.37.2"
+  tag: "v0.38.0"
 
 # VPA
 - name: vpa-admission-controller

@@ -33,13 +33,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func defaultEtcdDruid(
@@ -91,10 +91,16 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 }
 
 func defaultGardenerResourceManager(c client.Client, seedVersion string, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
 		ConcurrentSyncs:  pointer.Int32(20),

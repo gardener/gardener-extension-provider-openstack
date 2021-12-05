@@ -29,6 +29,7 @@ import (
 	workercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -89,7 +90,9 @@ func (a *genericActuator) Restore(ctx context.Context, worker *extensionsv1alpha
 		return fmt.Errorf("failed to restore the machine deployment config: %w", err)
 	}
 
-	return nil
+	// Finally reconcile the worker so that the machine-controller-manager gets scaled up and OwnerReferences between
+	// machinedeployments, machinesets and machines are added properly.
+	return a.Reconcile(ctx, worker, cluster)
 }
 
 func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments workercontroller.MachineDeployments) error {
@@ -130,7 +133,7 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 				return err
 			}
 
-			if err := extensionscontroller.TryPatchStatus(ctx, retry.DefaultBackoff, a.client, newMachine, func() error {
+			if err := controllerutils.TryPatchStatus(ctx, retry.DefaultBackoff, a.client, newMachine, func() error {
 				newMachine.Status = machine.Status
 				return nil
 			}); err != nil {

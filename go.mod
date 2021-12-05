@@ -32,6 +32,7 @@ require (
 	k8s.io/kubelet v0.22.2
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
 	sigs.k8s.io/controller-runtime v0.10.2
+	sigs.k8s.io/controller-tools v0.7.0
 )
 
 replace (

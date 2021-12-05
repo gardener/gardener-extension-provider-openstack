@@ -66,12 +66,17 @@ const (
 	ServiceAccountTokenExpirationDuration = "serviceaccount.resources.gardener.cloud/token-expiration-duration"
 	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when the token needs to be renewed
 	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
-	// ServiceAccountSkipDeletion is the key of an annotation of a secret whose value contains whether the serviceaccount referenced by this secret should be deleted
-	ServiceAccountSkipDeletion = "serviceaccount.resources.gardener.cloud/skip-deletion"
 	// DataKeyToken is the data key whose value contains a service account token.
 	DataKeyToken = "token"
 	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.
 	DataKeyKubeconfig = "kubeconfig"
+
+	// ProjectedTokenSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
+	// an automatic mount of a projected ServiceAccount token.
+	ProjectedTokenSkip = "projected-token-mount.resources.gardener.cloud/skip"
+	// ProjectedTokenExpirationSeconds is a constant for a label on a Pod which overwrites the default token expiration
+	// seconds for the automatic mount of a projected ServiceAccount token.
+	ProjectedTokenExpirationSeconds = "projected-token-mount.resources.gardener.cloud/expiration-seconds"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -66,6 +66,8 @@ type Interface interface {
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
 	WaitCleanupStaleResources(context.Context) error
+	// SetAPIServerURL sets the APIServerURL value.
+	SetAPIServerURL(string)
 	// SetCABundle sets the CABundle value.
 	SetCABundle(*string)
 	// SetKubeletCACertificate sets the KubeletCACertificate value.
@@ -398,6 +400,11 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurposeTaskFn(fn func(contex
 	return fns
 }
 
+// SetAPIServerURL sets the APIServerURL value.
+func (o *operatingSystemConfig) SetAPIServerURL(apiServerURL string) {
+	o.values.APIServerURL = apiServerURL
+}
+
 // SetCABundle sets the CABundle value.
 func (o *operatingSystemConfig) SetCABundle(val *string) {
 	o.values.CABundle = val
@@ -596,7 +603,14 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		}
 
 		if ccdUnitContent != nil {
-			files = append(files, downloaderFiles...)
+			// We do not want to overwrite a valid Bootstraptoken with the tokenPlaceholder
+			for _, downloaderFile := range downloaderFiles {
+				if downloaderFile.Path == downloader.PathBootstrapToken {
+					continue
+				}
+				files = append(files, downloaderFile)
+			}
+
 			files = append(files, extensionsv1alpha1.File{
 				Path:        "/etc/systemd/system/" + downloader.UnitName,
 				Permissions: pointer.Int32(0644),

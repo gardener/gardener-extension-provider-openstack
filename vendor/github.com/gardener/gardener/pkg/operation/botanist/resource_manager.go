@@ -45,21 +45,23 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	cfg := resourcemanager.Values{
-		AlwaysUpdate:               pointer.Bool(true),
-		ClusterIdentity:            b.Seed.GetInfo().Status.ClusterIdentity,
-		ConcurrentSyncs:            pointer.Int32(20),
-		HealthSyncPeriod:           utils.DurationPtr(time.Minute),
-		MaxConcurrentHealthWorkers: pointer.Int32(10),
-		SyncPeriod:                 utils.DurationPtr(time.Minute),
-		TargetDisableCache:         pointer.Bool(true),
-		WatchedNamespace:           pointer.String(b.Shoot.SeedNamespace),
+		AlwaysUpdate:                        pointer.Bool(true),
+		ClusterIdentity:                     b.Seed.GetInfo().Status.ClusterIdentity,
+		ConcurrentSyncs:                     pointer.Int32(20),
+		HealthSyncPeriod:                    utils.DurationPtr(time.Minute),
+		MaxConcurrentHealthWorkers:          pointer.Int32(10),
+		MaxConcurrentTokenRequestorWorkers:  pointer.Int32(10),
+		MaxConcurrentRootCAPublisherWorkers: pointer.Int32(10),
+		SyncPeriod:                          utils.DurationPtr(time.Minute),
+		TargetDisableCache:                  pointer.Bool(true),
+		WatchedNamespace:                    pointer.String(b.Shoot.SeedNamespace),
 	}
 
 	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
 	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
 	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
 	// the shoot is already hibernated.
-	replicas := int32(1)
+	replicas := int32(3)
 	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
 		replicas = 0
 	}
@@ -78,6 +80,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{
 		Kubeconfig: component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)},
 		Server:     component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
+		RootCA:     &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
 	})
 
 	return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)

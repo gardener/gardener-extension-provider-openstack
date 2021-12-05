@@ -488,6 +488,17 @@ func RunReconcileSeedFlow(
 
 	lokiValues["enabled"] = loggingEnabled
 
+	// check if loki disabled in gardenlet config
+	if loggingConfig != nil &&
+		loggingConfig.Loki != nil &&
+		loggingConfig.Loki.Enabled != nil &&
+		!*loggingConfig.Loki.Enabled {
+		lokiValues["enabled"] = false
+		if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+			return err
+		}
+	}
+
 	if loggingEnabled {
 		lokiValues["authEnabled"] = false
 
@@ -1080,7 +1091,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	extAuthzServer, err := defaultExternalAuthzServer(seedClient, kubernetesVersion.String(), imageVector)
+	extAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
 	if err != nil {
 		return err
 	}
@@ -1144,7 +1155,7 @@ func runCreateSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external authz server",
-			Fn:           flow.TaskFn(extAuthzServer.Deploy).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+			Fn:           extAuthzServer.Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
 	)

@@ -445,10 +445,7 @@ var _ = Describe("Machines", func() {
 					setup(region, machineImage, "")
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 
-					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
-
 					// Test workerDelegate.DeployMachineClasses()
-
 					chartApplier.
 						EXPECT().
 						Apply(
@@ -503,8 +500,6 @@ var _ = Describe("Machines", func() {
 					setup(regionWithImages, "", machineImageID)
 					workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.BoolPtr(true)}
-
-					c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
 
 					// Test workerDelegate.DeployMachineClasses()
 
@@ -570,7 +565,6 @@ var _ = Describe("Machines", func() {
 						)
 
 						setup(region, machineImage, "")
-						c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
 
 						workerWithServerGroup := w.DeepCopy()
 						workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
@@ -670,27 +664,6 @@ var _ = Describe("Machines", func() {
 						err := workerDelegate.DeployMachineClasses(context.TODO())
 						Expect(err).NotTo(HaveOccurred())
 					})
-
-					It("should delete the old OpenStackMachineClass", func() {
-						setup(region, machineImage, "")
-						workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
-
-						c.EXPECT().DeleteAllOf(context.TODO(), &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(namespace))
-
-						chartApplier.
-							EXPECT().
-							Apply(
-								context.TODO(),
-								filepath.Join(openstack.InternalChartsPath, "machineclass"),
-								namespace,
-								"machineclass",
-								kubernetes.Values(machineClasses),
-							).
-							Return(nil)
-
-						err := workerDelegate.DeployMachineClasses(context.TODO())
-						Expect(err).NotTo(HaveOccurred())
-					})
 				})
 
 				It("should fail if the server group dependencies do not exist", func() {
@@ -714,7 +687,6 @@ var _ = Describe("Machines", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal(`server group is required for pool "pool-1", but no server group dependency found`))
 				})
-
 			})
 
 			It("should fail because the version is invalid", func() {
@@ -818,6 +790,7 @@ func useDefaultMachineClassWith(def map[string]interface{}, add map[string]inter
 
 	return out
 }
+
 func addNameAndSecretToMachineClass(class map[string]interface{}, name string, credentialsSecretRef corev1.SecretReference) {
 	class["name"] = name
 	class["labels"] = map[string]string{

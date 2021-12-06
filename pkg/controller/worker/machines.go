@@ -56,12 +56,6 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 		}
 	}
 
-	// Delete any older version machine class CRs.
-	// TODO: This can safely be removed after a few releases. It only facilitates the transition between OpenStackMachineClass -> MachineClass for existing shoots.
-	if err := w.Client().DeleteAllOf(ctx, &machinev1alpha1.OpenStackMachineClass{}, client.InNamespace(w.worker.Namespace)); err != nil {
-		return fmt.Errorf("cleaning up old OpenstackMachineClass resources failed: %w", err)
-	}
-
 	return w.seedChartApplier.Apply(ctx, filepath.Join(openstack.InternalChartsPath, "machineclass"), w.worker.Namespace, "machineclass", kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}))
 }
 
@@ -214,7 +208,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 }
 
 func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency) (string, error) {
-	var additionalHashData = []string{}
+	additionalHashData := []string{}
 
 	// Include the given worker pool dependencies into the hash.
 	if serverGroupDependency != nil {

@@ -50,7 +50,7 @@ type GardenletConfiguration struct {
 	Resources *ResourcesConfiguration `json:"resources,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
-	LeaderElection *LeaderElectionConfiguration `json:"leaderElection,omitempty"`
+	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
@@ -86,6 +86,9 @@ type GardenletConfiguration struct {
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	// +optional
 	ExposureClassHandlers []ExposureClassHandler `json:"exposureClassHandlers,omitempty"`
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	// +optional
+	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -361,18 +364,6 @@ type ResourcesConfiguration struct {
 	Reserved corev1.ResourceList `json:"reserved,omitempty"`
 }
 
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:",inline"`
-	// LockObjectNamespace defines the namespace of the lock object.
-	// +optional
-	LockObjectNamespace *string `json:"lockObjectNamespace,omitempty"`
-	// LockObjectName defines the lock object name.
-	// +optional
-	LockObjectName *string `json:"lockObjectName,omitempty"`
-}
-
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
 	gardencorev1beta1.SeedTemplate `json:",inline"`
@@ -396,7 +387,13 @@ type FluentBit struct {
 
 // Loki contains configuration for the Loki.
 type Loki struct {
+	// Enabled is used to enable or disable the shoot and seed Loki.
+	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
+	// If not set, by default Loki is enabled
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// Garden contains configuration for the Loki in garden namespace.
+	// +optional
 	Garden *GardenLoki `json:"garden,omitempty" yaml:"garden,omitempty"`
 }
 
@@ -505,6 +502,35 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string `json:"annotations"`
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// Shoot is optional and contains settings for the shoot monitoring stack.
+	// +optional
+	Shoot *ShootMonitoringConfig `json:"shoot,omitempty"`
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
+	// +optional
+	RemoteWrite *RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty"`
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	// +optional
+	ExternalLabels map[string]string `json:"externalLabels,omitempty"`
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string `json:"url"`
+	// Keep contains a list of metrics that will be remote written
+	// +optional
+	Keep []string `json:"keep,omitempty"`
+	// QueueConfig contains the queue_config for prometheus remote write.
+	// +optional
+	QueueConfig *string `json:"queueConfig,omitempty"`
 }
 
 const (

@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -290,7 +290,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resources["crd.yaml"] = []byte(crdYAML)
+	resources["crd.yaml"] = []byte(CrdYAML)
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
@@ -333,7 +333,9 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 
 const (
 	crdName = "etcds.druid.gardener.cloud"
-	crdYAML = `apiVersion: apiextensions.k8s.io/v1
+
+	// CrdYAML is yaml representation of the custom resource of the ETCD.
+	CrdYAML = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: ` + crdName + `

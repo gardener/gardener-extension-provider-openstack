@@ -19,12 +19,12 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -66,7 +66,7 @@ func (a *actuator) updateProviderStatus(
 		return err
 	}
 
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, a.Client(), infra, func() error {
+	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, a.Client(), infra, func() error {
 		infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
 		infra.Status.State = &runtime.RawExtension{Raw: stateByte}
 		return nil

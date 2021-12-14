@@ -21,6 +21,11 @@ import (
 	"strings"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	sacadmission "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -31,10 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	sacadmission "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -43,6 +44,11 @@ const (
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-extension-crd-deletion"
 )
+
+// ObjectSelector is the object selector for CustomResourceDefinitions used by this admission controller.
+var ObjectSelector = map[string]string{
+	gutil.DeletionProtected: "true",
+}
 
 // New creates a new webhook handler validating DELETE requests for extension CRDs and extension resources, that are
 // marked for deletion protection (`gardener.cloud/deletion-protected`).
@@ -77,27 +83,32 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return admission.Allowed("operation is not DELETE")
 	}
 
+	var listOp client.ListOption
+
 	// Ignore all resources other than our expected ones
 	switch request.Resource {
 	case
 		metav1.GroupVersionResource{Group: apiextensionsv1beta1.SchemeGroupVersion.Group, Version: apiextensionsv1beta1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
-		metav1.GroupVersionResource{Group: apiextensionsv1.SchemeGroupVersion.Group, Version: apiextensionsv1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
-
+		metav1.GroupVersionResource{Group: apiextensionsv1.SchemeGroupVersion.Group, Version: apiextensionsv1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"}:
+		listOp = client.MatchingLabels(ObjectSelector)
+	case
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupbuckets"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupentries"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "containerruntimes"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "controlplanes"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "dnsrecords"},
+		metav1.GroupVersionResource{Group: druidv1alpha1.GroupVersion.Group, Version: druidv1alpha1.GroupVersion.Version, Resource: "etcds"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "extensions"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "infrastructures"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "networks"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "operatingsystemconfigs"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "workers"}:
+		listOp = client.InNamespace(request.Namespace)
 	default:
 		return admission.Allowed("resource is not deletion-protected")
 	}
 
-	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request)
+	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request, listOp)
 	if apierrors.IsNotFound(err) {
 		return admission.Allowed("object was not found")
 	}

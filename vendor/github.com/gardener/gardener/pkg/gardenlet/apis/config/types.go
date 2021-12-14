@@ -43,7 +43,7 @@ type GardenletConfiguration struct {
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
 	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection *LeaderElectionConfiguration
+	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel *string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
@@ -69,6 +69,8 @@ type GardenletConfiguration struct {
 	SNI *SNI
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	ExposureClassHandlers []ExposureClassHandler
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	Monitoring *MonitoringConfig
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -296,16 +298,6 @@ type ResourcesConfiguration struct {
 	Reserved corev1.ResourceList
 }
 
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfig.LeaderElectionConfiguration
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace *string
-	// LockObjectName defines the lock object name.
-	LockObjectName *string
-}
-
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
 	gardencore.SeedTemplate
@@ -326,6 +318,10 @@ type FluentBit struct {
 
 // Loki contains configuration for the Loki.
 type Loki struct {
+	// Enabled is used to enable or disable the shoot and seed Loki.
+	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
+	// If not set, by default Loki is enabled
+	Enabled *bool
 	// Garden contains configuration for the Loki in garden namespace.
 	Garden *GardenLoki
 }
@@ -424,4 +420,28 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// Shoot is optional and contains settings for the shoot monitoring stack.
+	Shoot *ShootMonitoringConfig
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
+	RemoteWrite *RemoteWriteMonitoringConfig
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	ExternalLabels map[string]string
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string
+	// Keep contains a list of metrics that will be remote written
+	Keep []string
+	// QueueConfig contains the queue_config for prometheus remote write.
+	QueueConfig *string
 }

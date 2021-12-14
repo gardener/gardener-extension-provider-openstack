@@ -33,6 +33,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -52,7 +53,7 @@ type reconciler struct {
 func NewReconciler(actuator Actuator) reconcile.Reconciler {
 	logger := log.Log.WithName(ControllerName)
 
-	return extensionscontroller.OperationAnnotationWrapper(
+	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.DNSRecord{} },
 		&reconciler{
 			logger:        logger,
@@ -142,8 +143,8 @@ func (r *reconciler) reconcile(ctx context.Context, dns *extensionsv1alpha1.DNSR
 
 	r.logger.Info("Starting the reconciliation of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Reconcile(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling dnsrecord")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling dnsrecord")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, dns, operationType, "Successfully reconciled dnsrecord"); err != nil {
@@ -164,8 +165,8 @@ func (r *reconciler) restore(ctx context.Context, dns *extensionsv1alpha1.DNSRec
 
 	r.logger.Info("Starting the restoration of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Restore(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring dnsrecord")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring dnsrecord")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored dnsrecord"); err != nil {
@@ -186,8 +187,8 @@ func (r *reconciler) migrate(ctx context.Context, dns *extensionsv1alpha1.DNSRec
 
 	r.logger.Info("Starting the migration of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Migrate(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating dnsrecord")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating dnsrecord")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated dnsrecord"); err != nil {
@@ -219,8 +220,8 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 
 	r.logger.Info("Starting the deletion of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Delete(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting dnsrecord")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting dnsrecord")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, dns, operationType, "Successfully deleted dnsrecord"); err != nil {

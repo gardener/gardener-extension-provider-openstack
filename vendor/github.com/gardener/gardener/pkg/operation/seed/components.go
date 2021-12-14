@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -22,9 +23,12 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
@@ -33,13 +37,16 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func defaultEtcdDruid(
@@ -90,18 +97,31 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, image.String()), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, seedVersion string, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, serverSecret *corev1.Secret) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
 
-	return resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
-		ConcurrentSyncs:  pointer.Int32(20),
-		HealthSyncPeriod: utils.DurationPtr(time.Minute),
-		ResourceClass:    pointer.String(v1beta1constants.SeedResourceManagerClass),
-		SyncPeriod:       utils.DurationPtr(time.Hour),
-	}), nil
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
+
+	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 3, resourcemanager.Values{
+		ConcurrentSyncs:                     pointer.Int32(20),
+		MaxConcurrentRootCAPublisherWorkers: pointer.Int32(20),
+		HealthSyncPeriod:                    utils.DurationPtr(time.Minute),
+		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
+		SyncPeriod:                          utils.DurationPtr(time.Hour),
+	})
+
+	gardenerResourceManager.SetSecrets(resourcemanager.Secrets{
+		Server: component.Secret{Name: resourcemanager.SecretNameServer, Checksum: utils.ComputeSecretChecksum(serverSecret.Data)},
+	})
+
+	return gardenerResourceManager, nil
 }
 
 func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEnabled bool) (component.DeployWaiter, error) {
@@ -195,4 +215,45 @@ func defaultDependencyWatchdogs(
 		ValuesProbe: dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations},
 	})
 	return
+}
+
+func defaultExternalAuthzServer(
+	ctx context.Context,
+	c client.Client,
+	seedVersion string,
+	imageVector imagevector.ImageVector,
+) (
+	extAuthzServer component.DeployWaiter,
+	err error,
+) {
+	image, err := imageVector.FindImage(charts.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	if err != nil {
+		return nil, err
+	}
+
+	extAuthServer := extauthzserver.NewExtAuthServer(
+		c,
+		v1beta1constants.GardenNamespace,
+		image.String(),
+		3,
+	)
+
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		return extAuthServer, nil
+	}
+
+	vpnSeedDeployments := &metav1.PartialObjectMetadataList{}
+	vpnSeedDeployments.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("DeploymentList"))
+
+	if err := c.List(ctx, vpnSeedDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}), client.Limit(1)); err != nil {
+		return nil, err
+	}
+
+	// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
+	// Thus, we cannot destroy the ext-authz-server.
+	if len(vpnSeedDeployments.Items) > 0 {
+		return component.NoOp(), nil
+	}
+
+	return component.OpDestroy(extAuthServer), nil
 }

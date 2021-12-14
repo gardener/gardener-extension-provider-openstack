@@ -75,6 +75,11 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 			CommonName: "metrics-server",
 			CertType:   secrets.CACert,
 		},
+		v1beta1constants.SecretNameCAVPN: {
+			Name:       v1beta1constants.SecretNameCAVPN,
+			CommonName: "vpn",
+			CertType:   secrets.CACert,
+		},
 	}
 
 	return wantedCertificateAuthorities
@@ -141,8 +146,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 
-		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
-		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
+		kubeControllerManagerCertDNSNames   = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
+		gardenerResourceManagerCertDNSNames = kubernetes.DNSNamesForService(resourcemanager.ServiceName, b.Shoot.SeedNamespace)
+		kubeSchedulerCertDNSNames           = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = append(
 			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
@@ -243,26 +249,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			},
 		},
 
-		// Secret definition for kube-scheduler
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubescheduler.SecretName,
-
-				CommonName:   user.KubeScheduler,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			}},
-		},
-
 		// Secret definition for kube-scheduler server
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -316,6 +302,19 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				ClusterName:   b.Shoot.SeedNamespace,
 				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			}},
+		},
+
+		// Secret definition for gardener-resource-manager server
+		&secrets.CertificateSecretConfig{
+			Name: resourcemanager.SecretNameServer,
+
+			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
+			Organization: nil,
+			DNSNames:     gardenerResourceManagerCertDNSNames,
+			IPAddresses:  nil,
+
+			CertType:  secrets.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
 
 		// Secret definition for kube-proxy
@@ -679,7 +678,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				Name:       vpnseedserver.VpnShootSecretName,
 				CommonName: "vpn-shoot-client",
 				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 
 			// Secret definition for vpn-seed-server (OpenVPN server side)
@@ -688,7 +687,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				CommonName: "vpn-seed-server",
 				DNSNames:   kubernetes.DNSNamesForService(vpnseedserver.ServiceName, b.Shoot.SeedNamespace),
 				CertType:   secrets.ServerCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 
 			&secrets.VPNTLSAuthConfig{
@@ -700,7 +699,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				Name:       kubeapiserver.SecretNameHTTPProxy,
 				CommonName: "kube-apiserver-http-proxy",
 				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 		)
 	} else {

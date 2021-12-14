@@ -26,8 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -315,7 +315,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								// The kube-apiserver and the kubelet use different CAs, however, the metrics-server assumes the CAs are the same.
 								// We should remove this flag once it is possible to specify the CA of the kubelet.
 								"--kubelet-insecure-tls",
-								"--kubelet-preferred-address-types=Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP",
+								"--kubelet-preferred-address-types=InternalIP,InternalDNS,ExternalDNS,ExternalIP,Hostname",
 								fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 								fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 							},

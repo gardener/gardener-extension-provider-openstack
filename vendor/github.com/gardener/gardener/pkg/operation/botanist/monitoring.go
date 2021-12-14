@@ -209,6 +209,47 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	prometheusConfig["podAnnotations"] = podAnnotations
 
+	// Add remotewrite to prometheus when enabled
+	if b.Config.Monitoring != nil &&
+		b.Config.Monitoring.Shoot != nil &&
+		b.Config.Monitoring.Shoot.RemoteWrite != nil &&
+		b.Config.Monitoring.Shoot.RemoteWrite.URL != "" {
+		// if remoteWrite Url is set add config into values
+		remoteWriteConfig := map[string]interface{}{
+			"url": b.Config.Monitoring.Shoot.RemoteWrite.URL,
+		}
+		// get secret for basic_auth in remote write
+		remoteWriteBasicAuth := b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring)
+		if remoteWriteBasicAuth != nil {
+			remoteWriteUsername := string(remoteWriteBasicAuth.Data["username"])
+			remoteWritePassword := string(remoteWriteBasicAuth.Data["password"])
+			if remoteWriteUsername != "" &&
+				remoteWritePassword != "" {
+				remoteWriteConfig["basic_auth"] = map[string]interface{}{
+					"username": remoteWriteUsername,
+					"password": remoteWritePassword,
+				}
+			}
+		}
+		// add list with keep metrics if set
+		if len(b.Config.Monitoring.Shoot.RemoteWrite.Keep) != 0 {
+			remoteWriteConfig["keep"] = b.Config.Monitoring.Shoot.RemoteWrite.Keep
+		}
+		// add queue_config if set
+		if b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig != nil &&
+			len(*b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig) != 0 {
+			remoteWriteConfig["queue_config"] = b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig
+		}
+		prometheusConfig["remoteWrite"] = remoteWriteConfig
+	}
+
+	// set externalLabels
+	if b.Config.Monitoring != nil &&
+		b.Config.Monitoring.Shoot != nil &&
+		len(b.Config.Monitoring.Shoot.ExternalLabels) != 0 {
+		prometheusConfig["externalLabels"] = b.Config.Monitoring.Shoot.ExternalLabels
+	}
+
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)
 	if err != nil {
 		return err
@@ -485,9 +526,12 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	// TODO(rfranzke): Remove in a future release.
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-dashboard-providers"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-datasources"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-dashboards"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-dashboard-providers"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-datasources"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-dashboards"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-dashboard-providers"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-datasources"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-dashboards"}},
 	)
 }
 

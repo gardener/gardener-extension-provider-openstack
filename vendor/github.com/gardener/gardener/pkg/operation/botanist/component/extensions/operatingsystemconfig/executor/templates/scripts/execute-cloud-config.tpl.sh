@@ -125,15 +125,6 @@ fi
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
 if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
-  BOOTSTRAP_TOKEN="{{ .bootstrapToken }}"
-  # If a bootstrap token file exists and the placeholder got replaced by the Worker extension then use it
-  if [[ -f "{{ .pathBootstrapToken }}" ]]; then
-    FILE_CONTENT="$(cat "{{ .pathBootstrapToken }}")"
-    if [[ $FILE_CONTENT != "{{ .bootstrapTokenPlaceholder }}" ]] && [[ $FILE_CONTENT != "{{ .bootstrapTokenPlaceholderB64 }}" ]]; then
-      BOOTSTRAP_TOKEN="$FILE_CONTENT"
-    fi
-  fi
-
   cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
 apiVersion: v1
@@ -153,7 +144,7 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: "$BOOTSTRAP_TOKEN"
+    token: "$(cat "{{ .pathBootstrapToken }}")"
 EOF
 
 else
@@ -238,7 +229,11 @@ rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 # Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
 # the Node object if possible and store the current date.
-if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+if [[ ! -z "$NODENAME" ]]; then
+  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" label node "$NODENAME" "{{ .labelWorkerKubernetesVersion }}={{ .kubernetesVersion }}" --overwrite
+
+  if [[ -f "$PATH_CHECKSUM" ]]; then
+    {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  fi
 fi
 date +%s > "$PATH_EXECUTION_LAST_DATE"

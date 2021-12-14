@@ -147,11 +147,6 @@ func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *
 
 // validateShootKubeconfigRotation validates that shoot in deletion cannot rotate its kubeconfig.
 func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	// if the feature gate `DisallowKubeconfigRotationForShootInDeletion` is disabled, allow kubeconfig rotation
-	if !utilfeature.DefaultFeatureGate.Enabled(features.DisallowKubeconfigRotationForShootInDeletion) {
-		return field.ErrorList{}
-	}
-
 	if newMeta.DeletionTimestamp == nil {
 		return field.ErrorList{}
 	}
@@ -420,16 +415,6 @@ func validateKubeProxyUpdate(newConfig, oldConfig *core.KubeProxyConfig, version
 	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
-	// The enabled flag is immutable for now to ensure that the networking extensions have time to adapt to it.
-	newEnabled := true
-	oldEnabled := true
-	if newConfig != nil && newConfig.Enabled != nil {
-		newEnabled = *newConfig.Enabled
-	}
-	if oldConfig != nil && oldConfig.Enabled != nil {
-		oldEnabled = *oldConfig.Enabled
-	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEnabled, oldEnabled, fldPath.Child("enabled"))...)
 	return allErrs
 }
 
@@ -727,6 +712,15 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 
 			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil && kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+			}
+		}
+
+		if kubeAPIServer.EventTTL != nil {
+			if kubeAPIServer.EventTTL.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "eventTTL"), *kubeAPIServer.EventTTL, "can not be negative"))
+			}
+			if kubeAPIServer.EventTTL.Duration > time.Hour*24*7 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 7d"))
 			}
 		}
 

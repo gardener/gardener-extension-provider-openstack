@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
@@ -82,7 +83,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -270,6 +270,18 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			SigningCA: certificateAuthorities[caSeed],
 			Validity:  &endUserCrtValidity,
 		},
+		// Secret definition for gardener-resource-manager server
+		&secretsutils.CertificateSecretConfig{
+			Name: resourcemanager.SecretNameServer,
+
+			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
+			Organization: nil,
+			DNSNames:     kutil.DNSNamesForService(resourcemanager.ServiceName, v1beta1constants.GardenNamespace),
+			IPAddresses:  nil,
+
+			CertType:  secretsutils.ServerCert,
+			SigningCA: certificateAuthorities[caSeed],
+		},
 	}
 
 	return secretList, nil
@@ -288,41 +300,9 @@ func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existi
 		return nil, err
 	}
 
-	// Only necessary to renew certificates for Grafana, Prometheus
-	// TODO: (timuthy) remove in future version.
-	var (
-		renewedLabel = "cert.gardener.cloud/renewed-endpoint"
-		browserCerts = sets.NewString(grafanaTLS, prometheusTLS)
-	)
-	for name, secret := range existingSecretsMap {
-		_, ok := secret.Labels[renewedLabel]
-		if browserCerts.Has(name) && !ok {
-			if err := c.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-				return nil, err
-			}
-			delete(existingSecretsMap, name)
-		}
-	}
-
 	secrets, err := secretsutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
-	}
-
-	// Only necessary to renew certificates for Grafana, Prometheus
-	// TODO: (timuthy) remove in future version.
-	for name, secret := range secrets {
-		_, ok := secret.Labels[renewedLabel]
-		if browserCerts.Has(name) && !ok {
-			if secret.Labels == nil {
-				secret.Labels = make(map[string]string)
-			}
-			secret.Labels[renewedLabel] = "true"
-
-			if err := c.Update(ctx, secret); err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	return secrets, nil
@@ -420,7 +400,6 @@ func RunReconcileSeedFlow(
 			charts.ImageNameLokiCurator,
 			charts.ImageNameFluentBit,
 			charts.ImageNameFluentBitPluginInstaller,
-			charts.ImageNameGardenerResourceManager,
 			charts.ImageNameGrafana,
 			charts.ImageNamePauseContainer,
 			charts.ImageNamePrometheus,
@@ -508,6 +487,17 @@ func RunReconcileSeedFlow(
 	)
 
 	lokiValues["enabled"] = loggingEnabled
+
+	// check if loki disabled in gardenlet config
+	if loggingConfig != nil &&
+		loggingConfig.Loki != nil &&
+		loggingConfig.Loki.Enabled != nil &&
+		!*loggingConfig.Loki.Enabled {
+		lokiValues["enabled"] = false
+		if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+			return err
+		}
+	}
 
 	if loggingEnabled {
 		lokiValues["authEnabled"] = false
@@ -938,6 +928,18 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// .spec.selector of a StatefulSet is immutable. If StatefulSet's .spec.selector contains
+	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
+	// TODO (ialidzhikov): remove in a future version
+	if loggingEnabled {
+		stsKeys := []client.ObjectKey{
+			kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.StatefulSetNameLoki),
+		}
+		if err := common.DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, seedClient, stsKeys); err != nil {
+			return err
+		}
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
@@ -1029,7 +1031,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, log, anySNI)
+	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, log, anySNI, deployedSecretsMap)
 }
 
 func runCreateSeedFlow(
@@ -1042,6 +1044,7 @@ func runCreateSeedFlow(
 	seed *Seed,
 	log logrus.FieldLogger,
 	anySNI bool,
+	deployedSecretsMap map[string]*corev1.Secret,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1068,7 +1071,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion.String(), imageVector)
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[resourcemanager.SecretNameServer])
 	if err != nil {
 		return err
 	}
@@ -1085,6 +1088,10 @@ func runCreateSeedFlow(
 		return err
 	}
 	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector)
+	if err != nil {
+		return err
+	}
+	extAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
 	if err != nil {
 		return err
 	}
@@ -1146,6 +1153,11 @@ func runCreateSeedFlow(
 			Fn:           dwdProbe.Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying external authz server",
+			Fn:           extAuthzServer.Deploy,
+			Dependencies: flow.NewTaskIDs(deployResourceManager),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
@@ -1190,6 +1202,7 @@ func RunDeleteSeedFlow(
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
 		dwdEndpoint     = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe        = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe})
+		extAuthzServer  = extauthzserver.NewExtAuthServer(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
@@ -1241,6 +1254,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroy dependency-watchdog-probe",
 			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
 		})
+		destroyExtAuthzServer = g.Add(flow.Task{
+			Name: "Destroy external authz server",
+			Fn:   component.OpDestroyAndWait(extAuthzServer).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1253,6 +1270,7 @@ func RunDeleteSeedFlow(
 				destroyNetworkPolicies,
 				destroyDWDEndpoint,
 				destroyDWDProbe,
+				destroyExtAuthzServer,
 				noControllerInstallations,
 			),
 		})

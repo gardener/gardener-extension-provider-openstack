@@ -362,7 +362,7 @@ message ClusterInfo {
 
 // Condition holds the information about the state of a resource.
 message Condition {
-  // Type of the Shoot condition.
+  // Type of the condition.
   optional string type = 1;
 
   // Status of the condition, one of True, False, Unknown.
@@ -476,16 +476,6 @@ message ControllerRegistration {
 
 // ControllerRegistrationDeployment contains information for how this controller is deployed.
 message ControllerRegistrationDeployment {
-  // Type is the deployment type.
-  // Deprecated: Declare type via `ControllerDeployment` instead.
-  // +optional
-  optional string type = 1;
-
-  // ProviderConfig contains type-specific configuration.
-  // Deprecated: Use `DeploymentRefs` instead.
-  // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
-
   // Policy controls how the controller is deployed. It defaults to 'OnDemand'.
   // +optional
   optional string policy = 3;
@@ -893,6 +883,11 @@ message KubeAPIServerConfig {
   // See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
   // +optional
   optional bool enableAnonymousAuthentication = 11;
+
+  // EventTTL controls the amount of time to retain events.
+  // Defaults to 1h.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
@@ -2030,6 +2025,10 @@ message SeedStatus {
   // ClusterIdentity is the identity of the Seed cluster
   // +optional
   optional string clusterIdentity = 5;
+
+  // ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 6;
 }
 
 // SeedTaint describes a taint on a seed.

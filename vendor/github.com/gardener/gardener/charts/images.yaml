@@ -11,6 +11,9 @@ images:
 - name: gardener-seed-admission-controller
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+- name: gardener-resource-manager
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/resource-manager
 
 # Seed bootstrap
 - name: pause-container
@@ -28,10 +31,6 @@ images:
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
   tag: "v0.5.2"
-- name: gardener-resource-manager
-  sourceRepository: github.com/gardener/gardener-resource-manager
-  repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
-  tag: "v0.25.1"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -96,7 +95,7 @@ images:
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
-  tag: "0.4.0"
+  tag: "0.5.0"
 
 # Monitoring
 - name: alertmanager
@@ -122,7 +121,7 @@ images:
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
-  tag: "7.5.10"
+  tag: "7.5.11"
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
@@ -130,7 +129,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
-  tag: v0.5.0
+  tag: v0.5.1
 
 # Shoot core addons
 - name: vpn-shoot
@@ -140,11 +139,11 @@ images:
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
-  tag: "0.4.0"
+  tag: "0.5.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.8.4"
+  tag: "1.8.6"
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: k8s.gcr.io/dns/k8s-dns-node-cache
@@ -229,7 +228,7 @@ images:
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.37.2"
+  tag: "v0.38.0"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -237,7 +236,7 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.37.2"
+  tag: "v0.38.0"
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
@@ -249,7 +248,7 @@ images:
 - name: telegraf
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.37.2"
+  tag: "v0.38.0"
 
 # VPA
 - name: vpa-admission-controller
@@ -285,11 +284,17 @@ images:
   repository: gcr.io/istio-release/pilot
   tag: "1.10.2-distroless"
 
+# External Authorization Server for the Istio Endpoint of Reversed VPN
+- name: ext-authz-server
+  sourceRepository: github.com/gardener/ext-authz-server
+  repository: eu.gcr.io/gardener-project/gardener/ext-authz-server
+  tag: "0.2.0"
+
 # API Server SNI
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
   repository: envoyproxy/envoy-alpine
-  tag: "v1.18.3"
+  tag: "v1.18.4"
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy

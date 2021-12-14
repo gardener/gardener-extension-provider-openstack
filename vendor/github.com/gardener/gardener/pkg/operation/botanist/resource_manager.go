@@ -27,32 +27,41 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 )
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
 func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
-	image, err := b.ImageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(charts.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
 
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
+
 	cfg := resourcemanager.Values{
-		AlwaysUpdate:               pointer.Bool(true),
-		ClusterIdentity:            b.Seed.GetInfo().Status.ClusterIdentity,
-		ConcurrentSyncs:            pointer.Int32(20),
-		HealthSyncPeriod:           utils.DurationPtr(time.Minute),
-		MaxConcurrentHealthWorkers: pointer.Int32(10),
-		SyncPeriod:                 utils.DurationPtr(time.Minute),
-		TargetDisableCache:         pointer.Bool(true),
-		WatchedNamespace:           pointer.String(b.Shoot.SeedNamespace),
+		AlwaysUpdate:                        pointer.Bool(true),
+		ClusterIdentity:                     b.Seed.GetInfo().Status.ClusterIdentity,
+		ConcurrentSyncs:                     pointer.Int32(20),
+		HealthSyncPeriod:                    utils.DurationPtr(time.Minute),
+		MaxConcurrentHealthWorkers:          pointer.Int32(10),
+		MaxConcurrentTokenRequestorWorkers:  pointer.Int32(10),
+		MaxConcurrentRootCAPublisherWorkers: pointer.Int32(10),
+		SyncPeriod:                          utils.DurationPtr(time.Minute),
+		TargetDisableCache:                  pointer.Bool(true),
+		WatchedNamespace:                    pointer.String(b.Shoot.SeedNamespace),
 	}
 
 	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
 	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
 	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
 	// the shoot is already hibernated.
-	replicas := int32(1)
+	replicas := int32(3)
 	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
 		replicas = 0
 	}
@@ -68,8 +77,11 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-	kubeCfg := component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)}
-	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{Kubeconfig: kubeCfg})
+	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{
+		Kubeconfig: component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)},
+		Server:     component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
+		RootCA:     &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+	})
 
 	return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 }

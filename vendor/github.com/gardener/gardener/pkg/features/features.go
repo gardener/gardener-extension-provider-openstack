@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,8 +61,9 @@ const (
 
 	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
 	// If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache.
-	// owner @tim-ebert
+	// owner @timebertt
 	// alpha: v1.7.0
+	// beta: v1.34.0
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
@@ -96,6 +97,7 @@ const (
 	// owner: @vpnachev
 	// alpha: v1.28.0
 	// beta: v1.32.0
+	// GA: v1.36.0
 	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.

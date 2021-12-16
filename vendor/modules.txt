@@ -48,14 +48,15 @@ github.com/fsnotify/fsnotify
 # github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
 github.com/gardener/dependency-watchdog/pkg/restarter/api
 github.com/gardener/dependency-watchdog/pkg/scaler/api
-# github.com/gardener/etcd-druid v0.6.1-0.20211022081522-071746e9d0bd
+# github.com/gardener/etcd-druid v0.7.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
+github.com/gardener/etcd-druid/pkg/utils
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.36.0
+# github.com/gardener/gardener v1.38.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -159,6 +160,7 @@ github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity
 github.com/gardener/gardener/pkg/operation/botanist/component/coredns
 github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog
 github.com/gardener/gardener/pkg/operation/botanist/component/etcd
+github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask
 github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane
@@ -185,6 +187,7 @@ github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operati
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker
+github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess
 github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler
 github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/configurator
 github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v18
@@ -203,6 +206,7 @@ github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies
 github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager
 github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller
 github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver
+github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot
 github.com/gardener/gardener/pkg/operation/common
 github.com/gardener/gardener/pkg/operation/etcdencryption
 github.com/gardener/gardener/pkg/operation/garden
@@ -210,6 +214,9 @@ github.com/gardener/gardener/pkg/operation/seed
 github.com/gardener/gardener/pkg/operation/shoot
 github.com/gardener/gardener/pkg/operation/shootsecrets
 github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
+github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher
+github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount
+github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator
 github.com/gardener/gardener/pkg/scheduler/apis/config
 github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1
 github.com/gardener/gardener/pkg/scheduler/controller/common
@@ -678,12 +685,12 @@ gopkg.in/tomb.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
-# istio.io/api v0.0.0-20210520012029-891c0c12abfd
+# istio.io/api v0.0.0-20211118170605-3f0f902cdfd1
 istio.io/api/analysis/v1alpha1
 istio.io/api/meta/v1alpha1
 istio.io/api/networking/v1alpha3
 istio.io/api/networking/v1beta1
-# istio.io/client-go v1.10.1
+# istio.io/client-go v1.12.0
 istio.io/client-go/pkg/apis/networking/v1alpha3
 istio.io/client-go/pkg/apis/networking/v1beta1
 # istio.io/gogo-genproto v0.0.0-20210113155706-4daf5697332f

@@ -47,7 +47,10 @@ providerSpec:
     podNetworkCidr: {{ $machineClass.podNetworkCidr }}
 {{- if $machineClass.rootDiskSize }}
     rootDiskSize: {{ $machineClass.rootDiskSize }}
-{{- end}}
+{{- end }}
+{{- if $machineClass.rootDiskType}}
+    rootDiskType: {{ $machineClass.rootDiskType }}
+{{- end }}
 {{- if $machineClass.serverGroupID }}
     serverGroupID: {{ $machineClass.serverGroupID }}
 {{- end }}

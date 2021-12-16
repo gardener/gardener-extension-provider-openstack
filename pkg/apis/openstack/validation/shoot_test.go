@@ -33,9 +33,7 @@ import (
 
 var _ = Describe("Shoot validation", func() {
 	Describe("#ValidateShootCredentialsForK8sVersion", func() {
-		var (
-			versionPath = field.NewPath("spec", "kubernetes", "version")
-		)
+		versionPath := field.NewPath("spec", "kubernetes", "version")
 
 		It("should allow using application credentials for k8s version >=1.19", func() {
 			errorList := ValidateShootCredentialsForK8sVersion("1.19.0", credentials.Credentials{ApplicationCredentialSecret: "secret"}, versionPath)
@@ -67,7 +65,7 @@ var _ = Describe("Shoot validation", func() {
 	})
 
 	Describe("#ValidateNetworking", func() {
-		var networkingPath = field.NewPath("spec", "networking")
+		networkingPath := field.NewPath("spec", "networking")
 
 		It("should return no error because nodes CIDR was provided", func() {
 			networking := core.Networking{
@@ -125,7 +123,6 @@ var _ = Describe("Shoot validation", func() {
 
 		Describe("#ValidateWorkers", func() {
 			It("should pass because workers are configured correctly", func() {
-
 				errorList := ValidateWorkers(workers, nil, nilPath)
 
 				Expect(errorList).To(BeEmpty())
@@ -153,6 +150,21 @@ var _ = Describe("Shoot validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("[0].minimum"),
+					})),
+				))
+			})
+
+			It("should forbid specifying volume type without size", func() {
+				workers[0].Volume = &core.Volume{
+					Type: pointer.String("standard"),
+				}
+
+				errorList := ValidateWorkers(workers, nil, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("[0].volume.type"),
 					})),
 				))
 			})

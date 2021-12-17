@@ -17,6 +17,7 @@ package cmd
 import (
 	backupbucketcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupentry"
+	bastioncontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	controlplanecontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
 	csimigrationcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/csimigration"
 	dnsrecordcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
@@ -29,6 +30,7 @@ import (
 
 	extensionsbackupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsbackupentrycontroller "github.com/gardener/gardener/extensions/pkg/controller/backupentry"
+	extensionsbastioncontroller "github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionscontrolplanecontroller "github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	extensionscsimigrationcontroller "github.com/gardener/gardener/extensions/pkg/controller/csimigration"
@@ -46,6 +48,7 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 	return controllercmd.NewSwitchOptions(
 		controllercmd.Switch(extensionsbackupbucketcontroller.ControllerName, backupbucketcontroller.AddToManager),
 		controllercmd.Switch(extensionsbackupentrycontroller.ControllerName, backupentrycontroller.AddToManager),
+		controllercmd.Switch(extensionsbastioncontroller.ControllerName, bastioncontroller.AddToManager),
 		controllercmd.Switch(extensionscontrolplanecontroller.ControllerName, controlplanecontroller.AddToManager),
 		controllercmd.Switch(extensionscsimigrationcontroller.ControllerName, csimigrationcontroller.AddToManager),
 		controllercmd.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),

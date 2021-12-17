@@ -60,15 +60,15 @@ func (a *actuator) Reconcile(ctx context.Context, dns *extensionsv1alpha1.DNSRec
 	// Create Openstack DNS client
 	credentials, err := openstack.GetCredentials(ctx, a.Client(), dns.Spec.SecretRef, true)
 	if err != nil {
-		return fmt.Errorf("could not get Openstack credentials: %+v", err)
+		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
 	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
 	if err != nil {
-		return fmt.Errorf("could not create Openstack client factory: %+v", err)
+		return fmt.Errorf("could not create Openstack client factory: %w", err)
 	}
 	dnsClient, err := openstackClientFactory.DNS()
 	if err != nil {
-		return fmt.Errorf("could not create Openstack DNS client: %+v", err)
+		return fmt.Errorf("could not create Openstack DNS client: %w", err)
 	}
 
 	// Determine DNS zone ID

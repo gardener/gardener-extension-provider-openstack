@@ -53,3 +53,10 @@ spec:
       - name: REGION
         type: env
         value: eu-nl-1
+  - name: bastion-test
+    definition:
+      name: bastion-test
+      config:
+      - name: REGION
+        type: env
+        value: eu-nl-1

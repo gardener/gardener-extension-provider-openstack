@@ -38,6 +38,9 @@ type ControllerConfiguration struct {
 	// HealthCheckConfig is the config for the health check controller
 	// +optional
 	HealthCheckConfig *healthcheckconfigv1alpha1.HealthCheckConfig `json:"healthCheckConfig,omitempty"`
+	// BastionConfig the config for the Bastion
+	// +optional
+	BastionConfig *BastionConfig `json:"bastionConfig,omitempty"`
 }
 
 // ETCD is an etcd configuration.
@@ -63,4 +66,12 @@ type ETCDBackup struct {
 	// Schedule is the etcd backup schedule.
 	// +optional
 	Schedule *string `json:"schedule,omitempty"`
+}
+
+// BastionConfig is the config for the Bastion
+type BastionConfig struct {
+	// ImageRef is the openstack image reference
+	ImageRef string `json:"imageRef,omitempty"`
+	// FlavorRef is the openstack flavorRef reference
+	FlavorRef string `json:"flavorRef,omitempty"`
 }

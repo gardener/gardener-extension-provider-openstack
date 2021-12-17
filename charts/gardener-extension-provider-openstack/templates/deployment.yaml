@@ -40,6 +40,7 @@ spec:
         - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
         - --backupbucket-max-concurrent-reconciles={{ .Values.controllers.backupbucket.concurrentSyncs }}
         - --backupentry-max-concurrent-reconciles={{ .Values.controllers.backupentry.concurrentSyncs }}
+        - --bastion-max-concurrent-reconciles={{ .Values.controllers.bastion.concurrentSyncs }}
         - --config-file=/etc/{{ include "name" . }}/config/config.yaml
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
         - --csimigration-max-concurrent-reconciles={{ .Values.controllers.csimigration.concurrentSyncs }}

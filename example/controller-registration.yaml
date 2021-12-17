@@ -23,6 +23,8 @@ spec:
     type: openstack
   - kind: BackupEntry
     type: openstack
+  - kind: Bastion
+    type: openstack
   - kind: ControlPlane
     type: openstack
   - kind: DNSRecord

@@ -1,0 +1,22 @@
+kind: TestDefinition
+metadata:
+  name: bastion-test
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Integration test for bastion creation and deletion
+  activeDeadlineSeconds: 1800
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 -mod=vendor ./test/integration/bastion
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    --kubeconfig=$TM_KUBECONFIG_PATH/testmachinery.config
+    --auth-url="$AUTH_URL"
+    --domain-name="$DOMAIN_NAME"
+    --floating-pool-name="$FLOATING_POOL_NAME"
+    --password="$PASSWORD"
+    --region="$REGION"
+    --tenant-name="$TENANT_NAME"
+    --user-name="$USER_NAME"
+  image: eu.gcr.io/gardener-project/3rd/golang:1.16.2

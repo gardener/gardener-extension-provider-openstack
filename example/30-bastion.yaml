@@ -1,0 +1,14 @@
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Bastion
+metadata:
+  name: bastion
+  namespace: shoot--foobar--openstack
+spec:
+  ingress:
+  - ipBlock:
+      cidr: "192.168.1.0/24"  
+  - ipBlock:
+      cidr: "110.112.119.110/32" 
+  userData: IyEvY=  #base64(userData)
+  type: openstack

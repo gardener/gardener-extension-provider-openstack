@@ -74,5 +74,6 @@ config:
       provisioner: kubernetes.io/cinder
 
 gardener:
+  version: ""
   seed:
     provider: openstack

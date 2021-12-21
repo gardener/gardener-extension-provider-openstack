@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright (c) SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -221,6 +221,10 @@ message BackupEntryStatus {
   // at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
   // +optional
   optional string seedName = 4;
+
+  // MigrationStartTime is the time when a migration to a different seed was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 5;
 }
 
 // CRI contains information about the Container Runtimes.
@@ -348,6 +352,10 @@ message ClusterAutoscaler {
   // MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
   // +optional
   optional int32 maxGracefulTerminationSeconds = 9;
+
+  // IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+  // +optional
+  repeated string ignoreTaints = 10;
 }
 
 // ClusterInfo contains information about the Plant cluster
@@ -2267,6 +2275,10 @@ message ShootStatus {
   // +patchMergeKey=name
   // +patchStrategy=merge
   repeated ShootAdvertisedAddress advertisedAddresses = 13;
+
+  // MigrationStartTime is the time when a migration to a different seed was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 14;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

@@ -47,7 +47,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Machines", func() {
@@ -482,9 +481,8 @@ var _ = Describe("Machines", func() {
 					}
 
 					ctx := context.TODO()
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(nil)
 					c.EXPECT().Status().Return(statusWriter)
-					statusWriter.EXPECT().Update(ctx, workerWithExpectedImages).Return(nil)
+					statusWriter.EXPECT().Patch(ctx, workerWithExpectedImages, gomock.Any()).Return(nil)
 
 					err = workerDelegate.UpdateMachineImagesStatus(ctx)
 					Expect(err).NotTo(HaveOccurred())
@@ -538,19 +536,15 @@ var _ = Describe("Machines", func() {
 					}
 
 					ctx := context.TODO()
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
-							return nil
-						})
 					c.EXPECT().Status().Return(statusWriter)
-					statusWriter.EXPECT().Update(ctx, workerWithExpectedImages).Return(nil)
+					statusWriter.EXPECT().Patch(ctx, workerWithExpectedImages, gomock.Any()).Return(nil)
 
 					err = workerDelegate.UpdateMachineImagesStatus(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.GenerateMachineDeployments()
 
-					result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+					result, err := workerDelegate.GenerateMachineDeployments(ctx)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(Equal(machineDeployments))
 				})

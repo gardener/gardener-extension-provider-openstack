@@ -85,11 +85,13 @@ const (
 	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
 	// owner: @petersutter
 	// alpha: v1.24.0
+	// beta: v1.39.0
 	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
 
 	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.
 	// owner: @stoyanr
 	// alpha: v1.27.0
+	// beta: v1.39.0
 	UseDNSRecords featuregate.Feature = "UseDNSRecords"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
@@ -120,4 +122,11 @@ const (
 	// owner: @ialidzhikov
 	// alpha: v1.38.0
 	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
+
+	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
+	// if the preparation for migration in the source seed is not finished after a certain grace period
+	// and is considered unlikely to succeed ("bad case" scenario).
+	// owner: @stoyanr
+	// alpha: v1.39.0
+	ForceRestore featuregate.Feature = "ForceRestore"
 )

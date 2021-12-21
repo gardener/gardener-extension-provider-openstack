@@ -30,12 +30,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -113,11 +114,12 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 3, resourcemanager.Values{
+	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
+		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
 		VPA: &resourcemanager.VPAConfig{
@@ -159,7 +161,7 @@ func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEn
 		SNIEnabled:           sniEnabled,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),
+		NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
 		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 	}), nil
 }
@@ -180,12 +182,12 @@ func defaultDependencyWatchdogs(
 	}
 
 	var (
-		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
-		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String()}
+		dwdEndpointValues = dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
+		dwdProbeValues    = dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe, Image: image.String()}
 	)
 
-	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
-	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues))
+	dwdEndpoint = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
+	dwdProbe = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues))
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
@@ -212,7 +214,7 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdEndpointValues.ValuesEndpoint = dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations}
-		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
+		dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
 	}
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
@@ -235,7 +237,7 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdProbeValues.ValuesProbe = dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations}
-		dwdProbe = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues)
+		dwdProbe = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues)
 	}
 
 	return
@@ -255,7 +257,7 @@ func defaultExternalAuthzServer(
 		return nil, err
 	}
 
-	extAuthServer := extauthzserver.NewExtAuthServer(
+	vpnAuthzServer := vpnauthzserver.New(
 		c,
 		v1beta1constants.GardenNamespace,
 		image.String(),
@@ -263,7 +265,7 @@ func defaultExternalAuthzServer(
 	)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		return extAuthServer, nil
+		return vpnAuthzServer, nil
 	}
 
 	vpnSeedDeployments := &metav1.PartialObjectMetadataList{}
@@ -279,5 +281,5 @@ func defaultExternalAuthzServer(
 		return component.NoOp(), nil
 	}
 
-	return component.OpDestroy(extAuthServer), nil
+	return component.OpDestroy(vpnAuthzServer), nil
 }

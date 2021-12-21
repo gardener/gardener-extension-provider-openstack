@@ -27,12 +27,17 @@ spec:
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-shoot-apiserver: allowed
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: csi-snapshot-controller
         image: {{ index .Values.images "csi-snapshot-controller" }}
         imagePullPolicy: IfNotPresent
         args:
+        {{- if .Values.global.useTokenRequestor }}
+        - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
+        {{- else }}
         - --kubeconfig=/var/lib/csi-snapshot-controller/kubeconfig
+        {{- end }}
         - --leader-election=true
         - --leader-election-namespace=kube-system
 {{- if .Values.csiSnapshotController.resources }}
@@ -40,9 +45,34 @@ spec:
 {{ toYaml .Values.csiSnapshotController.resources | indent 10 }}
 {{- end }}
         volumeMounts:
+        {{- if .Values.global.useTokenRequestor }}
+        - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
+          name: kubeconfig
+          readOnly: true
+        {{- else }}
         - name: csi-snapshot-controller
           mountPath: /var/lib/csi-snapshot-controller
+        {{- end }}
       volumes:
+      {{- if .Values.global.useTokenRequestor }}
+      - name: kubeconfig
+        projected:
+          defaultMode: 420
+          sources:
+            - secret:
+                items:
+                  - key: kubeconfig
+                    path: kubeconfig
+                name: generic-token-kubeconfig
+                optional: false
+            - secret:
+                items:
+                  - key: token
+                    path: token
+                name: shoot-access-csi-snapshot-controller
+                optional: false
+      {{- else }}
       - name: csi-snapshot-controller
         secret:
           secretName: csi-snapshot-controller
+      {{- end }}

@@ -16,6 +16,10 @@ spec:
     metadata:
       annotations:
         checksum/secret-cloud-provider-config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- if .Values.global.useProjectedTokenMount }}
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
+        {{- end }}
       labels:
         app: csi
         role: disk-driver

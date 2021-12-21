@@ -1,3 +1,5 @@
+global:
+  useTokenRequestor: false
 cloud-controller-manager:
   enabled: true
 csi-driver-controller:

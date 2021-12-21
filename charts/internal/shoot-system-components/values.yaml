@@ -1,3 +1,6 @@
+global:
+  useTokenRequestor: false
+  useProjectedTokenMount: false
 cloud-controller-manager:
   enabled: true
 csi-driver-node:

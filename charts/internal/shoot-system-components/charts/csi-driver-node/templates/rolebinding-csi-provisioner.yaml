@@ -5,9 +5,15 @@ metadata:
   name: {{ include "csi-driver-node.extensionsGroup" . }}:{{ include "csi-driver-node.name" . }}:csi-provisioner
   namespace: {{ .Release.Namespace }}
 subjects:
+{{- if .Values.global.useTokenRequestor }}
+- kind: ServiceAccount
+  name: csi-provisioner
+  namespace: kube-system
+{{- else }}
 - apiGroup: rbac.authorization.k8s.io
   kind: User
   name: {{ include "csi-driver-node.extensionsGroup" . }}:{{ include "csi-driver-node.name" . }}:csi-provisioner
+{{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

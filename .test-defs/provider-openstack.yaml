@@ -16,4 +16,4 @@ spec:
     --loadbalancer-provider=$LOADBALANCER_PROVIDER
     --network-worker-cidr=$NETWORK_WORKER_CIDR
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.16.2
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.5

@@ -54,6 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -290,7 +291,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
 func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, c, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
+	caSecrets, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, c, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -303,6 +304,10 @@ func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existi
 	secrets, err := secretsutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
+	}
+
+	for ca, secret := range caSecrets {
+		secrets[ca] = secret
 	}
 
 	return secrets, nil
@@ -455,6 +460,33 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// Deploy certificates and secrets for seed components
+	existingSecrets := &corev1.SecretList{}
+	if err = seedClient.List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		return err
+	}
+
+	existingSecretsMap := map[string]*corev1.Secret{}
+	for _, secret := range existingSecrets.Items {
+		secretObj := secret
+		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
+	}
+
+	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap)
+	if err != nil {
+		return err
+	}
+
+	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
+	// which is required for all other components to start-up.
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[caSeed], deployedSecretsMap[resourcemanager.SecretNameServer])
+	if err != nil {
+		return err
+	}
+	if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
+		return err
+	}
+
 	// Fetch component-specific central monitoring configuration
 	var (
 		centralScrapeConfigs                            = strings.Builder{}
@@ -479,7 +511,6 @@ func RunReconcileSeedFlow(
 	// Logging feature gate
 	var (
 		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
-		existingSecretsMap                = map[string]*corev1.Secret{}
 		filters                           = strings.Builder{}
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
@@ -487,6 +518,13 @@ func RunReconcileSeedFlow(
 	)
 
 	lokiValues["enabled"] = loggingEnabled
+
+	// Follow-up of https://github.com/gardener/gardener/pull/5010 (loki `ServiceAccount` got removed and was never
+	// used.
+	// TODO(rfranzke): Delete this in a future release.
+	if err := seedClient.Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}}); client.IgnoreNotFound(err) != nil {
+		return err
+	}
 
 	// check if loki disabled in gardenlet config
 	if loggingConfig != nil &&
@@ -579,6 +617,7 @@ func RunReconcileSeedFlow(
 			// shoot system components
 			coredns.CentralLoggingConfiguration,
 			metricsserver.CentralLoggingConfiguration,
+			vpnshoot.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{
 			v1beta1constants.DeploymentNameKubeAPIServer,
@@ -689,20 +728,6 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	existingSecrets := &corev1.SecretList{}
-	if err = seedClient.List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
-		return err
-	}
-
-	for _, secret := range existingSecrets.Items {
-		secretObj := secret
-		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
-	}
-
-	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap)
-	if err != nil {
-		return err
-	}
 	jsonString, err := json.Marshal(deployedSecretsMap[common.VPASecretName].Data)
 	if err != nil {
 		return err
@@ -1031,7 +1056,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, log, anySNI, deployedSecretsMap)
+	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, conf, log, anySNI)
 }
 
 func runCreateSeedFlow(
@@ -1042,9 +1067,9 @@ func runCreateSeedFlow(
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 	seed *Seed,
+	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 	anySNI bool,
-	deployedSecretsMap map[string]*corev1.Secret,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1071,11 +1096,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[resourcemanager.SecretNameServer])
-	if err != nil {
-		return err
-	}
-	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion.String(), imageVector, imageVectorOverwrites)
+	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion.String(), conf, imageVector, imageVectorOverwrites)
 	if err != nil {
 		return err
 	}
@@ -1087,7 +1108,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector)
+	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector, seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return err
 	}
@@ -1114,49 +1135,37 @@ func runCreateSeedFlow(
 				return destroyDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, destroyDNSProviderTask(seedClient))
 			}).DoIf(!managedIngress(seed)),
 		})
-		deployResourceManager = g.Add(flow.Task{
-			Name: "Deploying gardener-resource-manager",
-			Fn:   component.OpWaiter(gardenerResourceManager).Deploy,
+		_ = g.Add(flow.Task{
+			Name: "Deploying cluster-identity",
+			Fn:   clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying cluster-identity",
-			Fn:           clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying cluster-autoscaler",
+			Fn:   clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying cluster-autoscaler",
-			Fn:           clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace).Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying etcd-druid",
+			Fn:   etcdDruid.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying etcd-druid",
-			Fn:           etcdDruid.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying gardener-seed-admission-controller",
+			Fn:   gardenerSeedAdmissionController.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying gardener-seed-admission-controller",
-			Fn:           gardenerSeedAdmissionController.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying kube-scheduler for shoot control plane pods",
+			Fn:   kubeScheduler.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying kube-scheduler for shoot control plane pods",
-			Fn:           kubeScheduler.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying dependency-watchdog-endpoint",
+			Fn:   dwdEndpoint.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying dependency-watchdog-endpoint",
-			Fn:           dwdEndpoint.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying dependency-watchdog-probe",
+			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying dependency-watchdog-probe",
-			Fn:           dwdProbe.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying external authz server",
-			Fn:           extAuthzServer.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying external authz server",
+			Fn:   extAuthzServer.Deploy,
 		})
 	)
 
@@ -1173,6 +1182,7 @@ func RunDeleteSeedFlow(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	seed *Seed,
+	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 ) error {
 	seedClient := seedClientSet.Client()
@@ -1197,11 +1207,11 @@ func RunDeleteSeedFlow(
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, "")
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
-		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, "", nil)
+		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
 		networkPolicies = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
-		dwdEndpoint     = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe        = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe})
+		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		extAuthzServer  = extauthzserver.NewExtAuthServer(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)

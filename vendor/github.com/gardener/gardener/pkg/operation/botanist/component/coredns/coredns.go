@@ -20,13 +20,12 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -161,6 +160,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -344,10 +344,8 @@ import custom/*.server
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: utils.MergeStringMaps(c.values.PodAnnotations, map[string]string{
-							"scheduler.alpha.kubernetes.io/critical-pod": "",
-						}),
-						Labels: getLabels(),
+						Annotations: c.values.PodAnnotations,
+						Labels:      getLabels(),
 					},
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{

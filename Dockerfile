@@ -1,12 +1,12 @@
 ############# builder
-FROM golang:1.16.5 AS builder
+FROM golang:1.17.5 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener-extension-provider-openstack
 COPY . .
 RUN make install
 
 ############# base
-FROM alpine:3.13.5 AS base
+FROM alpine:3.13.7 AS base
 
 ############# gardener-extension-provider-openstack
 FROM base AS gardener-extension-provider-openstack

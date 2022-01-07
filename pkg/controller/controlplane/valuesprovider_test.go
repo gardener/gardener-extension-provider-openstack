@@ -280,6 +280,7 @@ var _ = Describe("ValuesProvider", func() {
 			"applicationCredentialID":     "",
 			"applicationCredentialSecret": "",
 			"applicationCredentialName":   "",
+			"internalNetworkName":         technicalID,
 		}
 
 		It("should return correct config chart values", func() {

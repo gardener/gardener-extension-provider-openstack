@@ -17,6 +17,7 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -50,6 +51,37 @@ import (
 )
 
 const namespace = "test"
+
+const updateResolvConfScript = `#!/bin/sh
+
+tmp=/etc/resolv-for-kubelet.conf.new
+dest=/etc/resolv-for-kubelet.conf
+line=%q
+
+is_systemd_resolved_system()
+{
+    if [ -f /run/systemd/resolve/resolv.conf ]; then
+      return 0
+    else
+      return 1
+    fi
+}
+
+rm -f "$tmp"
+if is_systemd_resolved_system; then
+  if [ "$line" = "" ]; then
+    ln -s /run/systemd/resolve/resolv.conf "$tmp"
+  else
+    cp /run/systemd/resolve/resolv.conf "$tmp"
+    echo "" >> "$tmp"
+    echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+    echo "$line" >> "$tmp"
+  fi
+else
+  ln -s /etc/resolv.conf "$tmp"
+fi
+mv "$tmp" "$dest" && echo updated "$dest"
+`
 
 var cloudProviderConfigContent = []byte("[Global]\nauth-url: https://path-to-keystone:5000/v3/\n")
 
@@ -496,6 +528,7 @@ var _ = Describe("Ensurer", func() {
 				FeatureGates: map[string]bool{
 					"Foo": true,
 				},
+				ResolverConfig: "/etc/resolv-for-kubelet.conf",
 			}
 			kubeletConfig := *oldKubeletConfig
 
@@ -512,6 +545,7 @@ var _ = Describe("Ensurer", func() {
 					"CSIMigrationOpenStack":         true,
 					"CSIMigrationOpenStackComplete": true,
 				},
+				ResolverConfig: "/etc/resolv-for-kubelet.conf",
 			}
 			kubeletConfig := *oldKubeletConfig
 
@@ -528,6 +562,7 @@ var _ = Describe("Ensurer", func() {
 					"CSIMigrationOpenStack":           true,
 					"InTreePluginOpenStackUnregister": true,
 				},
+				ResolverConfig: "/etc/resolv-for-kubelet.conf",
 			}
 			kubeletConfig := *oldKubeletConfig
 
@@ -579,24 +614,9 @@ var _ = Describe("Ensurer", func() {
 	})
 
 	Describe("#EnsureAdditionalUnits", func() {
-		It("should add no additional units if resolvConfOptions field is not set", func() {
-			var (
-				oldUnit = extensionsv1alpha1.Unit{Name: "oldunit"}
-				units   = []extensionsv1alpha1.Unit{oldUnit}
-			)
-			// Create ensurer
-			ensurer := NewEnsurer(logger)
-
-			// Call EnsureAdditionalUnits method and check the result
-			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s121, &units, nil)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(units).To(ConsistOf(oldUnit))
-		})
-
-		It("should add additional units to the current ones if resolvConfOptions field is set", func() {
-			var (
-				customUnitContent = `[Unit]
-Description=add options to /etc/resolv.conf after every change of /run/systemd/resolve/resolv.conf
+		var (
+			customUnitContent = `[Unit]
+Description=update /etc/resolv-for-kubelet.conf on start and after each change of /run/systemd/resolve/resolv.conf
 After=network.target
 StartLimitIntervalSec=0
 
@@ -605,14 +625,31 @@ Type=oneshot
 ExecStart=/opt/bin/update-resolv-conf.sh
 `
 
-				customPathContent = `[Path]
+			customPathContent = `[Path]
 PathChanged=/run/systemd/resolve/resolv.conf
 
 [Install]
 WantedBy=multi-user.target
 `
-				trueVar = true
+			trueVar        = true
+			oldUnit        = extensionsv1alpha1.Unit{Name: "oldunit"}
+			additionalPath = extensionsv1alpha1.Unit{Name: "update-resolv-conf.path", Enable: &trueVar, Content: &customPathContent}
+			additionalUnit = extensionsv1alpha1.Unit{Name: "update-resolv-conf.service", Enable: &trueVar, Content: &customUnitContent}
+			units          = []extensionsv1alpha1.Unit{oldUnit}
+		)
 
+		It("should add additional units if resolvConfOptions field is not set", func() {
+			// Create ensurer
+			ensurer := NewEnsurer(logger)
+
+			// Call EnsureAdditionalUnits method and check the result
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s121, &units, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(units).To(ConsistOf(oldUnit, additionalPath, additionalUnit))
+		})
+
+		It("should add additional units to the current ones if resolvConfOptions field is set", func() {
+			var (
 				oldUnit        = extensionsv1alpha1.Unit{Name: "oldunit"}
 				additionalPath = extensionsv1alpha1.Unit{Name: "update-resolv-conf.path", Enable: &trueVar, Content: &customPathContent}
 				additionalUnit = extensionsv1alpha1.Unit{Name: "update-resolv-conf.service", Enable: &trueVar, Content: &customUnitContent}
@@ -631,10 +668,29 @@ WantedBy=multi-user.target
 	})
 
 	Describe("#EnsureAdditionalFiles", func() {
-		It("should add no additional files to the current ones if resolvConfOptions field is not set", func() {
+		var (
+			permissions int32 = 0755
+
+			filePath = "/opt/bin/update-resolv-conf.sh"
+
+			oldFile            = extensionsv1alpha1.File{Path: "oldpath"}
+			additionalFileFunc = func(options string) extensionsv1alpha1.File {
+				return extensionsv1alpha1.File{
+					Path:        filePath,
+					Permissions: &permissions,
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "",
+							Data:     strings.Replace(updateResolvConfScript, "%q", options, 1),
+						},
+					},
+				}
+			}
+		)
+
+		It("should add additional files to the current ones if resolvConfOptions field is not set", func() {
 			var (
-				oldFile = extensionsv1alpha1.File{Path: "oldpath"}
-				files   = []extensionsv1alpha1.File{oldFile}
+				files = []extensionsv1alpha1.File{oldFile}
 			)
 			// Create ensurer
 			ensurer := NewEnsurer(logger)
@@ -642,40 +698,10 @@ WantedBy=multi-user.target
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(files).To(ConsistOf(oldFile))
+			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`""`)))
 		})
 		It("should add additional files to the current ones if resolvConfOptions field is set", func() {
 			var (
-				permissions       int32 = 0755
-				customFileContent       = `#!/bin/sh
-
-file=/run/systemd/resolve/resolv.conf
-tmp=/etc/resolv.conf.new
-dest=/etc/resolv.conf
-line="options rotate timeout:1"
-
-if [ -f "$file" ]; then
-  cp "$file" "$tmp"
-  echo "" >> "$tmp"
-  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
-  echo "$line" >> "$tmp"
-  mv "$tmp" "$dest"
-fi`
-
-				filePath = "/opt/bin/update-resolv-conf.sh"
-
-				oldFile        = extensionsv1alpha1.File{Path: "oldpath"}
-				additionalFile = extensionsv1alpha1.File{
-					Path:        filePath,
-					Permissions: &permissions,
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "",
-							Data:     customFileContent,
-						},
-					},
-				}
-
 				files = []extensionsv1alpha1.File{oldFile}
 			)
 
@@ -685,42 +711,13 @@ fi`
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121WithResolvConfOptions, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(files).To(ConsistOf(oldFile, additionalFile))
+			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`"options rotate timeout:1"`)))
 		})
 
 		It("should overwrite existing files of the current ones", func() {
 			var (
-				permissions       int32 = 0755
-				customFileContent       = `#!/bin/sh
-
-file=/run/systemd/resolve/resolv.conf
-tmp=/etc/resolv.conf.new
-dest=/etc/resolv.conf
-line="options rotate timeout:1"
-
-if [ -f "$file" ]; then
-  cp "$file" "$tmp"
-  echo "" >> "$tmp"
-  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
-  echo "$line" >> "$tmp"
-  mv "$tmp" "$dest"
-fi`
-
-				filePath = "/opt/bin/update-resolv-conf.sh"
-
-				oldFile        = extensionsv1alpha1.File{Path: "oldpath"}
-				additionalFile = extensionsv1alpha1.File{
-					Path:        filePath,
-					Permissions: &permissions,
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "",
-							Data:     customFileContent,
-						},
-					},
-				}
-
-				files = []extensionsv1alpha1.File{oldFile, additionalFile}
+				additionalFile = additionalFileFunc(`"options rotate timeout:1"`)
+				files          = []extensionsv1alpha1.File{oldFile, additionalFile}
 			)
 
 			// Create ensurer

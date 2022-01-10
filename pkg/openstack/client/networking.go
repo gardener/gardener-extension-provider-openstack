@@ -16,7 +16,6 @@ package client
 
 import (
 	"context"
-
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"k8s.io/utils/pointer"
@@ -28,7 +27,7 @@ type networkWithExternalExt struct {
 }
 
 // GetExternalNetworkNames returns a list of all external network names.
-func (c *NetworkingClient) GetExternalNetworkNames(ctx context.Context) ([]string, error) {
+func (c *NetworkingClient) GetExternalNetworkNames(_ context.Context) ([]string, error) {
 	allPages, err := networks.List(c.client, external.ListOptsExt{
 		ListOptsBuilder: networks.ListOpts{},
 		External:        pointer.Bool(true),
@@ -48,4 +47,13 @@ func (c *NetworkingClient) GetExternalNetworkNames(ctx context.Context) ([]strin
 		externalNetworkNames = append(externalNetworkNames, externalNetwork.Name)
 	}
 	return externalNetworkNames, nil
+}
+
+func (c *NetworkingClient) GetNetworkNameFromID(_ context.Context, id string) (string, error) {
+	network, err := networks.Get(c.client, id).Extract()
+	if err != nil {
+		return "", err
+	}
+
+	return network.Name, nil
 }

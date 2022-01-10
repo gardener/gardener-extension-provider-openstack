@@ -77,6 +77,10 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 			allErrs = append(allErrs, field.Forbidden(workerFldPath.Child("minimum"), "minimum value must be >= 1 if maximum value > 0 (auto scaling to 0 is not supported)"))
 		}
 
+		if worker.Volume != nil && worker.Volume.Type != nil && worker.Volume.VolumeSize == "" {
+			allErrs = append(allErrs, field.Forbidden(workerFldPath.Child("volume", "type"), "specifying volume type without a custom volume size is not allowed"))
+		}
+
 		if worker.ProviderConfig != nil {
 			workerConfig, err := helper.WorkerConfigFromRawExtension(worker.ProviderConfig)
 			if err != nil {

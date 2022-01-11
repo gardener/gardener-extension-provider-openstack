@@ -39,6 +39,8 @@ const (
 	TerraformOutputKeyRouterID = "router_id"
 	// TerraformOutputKeyNetworkID is the private worker network.
 	TerraformOutputKeyNetworkID = "network_id"
+	// TerraformOutputKeyNetworkName is the private worker network name.
+	TerraformOutputKeyNetworkName = "network_name"
 	// TerraformOutputKeySecurityGroupID is the id of worker security group.
 	TerraformOutputKeySecurityGroupID = "security_group_id"
 	// TerraformOutputKeySecurityGroupName is the name of the worker security group.
@@ -74,6 +76,7 @@ func ComputeTerraformerTemplateValues(
 		outputKeysConfig = map[string]interface{}{
 			"routerID":          TerraformOutputKeyRouterID,
 			"networkID":         TerraformOutputKeyNetworkID,
+			"networkName":       TerraformOutputKeyNetworkName,
 			"keyName":           TerraformOutputKeySSHKeyName,
 			"securityGroupID":   TerraformOutputKeySecurityGroupID,
 			"securityGroupName": TerraformOutputKeySecurityGroupName,
@@ -195,6 +198,8 @@ type TerraformState struct {
 	RouterID string
 	// NetworkID is the private worker network.
 	NetworkID string
+	// NetworkName is the private worker network name.
+	NetworkName string
 	// SubnetID is the id of the worker subnet.
 	SubnetID string
 	// FloatingNetworkID is the id of the provider network.
@@ -211,6 +216,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer) (*Te
 		TerraformOutputKeySSHKeyName,
 		TerraformOutputKeyRouterID,
 		TerraformOutputKeyNetworkID,
+		TerraformOutputKeyNetworkName,
 		TerraformOutputKeySubnetID,
 		TerraformOutputKeyFloatingNetworkID,
 		TerraformOutputKeySecurityGroupID,
@@ -226,6 +232,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer) (*Te
 		SSHKeyName:        vars[TerraformOutputKeySSHKeyName],
 		RouterID:          vars[TerraformOutputKeyRouterID],
 		NetworkID:         vars[TerraformOutputKeyNetworkID],
+		NetworkName:       vars[TerraformOutputKeyNetworkName],
 		SubnetID:          vars[TerraformOutputKeySubnetID],
 		FloatingNetworkID: vars[TerraformOutputKeyFloatingNetworkID],
 		SecurityGroupID:   vars[TerraformOutputKeySecurityGroupID],
@@ -242,7 +249,8 @@ func StatusFromTerraformState(state *TerraformState) *apiv1alpha1.Infrastructure
 			Kind:       "InfrastructureStatus",
 		},
 		Networks: apiv1alpha1.NetworkStatus{
-			ID: state.NetworkID,
+			ID:   state.NetworkID,
+			Name: state.NetworkName,
 			FloatingPool: apiv1alpha1.FloatingPoolStatus{
 				ID: state.FloatingNetworkID,
 			},

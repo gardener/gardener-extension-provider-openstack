@@ -17,7 +17,6 @@ package controlplane
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"path/filepath"
 	"strings"
 
@@ -482,9 +481,9 @@ func getConfigChartValues(
 		return nil, err
 	}
 
-	internalNetworkName, err := getInternalNetworkName(infraStatus, cluster, c)
-	if err != nil {
-		return nil, err
+	internalNetworkName := cluster.Shoot.Status.TechnicalID
+	if len(infraStatus.Networks.Name) > 0 {
+		internalNetworkName = infraStatus.Networks.Name
 	}
 
 	values := map[string]interface{}{
@@ -552,24 +551,6 @@ func getConfigChartValues(
 	}
 
 	return values, nil
-}
-
-func getInternalNetworkName(infraStatus *api.InfrastructureStatus, cluster *extensionscontroller.Cluster, c *openstack.Credentials) (string, error) {
-	if len(infraStatus.Networks.ID) == 0 {
-		return cluster.Shoot.Status.TechnicalID, nil
-	}
-
-	osClient, err := client.NewOpenstackClientFromCredentials(c)
-	if err != nil {
-		return "", err
-	}
-
-	osNetworkClient, err := osClient.Networking()
-	if err != nil {
-		return "", err
-	}
-
-	return osNetworkClient.GetNetworkNameFromID(context.Background(), infraStatus.Networks.ID)
 }
 
 func generateLoadBalancerClassValues(lbClasses []api.LoadBalancerClass, infrastructureStatus *api.InfrastructureStatus) []map[string]interface{} {

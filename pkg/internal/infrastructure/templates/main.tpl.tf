@@ -56,7 +56,7 @@ resource "openstack_networking_network_v2" "cluster" {
 }
 {{ else -}}
 data "openstack_networking_network_v2" "cluster" {
-  network_id = "{{ .networks.id }}"
+  network_id   = "{{ .networks.id }}"
 }
 {{- end }}
 
@@ -143,6 +143,10 @@ output "{{ .outputKeys.networkID }}" {
   value = {{ template "network-id" $ }}
 }
 
+output "{{ .outputKeys.networkName }}" {
+  value = {{ template "network-name" $ }}
+}
+
 output "{{ .outputKeys.keyName }}" {
   value = openstack_compute_keypair_v2.ssh_key.name
 }
@@ -172,5 +176,12 @@ output "{{ .outputKeys.subnetID }}" {
 openstack_networking_network_v2.cluster.id
 {{ else -}}
 data.openstack_networking_network_v2.cluster.id
+{{ end -}}
+{{- end -}}
+{{- define "network-name" -}}
+{{ if .create.network -}}
+openstack_networking_network_v2.cluster.name
+{{ else -}}
+data.openstack_networking_network_v2.cluster.name
 {{ end -}}
 {{- end -}}

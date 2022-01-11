@@ -48,12 +48,3 @@ func (c *NetworkingClient) GetExternalNetworkNames(_ context.Context) ([]string,
 	}
 	return externalNetworkNames, nil
 }
-
-func (c *NetworkingClient) GetNetworkNameFromID(_ context.Context, id string) (string, error) {
-	network, err := networks.Get(c.client, id).Extract()
-	if err != nil {
-		return "", err
-	}
-
-	return network.Name, nil
-}

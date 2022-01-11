@@ -84,7 +84,6 @@ type DNS interface {
 // Networking describes the operations of a client interacting with OpenStack's Networking service.
 type Networking interface {
 	GetExternalNetworkNames(ctx context.Context) ([]string, error)
-	GetNetworkNameFromID(ctx context.Context, id string) (string, error)
 }
 
 // FactoryFactory creates instances of Factory.

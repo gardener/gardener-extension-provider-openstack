@@ -134,6 +134,7 @@ var _ = Describe("Terraform", func() {
 			expectedOutputKeysValues = map[string]interface{}{
 				"routerID":          TerraformOutputKeyRouterID,
 				"networkID":         TerraformOutputKeyNetworkID,
+				"networkName":       TerraformOutputKeyNetworkName,
 				"keyName":           TerraformOutputKeySSHKeyName,
 				"securityGroupID":   TerraformOutputKeySecurityGroupID,
 				"securityGroupName": TerraformOutputKeySecurityGroupName,

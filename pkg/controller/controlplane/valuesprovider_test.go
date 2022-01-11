@@ -42,9 +42,10 @@ import (
 )
 
 const (
-	namespace = "test"
-	authURL   = "someurl"
-	region    = "europe"
+	namespace   = "test"
+	authURL     = "someurl"
+	region      = "europe"
+	technicalID = "shoot--dev--test"
 )
 
 var (
@@ -87,6 +88,7 @@ func controlPlane(floatingPoolID string, cfg *api.ControlPlaneConfig) *extension
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: encode(&api.InfrastructureStatus{
 					Networks: api.NetworkStatus{
+						Name: technicalID,
 						FloatingPool: api.FloatingPoolStatus{
 							ID: floatingPoolID,
 						},
@@ -122,7 +124,7 @@ var _ = Describe("ValuesProvider", func() {
 		rescanBlockStorageOnResize       = true
 		ignoreVolumeAZ                   = true
 		nodeVoluemAttachLimit      int32 = 25
-		technicalID                      = "shoot--dev--test"
+		technicalID                      = technicalID
 
 		cloudProfileConfig = &api.CloudProfileConfig{
 			KeyStoneURL:                authURL,

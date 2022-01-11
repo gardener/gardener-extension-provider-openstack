@@ -9,8 +9,13 @@ data:
 # authURL: base64(authentication-url)
 # domainName: base64(domain-name)
 # tenantName: base64(tenant-name)
+### either use username/password
 # username: base64(username)
 # password: base64(password)
+### or application credentials
+# applicationCredentialID: base64(app-credential-id)
+# applicationCredentialName: base64(app-credential-name) # optional
+# applicationCredentialSecret: base64(app-credential-secret)
 ---
 apiVersion: extensions.gardener.cloud/v1alpha1
 kind: BackupEntry

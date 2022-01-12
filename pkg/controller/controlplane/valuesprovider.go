@@ -481,11 +481,6 @@ func getConfigChartValues(
 		return nil, err
 	}
 
-	internalNetworkName := cluster.Shoot.Status.TechnicalID
-	if len(infraStatus.Networks.Name) > 0 {
-		internalNetworkName = infraStatus.Networks.Name
-	}
-
 	values := map[string]interface{}{
 		"kubernetesVersion":           cluster.Shoot.Spec.Kubernetes.Version,
 		"domainName":                  c.DomainName,
@@ -508,7 +503,7 @@ func getConfigChartValues(
 		"nodeVolumeAttachLimit":       cloudProfileConfig.NodeVolumeAttachLimit,
 		// detect internal network.
 		// See https://github.com/kubernetes/cloud-provider-openstack/blob/v1.22.1/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#networking
-		"internalNetworkName": internalNetworkName,
+		"internalNetworkName": infraStatus.Networks.Name,
 	}
 
 	var loadBalancerClassesFromCloudProfile = []api.LoadBalancerClass{}

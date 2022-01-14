@@ -4,6 +4,7 @@
 /local
 **/dev
 /bin
+hack/tools/bin
 
 *.coverprofile
 *.html

@@ -16,6 +16,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"k8s.io/utils/pointer"

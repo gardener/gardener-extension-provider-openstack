@@ -501,6 +501,9 @@ func getConfigChartValues(
 		"rescanBlockStorageOnResize":  cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
 		"ignoreVolumeAZ":              cloudProfileConfig.IgnoreVolumeAZ != nil && *cloudProfileConfig.IgnoreVolumeAZ,
 		"nodeVolumeAttachLimit":       cloudProfileConfig.NodeVolumeAttachLimit,
+		// detect internal network.
+		// See https://github.com/kubernetes/cloud-provider-openstack/blob/v1.22.1/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#networking
+		"internalNetworkName": infraStatus.Networks.Name,
 	}
 
 	var loadBalancerClassesFromCloudProfile = []api.LoadBalancerClass{}

@@ -31,6 +31,8 @@ useOctavia: false
 # - name: D
 #   floatingNetworkID: "1234"
 #   floatingSubnetTags: tag1,tag2
+# [Networking]
+# internalNetworkName: shoot--my-project--my-cluster
 # [BlockStorage]
 rescanBlockStorageOnResize: false
 ignoreVolumeAZ: false

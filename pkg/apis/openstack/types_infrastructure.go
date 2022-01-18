@@ -74,6 +74,8 @@ type NodeStatus struct {
 type NetworkStatus struct {
 	// ID is the Network id.
 	ID string
+	// Name is the Network name.
+	Name string
 	// FloatingPool contains information about the floating pool.
 	FloatingPool FloatingPoolStatus
 	// Router contains information about the Router and related resources.

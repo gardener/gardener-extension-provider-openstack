@@ -3,6 +3,7 @@
 {{ include "cloud-provider-config-credentials" . }}
 {{ include "cloud-provider-config-meta" . }}
 {{ include "cloud-provider-config-loadbalancer" . }}
+{{ include "cloud-provider-config-networking" . }}
 {{- end -}}
 ---
 apiVersion: v1

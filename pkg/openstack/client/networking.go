@@ -28,7 +28,7 @@ type networkWithExternalExt struct {
 }
 
 // GetExternalNetworkNames returns a list of all external network names.
-func (c *NetworkingClient) GetExternalNetworkNames(ctx context.Context) ([]string, error) {
+func (c *NetworkingClient) GetExternalNetworkNames(_ context.Context) ([]string, error) {
 	allPages, err := networks.List(c.client, external.ListOptsExt{
 		ListOptsBuilder: networks.ListOpts{},
 		External:        pointer.Bool(true),

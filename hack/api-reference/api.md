@@ -1087,6 +1087,17 @@ string
 </tr>
 <tr>
 <td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the Network name.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>floatingPool</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPoolStatus">

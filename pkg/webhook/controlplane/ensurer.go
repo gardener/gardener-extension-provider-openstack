@@ -419,6 +419,9 @@ func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.
 		new.FeatureGates[csiMigrationCompleteFeatureGate] = true
 	}
 
+	// resolv-for-kubelet.conf is created by update-resolv-conf.service
+	new.ResolverConfig = "/etc/resolv-for-kubelet.conf"
+
 	return nil
 }
 
@@ -458,17 +461,11 @@ func (e *ensurer) EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 
 // EnsureAdditionalUnits ensures that additional required system units are added.
 func (e *ensurer) EnsureAdditionalUnits(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.Unit) error {
-	cloudProfileConfig, err := getCloudProfileConfig(ctx, gctx)
-	if err != nil {
-		return err
-	}
-	if len(getResolveConfOptions(cloudProfileConfig)) > 0 {
-		e.addAdditionalUnitsForResolvConfOptions(new)
-	}
+	e.addAdditionalUnitsForResolvConfOptions(new)
 	return nil
 }
 
-// addAdditionalUnitsForResolvConfOptions installs a systemd service to update `resolv.conf`
+// addAdditionalUnitsForResolvConfOptions installs a systemd service to update `resolv-for-kubelet.conf`
 // after each change of `/run/systemd/resolve/resolv.conf`.
 func (e *ensurer) addAdditionalUnitsForResolvConfOptions(new *[]extensionsv1alpha1.Unit) {
 	var (
@@ -480,7 +477,7 @@ PathChanged=/run/systemd/resolve/resolv.conf
 WantedBy=multi-user.target
 `
 		customUnitContent = `[Unit]
-Description=add options to /etc/resolv.conf after every change of /run/systemd/resolve/resolv.conf
+Description=update /etc/resolv-for-kubelet.conf on start and after each change of /run/systemd/resolve/resolv.conf
 After=network.target
 StartLimitIntervalSec=0
 
@@ -508,9 +505,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 	if err != nil {
 		return err
 	}
-	if options := getResolveConfOptions(cloudProfileConfig); len(options) > 0 {
-		e.addAdditionalFilesForResolvConfOptions(options, new)
-	}
+	e.addAdditionalFilesForResolvConfOptions(getResolveConfOptions(cloudProfileConfig), new)
 	return nil
 }
 
@@ -521,21 +516,41 @@ func (e *ensurer) addAdditionalFilesForResolvConfOptions(options []string, new *
 		permissions int32 = 0755
 		template          = `#!/bin/sh
 
-file=/run/systemd/resolve/resolv.conf
-tmp=/etc/resolv.conf.new
-dest=/etc/resolv.conf
+tmp=/etc/resolv-for-kubelet.conf.new
+dest=/etc/resolv-for-kubelet.conf
 line=%q
 
-if [ -f "$file" ]; then
-  cp "$file" "$tmp"
-  echo "" >> "$tmp"
-  echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
-  echo "$line" >> "$tmp"
-  mv "$tmp" "$dest"
-fi`
+is_systemd_resolved_system()
+{
+    if [ -f /run/systemd/resolve/resolv.conf ]; then
+      return 0
+    else
+      return 1
+    fi
+}
+
+rm -f "$tmp"
+if is_systemd_resolved_system; then
+  if [ "$line" = "" ]; then
+    ln -s /run/systemd/resolve/resolv.conf "$tmp"
+  else
+    cp /run/systemd/resolve/resolv.conf "$tmp"
+    echo "" >> "$tmp"
+    echo "# updated by update-resolv-conf.service (installed by gardener-extension-provider-openstack)" >> "$tmp"
+    echo "$line" >> "$tmp"
+  fi
+else
+  ln -s /etc/resolv.conf "$tmp"
+fi
+mv "$tmp" "$dest" && echo updated "$dest"
+`
 	)
 
-	content := fmt.Sprintf(template, fmt.Sprintf("options %s", strings.Join(options, " ")))
+	optionLine := ""
+	if len(options) > 0 {
+		optionLine = fmt.Sprintf("options %s", strings.Join(options, " "))
+	}
+	content := fmt.Sprintf(template, optionLine)
 	file := extensionsv1alpha1.File{
 		Path:        "/opt/bin/update-resolv-conf.sh",
 		Permissions: &permissions,

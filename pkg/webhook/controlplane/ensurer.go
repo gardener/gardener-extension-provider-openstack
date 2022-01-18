@@ -505,8 +505,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 	if err != nil {
 		return err
 	}
-	options := getResolveConfOptions(cloudProfileConfig)
-	e.addAdditionalFilesForResolvConfOptions(options, new)
+	e.addAdditionalFilesForResolvConfOptions(getResolveConfOptions(cloudProfileConfig), new)
 	return nil
 }
 

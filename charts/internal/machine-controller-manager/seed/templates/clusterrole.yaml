@@ -37,6 +37,7 @@ rules:
   resources:
   - leases
   resourceNames:
+  - machine-controller
   - machine-controller-manager
   verbs:
   - get

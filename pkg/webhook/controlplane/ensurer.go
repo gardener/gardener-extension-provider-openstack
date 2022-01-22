@@ -25,7 +25,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/csimigration"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -62,8 +61,8 @@ func (e *ensurer) InjectClient(client client.Client) error {
 	return nil
 }
 
-func computeCSIMigrationCompleteFeatureGate(cluster *extensionscontroller.Cluster) (string, error) {
-	k8sGreaterEqual121, err := versionutils.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, ">=", "1.21")
+func computeCSIMigrationCompleteFeatureGate(version string) (string, error) {
+	k8sGreaterEqual121, err := versionutils.CompareVersions(version, ">=", "1.21")
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +87,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 	if err != nil {
 		return err
 	}
-	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster)
+	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster.Shoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return err
 	}
@@ -116,7 +115,7 @@ func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gct
 	if err != nil {
 		return err
 	}
-	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster)
+	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster.Shoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return err
 	}
@@ -145,7 +144,7 @@ func (e *ensurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gconte
 	if err != nil {
 		return err
 	}
-	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster)
+	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster.Shoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return err
 	}
@@ -392,7 +391,7 @@ func ensureKubeletCommandLineArgs(command []string, csiEnabled bool) []string {
 }
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
-func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error {
+func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {
 		return err
@@ -402,7 +401,7 @@ func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.
 	if err != nil {
 		return err
 	}
-	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster)
+	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(kubeletVersion.String())
 	if err != nil {
 		return err
 	}
@@ -425,7 +424,7 @@ func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.
 }
 
 // ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
-func (e *ensurer) ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version) bool {
+func (e *ensurer) ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, _ *semver.Version) bool {
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {
 		return false
@@ -440,7 +439,7 @@ func (e *ensurer) ShouldProvisionKubeletCloudProviderConfig(ctx context.Context,
 }
 
 // EnsureKubeletCloudProviderConfig ensures that the cloud provider config file conforms to the provider requirements.
-func (e *ensurer) EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, data *string, namespace string) error {
+func (e *ensurer) EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, _ *semver.Version, data *string, namespace string) error {
 	secret := corev1.Secret{}
 	if err := e.client.Get(ctx, kutil.Key(namespace, openstack.CloudProviderDiskConfigName), &secret); err != nil {
 		if apierrors.IsNotFound(err) {

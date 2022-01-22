@@ -36,7 +36,7 @@ type AddOptions struct {
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return csimigration.Add(mgr, csimigration.AddArgs{
 		ControllerOptions:             opts.Controller,
-		CSIMigrationKubernetesVersion: "1.19",
+		CSIMigrationKubernetesVersion: openstack.CSIMigrationKubernetesVersion,
 		Type:                          openstack.Type,
 		StorageClassNameToLegacyProvisioner: map[string]string{
 			"default":       "kubernetes.io/cinder",

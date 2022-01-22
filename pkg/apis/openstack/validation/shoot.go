@@ -38,7 +38,7 @@ func ValidateShootCredentialsForK8sVersion(k8sVersion string, credentials openst
 
 	// The Kubernetes version is the version of the CSI migration, where we stopped using the in-tree providers.
 	// see: pkg/webhook/controlplane/ensurer.go
-	k8sVersionLessThan19, err := version.CompareVersions(k8sVersion, "<", "1.19")
+	k8sVersionLessThan19, err := version.CompareVersions(k8sVersion, "<", openstack.CSIMigrationKubernetesVersion)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, k8sVersion, "not a valid version"))
 	}

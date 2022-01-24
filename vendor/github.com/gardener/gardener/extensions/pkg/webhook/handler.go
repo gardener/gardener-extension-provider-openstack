@@ -37,7 +37,7 @@ import (
 
 // HandlerBuilder contains information which are required to create an admission handler.
 type HandlerBuilder struct {
-	mutatorMap map[Mutator][]client.Object
+	mutatorMap map[Mutator][]Type
 	predicates []predicate.Predicate
 	scheme     *runtime.Scheme
 	logger     logr.Logger
@@ -46,14 +46,14 @@ type HandlerBuilder struct {
 // NewBuilder creates a new HandlerBuilder.
 func NewBuilder(mgr manager.Manager, logger logr.Logger) *HandlerBuilder {
 	return &HandlerBuilder{
-		mutatorMap: make(map[Mutator][]client.Object),
+		mutatorMap: make(map[Mutator][]Type),
 		scheme:     mgr.GetScheme(),
 		logger:     logger.WithName("handler"),
 	}
 }
 
 // WithMutator adds the given mutator for the given types to the HandlerBuilder.
-func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...client.Object) *HandlerBuilder {
+func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...Type) *HandlerBuilder {
 	mutator = hybridMutator(mutator)
 	b.mutatorMap[mutator] = append(b.mutatorMap[mutator], types...)
 
@@ -61,7 +61,7 @@ func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...client.Object) *H
 }
 
 // WithValidator adds the given validator for the given types to the HandlerBuilder.
-func (b *HandlerBuilder) WithValidator(validator Validator, types ...client.Object) *HandlerBuilder {
+func (b *HandlerBuilder) WithValidator(validator Validator, types ...Type) *HandlerBuilder {
 	mutator := hybridValidator(validator)
 	b.mutatorMap[mutator] = append(b.mutatorMap[mutator], types...)
 	return b
@@ -84,7 +84,7 @@ func (b *HandlerBuilder) Build() (admission.Handler, error) {
 	}
 
 	for m, t := range b.mutatorMap {
-		typesMap, err := buildTypesMap(b.scheme, t)
+		typesMap, err := buildTypesMap(b.scheme, objectsFromTypes(t))
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	obj := t.DeepCopyObject().(client.Object)
 	_, _, err := decoder.Decode(req.Object.Raw, nil, obj)
 	if err != nil {
-		logger.Error(err, "could not decode request", "request", ar)
+		logger.Error(err, "Could not decode request", "request", ar)
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode request %v: %w", ar, err))
 	}
 
@@ -171,7 +171,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	if len(req.OldObject.Raw) != 0 {
 		oldObj = t.DeepCopyObject().(client.Object)
 		if _, _, err := decoder.Decode(ar.OldObject.Raw, nil, oldObj); err != nil {
-			logger.Error(err, "could not decode old object", "object", oldObj)
+			logger.Error(err, "Could not decode old object", "object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
 	}
@@ -184,7 +184,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	// Process the resource
 	newObj := obj.DeepCopyObject().(client.Object)
 	if err = m.Mutate(ctx, newObj, oldObj); err != nil {
-		logger.Error(fmt.Errorf("could not process: %w", err), "admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+		logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -205,6 +205,14 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 
 	// Return a validation response if the resource should not be changed
 	return admission.ValidationResponse(true, "")
+}
+
+func objectsFromTypes(in []Type) []client.Object {
+	out := make([]client.Object, 0, len(in))
+	for _, t := range in {
+		out = append(out, t.Obj)
+	}
+	return out
 }
 
 // buildTypesMap builds a map of the given types keyed by their GroupVersionKind, using the scheme from the given Manager.

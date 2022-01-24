@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
@@ -42,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -99,15 +99,14 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	BackupEntry              backupentry.Interface
-	SourceBackupEntry        backupentry.Interface
-	ControlPlane             *ControlPlane
-	Extensions               *Extensions
-	NetworkPolicies          component.Deployer
-	SystemComponents         *SystemComponents
-	Logging                  *Logging
-	DependencyWatchdogAccess dependencywatchdog.AccessInterface
-	GardenerAccess           gardeneraccess.Interface
+	BackupEntry       backupentry.Interface
+	SourceBackupEntry backupentry.Interface
+	ControlPlane      *ControlPlane
+	Extensions        *Extensions
+	NetworkPolicies   component.Deployer
+	SystemComponents  *SystemComponents
+	Logging           *Logging
+	GardenerAccess    gardeneraccess.Interface
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -145,11 +144,13 @@ type Extensions struct {
 
 // SystemComponents contains references to system components.
 type SystemComponents struct {
-	ClusterIdentity clusteridentity.Interface
-	Namespaces      component.DeployWaiter
-	CoreDNS         coredns.Interface
-	MetricsServer   metricsserver.Interface
-	VPNShoot        vpnshoot.Interface
+	ClusterIdentity     clusteridentity.Interface
+	Namespaces          component.DeployWaiter
+	CoreDNS             coredns.Interface
+	NodeLocalDNS        nodelocaldns.Interface
+	MetricsServer       metricsserver.Interface
+	VPNShoot            vpnshoot.Interface
+	NodeProblemDetector component.DeployWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

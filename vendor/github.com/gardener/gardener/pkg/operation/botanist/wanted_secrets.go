@@ -19,8 +19,9 @@ import (
 	"net"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
@@ -122,6 +123,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
 			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
 			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			b.Shoot.GetInfo().Status.TechnicalID,
 		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 
 		kubeControllerManagerCertDNSNames   = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
@@ -223,26 +225,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			},
 		},
 
-		// Secret definition for gardener-resource-manager
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: resourcemanager.SecretName,
-
-				CommonName:   resourcemanager.UserName,
-				Organization: []string{user.SystemPrivilegedGroup},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			}},
-		},
-
 		// Secret definition for gardener-resource-manager server
 		&secrets.CertificateSecretConfig{
 			Name: resourcemanager.SecretNameServer,
@@ -291,26 +273,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				CertType:  secrets.ClientCert,
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAKubelet],
 			},
-		},
-
-		// Secret definition for cloud-config-downloader
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: downloader.SecretName,
-
-				CommonName:   downloader.SecretName,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			}},
 		},
 
 		// Secret definition for monitoring
@@ -472,6 +434,43 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			CertType:  secrets.ServerCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			Validity:  &endUserCrtValidity,
+		})
+	}
+
+	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
+		// Secret definitions for dependency-watchdog-internal and external probes
+		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
+
+				CommonName:   dependencywatchdog.UserName,
+				Organization: nil,
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
+			}},
+		}, &secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
+
+				CommonName:   dependencywatchdog.UserName,
+				Organization: nil,
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			}},
 		})
 	}
 

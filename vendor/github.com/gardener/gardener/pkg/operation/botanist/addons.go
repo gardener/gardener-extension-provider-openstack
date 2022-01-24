@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/gardener/gardener/charts"
@@ -31,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -296,9 +296,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 		}
-		nodeLocalDNSConfig = map[string]interface{}{
-			"domain": gardencorev1beta1.DefaultDomain,
-		}
 
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
@@ -336,10 +333,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"maintenanceBegin":  b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.Begin,
 			"maintenanceEnd":    b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.End,
 		}
-		nodeExporterConfig        = map[string]interface{}{}
-		blackboxExporterConfig    = map[string]interface{}{}
-		nodeProblemDetectorConfig = map[string]interface{}{}
-		networkPolicyConfig       = netpol.ShootNetworkPolicyValues{
+		nodeExporterConfig     = map[string]interface{}{}
+		blackboxExporterConfig = map[string]interface{}{}
+		networkPolicyConfig    = netpol.ShootNetworkPolicyValues{
 			Enabled: true,
 			NodeLocalDNS: netpol.NodeLocalDNSValues{
 				Enabled:          b.Shoot.NodeLocalDNSEnabled,
@@ -351,16 +347,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	)
 
 	if b.Shoot.IPVSEnabled() {
-		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = common.NodeLocalIPVSAddress
-	}
-
-	if b.APIServerSNIEnabled() {
-		nodeProblemDetectorConfig["env"] = []interface{}{
-			map[string]interface{}{
-				"name":  "KUBERNETES_SERVICE_HOST",
-				"value": kasFQDN,
-			},
-		}
+		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = nodelocaldns.IPVSAddress
 	}
 
 	if vpaSecret := b.LoadSecret(common.VPASecretName); vpaSecret != nil {
@@ -448,35 +435,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
 
-	// The node-local-dns interface cannot bind the kube-dns cluster IP since the interface
-	// used for IPVS load-balancing already uses this address.
-	if b.Shoot.IPVSEnabled() {
-		nodeLocalDNSConfig["clusterDNS"] = b.Shoot.Networks.CoreDNS.String()
-	} else {
-		nodeLocalDNSConfig["dnsServer"] = b.Shoot.Networks.CoreDNS.String()
-	}
-
-	nodeLocalDNSForceTcpToClusterDNS := true
-	if forceTcp, err := strconv.ParseBool(b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]); err == nil {
-		nodeLocalDNSForceTcpToClusterDNS = forceTcp
-	}
-	nodeLocalDNSConfig["forceTcpToClusterDNS"] = nodeLocalDNSForceTcpToClusterDNS
-	nodeLocalDNSForceTcpToUpstreamDNS := true
-	if forceTcp, err := strconv.ParseBool(b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]); err == nil {
-		nodeLocalDNSForceTcpToUpstreamDNS = forceTcp
-	}
-	nodeLocalDNSConfig["forceTcpToUpstreamDNS"] = nodeLocalDNSForceTcpToUpstreamDNS
-
-	nodelocalDNS, err := b.InjectShootShootImages(nodeLocalDNSConfig, charts.ImageNameNodeLocalDns)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeProblemDetector, err := b.InjectShootShootImages(nodeProblemDetectorConfig, charts.ImageNameNodeProblemDetector)
-	if err != nil {
-		return nil, err
-	}
-
 	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, charts.ImageNameAlpine)
 	if err != nil {
 		return nil, err
@@ -516,7 +474,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"global":                 global,
 		"coredns":                common.GenerateAddonConfig(nil, true),
 		"vpn-shoot":              common.GenerateAddonConfig(nil, true),
-		"node-local-dns":         common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
+		"node-local-dns":         common.GenerateAddonConfig(nil, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, kubeProxyEnabled),
@@ -525,7 +483,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
-		"node-problem-detector":   common.GenerateAddonConfig(nodeProblemDetector, true),
+		"node-problem-detector":   common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),

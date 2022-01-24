@@ -65,21 +65,37 @@ type genericActuator struct {
 	gardenerClientset    gardenerkubernetes.Interface
 	chartApplier         gardenerkubernetes.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
+
+	// TODO(rfranzke/BeckerMax): Remove these flags when all provider extensions enable the token requestor and
+	//  projected token mount.
+	useTokenRequestor      bool
+	useProjectedTokenMount bool
 }
 
 // NewActuator creates a new Actuator that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 // It provides a default implementation that allows easier integration of providers.
-func NewActuator(logger logr.Logger, delegateFactory DelegateFactory, mcmName string, mcmSeedChart, mcmShootChart chart.Interface, imageVector imagevector.ImageVector, chartRendererFactory extensionscontroller.ChartRendererFactory) worker.Actuator {
+func NewActuator(
+	logger logr.Logger,
+	delegateFactory DelegateFactory,
+	mcmName string,
+	mcmSeedChart,
+	mcmShootChart chart.Interface,
+	imageVector imagevector.ImageVector,
+	chartRendererFactory extensionscontroller.ChartRendererFactory,
+	useTokenRequestor bool,
+	useProjectedTokenMount bool,
+) worker.Actuator {
 	return &genericActuator{
-		logger: logger.WithName("worker-actuator"),
-
-		delegateFactory:      delegateFactory,
-		mcmName:              mcmName,
-		mcmSeedChart:         mcmSeedChart,
-		mcmShootChart:        mcmShootChart,
-		imageVector:          imageVector,
-		chartRendererFactory: chartRendererFactory,
+		logger:                 logger.WithName("worker-actuator"),
+		delegateFactory:        delegateFactory,
+		mcmName:                mcmName,
+		mcmSeedChart:           mcmSeedChart,
+		mcmShootChart:          mcmShootChart,
+		imageVector:            imageVector,
+		chartRendererFactory:   chartRendererFactory,
+		useTokenRequestor:      useTokenRequestor,
+		useProjectedTokenMount: useProjectedTokenMount,
 	}
 }
 
@@ -239,8 +255,8 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	// Delete the finalizers to all secrets which were used for machine classes that do not exist anymore.
 	for _, secret := range secretList.Items {
 		if !wantedMachineDeployments.HasSecret(secret.Name) {
-			if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, &secret); err != nil {
-				return fmt.Errorf("Error removing finalizer from MachineClassSecret: %s/%s: %w", secret.Namespace, secret.Name, err)
+			if err := controllerutils.RemoveAllFinalizers(ctx, a.client, a.client, &secret); err != nil {
+				return fmt.Errorf("error removing finalizer from MachineClassSecret: %s/%s: %w", secret.Namespace, secret.Name, err)
 			}
 			if err := a.client.Delete(ctx, &secret); err != nil {
 				return err
@@ -306,7 +322,7 @@ func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, logger lo
 
 	return meta.EachListItem(objectList, func(obj runtime.Object) error {
 		object := obj.(client.Object)
-		if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, object); err != nil {
+		if err := controllerutils.RemoveAllFinalizers(ctx, a.client, a.client, object); err != nil {
 			return err
 		}
 		if err := a.client.Delete(ctx, object); client.IgnoreNotFound(err) != nil {

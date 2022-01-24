@@ -27,6 +27,7 @@ import (
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client/mocks"
+
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
@@ -41,7 +42,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("#MachineDependencies", func() {
@@ -318,7 +318,7 @@ var _ = Describe("#MachineDependencies", func() {
 				},
 			}, nil)
 			computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
-			expectStatusUpdateToNotContainChanges(ctx, cl, statusCl)
+			expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
 			err := workerDelegate.CleanupMachineDependencies(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -443,18 +443,7 @@ func newClusterWithDefaultCloudProfileConfig(name string) *controller.Cluster {
 }
 
 func expectStatusUpdateToSucceed(ctx context.Context, c *k8smocks.MockClient, statusWriter *k8smocks.MockStatusWriter) {
-	c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
-		DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
-			return nil
-		})
-	statusWriter.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(nil)
-}
-
-func expectStatusUpdateToNotContainChanges(ctx context.Context, c *k8smocks.MockClient, statusWriter *k8smocks.MockStatusWriter) {
-	c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).
-		DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
-			return nil
-		})
+	statusWriter.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).Return(nil)
 }
 
 type prefixMatcher struct {

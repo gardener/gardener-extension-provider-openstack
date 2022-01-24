@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Masterminds/semver"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -488,7 +489,7 @@ var _ = Describe("Ensurer", func() {
 				hostnamectlUnitOption,
 			}
 
-			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, eContextK8s116, oldUnitOptions, nil)
+			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, eContextK8s116, semver.MustParse("1.16.0"), oldUnitOptions, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(opts).To(Equal(newUnitOptions))
 		})
@@ -506,7 +507,7 @@ var _ = Describe("Ensurer", func() {
 				hostnamectlUnitOption,
 			}
 
-			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, eContextK8s119, oldUnitOptions, nil)
+			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, eContextK8s119, semver.MustParse("1.19.0"), oldUnitOptions, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(opts).To(Equal(newUnitOptions))
 		})
@@ -532,7 +533,7 @@ var _ = Describe("Ensurer", func() {
 			}
 			kubeletConfig := *oldKubeletConfig
 
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s116, &kubeletConfig, nil)
+			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s116, semver.MustParse("1.16.0"), &kubeletConfig, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
 		})
@@ -549,7 +550,7 @@ var _ = Describe("Ensurer", func() {
 			}
 			kubeletConfig := *oldKubeletConfig
 
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s119, &kubeletConfig, nil)
+			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s119, semver.MustParse("1.19.0"), &kubeletConfig, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
 		})
@@ -566,7 +567,7 @@ var _ = Describe("Ensurer", func() {
 			}
 			kubeletConfig := *oldKubeletConfig
 
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s121, &kubeletConfig, nil)
+			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s121, semver.MustParse("1.21.0"), &kubeletConfig, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
 		})
@@ -574,11 +575,11 @@ var _ = Describe("Ensurer", func() {
 
 	Describe("#ShouldProvisionKubeletCloudProviderConfig", func() {
 		It("should return true (k8s < 1.19)", func() {
-			Expect(ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, eContextK8s116)).To(BeTrue())
+			Expect(ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, eContextK8s116, semver.MustParse("1.16.0"))).To(BeTrue())
 		})
 
 		It("should return false (k8s >= 1.19)", func() {
-			Expect(ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, eContextK8s119)).To(BeFalse())
+			Expect(ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, eContextK8s119, semver.MustParse("1.19.0"))).To(BeFalse())
 		})
 	})
 
@@ -591,7 +592,7 @@ var _ = Describe("Ensurer", func() {
 		It("cloud provider config secret does not exist", func() {
 			c.EXPECT().Get(ctx, cpDiskConfigSecretKey, &corev1.Secret{}).Return(errors.NewNotFound(schema.GroupResource{}, cpConfigSecret.Name))
 
-			err := ensurer.EnsureKubeletCloudProviderConfig(ctx, dummyContext, emptydata, namespace)
+			err := ensurer.EnsureKubeletCloudProviderConfig(ctx, dummyContext, nil, emptydata, namespace)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(*emptydata).To(Equal(""))
 		})
@@ -599,7 +600,7 @@ var _ = Describe("Ensurer", func() {
 		It("should create element containing cloud provider config content", func() {
 			c.EXPECT().Get(ctx, cpDiskConfigSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfigSecret))
 
-			err := ensurer.EnsureKubeletCloudProviderConfig(ctx, dummyContext, emptydata, namespace)
+			err := ensurer.EnsureKubeletCloudProviderConfig(ctx, dummyContext, nil, emptydata, namespace)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(*emptydata).To(Equal(string(cloudProviderConfigContent)))
 		})
@@ -607,7 +608,7 @@ var _ = Describe("Ensurer", func() {
 		It("should modify existing element containing cloud provider config content", func() {
 			c.EXPECT().Get(ctx, cpDiskConfigSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfigSecret))
 
-			err := ensurer.EnsureKubeletCloudProviderConfig(ctx, dummyContext, existingData, namespace)
+			err := ensurer.EnsureKubeletCloudProviderConfig(ctx, dummyContext, nil, existingData, namespace)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(*existingData).To(Equal(string(cloudProviderConfigContent)))
 		})

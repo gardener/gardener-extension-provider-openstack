@@ -23,12 +23,9 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -59,13 +56,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
 	var replicaFunc = func() (int32, error) {
 		if extensionscontroller.IsHibernated(cluster) {
-			deployment := &appsv1.Deployment{}
-			if err := a.client.Get(ctx, kutil.Key(worker.Namespace, a.mcmName), deployment); err != nil && !apierrors.IsNotFound(err) {
-				return 0, err
-			}
-			if replicas := deployment.Spec.Replicas; replicas != nil {
-				return *replicas, nil
-			}
+			return kutil.CurrentReplicaCountForDeployment(ctx, a.client, worker.Namespace, a.mcmName)
 		}
 		return 1, nil
 	}
@@ -147,7 +138,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		// check if the machine controller manager is stuck
 		isStuck, msg, err2 := a.IsMachineControllerStuck(ctx, worker)
 		if err2 != nil {
-			logger.Error(err2, "failed to check if the machine controller manager pod is stuck after unsuccessfully waiting for all machine deployments to be ready")
+			logger.Error(err2, "Failed to check if the machine controller manager pod is stuck after unsuccessfully waiting for all machine deployments to be ready")
 			// continue in order to return `err` and determine error codes
 		}
 
@@ -493,14 +484,12 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 		return err
 	}
 
-	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
-		if len(statusMachineDeployments) > 0 {
-			worker.Status.MachineDeployments = statusMachineDeployments
-		}
+	if len(statusMachineDeployments) > 0 {
+		worker.Status.MachineDeployments = statusMachineDeployments
+	}
 
-		worker.Status.Conditions = gardencorev1beta1helper.MergeConditions(worker.Status.Conditions, rollingUpdateCondition)
-		return nil
-	})
+	worker.Status.Conditions = gardencorev1beta1helper.MergeConditions(worker.Status.Conditions, rollingUpdateCondition)
+	return a.client.Status().Update(ctx, worker)
 }
 
 const (

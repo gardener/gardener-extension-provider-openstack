@@ -56,7 +56,7 @@ github.com/gardener/etcd-druid/pkg/utils
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.38.1
+# github.com/gardener/gardener v1.39.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -161,7 +161,6 @@ github.com/gardener/gardener/pkg/operation/botanist/component/coredns
 github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog
 github.com/gardener/gardener/pkg/operation/botanist/component/etcd
 github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask
-github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds
@@ -203,8 +202,11 @@ github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver
 github.com/gardener/gardener/pkg/operation/botanist/component/monitoring
 github.com/gardener/gardener/pkg/operation/botanist/component/namespaces
 github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies
+github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns
+github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector
 github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager
 github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller
+github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver
 github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver
 github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot
 github.com/gardener/gardener/pkg/operation/common
@@ -256,7 +258,7 @@ github.com/gardener/gardener/third_party/kube-scheduler/v20/v1
 github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1
 # github.com/gardener/hvpa-controller v0.3.1
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/machine-controller-manager v0.36.0
+# github.com/gardener/machine-controller-manager v0.41.0
 ## explicit
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
@@ -399,6 +401,8 @@ github.com/inconshreveable/mousetrap
 github.com/josharian/intern
 # github.com/json-iterator/go v1.1.11
 github.com/json-iterator/go
+# github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
+github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1
 # github.com/magiconair/properties v1.8.5
 github.com/magiconair/properties
 # github.com/mailru/easyjson v0.7.6
@@ -540,7 +544,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
+# golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
@@ -560,7 +564,7 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/mod v0.5.1
+# golang.org/x/mod v0.4.2
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
@@ -578,7 +582,7 @@ golang.org/x/net/idna
 # golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20211015200801-69063c4bb744
+# golang.org/x/sys v0.0.0-20210817190340-bfb29a6856f2
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader

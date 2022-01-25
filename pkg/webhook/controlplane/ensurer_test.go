@@ -20,11 +20,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Masterminds/semver"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
+	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/csimigration"
@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -524,53 +525,33 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should modify existing elements of kubelet configuration (k8s < 1.19)", func() {
-			newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
-				FeatureGates: map[string]bool{
-					"Foo": true,
-				},
-				ResolverConfig: "/etc/resolv-for-kubelet.conf",
-			}
-			kubeletConfig := *oldKubeletConfig
+		DescribeTable("should modify existing elements of kubelet configuration",
+			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, unregisterFeatureGateName string) {
+				newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
+					FeatureGates: map[string]bool{
+						"Foo": true,
+					},
+					ResolverConfig: "/etc/resolv-for-kubelet.conf",
+				}
 
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s116, semver.MustParse("1.16.0"), &kubeletConfig, nil)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
-		})
+				if unregisterFeatureGateName != "" {
+					newKubeletConfig.FeatureGates["CSIMigration"] = true
+					newKubeletConfig.FeatureGates["CSIMigrationOpenStack"] = true
+					newKubeletConfig.FeatureGates[unregisterFeatureGateName] = true
+				}
 
-		It("should modify existing elements of kubelet configuration (k8s >= 1.19)", func() {
-			newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
-				FeatureGates: map[string]bool{
-					"Foo":                           true,
-					"CSIMigration":                  true,
-					"CSIMigrationOpenStack":         true,
-					"CSIMigrationOpenStackComplete": true,
-				},
-				ResolverConfig: "/etc/resolv-for-kubelet.conf",
-			}
-			kubeletConfig := *oldKubeletConfig
+				kubeletConfig := *oldKubeletConfig
 
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s119, semver.MustParse("1.19.0"), &kubeletConfig, nil)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
-		})
+				err := ensurer.EnsureKubeletConfiguration(ctx, gctx, kubeletVersion, &kubeletConfig, nil)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(&kubeletConfig).To(Equal(newKubeletConfig))
+			},
 
-		It("should modify existing elements of kubelet configuration (k8s >= 1.21)", func() {
-			newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
-				FeatureGates: map[string]bool{
-					"Foo":                             true,
-					"CSIMigration":                    true,
-					"CSIMigrationOpenStack":           true,
-					"InTreePluginOpenStackUnregister": true,
-				},
-				ResolverConfig: "/etc/resolv-for-kubelet.conf",
-			}
-			kubeletConfig := *oldKubeletConfig
-
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s121, semver.MustParse("1.21.0"), &kubeletConfig, nil)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
-		})
+			Entry("control plane, kubelet < 1.19", eContextK8s116, semver.MustParse("1.16.0"), ""),
+			Entry("1.19 <= control plane, kubelet <= 1.21", eContextK8s119, semver.MustParse("1.19.0"), "CSIMigrationOpenStackComplete"),
+			Entry("control plane >= 1.21, kubelet < 1.21", eContextK8s121, semver.MustParse("1.20.0"), "CSIMigrationOpenStackComplete"),
+			Entry("control plane, kubelet >= 1.21", eContextK8s121, semver.MustParse("1.21.0"), "InTreePluginOpenStackUnregister"),
+		)
 	})
 
 	Describe("#ShouldProvisionKubeletCloudProviderConfig", func() {

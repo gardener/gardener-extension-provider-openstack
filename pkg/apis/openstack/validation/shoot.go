@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -38,7 +39,7 @@ func ValidateShootCredentialsForK8sVersion(k8sVersion string, credentials openst
 
 	// The Kubernetes version is the version of the CSI migration, where we stopped using the in-tree providers.
 	// see: pkg/webhook/controlplane/ensurer.go
-	k8sVersionLessThan19, err := version.CompareVersions(k8sVersion, "<", "1.19")
+	k8sVersionLessThan19, err := version.CompareVersions(k8sVersion, "<", openstack.CSIMigrationKubernetesVersion)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, k8sVersion, "not a valid version"))
 	}
@@ -66,8 +67,30 @@ func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.E
 func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	csiMigrationVersion, err := semver.NewVersion(openstack.CSIMigrationKubernetesVersion)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, err))
+		return allErrs
+	}
+
 	for i, worker := range workers {
 		workerFldPath := fldPath.Index(i)
+
+		// Ensure the kubelet version is not lower than the version in which the extension performs CSI migration.
+		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+			versionPath := workerFldPath.Child("kubernetes", "version")
+
+			v, err := semver.NewVersion(*worker.Kubernetes.Version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(versionPath, *worker.Kubernetes.Version, err.Error()))
+				return allErrs
+			}
+
+			if v.LessThan(csiMigrationVersion) {
+				allErrs = append(allErrs, field.Forbidden(versionPath, fmt.Sprintf("cannot use kubelet version (%s) lower than CSI migration version (%s)", v.String(), csiMigrationVersion.String())))
+			}
+		}
+
 		if len(worker.Zones) == 0 {
 			allErrs = append(allErrs, field.Required(workerFldPath.Child("zones"), "at least one zone must be configured"))
 			continue
@@ -84,7 +107,7 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 		if worker.ProviderConfig != nil {
 			workerConfig, err := helper.WorkerConfigFromRawExtension(worker.ProviderConfig)
 			if err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("providerConfig"), string(worker.ProviderConfig.Raw), fmt.Sprint("providerConfig could not be decoded", err)))
+				allErrs = append(allErrs, field.Invalid(workerFldPath.Child("providerConfig"), string(worker.ProviderConfig.Raw), fmt.Sprint("providerConfig could not be decoded", err)))
 				continue
 			}
 

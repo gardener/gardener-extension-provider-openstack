@@ -477,41 +477,42 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should modify existing elements of kubelet.service unit options (k8s < 1.19)", func() {
-			newUnitOptions := []*unit.UnitOption{
-				{
-					Section: "Service",
-					Name:    "ExecStart",
-					Value: `/opt/bin/hyperkube kubelet \
-    --config=/var/lib/kubelet/config/kubelet \
-    --cloud-provider=openstack \
-    --cloud-config=/var/lib/kubelet/cloudprovider.conf`,
-				},
-				hostnamectlUnitOption,
-			}
+		DescribeTable("should modify existing elements of kubelet.service unit options",
+			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, cloudProvider string, withControllerAttachDetachFlag bool) {
+				newUnitOptions := []*unit.UnitOption{
+					{
+						Section: "Service",
+						Name:    "ExecStart",
+						Value: `/opt/bin/hyperkube kubelet \
+    --config=/var/lib/kubelet/config/kubelet`,
+					},
+					hostnamectlUnitOption,
+				}
 
-			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, eContextK8s116, semver.MustParse("1.16.0"), oldUnitOptions, nil)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(opts).To(Equal(newUnitOptions))
-		})
+				if cloudProvider != "" {
+					newUnitOptions[0].Value += ` \
+    --cloud-provider=` + cloudProvider
 
-		It("should modify existing elements of kubelet.service unit options (k8s >= 1.19)", func() {
-			newUnitOptions := []*unit.UnitOption{
-				{
-					Section: "Service",
-					Name:    "ExecStart",
-					Value: `/opt/bin/hyperkube kubelet \
-    --config=/var/lib/kubelet/config/kubelet \
-    --cloud-provider=external \
-    --enable-controller-attach-detach=true`,
-				},
-				hostnamectlUnitOption,
-			}
+					if cloudProvider != "external" {
+						newUnitOptions[0].Value += ` \
+    --cloud-config=/var/lib/kubelet/cloudprovider.conf`
+					}
+				}
 
-			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, eContextK8s119, semver.MustParse("1.19.0"), oldUnitOptions, nil)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(opts).To(Equal(newUnitOptions))
-		})
+				if withControllerAttachDetachFlag {
+					newUnitOptions[0].Value += ` \
+    --enable-controller-attach-detach=true`
+				}
+
+				opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, gctx, kubeletVersion, oldUnitOptions, nil)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(opts).To(Equal(newUnitOptions))
+			},
+
+			Entry("kubelet version < 1.19", eContextK8s116, semver.MustParse("1.16.0"), "openstack", false),
+			Entry("1.19 <= kubelet version < 1.23", eContextK8s119, semver.MustParse("1.19.0"), "external", true),
+			Entry("kubelet version >= 1.23", eContextK8s119, semver.MustParse("1.23.0"), "", false),
+		)
 	})
 
 	Describe("#EnsureKubeletConfiguration", func() {
@@ -526,12 +527,13 @@ var _ = Describe("Ensurer", func() {
 		})
 
 		DescribeTable("should modify existing elements of kubelet configuration",
-			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, unregisterFeatureGateName string) {
+			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, unregisterFeatureGateName string, enableControllerAttachDetach *bool) {
 				newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
 					FeatureGates: map[string]bool{
 						"Foo": true,
 					},
-					ResolverConfig: "/etc/resolv-for-kubelet.conf",
+					ResolverConfig:               "/etc/resolv-for-kubelet.conf",
+					EnableControllerAttachDetach: enableControllerAttachDetach,
 				}
 
 				if unregisterFeatureGateName != "" {
@@ -547,10 +549,11 @@ var _ = Describe("Ensurer", func() {
 				Expect(&kubeletConfig).To(Equal(newKubeletConfig))
 			},
 
-			Entry("control plane, kubelet < 1.19", eContextK8s116, semver.MustParse("1.16.0"), ""),
-			Entry("1.19 <= control plane, kubelet <= 1.21", eContextK8s119, semver.MustParse("1.19.0"), "CSIMigrationOpenStackComplete"),
-			Entry("control plane >= 1.21, kubelet < 1.21", eContextK8s121, semver.MustParse("1.20.0"), "CSIMigrationOpenStackComplete"),
-			Entry("control plane, kubelet >= 1.21", eContextK8s121, semver.MustParse("1.21.0"), "InTreePluginOpenStackUnregister"),
+			Entry("control plane, kubelet < 1.19", eContextK8s116, semver.MustParse("1.16.0"), "", nil),
+			Entry("1.19 <= control plane, kubelet <= 1.21", eContextK8s119, semver.MustParse("1.19.0"), "CSIMigrationOpenStackComplete", nil),
+			Entry("control plane >= 1.21, kubelet < 1.21", eContextK8s121, semver.MustParse("1.20.0"), "CSIMigrationOpenStackComplete", nil),
+			Entry("1.21 <= kubelet < 1.23", eContextK8s121, semver.MustParse("1.22.0"), "InTreePluginOpenStackUnregister", nil),
+			Entry("kubelet >= 1.23", eContextK8s121, semver.MustParse("1.23.0"), "InTreePluginOpenStackUnregister", pointer.Bool(true)),
 		)
 	})
 

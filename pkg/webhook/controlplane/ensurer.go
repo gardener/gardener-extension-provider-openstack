@@ -39,6 +39,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -367,7 +368,7 @@ func (e *ensurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcon
 
 	if opt := extensionswebhook.UnitOptionWithSectionAndName(new, "Service", "ExecStart"); opt != nil {
 		command := extensionswebhook.DeserializeCommandLine(opt.Value)
-		command = ensureKubeletCommandLineArgs(command, csiEnabled)
+		command = ensureKubeletCommandLineArgs(command, csiEnabled, kubeletVersion)
 		opt.Value = extensionswebhook.SerializeCommandLine(command, 1, " \\\n    ")
 	}
 
@@ -379,10 +380,12 @@ func (e *ensurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcon
 	return new, nil
 }
 
-func ensureKubeletCommandLineArgs(command []string, csiEnabled bool) []string {
+func ensureKubeletCommandLineArgs(command []string, csiEnabled bool, kubeletVersion *semver.Version) []string {
 	if csiEnabled {
-		command = extensionswebhook.EnsureStringWithPrefix(command, "--cloud-provider=", "external")
-		command = extensionswebhook.EnsureStringWithPrefix(command, "--enable-controller-attach-detach=", "true")
+		if !versionutils.ConstraintK8sGreaterEqual123.Check(kubeletVersion) {
+			command = extensionswebhook.EnsureStringWithPrefix(command, "--cloud-provider=", "external")
+			command = extensionswebhook.EnsureStringWithPrefix(command, "--enable-controller-attach-detach=", "true")
+		}
 	} else {
 		command = extensionswebhook.EnsureStringWithPrefix(command, "--cloud-provider=", "openstack")
 		command = extensionswebhook.EnsureStringWithPrefix(command, "--cloud-config=", "/var/lib/kubelet/cloudprovider.conf")
@@ -415,6 +418,10 @@ func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.
 		new.FeatureGates["CSIMigrationOpenStack"] = true
 		// kubelets of new worker nodes can directly be started with the the <csiMigrationCompleteFeatureGate> feature gate
 		new.FeatureGates[csiMigrationCompleteFeatureGate] = true
+
+		if versionutils.ConstraintK8sGreaterEqual123.Check(kubeletVersion) {
+			new.EnableControllerAttachDetach = pointer.Bool(true)
+		}
 	}
 
 	// resolv-for-kubelet.conf is created by update-resolv-conf.service

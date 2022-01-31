@@ -21,16 +21,16 @@ clusters:
 - cluster:
     certificate-authority-data: <CA-DATA>
     server: https://default.kubernetes.svc.cluster.local
-    name: garden
+  name: garden
 contexts:
 - context:
     cluster: garden
     user: garden
-    name: garden
+  name: garden
 current-context: garden
 users:
 - name: garden
-    user:
+  user:
     tokenFile: /var/run/secrets/projected/serviceaccount/token
 ```
 
@@ -70,15 +70,15 @@ clusters:
 - cluster:
     certificate-authority-data: <CA-DATA>
     server: https://virtual-garden.api
-    name: virtual-garden
+  name: virtual-garden
 contexts:
 - context:
     cluster: virtual-garden
     user: virtual-garden
-    name: virtual-garden
+  name: virtual-garden
 current-context: virtual-garden
 users:
 - name: virtual-garden
-    user:
+  user:
     tokenFile: /var/run/secrets/projected/serviceaccount/token
 ```

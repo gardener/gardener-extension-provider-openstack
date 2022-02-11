@@ -16,8 +16,8 @@ package worker
 
 import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	machinescheme "github.com/gardener/machine-controller-manager/pkg/client/clientset/versioned/scheme"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -35,6 +35,11 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
+	// UseTokenRequestor specifies whether the token requestor shall be used for the machine-controller-manager.
+	UseTokenRequestor bool
+	// UseProjectedTokenMount specifies whether the projected token mount shall be used for the
+	// machine-controller-manager.
+	UseProjectedTokenMount bool
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
@@ -49,7 +54,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	}
 
 	return worker.Add(mgr, worker.AddArgs{
-		Actuator:          NewActuator(),
+		Actuator:          NewActuator(opts.UseTokenRequestor, opts.UseProjectedTokenMount),
 		ControllerOptions: opts.Controller,
 		Predicates:        worker.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,

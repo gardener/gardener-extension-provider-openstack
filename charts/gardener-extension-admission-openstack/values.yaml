@@ -1,6 +1,8 @@
 global:
   virtualGarden:
     enabled: false
+    user:
+      name: ""
   image:
     repository: eu.gcr.io/gardener-project/gardener/extensions/admission-openstack
     tag: latest
@@ -32,3 +34,8 @@ global:
         -----END RSA PRIVATE KEY-----
   # Kubeconfig to the target cluster. In-cluster configuration will be used if not specified.
   kubeconfig:
+
+  serviceAccountTokenVolumeProjection:
+    enabled: false
+    expirationSeconds: 43200
+    audience: ""

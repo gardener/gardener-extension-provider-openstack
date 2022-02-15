@@ -31,7 +31,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"

@@ -89,82 +89,34 @@ func validateFlags() {
 	}
 }
 
-var _ = Describe("Infrastructure tests", func() {
+var (
+	ctx    = context.Background()
+	logger *logrus.Entry
 
-	var (
-		ctx    = context.Background()
-		logger *logrus.Entry
+	testEnv   *envtest.Environment
+	mgrCancel context.CancelFunc
+	c         client.Client
 
-		testEnv   *envtest.Environment
-		mgrCancel context.CancelFunc
-		c         client.Client
+	decoder         runtime.Decoder
+	openstackClient *OpenstackClient
+)
 
-		decoder         runtime.Decoder
-		openstackClient *OpenstackClient
+var _ = BeforeSuite(func() {
+	flag.Parse()
+	validateFlags()
 
-		internalChartsPath string
-	)
+	internalChartsPath := openstack.InternalChartsPath
+	repoRoot := filepath.Join("..", "..", "..")
+	openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
 
-	BeforeSuite(func() {
-		flag.Parse()
-		validateFlags()
+	// enable manager logs
+	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 
-		internalChartsPath = openstack.InternalChartsPath
-		repoRoot := filepath.Join("..", "..", "..")
-		openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
+	log := logrus.New()
+	log.SetOutput(GinkgoWriter)
+	logger = logrus.NewEntry(log)
 
-		// enable manager logs
-		logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
-
-		log := logrus.New()
-		log.SetOutput(GinkgoWriter)
-		logger = logrus.NewEntry(log)
-
-		By("starting test environment")
-		testEnv = &envtest.Environment{
-			UseExistingCluster: pointer.BoolPtr(true),
-			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{
-					filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_clusters.yaml"),
-					filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_infrastructures.yaml"),
-				},
-			},
-		}
-
-		cfg, err := testEnv.Start()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cfg).NotTo(BeNil())
-
-		By("setup manager")
-		mgr, err := manager.New(cfg, manager.Options{
-			MetricsBindAddress: "0",
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
-		Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
-
-		Expect(infrastructure.AddToManager(mgr)).To(Succeed())
-
-		var mgrContext context.Context
-		mgrContext, mgrCancel = context.WithCancel(ctx)
-
-		By("start manager")
-		go func() {
-			err := mgr.Start(mgrContext)
-			Expect(err).NotTo(HaveOccurred())
-		}()
-
-		c = mgr.GetClient()
-		Expect(c).NotTo(BeNil())
-
-		decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
-
-		openstackClient, err = NewOpenstackClient(*authURL, *domainName, *floatingPoolName, *password, *region, *tenantName, *userName)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	AfterSuite(func() {
+	DeferCleanup(func() {
 		defer func() {
 			By("stopping manager")
 			mgrCancel()
@@ -179,6 +131,51 @@ var _ = Describe("Infrastructure tests", func() {
 		openstack.InternalChartsPath = internalChartsPath
 	})
 
+	By("starting test environment")
+	testEnv = &envtest.Environment{
+		UseExistingCluster: pointer.BoolPtr(true),
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_clusters.yaml"),
+				filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_infrastructures.yaml"),
+			},
+		},
+	}
+
+	cfg, err := testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(cfg).NotTo(BeNil())
+
+	By("setup manager")
+	mgr, err := manager.New(cfg, manager.Options{
+		MetricsBindAddress: "0",
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
+	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
+
+	Expect(infrastructure.AddToManager(mgr)).To(Succeed())
+
+	var mgrContext context.Context
+	mgrContext, mgrCancel = context.WithCancel(ctx)
+
+	By("start manager")
+	go func() {
+		err := mgr.Start(mgrContext)
+		Expect(err).NotTo(HaveOccurred())
+	}()
+
+	c = mgr.GetClient()
+	Expect(c).NotTo(BeNil())
+
+	decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
+
+	openstackClient, err = NewOpenstackClient(*authURL, *domainName, *floatingPoolName, *password, *region, *tenantName, *userName)
+	Expect(err).NotTo(HaveOccurred())
+})
+
+var _ = Describe("Infrastructure tests", func() {
 	Context("with infrastructure that requests new private network", func() {
 		AfterEach(func() {
 			framework.RunCleanupActions()

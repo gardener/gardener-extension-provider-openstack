@@ -499,6 +499,10 @@ const (
 	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
 	// from the namespace will be removed when the project is being deleted.
 	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+	// NamespaceCreatedByProjectController is a constant for annotation on a `Namespace` resource that states that it
+	// was created by the project controller because either the Project's `spec.namespace` field was not specified
+	// or the specified namespace was not present.
+	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
 	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
 	DefaultVpnRange = "192.168.123.0/24"
@@ -512,6 +516,13 @@ const (
 
 	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
 	GardenerAudience = "gardener"
+
+	// DNSRecordInternalName is a constant for DNSRecord objects used for the internal domain name.
+	DNSRecordInternalName = "internal"
+	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
+	DNSRecordExternalName = "external"
+	// DNSRecordOwnerName is a constant for DNSRecord objects used for the owner domain name.
+	DNSRecordOwnerName = "owner"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

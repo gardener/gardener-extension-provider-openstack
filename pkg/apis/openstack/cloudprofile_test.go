@@ -18,7 +18,7 @@ import (
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"k8s.io/utils/pointer"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

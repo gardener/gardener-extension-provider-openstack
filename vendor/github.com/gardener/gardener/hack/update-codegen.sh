@@ -387,8 +387,23 @@ openapi_definitions() {
     --report-filename=${PROJECT_ROOT}/pkg/openapi/api_violations.report \
     --output-package=github.com/gardener/gardener/pkg/openapi \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  echo "Generating openapi definitions for the Landscaper controlplane component"
+  ./${PROJECT_ROOT}/landscaper/pkg/controlplane/generate/generate-openapi.sh
+
+  echo "Generating openapi definitions for the Landscaper gardenlet component"
+  ./${PROJECT_ROOT}/landscaper/pkg/gardenlet/generate/generate-openapi.sh
 }
 export -f openapi_definitions
+
+landscaper_blueprints() {
+    echo "Rendering blueprint for the Landscaper controlplane component"
+    go run ./${PROJECT_ROOT}/landscaper/pkg/controlplane/generate
+
+    echo "Rendering blueprint for the Landscaper gardenlet component"
+    go run ./${PROJECT_ROOT}/landscaper/pkg/gardenlet/generate
+}
+export -f landscaper_blueprints
 
 if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
   shift 1
@@ -427,3 +442,4 @@ else
 fi
 
 openapi_definitions "$@"
+landscaper_blueprints

@@ -24,9 +24,13 @@ spec:
       {{- if not .Values.global.virtualGarden.enabled }}
       serviceAccountName: {{ include "name" . }}
       {{- else if and .Values.global.virtualGarden.enabled .Values.global.virtualGarden.user.name }}
-      {{- if .Values.global.serviceAccountTokenVolumeProjection.enabled }}
+        {{- if .Values.global.serviceAccountTokenVolumeProjection.enabled }}
       serviceAccountName: {{ include "name" . }}
-      {{- end }}
+        {{- else }}
+      serviceAccountName: default
+        {{- end }}
+      {{- else }}
+      serviceAccountName: default
       {{- end }}
       {{- if .Values.global.kubeconfig }}
       automountServiceAccountToken: false

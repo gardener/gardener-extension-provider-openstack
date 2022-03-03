@@ -18,7 +18,10 @@ webhooks:
     - shoots
   failurePolicy: Fail
   timeoutSeconds: 10
-  objectSelector: {}
+  # Please make sure you are running `gardener@v1.42` or later before enabling this object selector.
+  objectSelector:
+    matchLabels:
+      provider.extensions.gardener.cloud/openstack: "true"
   namespaceSelector: {}
   sideEffects: None
   admissionReviewVersions:

@@ -32,6 +32,7 @@ global:
         -----BEGIN RSA PRIVATE KEY-----
         ...
         -----END RSA PRIVATE KEY-----
+    # useObjectSelector: false
   # Kubeconfig to the target cluster. In-cluster configuration will be used if not specified.
   kubeconfig:
 

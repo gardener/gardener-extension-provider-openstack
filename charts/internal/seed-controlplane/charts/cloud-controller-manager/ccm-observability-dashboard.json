@@ -359,7 +359,6 @@
       "type": "logs"
     }
   ],
-  "refresh": "1m",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [

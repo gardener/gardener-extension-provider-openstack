@@ -413,7 +413,7 @@
         "14d"
       ]
     },
-    "timezone": "browser",
+    "timezone": "utc",
     "title": "CSI Driver Controller",
     "uid": "csi-driver-controller",
     "version": 1

@@ -18,7 +18,11 @@ webhooks:
     - shoots
   failurePolicy: Fail
   timeoutSeconds: 10
-  objectSelector: {}
+  objectSelector:
+    {{- if .Values.global.webhookConfig.useObjectSelector }}
+    matchLabels:
+      provider.extensions.gardener.cloud/openstack: "true"
+    {{- end }}
   namespaceSelector: {}
   sideEffects: None
   admissionReviewVersions:

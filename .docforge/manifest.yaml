@@ -3,4 +3,4 @@ structure:
   source: /README.md
 - name: docs
   nodesSelector:
-      path: /docs
+    path: /docs

@@ -11,6 +11,7 @@ require (
 	github.com/gardener/gardener v1.44.0
 	github.com/gardener/machine-controller-manager v0.41.0
 	github.com/go-logr/logr v1.2.0
+	github.com/gardener/machine-controller-manager v0.43.1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.1.2
 	github.com/gophercloud/gophercloud v0.7.0

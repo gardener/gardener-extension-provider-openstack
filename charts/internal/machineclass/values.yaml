@@ -5,6 +5,14 @@ machineClasses:
   region: europe-1
   availabilityZone: europe-1a
   machineType: medium_2_4
+  nodeTemplate:
+    capacity:
+      cpu: 2
+      gpu: 1
+      memory: 25Gi
+    instanceType: medium_2_4
+    region: europe-1
+    zone: europe-1a
   keyName: my-ssh-key
   imageName: coreos-v1.0
   #imageID: 836428cd-5f98-1305-af9d-9825d4dfd0ec

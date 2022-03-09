@@ -23,6 +23,14 @@ metadata:
   {{ toYaml $machineClass.labels | indent 4 }}
 {{- end }}
 provider: "OpenStack"
+{{- if $machineClass.nodeTemplate }}
+nodeTemplate:
+  capacity:
+{{ toYaml $machineClass.nodeTemplate.capacity | indent 4 }}
+  instanceType: {{ $machineClass.nodeTemplate.instanceType }}
+  region: {{ $machineClass.nodeTemplate.region }}
+  zone: {{ $machineClass.nodeTemplate.zone }}
+{{- end }}
 secretRef:
   name: {{ $machineClass.name }}
   namespace: {{ $.Release.Namespace }}

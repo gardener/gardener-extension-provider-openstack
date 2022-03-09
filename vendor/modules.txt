@@ -166,7 +166,7 @@ github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
 # github.com/gardener/hvpa-controller/api v0.4.0 => github.com/gardener/hvpa-controller/api v0.4.0
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/machine-controller-manager v0.41.0
+# github.com/gardener/machine-controller-manager v0.43.1
 ## explicit
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1

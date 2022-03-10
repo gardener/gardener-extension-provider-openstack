@@ -33,12 +33,14 @@ import (
 type actuator struct {
 	logger logr.Logger
 	common.RESTConfigContext
+	useProjectedTokenMount bool
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
-func NewActuator() infrastructure.Actuator {
+func NewActuator(useProjectedTokenMount bool) infrastructure.Actuator {
 	return &actuator{
-		logger: log.Log.WithName("infrastructure-actuator"),
+		logger:                 log.Log.WithName("infrastructure-actuator"),
+		useProjectedTokenMount: useProjectedTokenMount,
 	}
 }
 

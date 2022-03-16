@@ -1070,7 +1070,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 18,
   "style": "dark",
   "tags": [
@@ -1168,7 +1167,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Machine Controller Manager",
   "uid": "machine-controller-manager",
   "version": 1

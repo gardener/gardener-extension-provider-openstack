@@ -402,6 +402,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*CoreDNS)(nil), (*core.CoreDNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_CoreDNS_To_core_CoreDNS(a.(*CoreDNS), b.(*core.CoreDNS), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.CoreDNS)(nil), (*CoreDNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_CoreDNS_To_v1beta1_CoreDNS(a.(*core.CoreDNS), b.(*CoreDNS), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CoreDNSAutoscaling)(nil), (*core.CoreDNSAutoscaling)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_CoreDNSAutoscaling_To_core_CoreDNSAutoscaling(a.(*CoreDNSAutoscaling), b.(*core.CoreDNSAutoscaling), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.CoreDNSAutoscaling)(nil), (*CoreDNSAutoscaling)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_CoreDNSAutoscaling_To_v1beta1_CoreDNSAutoscaling(a.(*core.CoreDNSAutoscaling), b.(*CoreDNSAutoscaling), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*DNS)(nil), (*core.DNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_DNS_To_core_DNS(a.(*DNS), b.(*core.DNS), scope)
 	}); err != nil {
@@ -1302,6 +1322,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ShootCARotation)(nil), (*core.ShootCARotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootCARotation_To_core_ShootCARotation(a.(*ShootCARotation), b.(*core.ShootCARotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootCARotation)(nil), (*ShootCARotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootCARotation_To_v1beta1_ShootCARotation(a.(*core.ShootCARotation), b.(*ShootCARotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootCredentials)(nil), (*core.ShootCredentials)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootCredentials_To_core_ShootCredentials(a.(*ShootCredentials), b.(*core.ShootCredentials), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootCredentials)(nil), (*ShootCredentials)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootCredentials_To_v1beta1_ShootCredentials(a.(*core.ShootCredentials), b.(*ShootCredentials), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootCredentialsRotation)(nil), (*core.ShootCredentialsRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(a.(*ShootCredentialsRotation), b.(*core.ShootCredentialsRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootCredentialsRotation)(nil), (*ShootCredentialsRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(a.(*core.ShootCredentialsRotation), b.(*ShootCredentialsRotation), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ShootList)(nil), (*core.ShootList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ShootList_To_core_ShootList(a.(*ShootList), b.(*core.ShootList), scope)
 	}); err != nil {
@@ -1359,6 +1409,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.ShootTemplate)(nil), (*ShootTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_ShootTemplate_To_v1beta1_ShootTemplate(a.(*core.ShootTemplate), b.(*ShootTemplate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SystemComponents)(nil), (*core.SystemComponents)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SystemComponents_To_core_SystemComponents(a.(*SystemComponents), b.(*core.SystemComponents), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.SystemComponents)(nil), (*SystemComponents)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SystemComponents_To_v1beta1_SystemComponents(a.(*core.SystemComponents), b.(*SystemComponents), scope)
 	}); err != nil {
 		return err
 	}
@@ -2395,6 +2455,46 @@ func autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.
 // Convert_core_ControllerResource_To_v1beta1_ControllerResource is an autogenerated conversion function.
 func Convert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.ControllerResource, out *ControllerResource, s conversion.Scope) error {
 	return autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in, out, s)
+}
+
+func autoConvert_v1beta1_CoreDNS_To_core_CoreDNS(in *CoreDNS, out *core.CoreDNS, s conversion.Scope) error {
+	out.Autoscaling = (*core.CoreDNSAutoscaling)(unsafe.Pointer(in.Autoscaling))
+	return nil
+}
+
+// Convert_v1beta1_CoreDNS_To_core_CoreDNS is an autogenerated conversion function.
+func Convert_v1beta1_CoreDNS_To_core_CoreDNS(in *CoreDNS, out *core.CoreDNS, s conversion.Scope) error {
+	return autoConvert_v1beta1_CoreDNS_To_core_CoreDNS(in, out, s)
+}
+
+func autoConvert_core_CoreDNS_To_v1beta1_CoreDNS(in *core.CoreDNS, out *CoreDNS, s conversion.Scope) error {
+	out.Autoscaling = (*CoreDNSAutoscaling)(unsafe.Pointer(in.Autoscaling))
+	return nil
+}
+
+// Convert_core_CoreDNS_To_v1beta1_CoreDNS is an autogenerated conversion function.
+func Convert_core_CoreDNS_To_v1beta1_CoreDNS(in *core.CoreDNS, out *CoreDNS, s conversion.Scope) error {
+	return autoConvert_core_CoreDNS_To_v1beta1_CoreDNS(in, out, s)
+}
+
+func autoConvert_v1beta1_CoreDNSAutoscaling_To_core_CoreDNSAutoscaling(in *CoreDNSAutoscaling, out *core.CoreDNSAutoscaling, s conversion.Scope) error {
+	out.Mode = core.CoreDNSAutoscalingMode(in.Mode)
+	return nil
+}
+
+// Convert_v1beta1_CoreDNSAutoscaling_To_core_CoreDNSAutoscaling is an autogenerated conversion function.
+func Convert_v1beta1_CoreDNSAutoscaling_To_core_CoreDNSAutoscaling(in *CoreDNSAutoscaling, out *core.CoreDNSAutoscaling, s conversion.Scope) error {
+	return autoConvert_v1beta1_CoreDNSAutoscaling_To_core_CoreDNSAutoscaling(in, out, s)
+}
+
+func autoConvert_core_CoreDNSAutoscaling_To_v1beta1_CoreDNSAutoscaling(in *core.CoreDNSAutoscaling, out *CoreDNSAutoscaling, s conversion.Scope) error {
+	out.Mode = CoreDNSAutoscalingMode(in.Mode)
+	return nil
+}
+
+// Convert_core_CoreDNSAutoscaling_To_v1beta1_CoreDNSAutoscaling is an autogenerated conversion function.
+func Convert_core_CoreDNSAutoscaling_To_v1beta1_CoreDNSAutoscaling(in *core.CoreDNSAutoscaling, out *CoreDNSAutoscaling, s conversion.Scope) error {
+	return autoConvert_core_CoreDNSAutoscaling_To_v1beta1_CoreDNSAutoscaling(in, out, s)
 }
 
 func autoConvert_v1beta1_DNS_To_core_DNS(in *DNS, out *core.DNS, s conversion.Scope) error {
@@ -4757,6 +4857,7 @@ func autoConvert_v1beta1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *S
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
@@ -4770,6 +4871,7 @@ func autoConvert_core_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in *c
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
@@ -4830,6 +4932,68 @@ func autoConvert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress(i
 // Convert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress is an autogenerated conversion function.
 func Convert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress(in *core.ShootAdvertisedAddress, out *ShootAdvertisedAddress, s conversion.Scope) error {
 	return autoConvert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation, out *core.ShootCARotation, s conversion.Scope) error {
+	out.Phase = core.ShootCredentialsRotationPhase(in.Phase)
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
+	return nil
+}
+
+// Convert_v1beta1_ShootCARotation_To_core_ShootCARotation is an autogenerated conversion function.
+func Convert_v1beta1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation, out *core.ShootCARotation, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootCARotation_To_core_ShootCARotation(in, out, s)
+}
+
+func autoConvert_core_ShootCARotation_To_v1beta1_ShootCARotation(in *core.ShootCARotation, out *ShootCARotation, s conversion.Scope) error {
+	out.Phase = ShootCredentialsRotationPhase(in.Phase)
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
+	return nil
+}
+
+// Convert_core_ShootCARotation_To_v1beta1_ShootCARotation is an autogenerated conversion function.
+func Convert_core_ShootCARotation_To_v1beta1_ShootCARotation(in *core.ShootCARotation, out *ShootCARotation, s conversion.Scope) error {
+	return autoConvert_core_ShootCARotation_To_v1beta1_ShootCARotation(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootCredentials_To_core_ShootCredentials(in *ShootCredentials, out *core.ShootCredentials, s conversion.Scope) error {
+	out.Rotation = (*core.ShootCredentialsRotation)(unsafe.Pointer(in.Rotation))
+	return nil
+}
+
+// Convert_v1beta1_ShootCredentials_To_core_ShootCredentials is an autogenerated conversion function.
+func Convert_v1beta1_ShootCredentials_To_core_ShootCredentials(in *ShootCredentials, out *core.ShootCredentials, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootCredentials_To_core_ShootCredentials(in, out, s)
+}
+
+func autoConvert_core_ShootCredentials_To_v1beta1_ShootCredentials(in *core.ShootCredentials, out *ShootCredentials, s conversion.Scope) error {
+	out.Rotation = (*ShootCredentialsRotation)(unsafe.Pointer(in.Rotation))
+	return nil
+}
+
+// Convert_core_ShootCredentials_To_v1beta1_ShootCredentials is an autogenerated conversion function.
+func Convert_core_ShootCredentials_To_v1beta1_ShootCredentials(in *core.ShootCredentials, out *ShootCredentials, s conversion.Scope) error {
+	return autoConvert_core_ShootCredentials_To_v1beta1_ShootCredentials(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(in *ShootCredentialsRotation, out *core.ShootCredentialsRotation, s conversion.Scope) error {
+	out.CertificateAuthorities = (*core.ShootCARotation)(unsafe.Pointer(in.CertificateAuthorities))
+	return nil
+}
+
+// Convert_v1beta1_ShootCredentialsRotation_To_core_ShootCredentialsRotation is an autogenerated conversion function.
+func Convert_v1beta1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(in *ShootCredentialsRotation, out *core.ShootCredentialsRotation, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(in, out, s)
+}
+
+func autoConvert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(in *core.ShootCredentialsRotation, out *ShootCredentialsRotation, s conversion.Scope) error {
+	out.CertificateAuthorities = (*ShootCARotation)(unsafe.Pointer(in.CertificateAuthorities))
+	return nil
+}
+
+// Convert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation is an autogenerated conversion function.
+func Convert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(in *core.ShootCredentialsRotation, out *ShootCredentialsRotation, s conversion.Scope) error {
+	return autoConvert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(in, out, s)
 }
 
 func autoConvert_v1beta1_ShootList_To_core_ShootList(in *ShootList, out *core.ShootList, s conversion.Scope) error {
@@ -4949,6 +5113,7 @@ func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.Sh
 	out.Resources = *(*[]core.NamedResourceReference)(unsafe.Pointer(&in.Resources))
 	out.Tolerations = *(*[]core.Toleration)(unsafe.Pointer(&in.Tolerations))
 	out.ExposureClassName = (*string)(unsafe.Pointer(in.ExposureClassName))
+	out.SystemComponents = (*core.SystemComponents)(unsafe.Pointer(in.SystemComponents))
 	return nil
 }
 
@@ -4982,6 +5147,7 @@ func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *Sh
 	out.Resources = *(*[]NamedResourceReference)(unsafe.Pointer(&in.Resources))
 	out.Tolerations = *(*[]Toleration)(unsafe.Pointer(&in.Tolerations))
 	out.ExposureClassName = (*string)(unsafe.Pointer(in.ExposureClassName))
+	out.SystemComponents = (*SystemComponents)(unsafe.Pointer(in.SystemComponents))
 	return nil
 }
 
@@ -5007,6 +5173,7 @@ func autoConvert_v1beta1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *c
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.AdvertisedAddresses = *(*[]core.ShootAdvertisedAddress)(unsafe.Pointer(&in.AdvertisedAddresses))
 	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
+	out.Credentials = (*core.ShootCredentials)(unsafe.Pointer(in.Credentials))
 	return nil
 }
 
@@ -5032,6 +5199,7 @@ func autoConvert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, o
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.AdvertisedAddresses = *(*[]ShootAdvertisedAddress)(unsafe.Pointer(&in.AdvertisedAddresses))
 	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
+	out.Credentials = (*ShootCredentials)(unsafe.Pointer(in.Credentials))
 	return nil
 }
 
@@ -5064,6 +5232,26 @@ func autoConvert_core_ShootTemplate_To_v1beta1_ShootTemplate(in *core.ShootTempl
 // Convert_core_ShootTemplate_To_v1beta1_ShootTemplate is an autogenerated conversion function.
 func Convert_core_ShootTemplate_To_v1beta1_ShootTemplate(in *core.ShootTemplate, out *ShootTemplate, s conversion.Scope) error {
 	return autoConvert_core_ShootTemplate_To_v1beta1_ShootTemplate(in, out, s)
+}
+
+func autoConvert_v1beta1_SystemComponents_To_core_SystemComponents(in *SystemComponents, out *core.SystemComponents, s conversion.Scope) error {
+	out.CoreDNS = (*core.CoreDNS)(unsafe.Pointer(in.CoreDNS))
+	return nil
+}
+
+// Convert_v1beta1_SystemComponents_To_core_SystemComponents is an autogenerated conversion function.
+func Convert_v1beta1_SystemComponents_To_core_SystemComponents(in *SystemComponents, out *core.SystemComponents, s conversion.Scope) error {
+	return autoConvert_v1beta1_SystemComponents_To_core_SystemComponents(in, out, s)
+}
+
+func autoConvert_core_SystemComponents_To_v1beta1_SystemComponents(in *core.SystemComponents, out *SystemComponents, s conversion.Scope) error {
+	out.CoreDNS = (*CoreDNS)(unsafe.Pointer(in.CoreDNS))
+	return nil
+}
+
+// Convert_core_SystemComponents_To_v1beta1_SystemComponents is an autogenerated conversion function.
+func Convert_core_SystemComponents_To_v1beta1_SystemComponents(in *core.SystemComponents, out *SystemComponents, s conversion.Scope) error {
+	return autoConvert_core_SystemComponents_To_v1beta1_SystemComponents(in, out, s)
 }
 
 func autoConvert_v1beta1_Toleration_To_core_Toleration(in *Toleration, out *core.Toleration, s conversion.Scope) error {

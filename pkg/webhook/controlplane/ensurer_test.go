@@ -531,7 +531,7 @@ var _ = Describe("Ensurer", func() {
 					FeatureGates: map[string]bool{
 						"Foo": true,
 					},
-					ResolverConfig:               "/etc/resolv-for-kubelet.conf",
+					ResolverConfig:               pointer.String("/etc/resolv-for-kubelet.conf"),
 					EnableControllerAttachDetach: enableControllerAttachDetach,
 				}
 
@@ -653,7 +653,7 @@ WantedBy=multi-user.target
 
 	Describe("#EnsureAdditionalFiles", func() {
 		var (
-			permissions int32 = 0755
+			permissions int32 = 0o755
 
 			filePath = "/opt/bin/update-resolv-conf.sh"
 
@@ -673,9 +673,7 @@ WantedBy=multi-user.target
 		)
 
 		It("should add additional files to the current ones if resolvConfOptions field is not set", func() {
-			var (
-				files = []extensionsv1alpha1.File{oldFile}
-			)
+			files := []extensionsv1alpha1.File{oldFile}
 			// Create ensurer
 			ensurer := NewEnsurer(logger)
 
@@ -685,9 +683,7 @@ WantedBy=multi-user.target
 			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`""`)))
 		})
 		It("should add additional files to the current ones if resolvConfOptions field is set", func() {
-			var (
-				files = []extensionsv1alpha1.File{oldFile}
-			)
+			files := []extensionsv1alpha1.File{oldFile}
 
 			// Create ensurer
 			ensurer := NewEnsurer(logger)

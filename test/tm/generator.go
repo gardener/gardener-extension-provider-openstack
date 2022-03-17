@@ -23,7 +23,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 
-	"github.com/gardener/gardener/extensions/test/tm/generator"
+	"github.com/gardener/gardener/extensions/test/testmachinery/generator"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
@@ -111,7 +111,7 @@ func validate() error {
 	if err := generator.ValidateString(&cfg.loadBalancerProvider); err != nil {
 		return fmt.Errorf("error loadbalancer provider: %w", err)
 	}
-	//Optional Parameters
+	// Optional Parameters
 	if err := generator.ValidateString(&cfg.networkWorkerCidr); err != nil {
 		logger.Info("Parameter network-worker-cidr is not set, using default.", "value", defaultNetworkWorkerCidr)
 		cfg.networkWorkerCidr = defaultNetworkWorkerCidr

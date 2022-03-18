@@ -426,7 +426,7 @@ func (e *ensurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.
 	}
 
 	// resolv-for-kubelet.conf is created by update-resolv-conf.service
-	new.ResolverConfig = "/etc/resolv-for-kubelet.conf"
+	new.ResolverConfig = pointer.String("/etc/resolv-for-kubelet.conf")
 
 	return nil
 }
@@ -519,7 +519,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 // `/run/systemd/resolve/resolv.conf` and adds a options line to it.
 func (e *ensurer) addAdditionalFilesForResolvConfOptions(options []string, new *[]extensionsv1alpha1.File) {
 	var (
-		permissions int32 = 0755
+		permissions int32 = 0o755
 		template          = `#!/bin/sh
 
 tmp=/etc/resolv-for-kubelet.conf.new

@@ -46,7 +46,7 @@ import (
 
 	genericcontrolplaneactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
-	healthcheckoperation "github.com/gardener/gardener/extensions/test/integration/healthcheck"
+	healthcheckoperation "github.com/gardener/gardener/extensions/test/testmachinery/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
@@ -66,7 +66,6 @@ var _ = ginkgo.Describe("Provider-openstack integration test: health checks", fu
 	f := createShootFramework()
 
 	ginkgo.Context("ControlPlane", func() {
-
 		ginkgo.Context("Condition type: ShootControlPlaneHealthy", func() {
 			f.Serial().Release().CIt(fmt.Sprintf("ControlPlane CRD should contain unhealthy condition because the deployment '%s' cannot be found in the shoot namespace in the seed", openstack.CloudControllerManagerName), func(ctx context.Context) {
 				err := healthcheckoperation.ControlPlaneHealthCheckDeleteSeedDeployment(ctx, f, f.Shoot.GetName(), openstack.CloudControllerManagerName, gardencorev1beta1.ShootControlPlaneHealthy)
@@ -83,7 +82,6 @@ var _ = ginkgo.Describe("Provider-openstack integration test: health checks", fu
 	})
 
 	ginkgo.Context("Worker", func() {
-
 		ginkgo.Context("Condition type: ShootControlPlaneHealthy", func() {
 			f.Serial().Release().CIt(fmt.Sprintf("Worker CRD should contain unhealthy condition because the deployment '%s' cannot be found in the shoot namespace in the seed", openstack.MachineControllerManagerName), func(ctx context.Context) {
 				err := healthcheckoperation.WorkerHealthCheckDeleteSeedDeployment(ctx, f, f.Shoot.GetName(), openstack.MachineControllerManagerName, gardencorev1beta1.ShootControlPlaneHealthy)

@@ -549,6 +549,19 @@ message ControllerResource {
   optional bool primary = 5;
 }
 
+// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+message CoreDNS {
+  // Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+  optional CoreDNSAutoscaling autoscaling = 1;
+}
+
+// CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+message CoreDNSAutoscaling {
+  // The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
+  // Supported values are `horizontal` and `cluster-proportional`.
+  optional string mode = 1;
+}
+
 // DNS holds information about the provider, the hosted zone id and the domain.
 message DNS {
   // Domain is the external available domain of the Shoot cluster. This domain will be written into the
@@ -2145,8 +2158,8 @@ message SeedVolumeProvider {
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
 message ServiceAccountConfig {
   // Issuer is the identifier of the service account token issuer. The issuer will assert this
-  // identifier in "iss" claim of issued tokens. This value is a string or URI.
-  // Defaults to URI of the API server.
+  // identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
+  // This value is a string or URI. Defaults to URI of the API server.
   // +optional
   optional string issuer = 1;
 
@@ -2168,6 +2181,13 @@ message ServiceAccountConfig {
   // with a validity duration of this value.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 4;
+
+  // AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+  // These values are not used to generate new service account tokens. Only useful when service account tokens are also
+  // issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+  // This field is only available for Kubernetes v1.22 or later.
+  // +optional
+  repeated string acceptedIssuers = 5;
 }
 
 // Shoot represents a Shoot cluster created and managed by Gardener.
@@ -2193,6 +2213,31 @@ message ShootAdvertisedAddress {
 
   // The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
   optional string url = 2;
+}
+
+// ShootCARotation contains information about the certificate authority credential rotation.
+message ShootCARotation {
+  // Phase describes the phase of the certificate authority credential rotation.
+  optional string phase = 1;
+
+  // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
+// ShootCredentials contains information about the shoot credentials.
+message ShootCredentials {
+  // Rotation contains information about the credential rotations.
+  // +optional
+  optional ShootCredentialsRotation rotation = 1;
+}
+
+// ShootCredentialsRotation contains information about the rotation of credentials.
+message ShootCredentialsRotation {
+  // CertificateAuthorities contains information about the certificate authority credential rotation.
+  // +optional
+  optional ShootCARotation certificateAuthorities = 1;
 }
 
 // ShootExtensionStatus holds the status information of extensions of a Shoot cluster
@@ -2329,6 +2374,10 @@ message ShootSpec {
   // This field is immutable.
   // +optional
   optional string exposureClassName = 18;
+
+  // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+  // +optional
+  optional SystemComponents systemComponents = 19;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
@@ -2437,6 +2486,17 @@ message ShootStatus {
   // MigrationStartTime is the time when a migration to a different seed was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 15;
+
+  // Credentials contains information about the shoot credentials.
+  // +optional
+  optional ShootCredentials credentials = 16;
+}
+
+// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+message SystemComponents {
+  // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+  // +optional
+  optional CoreDNS coreDNS = 1;
 }
 
 // Toleration is a toleration for a seed taint.

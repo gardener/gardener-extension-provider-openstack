@@ -45,6 +45,9 @@ const (
 	WebhookServerPortFlag = "webhook-config-server-port"
 	// WebhookCertDirFlag is the name of the command line flag to specify the webhook certificate directory.
 	WebhookCertDirFlag = "webhook-config-cert-dir"
+	// HealthBindAddressFlag is the name of the command line flag to specify the TCP address that the controller
+	// should bind to for serving health probes
+	HealthBindAddressFlag = "health-bind-address"
 
 	// MaxConcurrentReconcilesFlag is the name of the command line flag to specify the maximum number of
 	// concurrent reconciliations a controller can do.
@@ -153,7 +156,7 @@ func (b *OptionAggregator) Complete() error {
 type ManagerOptions struct {
 	// LeaderElection is whether leader election is turned on or not.
 	LeaderElection bool
-	// LeaderElectionResourceLock is the resource type used for leader election (defaults to `configmapsleases`).
+	// LeaderElectionResourceLock is the resource type used for leader election (defaults to `leases`).
 	//
 	// When changing the default resource lock, please make sure to migrate via multilocks to
 	// avoid situations where multiple running instances of your controller have each acquired leadership
@@ -177,6 +180,8 @@ type ManagerOptions struct {
 	WebhookServerPort int
 	// WebhookCertDir is the directory that contains the webhook server key and certificate.
 	WebhookCertDir string
+	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes
+	HealthBindAddress string
 
 	config *ManagerConfig
 }
@@ -185,11 +190,8 @@ type ManagerOptions struct {
 func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	defaultLeaderElectionResourceLock := m.LeaderElectionResourceLock
 	if defaultLeaderElectionResourceLock == "" {
-		// explicitly default to configmapleases if no default is specified for migration purposes
-		// same as in controller-runtime, see
-		// https://github.com/kubernetes-sigs/controller-runtime/blob/a763c9a36c6f18660799384c9765348942bda53a/pkg/leaderelection/leader_election.go#L59-L64
-		// we might consider changing this default after many releases
-		defaultLeaderElectionResourceLock = resourcelock.ConfigMapsLeasesResourceLock
+		// explicitly default to leases if no default is specified
+		defaultLeaderElectionResourceLock = resourcelock.LeasesResourceLock
 	}
 
 	fs.BoolVar(&m.LeaderElection, LeaderElectionFlag, m.LeaderElection, "Whether to use leader election or not when running this controller manager.")
@@ -200,11 +202,12 @@ func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&m.WebhookServerHost, WebhookServerHostFlag, m.WebhookServerHost, "The webhook server host.")
 	fs.IntVar(&m.WebhookServerPort, WebhookServerPortFlag, m.WebhookServerPort, "The webhook server port.")
 	fs.StringVar(&m.WebhookCertDir, WebhookCertDirFlag, m.WebhookCertDir, "The directory that contains the webhook server key and certificate.")
+	fs.StringVar(&m.HealthBindAddress, HealthBindAddressFlag, ":8081", "bind address for the health server")
 }
 
 // Complete implements Completer.Complete.
 func (m *ManagerOptions) Complete() error {
-	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir}
+	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir, m.HealthBindAddress}
 	return nil
 }
 
@@ -229,6 +232,8 @@ type ManagerConfig struct {
 	WebhookServerPort int
 	// WebhookCertDir is the directory that contains the webhook server key and certificate.
 	WebhookCertDir string
+	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes
+	HealthBindAddress string
 }
 
 // Apply sets the values of this ManagerConfig in the given manager.Options.
@@ -240,6 +245,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.Host = c.WebhookServerHost
 	opts.Port = c.WebhookServerPort
 	opts.CertDir = c.WebhookCertDir
+	opts.HealthProbeBindAddress = c.HealthBindAddress
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.

@@ -94,6 +94,7 @@ type RegisteredExtension struct {
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
 func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck) error {
 	predicates := append(DefaultPredicates(), customPredicates...)
+	opts.Controller.RecoverPanic = true
 
 	args := AddArgs{
 		ControllerOptions:       opts.Controller,
@@ -149,7 +150,8 @@ func DefaultPredicates() []predicate.Predicate {
 // Add creates a new Reconciler and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Register(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod)
+	args.ControllerOptions.Reconciler = NewReconciler(actuator, *args.registeredExtension, args.SyncPeriod)
+	args.ControllerOptions.RecoverPanic = true
 	return add(mgr, args)
 }
 
@@ -166,7 +168,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 		return err
 	}
 
-	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "health check type", args.registeredExtension.healthConditionTypes, "sync period", args.SyncPeriod.Duration.String())
+	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
 	// add type predicate to only watch registered resource (e.g ControlPlane) with a certain type (e.g aws)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)

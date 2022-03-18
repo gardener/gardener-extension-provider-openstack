@@ -1125,6 +1125,7 @@ func Convert_config_LoadBalancerServiceConfig_To_v1alpha1_LoadBalancerServiceCon
 }
 
 func autoConvert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.FluentBit = (*config.FluentBit)(unsafe.Pointer(in.FluentBit))
 	if in.Loki != nil {
 		in, out := &in.Loki, &out.Loki
@@ -1145,6 +1146,7 @@ func Convert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging
 }
 
 func autoConvert_config_Logging_To_v1alpha1_Logging(in *config.Logging, out *Logging, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.FluentBit = (*FluentBit)(unsafe.Pointer(in.FluentBit))
 	if in.Loki != nil {
 		in, out := &in.Loki, &out.Loki
@@ -1207,6 +1209,7 @@ func autoConvert_v1alpha1_ManagedSeedControllerConfiguration_To_config_ManagedSe
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.WaitSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.WaitSyncPeriod))
 	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
+	out.JitterUpdates = (*bool)(unsafe.Pointer(in.JitterUpdates))
 	return nil
 }
 
@@ -1220,6 +1223,7 @@ func autoConvert_config_ManagedSeedControllerConfiguration_To_v1alpha1_ManagedSe
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.WaitSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.WaitSyncPeriod))
 	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
+	out.JitterUpdates = (*bool)(unsafe.Pointer(in.JitterUpdates))
 	return nil
 }
 

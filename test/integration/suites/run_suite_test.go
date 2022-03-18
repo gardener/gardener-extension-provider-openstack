@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/test/framework/config"
 	"github.com/gardener/gardener/test/framework/reporter"
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/ginkgo/v2/reporters"
 	. "github.com/onsi/gomega"
 )
 
@@ -59,6 +58,5 @@ func TestGardenerSuite(t *testing.T) {
 }
 
 var _ = ReportAfterSuite("Report to Elasticsearch", func(report Report) {
-	//nolint:staticcheck // Ignore SA1019 until NewDeprecatedGardenerESReporter is reworked to be compatible with ginkgo v2 reporting.
-	reporters.ReportViaDeprecatedReporter(reporter.NewDeprecatedGardenerESReporter(*reportFilePath, *esIndex), report)
+	reporter.ReportResults(*reportFilePath, *esIndex, report)
 })

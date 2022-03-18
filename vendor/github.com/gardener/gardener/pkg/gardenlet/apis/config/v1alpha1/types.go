@@ -408,6 +408,10 @@ type ManagedSeedControllerConfiguration struct {
 	// duration between 0 and the configured value. It is defaulted to 5m.
 	// +optional
 	SyncJitterPeriod *metav1.Duration `json:"syncJitterPeriod,omitempty"`
+	// JitterUpdates enables enqueuing managed seeds with a random duration(jitter) in case of an update to the spec.
+	// The applied jitterPeriod is taken from SyncJitterPeriod.
+	// +optional
+	JitterUpdates *bool `json:"jitterUpdates,omitempty"`
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
@@ -469,6 +473,9 @@ type ShootNodeLogging struct {
 
 // Logging contains configuration for the logging stack.
 type Logging struct {
+	// Enabled is used to enable or disable logging stack for clusters.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// FluentBit contains configurations for the fluent-bit
 	// +optional
 	FluentBit *FluentBit `json:"fluentBit,omitempty" yaml:"fluentBit,omitempty"`

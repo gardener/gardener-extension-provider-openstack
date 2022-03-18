@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
@@ -59,7 +58,7 @@ const (
 
 // NewReconciler creates a new performHealthCheck.Reconciler that reconciles
 // the registered extension resources (Gardener's `extensions.gardener.cloud` API group).
-func NewReconciler(mgr manager.Manager, actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
+func NewReconciler(actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
 	return &reconciler{
 		logger:              log.Log.WithName(ControllerName),
 		actuator:            actuator,
@@ -78,6 +77,9 @@ func (r *reconciler) InjectClient(client client.Client) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.syncPeriod.Duration/2)
+	defer cancel()
+
 	extension := r.registeredExtension.getExtensionObjFunc()
 
 	if err := r.client.Get(ctx, request.NamespacedName, extension); err != nil {
@@ -93,12 +95,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if acc.GetDeletionTimestamp() != nil {
-		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Extension is being deleted.", "healthcheck", kutil.ObjectName(acc))
+		r.logger.V(6).Info("Do not perform HealthCheck for extension resource, extension is being deleted", "healthcheck", kutil.ObjectName(acc))
 		return reconcile.Result{}, nil
 	}
 
 	if isInMigration(acc) {
-		r.logger.Info("Do not perform HealthCheck for extension resource. Extension is being migrated.", "healthecheck", kutil.ObjectName(acc))
+		r.logger.Info("Do not perform HealthCheck for extension resource, extension is being migrated", "healthecheck", kutil.ObjectName(acc))
 		return reconcile.Result{}, nil
 	}
 
@@ -121,11 +123,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 
-		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Shoot is hibernated.", "healthcheck", kutil.ObjectName(acc), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
+		r.logger.V(6).Info("Do not perform HealthCheck for extension resource, Shoot is hibernated", "healthcheck", kutil.ObjectName(acc), "groupVersionKind", r.registeredExtension.groupVersionKind)
 		return reconcile.Result{}, nil
 	}
 
-	r.logger.V(6).Info("Performing healthcheck", "healthcheck", kutil.ObjectName(acc), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
+	r.logger.V(6).Info("Performing healthcheck", "healthcheck", kutil.ObjectName(acc), "groupVersionKind", r.registeredExtension.groupVersionKind)
 	return r.performHealthCheck(ctx, request, extension)
 }
 
@@ -133,7 +135,7 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 	healthCheckResults, err := r.actuator.ExecuteHealthCheckFunctions(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name})
 	if err != nil {
 		var conditions []condition
-		r.logger.Info("Failed to execute healthChecks. Updating each HealthCheckCondition for the extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition types", r.registeredExtension.healthConditionTypes, "name", request.Name, "namespace", request.Namespace, "error", err.Error())
+		r.logger.Info("Failed to execute healthChecks, updating each HealthCheckCondition for the extension resource to ConditionCheckError", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionTypes", r.registeredExtension.healthConditionTypes, "name", request.Name, "namespace", request.Namespace, "error", err.Error())
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
 			conditionBuilder, buildErr := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
 			if buildErr != nil {
@@ -163,18 +165,18 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 		}
 
 		if healthCheckResult.Status == gardencorev1beta1.ConditionTrue {
-			logger.Info("Health check for extension resource successful.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
+			logger.Info("Health check for extension resource successful", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionType", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
 			conditions = append(conditions, extensionConditionSuccessful(conditionBuilder, healthCheckResult.HealthConditionType, healthCheckResult))
 			continue
 		}
 
 		if healthCheckResult.FailedChecks > 0 {
-			r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
+			r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionType", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
 			conditions = append(conditions, extensionConditionCheckError(conditionBuilder, healthCheckResult.HealthConditionType, healthCheckResult))
 			continue
 		}
 
-		logger.Info("Health check for extension resource progressing or unsuccessful.", "kind", fmt.Sprintf("%s.%s.%s", r.registeredExtension.groupVersionKind.Kind, r.registeredExtension.groupVersionKind.Group, r.registeredExtension.groupVersionKind.Version), "name", request.Name, "namespace", request.Namespace, "failed", healthCheckResult.FailedChecks, "progressing", healthCheckResult.ProgressingChecks, "successful", healthCheckResult.SuccessfulChecks, "details", healthCheckResult.GetDetails())
+		logger.Info("Health check for extension resource progressing or unsuccessful", "kind", fmt.Sprintf("%s.%s.%s", r.registeredExtension.groupVersionKind.Kind, r.registeredExtension.groupVersionKind.Group, r.registeredExtension.groupVersionKind.Version), "name", request.Name, "namespace", request.Namespace, "failed", healthCheckResult.FailedChecks, "progressing", healthCheckResult.ProgressingChecks, "successful", healthCheckResult.SuccessfulChecks, "details", healthCheckResult.GetDetails())
 		conditions = append(conditions, extensionConditionUnsuccessful(conditionBuilder, healthCheckResult.HealthConditionType, extension, healthCheckResult))
 	}
 

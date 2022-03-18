@@ -15,6 +15,7 @@
 package healthcheck
 
 import (
+	"context"
 	"time"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -47,7 +48,7 @@ var (
 // RegisterHealthChecks registers health checks for each extension resource
 // HealthChecks are grouped by extension (e.g worker), extension.type (e.g aws) and  Health Check Type (e.g SystemComponentsHealthy)
 func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) error {
-	csiEnabledPreCheckFunc := func(_ client.Object, cluster *extensionscontroller.Cluster) bool {
+	csiEnabledPreCheckFunc := func(_ context.Context, _ client.Client, _ client.Object, cluster *extensionscontroller.Cluster) bool {
 		csiEnabled, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, ">=", openstack.CSIMigrationKubernetesVersion)
 		if err != nil {
 			return false

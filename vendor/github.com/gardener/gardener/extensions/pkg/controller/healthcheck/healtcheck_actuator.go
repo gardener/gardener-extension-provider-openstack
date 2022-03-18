@@ -108,11 +108,10 @@ type checkResultForConditionType struct {
 func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request types.NamespacedName) (*[]Result, error) {
 	var (
 		shootClient client.Client
-		channel     = make(chan channelResult)
+		channel     = make(chan channelResult, len(a.healthChecks))
 		wg          sync.WaitGroup
 	)
 
-	wg.Add(len(a.healthChecks))
 	for _, hc := range a.healthChecks {
 		// clone to avoid problems during parallel execution
 		check := hc.HealthCheck.DeepCopy()
@@ -122,9 +121,16 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 				var err error
 				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
 				if err != nil {
-					msg := fmt.Errorf("failed to create shoot client in namespace '%s': %v", request.Namespace, err)
-					a.logger.Error(err, msg.Error())
-					return nil, msg
+					// don't return here, as we might have started some goroutines already to prevent leakage
+					channel <- channelResult{
+						healthCheckResult: &SingleCheckResult{
+							Status: gardencorev1beta1.ConditionFalse,
+							Detail: fmt.Sprintf("failed to create shoot client: %v", err),
+						},
+						error:               err,
+						healthConditionType: hc.ConditionType,
+					}
+					continue
 				}
 			}
 			ShootClientInto(shootClient, check)
@@ -132,6 +138,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 
 		check.SetLoggerSuffix(a.provider, a.extensionKind)
 
+		wg.Add(1)
 		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, preCheckFunc PreCheckFunc, healthConditionType string) {
 			defer wg.Done()
 
@@ -162,8 +169,8 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 					return
 				}
 
-				if !preCheckFunc(obj, cluster) {
-					a.logger.V(6).Info("Skipping health check as pre check function returned false", "condition type", healthConditionType)
+				if !preCheckFunc(ctx, a.seedClient, obj, cluster) {
+					a.logger.V(6).Info("Skipping health check as pre check function returned false", "conditionType", healthConditionType)
 					channel <- channelResult{
 						healthCheckResult: &SingleCheckResult{
 							Status: gardencorev1beta1.ConditionTrue,

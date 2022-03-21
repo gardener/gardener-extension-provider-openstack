@@ -17,6 +17,8 @@ vpa:
   updatePolicy:
     updateMode: "Auto"
 
+healthPort: 8081
+
 controllers:
   backupbucket:
     concurrentSyncs: 5

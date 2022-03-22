@@ -76,6 +76,10 @@ images:
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: k8s.gcr.io/sig-storage/snapshot-controller
   tag: "v3.0.3"
+- name: csi-snapshot-validation-webhook
+  sourceRepository: github.com/kubernetes-csi/external-snapshotter
+  repository: k8s.gcr.io/sig-storage/snapshot-validation-webhook
+  tag: "v3.0.3"
 - name: csi-resizer
   sourceRepository: github.com/kubernetes-csi/external-resizer
   repository: k8s.gcr.io/sig-storage/csi-resizer

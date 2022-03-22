@@ -1,0 +1,19 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: csi-snapshot-validation
+webhooks:
+- name: "validation-webhook.snapshot.storage.k8s.io"
+  rules:
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    apiVersions: ["v1", "v1beta1"]
+    operations: ["CREATE", "UPDATE"]
+    resources: ["volumesnapshots", "volumesnapshotcontents"]
+    scope: "*"
+  clientConfig:
+    url: {{ required ".Values.webhookConfig.url is required" .Values.webhookConfig.url }}
+    caBundle: {{ required ".Values.webhookConfig.caBundle is required" .Values.webhookConfig.caBundle | b64enc }}
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: None
+  failurePolicy: Fail
+  timeoutSeconds: 10

@@ -17,6 +17,7 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -29,6 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -237,12 +239,14 @@ var _ = Describe("ValuesProvider", func() {
 			openstack.CSISnapshotterName:                     "6a5bfc847638c499062f7fb44e31a30a9760bf4179e1dbf85e0ff4b4f162cd68",
 			openstack.CSIResizerName:                         "a77e663ba1af340fb3dd7f6f8a1be47c7aa9e658198695480641e6b934c0b9ed",
 			openstack.CSISnapshotControllerName:              "84cba346d2e2cf96c3811b55b01f57bdd9b9bcaed7065760470942d267984eaf",
+			openstack.CSISnapshotValidation:                  "452097220f89011daa2543876c3f3184f5064a12be454ae32e2ad205ec55823c",
 		}
 
 		enabledTrue  = map[string]interface{}{"enabled": true}
 		enabledFalse = map[string]interface{}{"enabled": false}
 
-		logger = log.Log.WithName("test")
+		logger  = log.Log.WithName("test")
+		fakeErr = fmt.Errorf("fake err")
 	)
 
 	BeforeEach(func() {
@@ -533,6 +537,12 @@ var _ = Describe("ValuesProvider", func() {
 							"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
 						},
 					},
+					"csiSnapshotValidationWebhook": map[string]interface{}{
+						"replicas": 1,
+						"podAnnotations": map[string]interface{}{
+							"checksum/secret-" + openstack.CSISnapshotValidation: checksums[openstack.CSISnapshotValidation],
+						},
+					},
 				}),
 			}))
 		})
@@ -556,32 +566,52 @@ var _ = Describe("ValuesProvider", func() {
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: "",
 					},
 					"cloudProviderConfig": b,
+					"webhookConfig": map[string]interface{}{
+						"url":      "https://csi-snapshot-validation.test/volumesnapshot",
+						"caBundle": "",
+					},
 				}),
 			}))
 		})
 
-		It("should return correct shoot control plane chart values (k8s >= 1.19)", func() {
-			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+		Context("shoot control plane chart values (k8s >= 1.19)", func() {
+			It("should return error when ca secret is not found", func() {
+				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
+				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+				c.EXPECT().Get(ctx, kutil.Key(cp.Namespace, string(v1beta1constants.SecretNameCACluster)), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
 
-			values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(values).To(Equal(map[string]interface{}{
-				"global": map[string]interface{}{
-					"useTokenRequestor":      true,
-					"useProjectedTokenMount": true,
-				},
-				openstack.CloudControllerManagerName: enabledTrue,
-				openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"vpaEnabled":        true,
-					"kubernetesVersion": "1.19.4",
-					"podAnnotations": map[string]interface{}{
-						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+				_, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should return correct shoot control plane chart when ca is secret found", func() {
+				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
+				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+				c.EXPECT().Get(ctx, kutil.Key(cp.Namespace, string(v1beta1constants.SecretNameCACluster)), gomock.AssignableToTypeOf(&corev1.Secret{}))
+
+				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(values).To(Equal(map[string]interface{}{
+					"global": map[string]interface{}{
+						"useTokenRequestor":      true,
+						"useProjectedTokenMount": true,
 					},
-					"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-					"cloudProviderConfig": cloudProviderDiskConfig,
-				}),
-			}))
+					openstack.CloudControllerManagerName: enabledTrue,
+					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
+						"vpaEnabled":        true,
+						"kubernetesVersion": "1.19.4",
+						"podAnnotations": map[string]interface{}{
+							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+						},
+						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
+						"cloudProviderConfig": cloudProviderDiskConfig,
+						"webhookConfig": map[string]interface{}{
+							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
+							"caBundle": "",
+						},
+					}),
+				}))
+			})
 		})
 	})
 

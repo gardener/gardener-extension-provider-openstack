@@ -46,9 +46,7 @@ spec:
         {{- if .Values.global.kubeconfig }}
         - --kubeconfig=/etc/gardener-extension-admission-openstack/kubeconfig/kubeconfig
         {{- end }}
-        {{- if .Values.global.healthPort }}
         - --health-bind-address=:{{ .Values.healthPort }}
-        {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz

@@ -2,6 +2,8 @@
 **
 
 # Exclude folders relevant for build
+!.git/
+!.dockerignore
 !charts/
 !cmd/
 !docs/

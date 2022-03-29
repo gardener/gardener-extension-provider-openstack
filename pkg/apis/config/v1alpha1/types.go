@@ -36,8 +36,10 @@ type ControllerConfiguration struct {
 	// ETCD is the etcd configuration.
 	ETCD ETCD `json:"etcd"`
 	// HealthCheckConfig is the config for the health check controller
+	// +optional
 	HealthCheckConfig *healthcheckconfigv1alpha1.HealthCheckConfig `json:"healthCheckConfig,omitempty"`
 	// BastionConfig the config for the Bastion
+	// +optional
 	BastionConfig *BastionConfig `json:"bastionConfig,omitempty"`
 }
 

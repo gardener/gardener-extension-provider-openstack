@@ -80,6 +80,7 @@ github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alph
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>HealthCheckConfig is the config for the health check controller</p>
 </td>
 </tr>
@@ -93,6 +94,7 @@ BastionConfig
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>BastionConfig the config for the Bastion</p>
 </td>
 </tr>

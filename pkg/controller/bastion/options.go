@@ -30,9 +30,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-//Maximum length for "base" name due to fact that we use this name to name other openstack resources,
-//
 const (
+	//maxLengthForBaseName for "base" name due to fact that we use this name to name other openstack resources,
 	maxLengthForBaseName = 33
 )
 

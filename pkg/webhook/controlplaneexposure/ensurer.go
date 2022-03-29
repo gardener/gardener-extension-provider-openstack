@@ -80,7 +80,6 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 
 	if c := extensionswebhook.ContainerWithName(new.Spec.Template.Spec.Containers, "kube-apiserver"); c != nil {
 		c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--advertise-address=", address)
-		c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--external-hostname=", address)
 	}
 	return nil
 }

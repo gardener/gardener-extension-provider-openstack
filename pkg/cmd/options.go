@@ -56,10 +56,10 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 }
 
 // WebhookSwitchOptions are the webhookcmd.SwitchOptions for the provider webhooks.
-func WebhookSwitchOptions() *webhookcmd.SwitchOptions {
+func WebhookSwitchOptions(gardenerVersion *string) *webhookcmd.SwitchOptions {
 	return webhookcmd.NewSwitchOptions(
 		webhookcmd.Switch(extensioncontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
 		webhookcmd.Switch(extensioncontrolplanewebhook.ExposureWebhookName, controlplaneexposurewebhook.AddToManager),
-		webhookcmd.Switch(extensionscloudproviderwebhook.WebhookName, cloudproviderwebhook.AddToManager),
+		webhookcmd.Switch(extensionscloudproviderwebhook.WebhookName, cloudproviderwebhook.AddToManager(gardenerVersion)),
 	)
 }

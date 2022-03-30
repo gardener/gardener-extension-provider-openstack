@@ -9,6 +9,7 @@ global:
     pullPolicy: IfNotPresent
   replicaCount: 1
   resources: {}
+  healthPort: 8081
   vpa:
     enabled: true
     resourcePolicy:

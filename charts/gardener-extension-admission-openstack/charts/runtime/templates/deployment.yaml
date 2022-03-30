@@ -46,6 +46,19 @@ spec:
         {{- if .Values.global.kubeconfig }}
         - --kubeconfig=/etc/gardener-extension-admission-openstack/kubeconfig/kubeconfig
         {{- end }}
+        - --health-bind-address=:{{ .Values.healthPort }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.global.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.global.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5
         ports:
         - name: webhook-server
           containerPort: {{ .Values.global.webhookConfig.serverPort }}

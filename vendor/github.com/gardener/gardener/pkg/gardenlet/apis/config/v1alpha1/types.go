@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
@@ -175,6 +176,9 @@ type GardenletControllerConfiguration struct {
 	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
 	// +optional
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
+	// ShootSecretControllerConfiguration the configuration of the ShootSecret controller.
+	// +optional
+	ShootSecret *ShootSecretControllerConfiguration `json:"shootSecret,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -352,6 +356,13 @@ type ShootMigrationControllerConfiguration struct {
 	LastOperationStaleDuration *metav1.Duration `json:"lastOperationStaleDuration,omitempty"`
 }
 
+// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
+type ShootSecretControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 type StaleExtensionHealthChecks struct {
 	// Enabled specifies whether the check for stale extensions health checks is enabled.
@@ -461,7 +472,12 @@ type Loki struct {
 // GardenLoki contains configuration for the Loki in garden namespace.
 type GardenLoki struct {
 	// Priority is the priority value for the Loki
+	// +optional
 	Priority *int `json:"priority,omitempty" yaml:"priority,omitempty"`
+	// Storage is the disk storage capacity of the central Loki.
+	// Defaults to 100Gi.
+	// +optional
+	Storage *resource.Quantity `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
 
 // ShootNodeLogging contains configuration for the shoot node logging.
@@ -699,3 +715,6 @@ const (
 
 // DefaultControllerSyncPeriod is a default value for sync period for controllers.
 var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
+
+// DefaultCentralLokiStorage is a default value for garden/loki's storage.
+var DefaultCentralLokiStorage = resource.MustParse("100Gi")

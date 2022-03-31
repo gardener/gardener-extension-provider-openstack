@@ -691,7 +691,7 @@ message Gardener {
 // Hibernation contains information whether the Shoot is suspended or not.
 message Hibernation {
   // Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
-  // If it is false or nil, the Shoot's desired state is to be awaken.
+  // If it is false or nil, the Shoot's desired state is to be awakened.
   // +optional
   optional bool enabled = 1;
 
@@ -2099,6 +2099,8 @@ message ServiceAccountConfig {
   // MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
   // otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
   // with a validity duration of this value.
+  // This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+  // This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 4;
 
@@ -2140,6 +2142,10 @@ message ShootCARotation {
   // Phase describes the phase of the certificate authority credential rotation.
   optional string phase = 1;
 
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
   // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
   // completed.
   // +optional
@@ -2158,6 +2164,25 @@ message ShootCredentialsRotation {
   // CertificateAuthorities contains information about the certificate authority credential rotation.
   // +optional
   optional ShootCARotation certificateAuthorities = 1;
+
+  // Kubeconfig contains information about the kubeconfig credential rotation.
+  // +optional
+  optional ShootKubeconfigRotation kubeconfig = 2;
+
+  // SSHKeypair contains information about the ssh-keypair credential rotation.
+  // +optional
+  optional ShootSSHKeypairRotation sshKeypair = 3;
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+message ShootKubeconfigRotation {
+  // LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootList is a list of Shoot objects.
@@ -2195,6 +2220,17 @@ message ShootNetworks {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 2;
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+message ShootSSHKeypairRotation {
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootSpec is the specification of a Shoot.

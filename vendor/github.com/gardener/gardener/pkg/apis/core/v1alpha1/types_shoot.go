@@ -190,14 +190,43 @@ type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	// +optional
 	CertificateAuthorities *ShootCARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
+	// Kubeconfig contains information about the kubeconfig credential rotation.
+	// +optional
+	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
+	// SSHKeypair contains information about the ssh-keypair credential rotation.
+	// +optional
+	SSHKeypair *ShootSSHKeypairRotation `json:"sshKeypair,omitempty" protobuf:"bytes,3,opt,name=sshKeypair"`
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
 type ShootCARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
 	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+type ShootKubeconfigRotation struct {
+	// LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+type ShootSSHKeypairRotation struct {
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }
@@ -364,7 +393,7 @@ type NamedResourceReference struct {
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
 	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
-	// If it is false or nil, the Shoot's desired state is to be awaken.
+	// If it is false or nil, the Shoot's desired state is to be awakened.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" protobuf:"varint,1,opt,name=enabled"`
 	// Schedules determine the hibernation schedules.
@@ -621,6 +650,8 @@ type ServiceAccountConfig struct {
 	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
 	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
 	// with a validity duration of this value.
+	// This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+	// This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
 	// +optional
 	MaxTokenExpiration *metav1.Duration `json:"maxTokenExpiration,omitempty" protobuf:"bytes,4,opt,name=maxTokenExpiration"`
 	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.

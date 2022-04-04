@@ -8,7 +8,7 @@ spec:
     containerPolicies:
     - containerName: csi-snapshot-validation
       minAllowed:
-        memory: 25Mi
+        memory: {{ .Values.csiSnapshotValidationWebhook.resources.memory }}
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

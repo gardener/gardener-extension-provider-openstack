@@ -161,14 +161,36 @@ type ShootCredentials struct {
 type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	CertificateAuthorities *ShootCARotation
+	// Kubeconfig contains information about the kubeconfig credential rotation.
+	Kubeconfig *ShootKubeconfigRotation
+	// SSHKeypair contains information about the ssh-keypair credential rotation.
+	SSHKeypair *ShootSSHKeypairRotation
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
 type ShootCARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
 	Phase ShootCredentialsRotationPhase
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+type ShootKubeconfigRotation struct {
+	// LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+type ShootSSHKeypairRotation struct {
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
 	LastCompletionTime *metav1.Time
 }
 
@@ -316,7 +338,7 @@ type NamedResourceReference struct {
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
 	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
-	// If it is false or nil, the Shoot's desired state is to be awaken.
+	// If it is false or nil, the Shoot's desired state is to be awakened.
 	Enabled *bool
 	// Schedules determine the hibernation schedules.
 	Schedules []HibernationSchedule
@@ -503,6 +525,8 @@ type ServiceAccountConfig struct {
 	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
 	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
 	// with a validity duration of this value.
+	// This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+	// This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
 	MaxTokenExpiration *metav1.Duration
 	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
 	// These values are not used to generate new service account tokens. Only useful when service account tokens are also

@@ -60,8 +60,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 		SecretConfigsFunc: func(cas map[string]*secrets.Certificate, clusterName string) []secrets.ConfigInterface {
 			out := []secrets.ConfigInterface{
 				&secrets.ControlPlaneSecretConfig{
+					Name: openstack.CloudControllerManagerName + "-server",
 					CertificateSecretConfig: &secrets.CertificateSecretConfig{
-						Name:       openstack.CloudControllerManagerName + "-server",
 						CommonName: openstack.CloudControllerManagerName,
 						DNSNames:   kutil.DNSNamesForService(openstack.CloudControllerManagerName, clusterName),
 						CertType:   secrets.ServerCert,
@@ -73,8 +73,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 			if !useTokenRequestor {
 				out = append(out,
 					&secrets.ControlPlaneSecretConfig{
+						Name: openstack.CloudControllerManagerName,
 						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							Name:         openstack.CloudControllerManagerName,
 							CommonName:   "system:cloud-controller-manager",
 							Organization: []string{user.SystemPrivilegedGroup},
 							CertType:     secrets.ClientCert,
@@ -88,8 +88,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 						},
 					},
 					&secrets.ControlPlaneSecretConfig{
+						Name: openstack.CSIProvisionerName,
 						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							Name:       openstack.CSIProvisionerName,
 							CommonName: openstack.UsernamePrefix + openstack.CSIProvisionerName,
 							CertType:   secrets.ClientCert,
 							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
@@ -102,8 +102,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 						},
 					},
 					&secrets.ControlPlaneSecretConfig{
+						Name: openstack.CSIAttacherName,
 						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							Name:       openstack.CSIAttacherName,
 							CommonName: openstack.UsernamePrefix + openstack.CSIAttacherName,
 							CertType:   secrets.ClientCert,
 							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
@@ -116,8 +116,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 						},
 					},
 					&secrets.ControlPlaneSecretConfig{
+						Name: openstack.CSISnapshotterName,
 						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							Name:       openstack.CSISnapshotterName,
 							CommonName: openstack.UsernamePrefix + openstack.CSISnapshotterName,
 							CertType:   secrets.ClientCert,
 							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
@@ -130,8 +130,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 						},
 					},
 					&secrets.ControlPlaneSecretConfig{
+						Name: openstack.CSIResizerName,
 						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							Name:       openstack.CSIResizerName,
 							CommonName: openstack.UsernamePrefix + openstack.CSIResizerName,
 							CertType:   secrets.ClientCert,
 							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
@@ -144,8 +144,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 						},
 					},
 					&secrets.ControlPlaneSecretConfig{
+						Name: openstack.CSISnapshotControllerName,
 						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							Name:       openstack.CSISnapshotControllerName,
 							CommonName: openstack.UsernamePrefix + openstack.CSISnapshotControllerName,
 							CertType:   secrets.ClientCert,
 							SigningCA:  cas[v1beta1constants.SecretNameCACluster],

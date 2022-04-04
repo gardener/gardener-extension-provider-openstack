@@ -18,6 +18,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/klog"
@@ -137,6 +138,8 @@ type GardenletControllerConfiguration struct {
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
+	// ShootSecretControllerConfiguration the configuration of the ShootSecret controller.
+	ShootSecret *ShootSecretControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -282,6 +285,12 @@ type ShootMigrationControllerConfiguration struct {
 	LastOperationStaleDuration *metav1.Duration
 }
 
+// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
+type ShootSecretControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
+}
+
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 type StaleExtensionHealthChecks struct {
 	// Enabled specifies whether the check for stale extensions health checks is enabled.
@@ -367,7 +376,7 @@ type FluentBit struct {
 type Loki struct {
 	// Enabled is used to enable or disable the shoot and seed Loki.
 	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
-	// If not set, by default Loki is enabled
+	// If not set, by default Loki is enabled.
 	Enabled *bool
 	// Garden contains configuration for the Loki in garden namespace.
 	Garden *GardenLoki
@@ -375,13 +384,16 @@ type Loki struct {
 
 // GardenLoki contains configuration for the Loki in garden namespace.
 type GardenLoki struct {
-	// Priority is the priority value for the Loki
+	// Priority is the priority value for the Loki.
 	Priority *int32
+	// Storage is the disk storage capacity of the central Loki.
+	// Defaults to 100Gi.
+	Storage *resource.Quantity
 }
 
 // ShootNodeLogging contains configuration for the shoot node logging.
 type ShootNodeLogging struct {
-	// ShootPurposes determines which shoots can have node logging by their purpose
+	// ShootPurposes determines which shoots can have node logging by their purpose.
 	ShootPurposes []gardencore.ShootPurpose
 }
 
@@ -389,11 +401,11 @@ type ShootNodeLogging struct {
 type Logging struct {
 	// Enabled is used to enable or disable logging stack for clusters.
 	Enabled *bool
-	// FluentBit contains configurations for the fluent-bit
+	// FluentBit contains configurations for the fluent-bit.
 	FluentBit *FluentBit
-	// Loki contains configuration for the Loki
+	// Loki contains configuration for the Loki.
 	Loki *Loki
-	// ShootNodeLogging contains configurations for the shoot node logging
+	// ShootNodeLogging contains configurations for the shoot node logging.
 	ShootNodeLogging *ShootNodeLogging
 }
 

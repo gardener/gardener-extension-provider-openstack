@@ -59,7 +59,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 		return csiEnabled
 	}
 
-	healthCheck := func(ctx context.Context, client client.Client, obj client.Object, cluster *extensionscontroller.Cluster) bool {
+	skiphealthCheck := func(ctx context.Context, client client.Client, obj client.Object, cluster *extensionscontroller.Cluster) bool {
 		deployment := &appsv1.Deployment{}
 		if err := client.Get(ctx, kutil.Key(cluster.ObjectMeta.Name, "csi-snapshot-validation"), deployment); err != nil {
 			return !apierrors.IsNotFound(err)
@@ -91,11 +91,11 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CSISnapshotControllerName),
 				PreCheckFunc:  csiEnabledPreCheckFunc,
 			},
-			// TODO(acumino): Enable this health check in v1.27.
+			// TODO(acumino): Enable this health check in v1.26 and use csiEnabledPreCheckFunc for PreCheckFunc.
 			{
 				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
 				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CSISnapshotValidation),
-				PreCheckFunc:  healthCheck,
+				PreCheckFunc:  skiphealthCheck,
 			},
 			{
 				ConditionType: string(gardencorev1beta1.ShootSystemComponentsHealthy),

@@ -38,8 +38,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -64,6 +66,15 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 					CertificateSecretConfig: &secrets.CertificateSecretConfig{
 						CommonName: openstack.CloudControllerManagerName,
 						DNSNames:   kutil.DNSNamesForService(openstack.CloudControllerManagerName, clusterName),
+						CertType:   secrets.ServerCert,
+						SigningCA:  cas[v1beta1constants.SecretNameCACluster],
+					},
+				},
+				&secrets.ControlPlaneSecretConfig{
+					CertificateSecretConfig: &secrets.CertificateSecretConfig{
+						Name:       openstack.CSISnapshotValidation,
+						CommonName: openstack.UsernamePrefix + openstack.CSISnapshotValidation,
+						DNSNames:   kutil.DNSNamesForService(openstack.CSISnapshotValidation, clusterName),
 						CertType:   secrets.ServerCert,
 						SigningCA:  cas[v1beta1constants.SecretNameCACluster],
 					},
@@ -219,6 +230,7 @@ var (
 					openstack.CSIResizerImageName,
 					openstack.CSILivenessProbeImageName,
 					openstack.CSISnapshotControllerImageName,
+					openstack.CSISnapshotValidationWebhookImageName,
 				},
 				Objects: []*chart.Object{
 					// csi-driver-controller
@@ -228,6 +240,10 @@ var (
 					// csi-snapshot-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotControllerName},
 					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
+					// csi-snapshot-validation-webhook
+					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotValidation},
+					{Type: &corev1.Service{}, Name: openstack.CSISnapshotValidation},
+					{Type: &networkingv1.NetworkPolicy{}, Name: "allow-kube-apiserver-to-csi-snapshot-validation"},
 				},
 			},
 		},
@@ -287,6 +303,8 @@ var (
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
+					// csi-snapshot-validation-webhook
+					{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}, Name: openstack.CSISnapshotValidation},
 				},
 			},
 		},
@@ -412,27 +430,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	cluster *extensionscontroller.Cluster,
 	checksums map[string]string,
 ) (map[string]interface{}, error) {
-	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		cloudProviderDiskConfig []byte
-		userAgentHeaders        []string
-	)
-
-	if !k8sVersionLessThan119 {
-		secret := &corev1.Secret{}
-		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
-			return nil, err
-		}
-
-		cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
-		checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
-		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
-	}
-	return getControlPlaneShootChartValues(cluster, checksums, k8sVersionLessThan119, cloudProviderDiskConfig, userAgentHeaders, vp.useTokenRequestor, vp.useProjectedTokenMount)
+	return vp.getControlPlaneShootChartValues(ctx, cp, cluster, checksums)
 }
 
 // GetControlPlaneShootCRDsChartValues returns the values for the control plane shoot CRDs chart applied by the generic actuator.
@@ -749,6 +747,12 @@ func getCSIControllerChartValues(
 				"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
 			},
 		},
+		"csiSnapshotValidationWebhook": map[string]interface{}{
+			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-" + openstack.CSISnapshotValidation: checksums[openstack.CSISnapshotValidation],
+			},
+		},
 	}
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders
@@ -757,19 +761,46 @@ func getCSIControllerChartValues(
 }
 
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.
-func getControlPlaneShootChartValues(
+func (vp *valuesProvider) getControlPlaneShootChartValues(
+	ctx context.Context,
+	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 	checksums map[string]string,
-	k8sVersionLessThan119 bool,
-	cloudProviderDiskConfig []byte,
-	userAgentHeader []string,
-	useTokenRequestor bool,
-	useProjectedTokenMount bool,
 ) (
 	map[string]interface{},
 	error,
 ) {
-	var csiNodeDriverValues = map[string]interface{}{
+	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		cloudProviderDiskConfig []byte
+		userAgentHeader         []string
+		csiNodeDriverValues     map[string]interface{}
+		caBundle                string
+	)
+
+	if !k8sVersionLessThan119 {
+		secret := &corev1.Secret{}
+		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
+			return nil, err
+		}
+
+		cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
+		checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
+		userAgentHeader = vp.getUserAgentHeaders(ctx, cp, cluster)
+
+		// get the ca.crt for caBundle of the snapshot-validation webhook
+		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, string(v1beta1constants.SecretNameCACluster)), secret); err != nil {
+			return nil, err
+		}
+
+		caBundle = string(secret.Data["ca.crt"])
+	}
+
+	csiNodeDriverValues = map[string]interface{}{
 		"enabled":           !k8sVersionLessThan119,
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 		"vpaEnabled":        gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
@@ -777,6 +808,10 @@ func getControlPlaneShootChartValues(
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
 		"cloudProviderConfig": cloudProviderDiskConfig,
+		"webhookConfig": map[string]interface{}{
+			"url":      "https://" + openstack.CSISnapshotValidation + "." + cp.Namespace + "/volumesnapshot",
+			"caBundle": caBundle,
+		},
 	}
 	if userAgentHeader != nil {
 		csiNodeDriverValues["userAgentHeaders"] = userAgentHeader
@@ -784,8 +819,8 @@ func getControlPlaneShootChartValues(
 
 	return map[string]interface{}{
 		"global": map[string]interface{}{
-			"useTokenRequestor":      useTokenRequestor,
-			"useProjectedTokenMount": useProjectedTokenMount,
+			"useTokenRequestor":      vp.useTokenRequestor,
+			"useProjectedTokenMount": vp.useProjectedTokenMount,
 		},
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName:                csiNodeDriverValues,

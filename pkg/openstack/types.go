@@ -42,6 +42,8 @@ const (
 	CSILivenessProbeImageName = "csi-liveness-probe"
 	// CSISnapshotControllerImageName is the name of the csi-snapshot-controller image.
 	CSISnapshotControllerImageName = "csi-snapshot-controller"
+	// CSISnapshotValidationWebhookImageName is the name of the csi-snapshot-validation-webhook image.
+	CSISnapshotValidationWebhookImageName = "csi-snapshot-validation-webhook"
 	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
 	MachineControllerManagerImageName = "machine-controller-manager"
 	// MachineControllerManagerProviderOpenStackImageName is the name of the MachineControllerManager OpenStack image.
@@ -119,6 +121,8 @@ const (
 	CSILivenessProbeName = "csi-liveness-probe"
 	// CSISnapshotControllerName is a constant for the name of the csi-snapshot-controller component.
 	CSISnapshotControllerName = "csi-snapshot-controller"
+	// CSISnapshotValidation is the constant for the name of the csi-snapshot-validation-webhook component.
+	CSISnapshotValidation = "csi-snapshot-validation"
 	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
 	MachineControllerManagerName = "machine-controller-manager"
 	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager deployment.

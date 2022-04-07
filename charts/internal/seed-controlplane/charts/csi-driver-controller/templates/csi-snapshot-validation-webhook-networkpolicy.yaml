@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app: snapshot-validation
+    gardener.cloud/role: controlplane
+  name: allow-kube-apiserver-to-csi-snapshot-validation
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    gardener.cloud/description: "Allows Egress from shoot's kube-apiserver pods to csi-snapshot-validation pods."
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    to:
+    - podSelector:
+        matchLabels:
+          app: snapshot-validation
+  podSelector:
+    matchLabels:
+      app: kubernetes
+      gardener.cloud/role: controlplane
+      role: apiserver
+  policyTypes:
+  - Egress

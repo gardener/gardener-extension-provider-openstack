@@ -9,6 +9,7 @@ images:
   csi-resizer: image-repository:image-tag
   csi-liveness-probe: image-repository:image-tag
   csi-snapshot-controller: image-repository:image-tag
+  csi-snapshot-validation-webhook: image-repository:image-tag
 
 socketPath: /var/lib/csi/sockets/pluginproxy
 timeout: 3m
@@ -68,3 +69,13 @@ csiSnapshotController:
     limits:
       cpu: 30m
       memory: 50Mi
+
+csiSnapshotValidationWebhook:
+  replica: 1
+  podAnnotations: {}
+  resources:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 30m
+    memory: 50Mi

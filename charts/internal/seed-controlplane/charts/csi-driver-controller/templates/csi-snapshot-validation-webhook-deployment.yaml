@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csi-snapshot-validation
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: snapshot-validation
+spec:
+  replicas: {{ .Values.csiSnapshotValidationWebhook.replicas }}
+  selector:
+    matchLabels:
+      app: snapshot-validation
+  template:
+    metadata:
+      annotations:
+{{- if .Values.csiSnapshotValidationWebhook.podAnnotations }}
+{{ toYaml .Values.csiSnapshotValidationWebhook.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: snapshot-validation
+        networking.gardener.cloud/from-shoot-apiserver: allowed
+    spec:
+      containers:
+      - name: csi-snapshot-validation
+        image: {{ index .Values.images "csi-snapshot-validation-webhook" }}
+        imagePullPolicy: IfNotPresent
+        args: ['--tls-cert-file=/etc/csi-snapshot-validation/csi-snapshot-validation.crt', '--tls-private-key-file=etc/csi-snapshot-validation/csi-snapshot-validation.key']
+        ports:
+        - containerPort: 443
+{{- if .Values.csiSnapshotValidationWebhook.resources }}
+        resources:
+{{ toYaml .Values.csiSnapshotValidationWebhook.resources | indent 10 }}
+{{- end }}
+        volumeMounts:
+          - name: csi-snapshot-validation
+            mountPath: /etc/csi-snapshot-validation
+            readOnly: true
+      volumes:
+        - name: csi-snapshot-validation
+          secret:
+            secretName: csi-snapshot-validation

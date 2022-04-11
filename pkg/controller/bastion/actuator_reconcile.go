@@ -209,7 +209,7 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 
 	imageID, err := Compute.FindImagesID(bastionConfig.ImageRef)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get (create) public ip address: %w", err)
+		return nil, err
 	}
 
 	if imageID == nil {

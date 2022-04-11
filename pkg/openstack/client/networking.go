@@ -148,8 +148,8 @@ func (c *NetworkingClient) ListSecurityGroup(listOpts groups.ListOpts) ([]groups
 	return groups.ExtractGroups(allPages)
 }
 
-// GetSecurityGroupbyName returns a security group info by security group name
-func (c *NetworkingClient) GetSecurityGroupbyName(name string) ([]groups.SecGroup, error) {
+// GetSecurityGroupByName returns a security group info by security group name
+func (c *NetworkingClient) GetSecurityGroupByName(name string) ([]groups.SecGroup, error) {
 	listOpts := groups.ListOpts{
 		Name: name,
 	}

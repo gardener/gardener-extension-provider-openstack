@@ -13,6 +13,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	floatingips "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	servergroups "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+	images "github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	servers "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	floatingips0 "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	groups "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -252,6 +253,21 @@ func (mr *MockComputeMockRecorder) DeleteServerGroup(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteServerGroup", reflect.TypeOf((*MockCompute)(nil).DeleteServerGroup), arg0)
 }
 
+// FindFlavorID mocks base method.
+func (m *MockCompute) FindFlavorID(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindFlavorID", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindFlavorID indicates an expected call of FindFlavorID.
+func (mr *MockComputeMockRecorder) FindFlavorID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFlavorID", reflect.TypeOf((*MockCompute)(nil).FindFlavorID), arg0)
+}
+
 // FindFloatingIDByInstanceID mocks base method.
 func (m *MockCompute) FindFloatingIDByInstanceID(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
@@ -265,6 +281,21 @@ func (m *MockCompute) FindFloatingIDByInstanceID(arg0 string) (string, error) {
 func (mr *MockComputeMockRecorder) FindFloatingIDByInstanceID(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFloatingIDByInstanceID", reflect.TypeOf((*MockCompute)(nil).FindFloatingIDByInstanceID), arg0)
+}
+
+// FindImagesID mocks base method.
+func (m *MockCompute) FindImagesID(arg0 string) ([]images.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindImagesID", arg0)
+	ret0, _ := ret[0].([]images.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindImagesID indicates an expected call of FindImagesID.
+func (mr *MockComputeMockRecorder) FindImagesID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindImagesID", reflect.TypeOf((*MockCompute)(nil).FindImagesID), arg0)
 }
 
 // FindServersByName mocks base method.
@@ -295,6 +326,21 @@ func (m *MockCompute) GetServerGroup(arg0 string) (*servergroups.ServerGroup, er
 func (mr *MockComputeMockRecorder) GetServerGroup(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServerGroup", reflect.TypeOf((*MockCompute)(nil).GetServerGroup), arg0)
+}
+
+// ListImages mocks base method.
+func (m *MockCompute) ListImages(arg0 images.ListOpts) ([]images.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListImages", arg0)
+	ret0, _ := ret[0].([]images.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListImages indicates an expected call of ListImages.
+func (mr *MockComputeMockRecorder) ListImages(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListImages", reflect.TypeOf((*MockCompute)(nil).ListImages), arg0)
 }
 
 // ListServerGroups mocks base method.

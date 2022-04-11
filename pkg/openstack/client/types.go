@@ -22,6 +22,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -85,6 +86,10 @@ type Compute interface {
 	AssociateFIPWithInstance(serverID string, associateOpts computefip.AssociateOpts) error
 	// FloatingID
 	FindFloatingIDByInstanceID(id string) (string, error)
+
+	FindFlavorID(name string) (string, error)
+	FindImagesID(name string) ([]images.Image, error)
+	ListImages(listOpts images.ListOpts) ([]images.Image, error)
 }
 
 // DNS describes the operations of a client interacting with OpenStack's DNS service.

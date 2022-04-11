@@ -19,6 +19,8 @@ package client
 import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
@@ -127,4 +129,26 @@ func (c *ComputeClient) FindFloatingIDByInstanceID(id string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// FindFlavorID find flavor ID by flavor name
+func (c *ComputeClient) FindFlavorID(name string) (string, error) {
+	return flavors.IDFromName(c.client, name)
+}
+
+//FindImagesID find image ID by images name
+func (c *ComputeClient) FindImagesID(name string) ([]images.Image, error) {
+	listOpts := images.ListOpts{
+		Name: name,
+	}
+	return c.ListImages(listOpts)
+}
+
+//ListImages list all images
+func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, error) {
+	allPages, err := images.ListDetail(c.client, listOpts).AllPages()
+	if err != nil {
+		return nil, err
+	}
+	return images.ExtractImages(allPages)
 }

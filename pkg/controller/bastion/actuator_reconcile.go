@@ -193,10 +193,33 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 		return nil, errors.New("networkInfo must not be empty")
 	}
 
+	Compute, err := openstackClientFactory.Compute()
+	if err != nil {
+		return nil, err
+	}
+
+	flavorID, err := Compute.FindFlavorID(bastionConfig.FlavorRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if flavorID == "" {
+		return nil, errors.New("flavorID not found")
+	}
+
+	imageID, err := Compute.FindImagesID(bastionConfig.ImageRef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get (create) public ip address: %w", err)
+	}
+
+	if imageID == nil {
+		return nil, errors.New("imageID not found")
+	}
+
 	createOpts := servers.CreateOpts{
 		Name:           opt.BastionInstanceName,
-		FlavorRef:      bastionConfig.FlavorRef,
-		ImageRef:       bastionConfig.ImageRef,
+		FlavorRef:      flavorID,
+		ImageRef:       imageID[0].ID,
 		SecurityGroups: []string{opt.SecurityGroup},
 		Networks:       []servers.Network{{UUID: networkInfo[0].ID}},
 		UserData:       opt.UserData,

@@ -136,8 +136,8 @@ func (c *ComputeClient) FindFlavorID(name string) (string, error) {
 	return flavors.IDFromName(c.client, name)
 }
 
-//FindImagesID find image ID by images name
-func (c *ComputeClient) FindImagesID(name string) ([]images.Image, error) {
+//FindImages find image ID by images name
+func (c *ComputeClient) FindImages(name string) ([]images.Image, error) {
 	listOpts := images.ListOpts{
 		Name: name,
 	}

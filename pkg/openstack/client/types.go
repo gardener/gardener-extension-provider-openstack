@@ -88,7 +88,7 @@ type Compute interface {
 	FindFloatingIDByInstanceID(id string) (string, error)
 
 	FindFlavorID(name string) (string, error)
-	FindImagesID(name string) ([]images.Image, error)
+	FindImages(name string) ([]images.Image, error)
 	ListImages(listOpts images.ListOpts) ([]images.Image, error)
 }
 

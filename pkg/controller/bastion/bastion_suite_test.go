@@ -49,10 +49,8 @@ var _ = Describe("Bastion", func() {
 		bastion = createTestBastion()
 		maxLengthForResource = 63
 	})
-	AfterEach(func() {
-	})
 
-	Describe("Determine options", func() {
+	Describe("DetermineOptions", func() {
 		It("should return options", func() {
 			options, err := DetermineOptions(bastion, cluster)
 			Expect(err).To(Not(HaveOccurred()))
@@ -69,7 +67,7 @@ var _ = Describe("Bastion", func() {
 		})
 	})
 
-	Describe("check Ingress Permissions", func() {
+	Describe("#ingressPermissions", func() {
 		It("Should return a string array with ipV4 normalized addresses", func() {
 			bastion.Spec.Ingress = []extensionsv1alpha1.BastionIngressPolicy{
 				{IPBlock: networkingv1.IPBlock{
@@ -94,7 +92,7 @@ var _ = Describe("Bastion", func() {
 		})
 	})
 
-	Describe("check Names generations", func() {
+	Describe("#generateBastionBaseResourceName", func() {
 		It("should generate idempotent name", func() {
 			expected := "clusterName-shortName-bastion-79641"
 
@@ -127,7 +125,7 @@ var _ = Describe("Bastion", func() {
 		)
 	})
 
-	Describe("check rulesSymmetricDifference", func() {
+	Describe("#ingressAllowSSHResourceName,#rulesSymmetricDifference ", func() {
 		It("should return rulestoAdd, rulesToDelete", func() {
 			currentRules := []rules.SecGroupRule{
 				{Direction: "ingress",
@@ -175,7 +173,7 @@ var _ = Describe("Bastion", func() {
 		})
 	})
 
-	Describe("check ruleEqual", func() {
+	Describe("#ruleEqual", func() {
 		It("should return bool for rule equal", func() {
 			a := rules.SecGroupRule{
 				Direction:      "ingress",

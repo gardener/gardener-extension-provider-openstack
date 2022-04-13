@@ -207,19 +207,19 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 		return nil, errors.New("flavorID not found")
 	}
 
-	image, err := Compute.FindImages(bastionConfig.ImageRef)
+	images, err := Compute.FindImages(bastionConfig.ImageRef)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(image) == 0 {
+	if len(images) == 0 {
 		return nil, errors.New("imageID not found")
 	}
 
 	createOpts := servers.CreateOpts{
 		Name:           opt.BastionInstanceName,
 		FlavorRef:      flavorID,
-		ImageRef:       image[0].ID,
+		ImageRef:       images[0].ID,
 		SecurityGroups: []string{opt.SecurityGroup},
 		Networks:       []servers.Network{{UUID: networkInfo[0].ID}},
 		UserData:       opt.UserData,

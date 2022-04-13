@@ -22,6 +22,7 @@ import (
 	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/go-logr/logr"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -38,7 +39,9 @@ const (
 )
 
 type actuator struct {
-	client                 client.Client
+	common.ClientContext
+	client client.Client
+
 	openstackClientFactory openstackclient.FactoryFactory
 	logger                 logr.Logger
 	bastionConfig          *controllerconfig.BastionConfig

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
+	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
@@ -91,7 +92,17 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return err
 	}
 
-	fipid, err := ensurePublicIPAddress(opt, openstackClientFactory)
+	infrastructureConfig := &openstackapi.InfrastructureConfig{}
+
+	if cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw == nil {
+		return errors.New("infrastructureConfig raw must not be empty")
+	}
+
+	if _, _, err := a.Decoder().Decode(cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
+	}
+
+	fipid, err := ensurePublicIPAddress(opt, openstackClientFactory, infrastructureConfig.FloatingPoolName)
 	if err != nil {
 		return err
 	}
@@ -133,7 +144,7 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
-func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.Factory) (*floatingips.FloatingIP, error) {
+func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.Factory, floatingPoolName string) (*floatingips.FloatingIP, error) {
 	fips, err := getFipByName(openstackClientFactory, opt.BastionInstanceName)
 	if err != nil {
 		return nil, err
@@ -145,7 +156,7 @@ func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.
 
 	logger.Info("creating new bastion Public IP")
 
-	externalFipInfo, err := getExternalNetworkInfoByName(openstackClientFactory, opt.FloatingPoolName)
+	externalFipInfo, err := getExternalNetworkInfoByName(openstackClientFactory, floatingPoolName)
 	if err != nil {
 		return nil, err
 	}

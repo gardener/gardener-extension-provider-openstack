@@ -17,11 +17,9 @@ package bastion
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 
-	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -46,7 +44,6 @@ type Options struct {
 	SecretReference     corev1.SecretReference
 	SecurityGroup       string
 	UserData            []byte
-	FloatingPoolName    string
 }
 
 // DetermineOptions determines the required information that are required to reconcile a Bastion on Openstack. This
@@ -65,12 +62,6 @@ func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.C
 		Name:      v1beta1constants.SecretNameCloudProvider,
 	}
 
-	infrastructureConfig := &openstackapi.InfrastructureConfig{}
-	err = json.Unmarshal(cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw, infrastructureConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Options{
 		ShootName:           clusterName,
 		BastionInstanceName: baseResourceName,
@@ -78,7 +69,6 @@ func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.C
 		SecurityGroup:       securityGroupName(baseResourceName),
 		Region:              region,
 		UserData:            []byte(base64.StdEncoding.EncodeToString(bastion.Spec.UserData)),
-		FloatingPoolName:    infrastructureConfig.FloatingPoolName,
 	}, nil
 }
 

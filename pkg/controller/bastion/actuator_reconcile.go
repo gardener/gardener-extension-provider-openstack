@@ -121,7 +121,7 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
 	}
 
-	fipid, err := ensurePublicIPAddress(opt, openstackClientFactory, infrastructureConfig.FloatingPoolName)
+	fipid, err := ensurePublicIPAddress(opt, networkingClient, infrastructureConfig.FloatingPoolName)
 	if err != nil {
 		return err
 	}
@@ -163,8 +163,8 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
-func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.Factory, floatingPoolName string) (*floatingips.FloatingIP, error) {
-	fips, err := getFipByName(openstackClientFactory, opt.BastionInstanceName)
+func ensurePublicIPAddress(opt *Options, client openstackclient.Networking, floatingPoolName string) (*floatingips.FloatingIP, error) {
+	fips, err := getFipByName(client, opt.BastionInstanceName)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.
 
 	logger.Info("creating new bastion Public IP")
 
-	externalFipInfo, err := getExternalNetworkInfoByName(openstackClientFactory, floatingPoolName)
+	externalFipInfo, err := getExternalNetworkInfoByName(client, floatingPoolName)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func ensureComputeInstance(logger logr.Logger, client openstackclient.Compute, b
 		return nil, errors.New("flavorID not found")
 	}
 
-	images, err := Compute.FindImages(bastionConfig.ImageRef)
+	images, err := client.FindImages(bastionConfig.ImageRef)
 	if err != nil {
 		return nil, err
 	}

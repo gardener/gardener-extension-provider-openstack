@@ -57,14 +57,6 @@ data:
             description: All infrastruture specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
             summary: Cloud controller manager is down.
 
-  dashboard_operators: |
-    cloud-controller-manager-dashboard.json: |-
-{{- .Files.Get "ccm-observability-dashboard.json" | nindent 6 }}
-
-  dashboard_users: |
-    cloud-controller-manager-dashboard.json: |-
-{{- .Files.Get "ccm-observability-dashboard.json" | nindent 6 }}
-
   observedComponents: |
     observedPods:
     - podPrefix: cloud-controller-manager

@@ -71,8 +71,8 @@ func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
 					},
 				},
 				&secrets.ControlPlaneSecretConfig{
+					Name: openstack.CSISnapshotValidation,
 					CertificateSecretConfig: &secrets.CertificateSecretConfig{
-						Name:       openstack.CSISnapshotValidation,
 						CommonName: openstack.UsernamePrefix + openstack.CSISnapshotValidation,
 						DNSNames:   kutil.DNSNamesForService(openstack.CSISnapshotValidation, clusterName),
 						CertType:   secrets.ServerCert,

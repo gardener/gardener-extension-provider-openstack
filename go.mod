@@ -7,8 +7,8 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.3.2
-	github.com/gardener/etcd-druid v0.7.0
-	github.com/gardener/gardener v1.43.2
+	github.com/gardener/etcd-druid v0.8.0
+	github.com/gardener/gardener v1.44.0
 	github.com/gardener/machine-controller-manager v0.41.0
 	github.com/go-logr/logr v1.2.0
 	github.com/golang/mock v1.6.0
@@ -25,7 +25,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.23.3
 	k8s.io/apimachinery v0.23.3
 	k8s.io/apiserver v0.23.3
-	k8s.io/autoscaler/vertical-pod-autoscaler v0.0.0-00010101000000-000000000000
+	k8s.io/autoscaler/vertical-pod-autoscaler v0.9.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/code-generator v0.23.3
 	k8s.io/component-base v0.23.3
@@ -49,4 +49,10 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.23.3
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.23.3
+)
+
+// workaround for https://github.com/gardener/hvpa-controller/issues/92, remove once it's fixed
+replace (
+	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.4.0
+	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.4.0
 )

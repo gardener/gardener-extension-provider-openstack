@@ -20,7 +20,7 @@ github.com/beorn7/perks/quantile
 # github.com/bronze1man/yaml2json v0.0.0-20201022121239-82e774ec909d
 github.com/bronze1man/yaml2json
 github.com/bronze1man/yaml2json/y2jLib
-# github.com/cespare/xxhash/v2 v2.1.1
+# github.com/cespare/xxhash/v2 v2.1.2
 github.com/cespare/xxhash/v2
 # github.com/coreos/go-systemd/v22 v22.3.2
 ## explicit
@@ -166,7 +166,7 @@ github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
 # github.com/gardener/hvpa-controller/api v0.4.0 => github.com/gardener/hvpa-controller/api v0.4.0
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/machine-controller-manager v0.41.0
+# github.com/gardener/machine-controller-manager v0.44.1
 ## explicit
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
@@ -387,18 +387,18 @@ github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
-# github.com/prometheus/client_golang v1.11.0 => github.com/prometheus/client_golang v1.11.0
+# github.com/prometheus/client_golang v1.12.1 => github.com/prometheus/client_golang v1.11.0
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/collectors
 github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.2.0
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.28.0
+# github.com/prometheus/common v0.32.1
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.6.0
+# github.com/prometheus/procfs v0.7.3
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
@@ -483,7 +483,7 @@ golang.org/x/net/idna
 # golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
+# golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader

@@ -15,8 +15,7 @@ resources:
     cpu: 100m
     memory: 64Mi
   limits:
-    cpu: 500m
-    memory: 512Mi
+    memory: 2Gi
 tlsCipherSuites: []
 secrets:
   server: cloud-controller-manager-server

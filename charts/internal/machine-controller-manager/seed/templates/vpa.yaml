@@ -1,5 +1,5 @@
 {{- if .Values.vpa.enabled }}
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: machine-controller-manager-vpa
@@ -13,8 +13,14 @@ spec:
     updateMode: {{ .Values.vpa.updatePolicy.updateMode | quote }}
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: machine-controller-manager-provider-openstack
       minAllowed:
-        cpu: 30m
-        memory: 40M
+        cpu: {{ .Values.resources.mcmProviderOpenstack.requests.cpu }}
+        memory: {{ .Values.resources.mcmProviderOpenstack.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-machine-controller-manager
+      minAllowed:
+        cpu: {{ .Values.resources.mcm.requests.cpu }}
+        memory: {{ .Values.resources.mcm.requests.memory }}
+      controlledValues: RequestsOnly
 {{- end }}

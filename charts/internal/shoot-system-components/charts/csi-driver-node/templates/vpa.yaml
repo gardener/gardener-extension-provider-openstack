@@ -1,5 +1,5 @@
 {{- if .Values.vpaEnabled }}
-apiVersion: "autoscaling.k8s.io/v1beta2"
+apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
   name: csi-driver-node
@@ -7,10 +7,21 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: csi-driver
       minAllowed:
-        cpu: 10m
-        memory: 25Mi
+        cpu: {{ .Values.resources.driver.requests.cpu }}
+        memory: {{ .Values.resources.driver.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: csi-node-driver-registrar
+      minAllowed:
+        cpu: {{ .Values.resources.nodeDriverRegistrar.requests.cpu }}
+        memory: {{ .Values.resources.nodeDriverRegistrar.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: csi-liveness-probe
+      minAllowed:
+        cpu: {{ .Values.resources.livenessProbe.requests.cpu }}
+        memory: {{ .Values.resources.livenessProbe.requests.memory }}
+      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

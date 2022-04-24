@@ -1,4 +1,4 @@
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: csi-snapshot-webhook-vpa
@@ -8,7 +8,8 @@ spec:
     containerPolicies:
     - containerName: csi-snapshot-validation
       minAllowed:
-        memory: {{ .Values.csiSnapshotValidationWebhook.resources.memory }}
+        memory: {{ .Values.csiSnapshotValidationWebhook.resources.requests.memory }}
+      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

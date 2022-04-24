@@ -1,0 +1,39 @@
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: csi-driver-controller-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: openstack-csi-driver
+      minAllowed:
+        memory: {{ .Values.resources.driver.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-csi-provisioner
+      minAllowed:
+        memory: {{ .Values.resources.provisioner.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-csi-attacher
+      minAllowed:
+        memory: {{ .Values.resources.attacher.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-csi-snapshotter
+      minAllowed:
+        memory: {{ .Values.resources.snapshotter.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-csi-resizer
+      minAllowed:
+        memory: {{ .Values.resources.resizer.requests.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-csi-liveness-probe
+      minAllowed:
+        memory: {{ .Values.resources.livenessProbe.requests.memory }}
+      controlledValues: RequestsOnly
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: csi-driver-controller
+  updatePolicy:
+    updateMode: Auto

@@ -23,3 +23,17 @@ vpa:
   enabled: true
   updatePolicy:
     updateMode: "Auto"
+
+resources:
+  mcm:
+    requests:
+      cpu: 31m
+      memory: 70Mi
+    limits:
+      memory: 750Mi 
+  mcmProviderOpenstack:
+    requests:
+      cpu: 30m
+      memory: 64Mi
+    limits:
+      memory: 400Mi

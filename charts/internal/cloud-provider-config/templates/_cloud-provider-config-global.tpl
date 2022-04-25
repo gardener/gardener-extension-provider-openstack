@@ -2,6 +2,7 @@
 auth-url="{{ .Values.authUrl }}"
 domain-name="{{ .Values.domainName }}"
 tenant-name="{{ .Values.tenantName }}"
+project-name="{{ .Values.tenantName }}"
 username="{{ .Values.username }}"
 {{- if .Values.password }}
 password="{{ .Values.password }}"

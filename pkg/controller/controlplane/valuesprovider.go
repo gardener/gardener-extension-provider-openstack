@@ -96,15 +96,6 @@ func shootAccessSecretsFunc(namespace string) []*gutil.ShootAccessSecret {
 }
 
 var (
-	legacySecretNamesToCleanup = []string{
-		openstack.CloudControllerManagerName,
-		openstack.CSIProvisionerName,
-		openstack.CSIAttacherName,
-		openstack.CSISnapshotterName,
-		openstack.CSIResizerName,
-		openstack.CSISnapshotControllerName,
-	}
-
 	configChart = &chart.Chart{
 		Name: openstack.CloudProviderConfigName,
 		Path: filepath.Join(openstack.InternalChartsPath, openstack.CloudProviderConfigName),

@@ -47,7 +47,7 @@ type AddOptions struct {
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return controlplane.Add(mgr, controlplane.AddArgs{
 		Actuator: genericactuator.NewActuator(openstack.Name,
-			getSecretConfigsFuncs(), shootAccessSecretsFunc, legacySecretNamesToCleanup, nil, nil, nil,
+			getSecretConfigsFuncs(), shootAccessSecretsFunc, nil, nil,
 			configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassChart, nil,
 			NewValuesProvider(logger), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
 			imagevector.ImageVector(), "", nil, mgr.GetWebhookServer().Port, logger),

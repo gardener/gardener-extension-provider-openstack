@@ -254,7 +254,7 @@ var _ = Describe("ValuesProvider", func() {
 
 		c = mockclient.NewMockClient(ctrl)
 
-		vp = NewValuesProvider(logger, true, true)
+		vp = NewValuesProvider(logger)
 		err := vp.(inject.Scheme).InjectScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		err = vp.(inject.Client).InjectClient(c)
@@ -497,9 +497,6 @@ var _ = Describe("ValuesProvider", func() {
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sLessThan119, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
-				"global": map[string]interface{}{
-					"useTokenRequestor": true,
-				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
 					"kubernetesVersion": clusterK8sLessThan119.Shoot.Spec.Kubernetes.Version,
 				}),
@@ -514,9 +511,6 @@ var _ = Describe("ValuesProvider", func() {
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sAtLeast119, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
-				"global": map[string]interface{}{
-					"useTokenRequestor": true,
-				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
 					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
 					"kubernetesVersion": clusterK8sAtLeast119.Shoot.Spec.Kubernetes.Version,
@@ -554,10 +548,6 @@ var _ = Describe("ValuesProvider", func() {
 			values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sLessThan119, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
-				"global": map[string]interface{}{
-					"useTokenRequestor":      true,
-					"useProjectedTokenMount": true,
-				},
 				openstack.CloudControllerManagerName: enabledTrue,
 				openstack.CSINodeName: utils.MergeMaps(enabledFalse, map[string]interface{}{
 					"vpaEnabled":        false,
@@ -592,10 +582,6 @@ var _ = Describe("ValuesProvider", func() {
 				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(values).To(Equal(map[string]interface{}{
-					"global": map[string]interface{}{
-						"useTokenRequestor":      true,
-						"useProjectedTokenMount": true,
-					},
 					openstack.CloudControllerManagerName: enabledTrue,
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"vpaEnabled":        true,

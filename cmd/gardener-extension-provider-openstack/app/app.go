@@ -183,17 +183,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
 			*gardenerVersion = generalOpts.Completed().GardenerVersion
-			useTokenRequestor, err := controller.UseTokenRequestor(generalOpts.Completed().GardenerVersion)
-			if err != nil {
-				return fmt.Errorf("could not determine whether token requestor should be used: %w", err)
-			}
-			openstackcontrolplane.DefaultAddOptions.UseTokenRequestor = useTokenRequestor
-
-			useProjectedTokenMount, err := controller.UseServiceAccountTokenVolumeProjection(generalOpts.Completed().GardenerVersion)
-			if err != nil {
-				return fmt.Errorf("could not determine whether service account token volume projection should be used: %w", err)
-			}
-			openstackcontrolplane.DefaultAddOptions.UseProjectedTokenMount = useProjectedTokenMount
 
 			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)

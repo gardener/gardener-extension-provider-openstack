@@ -47,15 +47,9 @@ spec:
         - --concurrent-service-syncs=10
         - --configure-cloud-routes=true
         {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
-        {{- if .Values.global.useTokenRequestor }}
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
-        - --authentication-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
-        - --authorization-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
-        {{- end }}
         - --leader-elect=true
         - --secure-port={{ include "cloud-controller-manager.port" . }}
         - --port=0
@@ -88,14 +82,9 @@ spec:
 {{ toYaml .Values.resources | indent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if .Values.global.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig
           readOnly: true
-        {{- else }}
-        - name: cloud-controller-manager
-          mountPath: /var/lib/cloud-controller-manager
-        {{- end }}
         - name: cloud-controller-manager-server
           mountPath: /var/lib/cloud-controller-manager-server
         - name: cloud-provider-config
@@ -113,28 +102,22 @@ spec:
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
       volumes:
-      {{- if .Values.global.useTokenRequestor }}
       - name: kubeconfig
         projected:
           defaultMode: 420
           sources:
           - secret:
               items:
-                - key: kubeconfig
-                  path: kubeconfig
+              - key: kubeconfig
+                path: kubeconfig
               name: generic-token-kubeconfig
               optional: false
           - secret:
               items:
-                - key: token
-                  path: token
+              - key: token
+                path: token
               name: shoot-access-cloud-controller-manager
               optional: false
-      {{- else }}
-      - name: cloud-controller-manager
-        secret:
-          secretName: cloud-controller-manager
-      {{- end }}
       - name: cloud-controller-manager-server
         secret:
           secretName: cloud-controller-manager-server

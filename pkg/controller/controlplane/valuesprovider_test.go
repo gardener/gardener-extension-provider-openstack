@@ -44,10 +44,11 @@ import (
 )
 
 const (
-	namespace   = "test"
-	authURL     = "someurl"
-	region      = "europe"
-	technicalID = "shoot--dev--test"
+	namespace                        = "test"
+	authURL                          = "someurl"
+	region                           = "europe"
+	technicalID                      = "shoot--dev--test"
+	genericTokenKubeconfigSecretName = "generic-token-kubeconfig-92e9ae14"
 )
 
 var (
@@ -140,6 +141,11 @@ var _ = Describe("ValuesProvider", func() {
 		cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
 
 		clusterK8sLessThan119 = &extensionscontroller.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"generic-token-kubeconfig.secret.gardener.cloud/name": genericTokenKubeconfigSecretName,
+				},
+			},
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{
 					ProviderConfig: &runtime.RawExtension{
@@ -162,6 +168,11 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 		clusterK8sAtLeast119 = &extensionscontroller.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"generic-token-kubeconfig.secret.gardener.cloud/name": genericTokenKubeconfigSecretName,
+				},
+			},
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{
 					ProviderConfig: &runtime.RawExtension{
@@ -230,16 +241,8 @@ var _ = Describe("ValuesProvider", func() {
 		}
 
 		checksums = map[string]string{
-			v1beta1constants.SecretNameCloudProvider:         "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
-			openstack.CloudControllerManagerName:             "3d791b164a808638da9a8df03924be2a41e34cd664e42231c00fe369e3588272",
-			openstack.CloudControllerManagerName + "-server": "6dff2a2e6f14444b66d8e4a351c049f7e89ee24ba3eaab95dbec40ba6bdebb52",
-			openstack.CloudProviderConfigName:                "bf19236c3ff3be18cf28cb4f58532bda4fd944857dd163baa05d23f952550392",
-			openstack.CSIProvisionerName:                     "65b1dac6b50673535cff480564c2e5c71077ed19b1b6e0e2291207225bdf77d4",
-			openstack.CSIAttacherName:                        "3f22909841cdbb80e5382d689d920309c0a7d995128e52c79773f9608ed7c289",
-			openstack.CSISnapshotterName:                     "6a5bfc847638c499062f7fb44e31a30a9760bf4179e1dbf85e0ff4b4f162cd68",
-			openstack.CSIResizerName:                         "a77e663ba1af340fb3dd7f6f8a1be47c7aa9e658198695480641e6b934c0b9ed",
-			openstack.CSISnapshotControllerName:              "84cba346d2e2cf96c3811b55b01f57bdd9b9bcaed7065760470942d267984eaf",
-			openstack.CSISnapshotValidation:                  "452097220f89011daa2543876c3f3184f5064a12be454ae32e2ad205ec55823c",
+			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
+			openstack.CloudProviderConfigName:        "bf19236c3ff3be18cf28cb4f58532bda4fd944857dd163baa05d23f952550392",
 		}
 
 		enabledTrue  = map[string]interface{}{"enabled": true}
@@ -468,10 +471,8 @@ var _ = Describe("ValuesProvider", func() {
 			"clusterName":       namespace,
 			"podNetwork":        cidr,
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CloudControllerManagerName:             checksums[openstack.CloudControllerManagerName],
-				"checksum/secret-" + openstack.CloudControllerManagerName + "-server": checksums[openstack.CloudControllerManagerName+"-server"],
-				"checksum/secret-" + v1beta1constants.SecretNameCloudProvider:         checksums[v1beta1constants.SecretNameCloudProvider],
-				"checksum/secret-" + openstack.CloudProviderConfigName:                checksums[openstack.CloudProviderConfigName],
+				"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
+				"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
 			},
 			"podLabels": map[string]interface{}{
 				"maintenance.gardener.cloud/restart": "true",
@@ -497,6 +498,9 @@ var _ = Describe("ValuesProvider", func() {
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sLessThan119, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
+				"global": map[string]interface{}{
+					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
+				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
 					"kubernetesVersion": clusterK8sLessThan119.Shoot.Spec.Kubernetes.Version,
 				}),
@@ -511,6 +515,9 @@ var _ = Describe("ValuesProvider", func() {
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sAtLeast119, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
+				"global": map[string]interface{}{
+					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
+				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
 					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
 					"kubernetesVersion": clusterK8sAtLeast119.Shoot.Spec.Kubernetes.Version,
@@ -518,24 +525,14 @@ var _ = Describe("ValuesProvider", func() {
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 					"replicas": 1,
 					"podAnnotations": map[string]interface{}{
-						"checksum/secret-" + openstack.CSIProvisionerName:             checksums[openstack.CSIProvisionerName],
-						"checksum/secret-" + openstack.CSIAttacherName:                checksums[openstack.CSIAttacherName],
-						"checksum/secret-" + openstack.CSISnapshotterName:             checksums[openstack.CSISnapshotterName],
-						"checksum/secret-" + openstack.CSIResizerName:                 checksums[openstack.CSIResizerName],
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
-						},
 					},
 					"csiSnapshotValidationWebhook": map[string]interface{}{
 						"replicas": 1,
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CSISnapshotValidation: checksums[openstack.CSISnapshotValidation],
-						},
 					},
 				}),
 			}))

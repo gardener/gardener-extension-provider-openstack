@@ -558,6 +558,9 @@ func getControlPlaneChartValues(
 	}
 
 	return map[string]interface{}{
+		"global": map[string]interface{}{
+			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
+		},
 		openstack.CloudControllerManagerName: ccm,
 		openstack.CSIControllerName:          csi,
 	}, nil
@@ -584,10 +587,8 @@ func getCCMChartValues(
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 		"podNetwork":        extensionscontroller.GetPodNetwork(cluster),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CloudControllerManagerName:             checksums[openstack.CloudControllerManagerName],
-			"checksum/secret-" + openstack.CloudControllerManagerName + "-server": checksums[openstack.CloudControllerManagerName+"-server"],
-			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider:         checksums[v1beta1constants.SecretNameCloudProvider],
-			"checksum/secret-" + openstack.CloudProviderConfigName:                checksums[openstack.CloudProviderConfigName],
+			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
+			"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
 		},
 		"podLabels": map[string]interface{}{
 			v1beta1constants.LabelPodMaintenanceRestart: "true",
@@ -626,23 +627,13 @@ func getCSIControllerChartValues(
 		"enabled":  true,
 		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CSIProvisionerName:             checksums[openstack.CSIProvisionerName],
-			"checksum/secret-" + openstack.CSIAttacherName:                checksums[openstack.CSIAttacherName],
-			"checksum/secret-" + openstack.CSISnapshotterName:             checksums[openstack.CSISnapshotterName],
-			"checksum/secret-" + openstack.CSIResizerName:                 checksums[openstack.CSIResizerName],
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
 		"csiSnapshotController": map[string]interface{}{
 			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
-			},
 		},
 		"csiSnapshotValidationWebhook": map[string]interface{}{
 			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CSISnapshotValidation: checksums[openstack.CSISnapshotValidation],
-			},
 		},
 	}
 	if userAgentHeaders != nil {

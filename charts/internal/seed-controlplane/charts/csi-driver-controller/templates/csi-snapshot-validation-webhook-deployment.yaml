@@ -24,7 +24,7 @@ spec:
       - name: csi-snapshot-validation
         image: {{ index .Values.images "csi-snapshot-validation-webhook" }}
         imagePullPolicy: IfNotPresent
-        args: ['--tls-cert-file=/etc/csi-snapshot-validation/csi-snapshot-validation.crt', '--tls-private-key-file=etc/csi-snapshot-validation/csi-snapshot-validation.key']
+        args: ['--tls-cert-file=/etc/csi-snapshot-validation/tls.crt', '--tls-private-key-file=etc/csi-snapshot-validation/tls.key']
         ports:
         - containerPort: 443
 {{- if .Values.csiSnapshotValidationWebhook.resources }}
@@ -38,4 +38,5 @@ spec:
       volumes:
         - name: csi-snapshot-validation
           secret:
-            secretName: csi-snapshot-validation
+            secretName: {{ .Values.csiSnapshotValidationWebhook.secrets.server }}
+

@@ -18,3 +18,5 @@ resources:
     cpu: 500m
     memory: 512Mi
 tlsCipherSuites: []
+secrets:
+  server: cloud-controller-manager-server

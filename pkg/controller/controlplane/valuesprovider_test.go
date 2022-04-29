@@ -17,7 +17,6 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -30,7 +29,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
@@ -116,6 +117,9 @@ var _ = Describe("ValuesProvider", func() {
 
 		scheme = runtime.NewScheme()
 		_      = api.AddToScheme(scheme)
+
+		fakeClient         client.Client
+		fakeSecretsManager secretsmanager.Interface
 
 		vp genericactuator.ValuesProvider
 		c  *mockclient.MockClient
@@ -248,14 +252,16 @@ var _ = Describe("ValuesProvider", func() {
 		enabledTrue  = map[string]interface{}{"enabled": true}
 		enabledFalse = map[string]interface{}{"enabled": false}
 
-		logger  = log.Log.WithName("test")
-		fakeErr = fmt.Errorf("fake err")
+		logger = log.Log.WithName("test")
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		c = mockclient.NewMockClient(ctrl)
+
+		fakeClient = fakeclient.NewClientBuilder().Build()
+		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
 		vp = NewValuesProvider(logger)
 		err := vp.(inject.Scheme).InjectScheme(scheme)
@@ -488,6 +494,9 @@ var _ = Describe("ValuesProvider", func() {
 				"TLS_RSA_WITH_AES_256_CBC_SHA",
 				"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
 			},
+			"secrets": map[string]interface{}{
+				"server": "cloud-controller-manager-server",
+			},
 		})
 
 		BeforeEach(func() {
@@ -495,7 +504,7 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct control plane chart values (k8s < 1.19)", func() {
-			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sLessThan119, checksums, false)
+			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sLessThan119, fakeSecretsManager, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"global": map[string]interface{}{
@@ -512,7 +521,7 @@ var _ = Describe("ValuesProvider", func() {
 			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
-			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sAtLeast119, checksums, false)
+			values, err := vp.GetControlPlaneChartValues(ctx, cp, clusterK8sAtLeast119, fakeSecretsManager, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"global": map[string]interface{}{
@@ -533,6 +542,9 @@ var _ = Describe("ValuesProvider", func() {
 					},
 					"csiSnapshotValidationWebhook": map[string]interface{}{
 						"replicas": 1,
+						"secrets": map[string]interface{}{
+							"server": "csi-snapshot-validation-server",
+						},
 					},
 				}),
 			}))
@@ -542,7 +554,7 @@ var _ = Describe("ValuesProvider", func() {
 	Describe("#GetControlPlaneShootChartValues", func() {
 		It("should return correct shoot control plane chart values (k8s < 1.19)", func() {
 			var b []byte
-			values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sLessThan119, map[string]string{})
+			values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sLessThan119, fakeSecretsManager, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				openstack.CloudControllerManagerName: enabledTrue,
@@ -562,21 +574,11 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		Context("shoot control plane chart values (k8s >= 1.19)", func() {
-			It("should return error when ca secret is not found", func() {
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-				c.EXPECT().Get(ctx, kutil.Key(cp.Namespace, string(v1beta1constants.SecretNameCACluster)), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
-
-				_, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
-				Expect(err).To(HaveOccurred())
-			})
-
 			It("should return correct shoot control plane chart when ca is secret found", func() {
 				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-				c.EXPECT().Get(ctx, kutil.Key(cp.Namespace, string(v1beta1constants.SecretNameCACluster)), gomock.AssignableToTypeOf(&corev1.Secret{}))
 
-				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, map[string]string{})
+				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, clusterK8sAtLeast119, fakeSecretsManager, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(values).To(Equal(map[string]interface{}{
 					openstack.CloudControllerManagerName: enabledTrue,

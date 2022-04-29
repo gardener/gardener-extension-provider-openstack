@@ -53,8 +53,8 @@ spec:
         - --leader-elect=true
         - --secure-port={{ include "cloud-controller-manager.port" . }}
         - --port=0
-        - --tls-cert-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.crt
-        - --tls-private-key-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.key
+        - --tls-cert-file=/var/lib/cloud-controller-manager-server/tls.crt
+        - --tls-private-key-file=/var/lib/cloud-controller-manager-server/tls.key
         - --tls-cipher-suites={{ .Values.tlsCipherSuites | join "," }}
         - --use-service-account-credentials
         {{- range $userAgentHeader := .Values.userAgentHeaders }}
@@ -120,7 +120,7 @@ spec:
               optional: false
       - name: cloud-controller-manager-server
         secret:
-          secretName: cloud-controller-manager-server
+          secretName: {{ .Values.secrets.server }}
       - name: cloud-provider-config
         secret:
           secretName: cloud-provider-config

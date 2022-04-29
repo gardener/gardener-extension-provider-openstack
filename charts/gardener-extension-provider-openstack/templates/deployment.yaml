@@ -54,9 +54,7 @@ spec:
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
         - --health-bind-address=:{{ .Values.healthPort }}
-        {{- if .Values.gardener.version }}
         - --gardener-version={{ .Values.gardener.version }}
-        {{- end }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

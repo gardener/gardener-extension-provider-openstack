@@ -154,8 +154,11 @@ var _ = BeforeSuite(func() {
 
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
-
-	Expect(infrastructure.AddToManager(mgr)).To(Succeed())
+	Expect(infrastructure.AddToManagerWithOptions(mgr, infrastructure.AddOptions{
+		// During testing in testmachinery cluster, there is no gardener-resource-manager to inject the volume mount.
+		// Hence, we need to run without projected token mount.
+		DisableProjectedTokenMount: true,
+	})).To(Succeed())
 
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
@@ -252,7 +255,6 @@ var _ = Describe("Infrastructure tests", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 		})
-
 	})
 
 	Context("with infrastructure that uses existing network and router", func() {

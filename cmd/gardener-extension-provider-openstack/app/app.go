@@ -195,7 +195,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not determine whether service account token volume projection should be used: %w", err)
 			}
 			openstackcontrolplane.DefaultAddOptions.UseProjectedTokenMount = useProjectedTokenMount
-			openstackinfrastructure.DefaultAddOptions.UseProjectedTokenMount = useProjectedTokenMount
 			openstackworker.DefaultAddOptions.UseProjectedTokenMount = useProjectedTokenMount
 
 			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)

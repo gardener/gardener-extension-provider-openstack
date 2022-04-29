@@ -20,7 +20,7 @@
 # The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
 ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
-TOOLS_PKG_PATH             := hack/tools
+TOOLS_PKG_PATH             := ./hack/tools
 else
 # dependency on github.com/gardener/gardener/hack/tools is optional and only needed if other projects want to reuse
 # install-promtool.sh or logcheck. If they don't use it and the project doesn't depend on the package, silence the error
@@ -44,10 +44,12 @@ MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
 PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
+REPORT_COLLECTOR           := $(TOOLS_BIN_DIR)/report-collector
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
+GO_APIDIFF                 := $(TOOLS_BIN_DIR)/go-apidiff
 
 # default tool versions
 DOCFORGE_VERSION ?= v0.28.0
@@ -56,6 +58,7 @@ HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.11.1
 SKAFFOLD_VERSION ?= v1.35.0
 YQ_VERSION ?= v4.9.6
+GO_APIDIFF_VERSION ?= v0.3.0
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
@@ -142,6 +145,14 @@ $(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
 $(PROTOC_GEN_GOGO): go.mod
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
 
+ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+$(REPORT_COLLECTOR): $(TOOLS_PKG_PATH)/report-collector/*.go
+	go build -o $(REPORT_COLLECTOR) $(TOOLS_PKG_PATH)/report-collector
+else
+$(REPORT_COLLECTOR): go.mod
+	go build -o $(REPORT_COLLECTOR) github.com/gardener/gardener/hack/tools/report-collector
+endif
+
 $(SETUP_ENVTEST): go.mod
 	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
 
@@ -155,3 +166,6 @@ $(YAML2JSON): go.mod
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/')
 	chmod +x $(YQ)
+
+$(GO_APIDIFF): $(call tool_version_file,$(GO_APIDIFF),$(GO_APIDIFF_VERSION))
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/joelanford/go-apidiff@$(GO_APIDIFF_VERSION)

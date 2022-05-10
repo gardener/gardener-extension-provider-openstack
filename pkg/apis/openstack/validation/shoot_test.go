@@ -170,19 +170,6 @@ var _ = Describe("Shoot validation", func() {
 				))
 			})
 
-			It("should enforce workers min > 0 if max > 0", func() {
-				workers[0].Minimum = 0
-
-				errorList := ValidateWorkers(workers, nil, nilPath)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("[0].minimum"),
-					})),
-				))
-			})
-
 			It("should forbid specifying volume type without size", func() {
 				workers[0].Volume = &core.Volume{
 					Type: pointer.String("standard"),

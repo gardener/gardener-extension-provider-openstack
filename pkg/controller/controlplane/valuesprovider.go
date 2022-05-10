@@ -27,7 +27,9 @@ import (
 
 	"github.com/Masterminds/semver"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
+	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -36,6 +38,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -46,132 +50,46 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apiserver/pkg/authentication/user"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 )
 
-func getSecretConfigsFuncs(useTokenRequestor bool) secrets.Interface {
-	return &secrets.Secrets{
-		CertificateSecretConfigs: map[string]*secrets.CertificateSecretConfig{
-			v1beta1constants.SecretNameCACluster: {
-				Name:       v1beta1constants.SecretNameCACluster,
-				CommonName: "kubernetes",
-				CertType:   secrets.CACert,
+const (
+	caNameControlPlane               = "ca-" + openstack.Name + "-controlplane"
+	cloudControllerManagerServerName = openstack.CloudControllerManagerName + "-server"
+	csiSnapshotValidationServerName  = openstack.CSISnapshotValidation + "-server"
+)
+
+func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
+	return []extensionssecretsmanager.SecretConfigWithOptions{
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       caNameControlPlane,
+				CommonName: caNameControlPlane,
+				CertType:   secretutils.CACert,
 			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 		},
-		SecretConfigsFunc: func(cas map[string]*secrets.Certificate, clusterName string) []secrets.ConfigInterface {
-			out := []secrets.ConfigInterface{
-				&secrets.ControlPlaneSecretConfig{
-					Name: openstack.CloudControllerManagerName + "-server",
-					CertificateSecretConfig: &secrets.CertificateSecretConfig{
-						CommonName: openstack.CloudControllerManagerName,
-						DNSNames:   kutil.DNSNamesForService(openstack.CloudControllerManagerName, clusterName),
-						CertType:   secrets.ServerCert,
-						SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-					},
-				},
-				&secrets.ControlPlaneSecretConfig{
-					Name: openstack.CSISnapshotValidation,
-					CertificateSecretConfig: &secrets.CertificateSecretConfig{
-						CommonName: openstack.UsernamePrefix + openstack.CSISnapshotValidation,
-						DNSNames:   kutil.DNSNamesForService(openstack.CSISnapshotValidation, clusterName),
-						CertType:   secrets.ServerCert,
-						SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-					},
-				},
-			}
-
-			if !useTokenRequestor {
-				out = append(out,
-					&secrets.ControlPlaneSecretConfig{
-						Name: openstack.CloudControllerManagerName,
-						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							CommonName:   "system:cloud-controller-manager",
-							Organization: []string{user.SystemPrivilegedGroup},
-							CertType:     secrets.ClientCert,
-							SigningCA:    cas[v1beta1constants.SecretNameCACluster],
-						},
-						KubeConfigRequests: []secrets.KubeConfigRequest{
-							{
-								ClusterName:   clusterName,
-								APIServerHost: v1beta1constants.DeploymentNameKubeAPIServer,
-							},
-						},
-					},
-					&secrets.ControlPlaneSecretConfig{
-						Name: openstack.CSIProvisionerName,
-						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							CommonName: openstack.UsernamePrefix + openstack.CSIProvisionerName,
-							CertType:   secrets.ClientCert,
-							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-						},
-						KubeConfigRequests: []secrets.KubeConfigRequest{
-							{
-								ClusterName:   clusterName,
-								APIServerHost: v1beta1constants.DeploymentNameKubeAPIServer,
-							},
-						},
-					},
-					&secrets.ControlPlaneSecretConfig{
-						Name: openstack.CSIAttacherName,
-						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							CommonName: openstack.UsernamePrefix + openstack.CSIAttacherName,
-							CertType:   secrets.ClientCert,
-							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-						},
-						KubeConfigRequests: []secrets.KubeConfigRequest{
-							{
-								ClusterName:   clusterName,
-								APIServerHost: v1beta1constants.DeploymentNameKubeAPIServer,
-							},
-						},
-					},
-					&secrets.ControlPlaneSecretConfig{
-						Name: openstack.CSISnapshotterName,
-						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							CommonName: openstack.UsernamePrefix + openstack.CSISnapshotterName,
-							CertType:   secrets.ClientCert,
-							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-						},
-						KubeConfigRequests: []secrets.KubeConfigRequest{
-							{
-								ClusterName:   clusterName,
-								APIServerHost: v1beta1constants.DeploymentNameKubeAPIServer,
-							},
-						},
-					},
-					&secrets.ControlPlaneSecretConfig{
-						Name: openstack.CSIResizerName,
-						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							CommonName: openstack.UsernamePrefix + openstack.CSIResizerName,
-							CertType:   secrets.ClientCert,
-							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-						},
-						KubeConfigRequests: []secrets.KubeConfigRequest{
-							{
-								ClusterName:   clusterName,
-								APIServerHost: v1beta1constants.DeploymentNameKubeAPIServer,
-							},
-						},
-					},
-					&secrets.ControlPlaneSecretConfig{
-						Name: openstack.CSISnapshotControllerName,
-						CertificateSecretConfig: &secrets.CertificateSecretConfig{
-							CommonName: openstack.UsernamePrefix + openstack.CSISnapshotControllerName,
-							CertType:   secrets.ClientCert,
-							SigningCA:  cas[v1beta1constants.SecretNameCACluster],
-						},
-						KubeConfigRequests: []secrets.KubeConfigRequest{
-							{
-								ClusterName:   clusterName,
-								APIServerHost: v1beta1constants.DeploymentNameKubeAPIServer,
-							},
-						},
-					},
-				)
-			}
-
-			return out
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:                        cloudControllerManagerServerName,
+				CommonName:                  openstack.CloudControllerManagerName,
+				DNSNames:                    kutil.DNSNamesForService(openstack.CloudControllerManagerName, namespace),
+				CertType:                    secrets.ServerCert,
+				SkipPublishingCACertificate: true,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
+		},
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:                        csiSnapshotValidationServerName,
+				CommonName:                  openstack.UsernamePrefix + openstack.CSISnapshotValidation,
+				DNSNames:                    kutil.DNSNamesForService(openstack.CSISnapshotValidation, namespace),
+				CertType:                    secrets.ServerCert,
+				SkipPublishingCACertificate: true,
+			},
+			// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook
+			// config in phase Completing
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane, secretsmanager.UseCurrentCA)},
 		},
 	}
 }
@@ -188,15 +106,6 @@ func shootAccessSecretsFunc(namespace string) []*gutil.ShootAccessSecret {
 }
 
 var (
-	legacySecretNamesToCleanup = []string{
-		openstack.CloudControllerManagerName,
-		openstack.CSIProvisionerName,
-		openstack.CSIAttacherName,
-		openstack.CSISnapshotterName,
-		openstack.CSIResizerName,
-		openstack.CSISnapshotControllerName,
-	}
-
 	configChart = &chart.Chart{
 		Name: openstack.CloudProviderConfigName,
 		Path: filepath.Join(openstack.InternalChartsPath, openstack.CloudProviderConfigName),
@@ -332,20 +241,17 @@ var (
 )
 
 // NewValuesProvider creates a new ValuesProvider for the generic actuator.
-func NewValuesProvider(logger logr.Logger, useTokenRequestor, useProjectedTokenMount bool) genericactuator.ValuesProvider {
+func NewValuesProvider(logger logr.Logger) genericactuator.ValuesProvider {
 	return &valuesProvider{
-		logger:                 logger.WithName("openstack-values-provider"),
-		useTokenRequestor:      useTokenRequestor,
-		useProjectedTokenMount: useProjectedTokenMount,
+		logger: logger.WithName("openstack-values-provider"),
 	}
 }
 
 // valuesProvider is a ValuesProvider that provides OpenStack-specific values for the 2 charts applied by the generic actuator.
 type valuesProvider struct {
 	genericactuator.NoopValuesProvider
-	logger                 logr.Logger
-	useTokenRequestor      bool
-	useProjectedTokenMount bool
+	common.ClientContext
+	logger logr.Logger
 }
 
 // GetConfigChartValues returns the values for the config chart applied by the generic actuator.
@@ -385,6 +291,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
 	checksums map[string]string,
 	scaledDown bool,
 ) (
@@ -420,7 +327,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
 
-	return getControlPlaneChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, vp.useTokenRequestor)
+	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
@@ -428,9 +335,10 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
 	checksums map[string]string,
 ) (map[string]interface{}, error) {
-	return vp.getControlPlaneShootChartValues(ctx, cp, cluster, checksums)
+	return vp.getControlPlaneShootChartValues(ctx, cp, cluster, secretsReader, checksums)
 }
 
 // GetControlPlaneShootCRDsChartValues returns the values for the control plane shoot CRDs chart applied by the generic actuator.
@@ -645,27 +553,27 @@ func getControlPlaneChartValues(
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
-	useTokenRequestor bool,
 ) (
 	map[string]interface{},
 	error,
 ) {
-	ccm, err := getCCMChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown)
+	ccm, err := getCCMChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
 	if err != nil {
 		return nil, err
 	}
 
-	csi, err := getCSIControllerChartValues(cluster, userAgentHeaders, checksums, scaledDown)
+	csi, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]interface{}{
 		"global": map[string]interface{}{
-			"useTokenRequestor": useTokenRequestor,
+			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
 		},
 		openstack.CloudControllerManagerName: ccm,
 		openstack.CSIControllerName:          csi,
@@ -677,6 +585,7 @@ func getCCMChartValues(
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
@@ -686,6 +595,11 @@ func getCCMChartValues(
 		return nil, err
 	}
 
+	serverSecret, found := secretsReader.Get(cloudControllerManagerServerName)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", cloudControllerManagerServerName)
+	}
+
 	values := map[string]interface{}{
 		"enabled":           true,
 		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
@@ -693,15 +607,16 @@ func getCCMChartValues(
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 		"podNetwork":        extensionscontroller.GetPodNetwork(cluster),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CloudControllerManagerName:             checksums[openstack.CloudControllerManagerName],
-			"checksum/secret-" + openstack.CloudControllerManagerName + "-server": checksums[openstack.CloudControllerManagerName+"-server"],
-			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider:         checksums[v1beta1constants.SecretNameCloudProvider],
-			"checksum/secret-" + openstack.CloudProviderConfigName:                checksums[openstack.CloudProviderConfigName],
+			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
+			"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
 		},
 		"podLabels": map[string]interface{}{
 			v1beta1constants.LabelPodMaintenanceRestart: "true",
 		},
 		"tlsCipherSuites": kutil.TLSCipherSuites(kubeVersion),
+		"secrets": map[string]interface{}{
+			"server": serverSecret.Name,
+		},
 	}
 
 	if userAgentHeaders != nil {
@@ -718,6 +633,7 @@ func getCCMChartValues(
 // getCSIControllerChartValues collects and returns the CSIController chart values.
 func getCSIControllerChartValues(
 	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
@@ -731,26 +647,24 @@ func getCSIControllerChartValues(
 		return map[string]interface{}{"enabled": false}, nil
 	}
 
+	serverSecret, found := secretsReader.Get(csiSnapshotValidationServerName)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", csiSnapshotValidationServerName)
+	}
+
 	var values = map[string]interface{}{
 		"enabled":  true,
 		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CSIProvisionerName:             checksums[openstack.CSIProvisionerName],
-			"checksum/secret-" + openstack.CSIAttacherName:                checksums[openstack.CSIAttacherName],
-			"checksum/secret-" + openstack.CSISnapshotterName:             checksums[openstack.CSISnapshotterName],
-			"checksum/secret-" + openstack.CSIResizerName:                 checksums[openstack.CSIResizerName],
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
 		"csiSnapshotController": map[string]interface{}{
 			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
-			},
 		},
 		"csiSnapshotValidationWebhook": map[string]interface{}{
 			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-" + openstack.CSISnapshotValidation: checksums[openstack.CSISnapshotValidation],
+			"secrets": map[string]interface{}{
+				"server": serverSecret.Name,
 			},
 		},
 	}
@@ -765,6 +679,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
+	secretsReader secretsmanager.Reader,
 	checksums map[string]string,
 ) (
 	map[string]interface{},
@@ -792,12 +707,11 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
 		userAgentHeader = vp.getUserAgentHeaders(ctx, cp, cluster)
 
-		// get the ca.crt for caBundle of the snapshot-validation webhook
-		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, string(v1beta1constants.SecretNameCACluster)), secret); err != nil {
-			return nil, err
+		caSecret, found := secretsReader.Get(caNameControlPlane)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", caNameControlPlane)
 		}
-
-		caBundle = string(secret.Data["ca.crt"])
+		caBundle = string(caSecret.Data[secretutils.DataKeyCertificateBundle])
 	}
 
 	csiNodeDriverValues = map[string]interface{}{
@@ -818,10 +732,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	}
 
 	return map[string]interface{}{
-		"global": map[string]interface{}{
-			"useTokenRequestor":      vp.useTokenRequestor,
-			"useProjectedTokenMount": vp.useProjectedTokenMount,
-		},
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName:                csiNodeDriverValues,
 	}, nil

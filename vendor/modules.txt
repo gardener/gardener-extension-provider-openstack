@@ -51,7 +51,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-# github.com/gardener/gardener v1.44.0
+# github.com/gardener/gardener v1.45.0
 ## explicit
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -79,6 +79,7 @@ github.com/gardener/gardener/extensions/pkg/terraformer
 github.com/gardener/gardener/extensions/pkg/util
 github.com/gardener/gardener/extensions/pkg/util/index
 github.com/gardener/gardener/extensions/pkg/util/secret
+github.com/gardener/gardener/extensions/pkg/util/secret/manager
 github.com/gardener/gardener/extensions/pkg/webhook
 github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider
 github.com/gardener/gardener/extensions/pkg/webhook/cmd
@@ -155,6 +156,8 @@ github.com/gardener/gardener/pkg/utils/managedresources
 github.com/gardener/gardener/pkg/utils/managedresources/builder
 github.com/gardener/gardener/pkg/utils/retry
 github.com/gardener/gardener/pkg/utils/secrets
+github.com/gardener/gardener/pkg/utils/secrets/manager
+github.com/gardener/gardener/pkg/utils/secrets/manager/fake
 github.com/gardener/gardener/pkg/utils/test/matchers
 github.com/gardener/gardener/pkg/utils/timewindow
 github.com/gardener/gardener/pkg/utils/validation
@@ -164,7 +167,7 @@ github.com/gardener/gardener/pkg/utils/version
 github.com/gardener/gardener/test/framework
 github.com/gardener/gardener/test/framework/config
 github.com/gardener/gardener/test/framework/reporter
-# github.com/gardener/hvpa-controller/api v0.4.0 => github.com/gardener/hvpa-controller/api v0.4.0
+# github.com/gardener/hvpa-controller/api v0.5.0 => github.com/gardener/hvpa-controller/api v0.4.0
 github.com/gardener/hvpa-controller/api/v1alpha1
 # github.com/gardener/machine-controller-manager v0.44.1
 ## explicit
@@ -331,6 +334,8 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mholt/archiver
 # github.com/mitchellh/copystructure v1.2.0
 github.com/mitchellh/copystructure
+# github.com/mitchellh/hashstructure/v2 v2.0.2
+github.com/mitchellh/hashstructure/v2
 # github.com/mitchellh/mapstructure v1.4.1
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.2
@@ -344,7 +349,7 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/nwaples/rardecode v1.1.2
 github.com/nwaples/rardecode
-# github.com/onsi/ginkgo/v2 v2.1.0
+# github.com/onsi/ginkgo/v2 v2.1.3
 ## explicit
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -589,12 +594,12 @@ gopkg.in/ini.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
-# istio.io/api v0.0.0-20211118170605-3f0f902cdfd1
+# istio.io/api v0.0.0-20220304035241-8c47cbbea144
 istio.io/api/analysis/v1alpha1
 istio.io/api/meta/v1alpha1
 istio.io/api/networking/v1alpha3
 istio.io/api/networking/v1beta1
-# istio.io/client-go v1.12.0
+# istio.io/client-go v1.12.5
 istio.io/client-go/pkg/apis/networking/v1alpha3
 istio.io/client-go/pkg/apis/networking/v1beta1
 # istio.io/gogo-genproto v0.0.0-20210113155706-4daf5697332f
@@ -714,9 +719,10 @@ k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
 # k8s.io/apiserver v0.23.3 => k8s.io/apiserver v0.23.3
-## explicit
+k8s.io/apiserver/pkg/apis/config
+k8s.io/apiserver/pkg/apis/config/v1
 k8s.io/apiserver/pkg/authentication/user
-# k8s.io/autoscaler/vertical-pod-autoscaler v0.9.0 => k8s.io/autoscaler/vertical-pod-autoscaler v0.9.0
+# k8s.io/autoscaler/vertical-pod-autoscaler v0.10.0 => k8s.io/autoscaler/vertical-pod-autoscaler v0.9.0
 ## explicit
 k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1
 k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2
@@ -825,6 +831,7 @@ k8s.io/client-go/plugin/pkg/client/auth/exec
 k8s.io/client-go/rest
 k8s.io/client-go/rest/watch
 k8s.io/client-go/restmapper
+k8s.io/client-go/testing
 k8s.io/client-go/tools/auth
 k8s.io/client-go/tools/cache
 k8s.io/client-go/tools/clientcmd
@@ -960,7 +967,7 @@ k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# sigs.k8s.io/controller-runtime v0.11.0
+# sigs.k8s.io/controller-runtime v0.11.1
 ## explicit
 sigs.k8s.io/controller-runtime/pkg/cache
 sigs.k8s.io/controller-runtime/pkg/cache/internal
@@ -968,6 +975,7 @@ sigs.k8s.io/controller-runtime/pkg/certwatcher
 sigs.k8s.io/controller-runtime/pkg/client
 sigs.k8s.io/controller-runtime/pkg/client/apiutil
 sigs.k8s.io/controller-runtime/pkg/client/config
+sigs.k8s.io/controller-runtime/pkg/client/fake
 sigs.k8s.io/controller-runtime/pkg/cluster
 sigs.k8s.io/controller-runtime/pkg/config
 sigs.k8s.io/controller-runtime/pkg/config/v1alpha1

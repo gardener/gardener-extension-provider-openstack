@@ -1,7 +1,6 @@
 ---
 name: Bug Report
 about: Report a bug encountered while working with this Gardener extension
-labels: kind/bug
 
 ---
 

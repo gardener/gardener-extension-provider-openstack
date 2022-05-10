@@ -21,10 +21,6 @@ spec:
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
-        {{- if .Values.useProjectedTokenMount }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
-        {{- end }}
       labels:
         gardener.cloud/role: controlplane
         app: kubernetes
@@ -48,11 +44,7 @@ spec:
         command:
         - ./machine-controller-manager
         - --control-kubeconfig=inClusterConfig
-        {{- if .Values.useTokenRequestor }}
         - --target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
-        {{- end }}
         - --namespace={{ .Release.Namespace }}
         - --port={{ .Values.metricsPort }}
         - --machine-safety-apiserver-statuscheck-timeout=30s
@@ -85,15 +77,9 @@ spec:
             cpu: 350m
             memory: 256Mi
         volumeMounts:
-        {{- if .Values.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig
           readOnly: true
-        {{- else }}
-        - mountPath: /var/lib/machine-controller-manager
-          name: machine-controller-manager
-          readOnly: true
-        {{- end }}
       - name: provider-openstack
         image: {{ index .Values.images "machine-controller-manager-provider-openstack" }}
         imagePullPolicy: IfNotPresent
@@ -102,11 +88,7 @@ spec:
         - --control-kubeconfig=inClusterConfig
         - --namespace={{ .Release.Namespace }}
         - --port={{ .Values.metricsPortOpenstack}}
-        {{- if .Values.useTokenRequestor }}
         - --target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
-        {{- end }}
         - --v=3
         - --machine-creation-timeout=20m
         - --machine-drain-timeout=2h
@@ -124,35 +106,23 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        {{- if .Values.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig
           readOnly: true
-        {{- else }}
-        - mountPath: /var/lib/machine-controller-manager
-          name: machine-controller-manager
-          readOnly: true
-        {{- end }}
       volumes:
-      {{- if .Values.useTokenRequestor }}
       - name: kubeconfig
         projected:
           defaultMode: 420
           sources:
           - secret:
               items:
-                - key: kubeconfig
-                  path: kubeconfig
-              name: generic-token-kubeconfig
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ .Values.genericTokenKubeconfigSecretName }}
               optional: false
           - secret:
               items:
-                - key: token
-                  path: token
+              - key: token
+                path: token
               name: shoot-access-machine-controller-manager
               optional: false
-      {{- else }}
-      - name: machine-controller-manager
-        secret:
-          secretName: machine-controller-manager
-      {{- end }}

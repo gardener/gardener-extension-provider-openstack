@@ -123,6 +123,8 @@ func New(
 		deadlineCleaning:    20 * time.Minute,
 		deadlinePod:         20 * time.Minute,
 		deadlinePodCreation: 5 * time.Minute,
+
+		useProjectedTokenMount: true,
 	}
 }
 
@@ -383,7 +385,7 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 						corev1.ResourceMemory: resource.MustParse("1.5Gi"),
 					},
 				},
-				Env:                    t.env(),
+				Env:                    t.envVars,
 				TerminationMessagePath: "/terraform-termination-log",
 			}},
 			RestartPolicy:                 corev1.RestartPolicyNever,
@@ -397,12 +399,6 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 }
 
 func (t *terraformer) computeTerraformerCommand(command string) []string {
-	if t.useV1 {
-		return []string{
-			"/terraformer.sh",
-			command,
-		}
-	}
 	return []string{
 		"/terraformer",
 		command,
@@ -424,22 +420,6 @@ func getTerraformerCommand(pod *corev1.Pod) string {
 		return ""
 	}
 	return pod.Spec.Containers[0].Command[1]
-}
-
-func (t *terraformer) env() []corev1.EnvVar {
-	var envVars []corev1.EnvVar
-
-	if t.useV1 {
-		envVars = append(envVars, []corev1.EnvVar{
-			{Name: "MAX_BACKOFF_SEC", Value: "60"},
-			{Name: "MAX_TIME_SEC", Value: "1800"},
-			{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
-			{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
-			{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
-		}...)
-	}
-
-	return append(envVars, t.envVars...)
 }
 
 // listTerraformerPods lists all pods in the Terraformer namespace which have labels 'terraformer.gardener.cloud/name'

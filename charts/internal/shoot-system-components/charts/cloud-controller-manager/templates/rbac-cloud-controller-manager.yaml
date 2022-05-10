@@ -1,4 +1,3 @@
-{{- if .Values.global.useTokenRequestor }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -13,4 +12,3 @@ subjects:
 - kind: ServiceAccount
   name: cloud-controller-manager
   namespace: kube-system
-{{- end }}

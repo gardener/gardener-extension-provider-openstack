@@ -87,11 +87,7 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(ADDRESS)
-        {{- if .Values.global.useTokenRequestor }}
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --kubeconfig=/var/lib/csi-provisioner/kubeconfig
-        {{- end }}
         - --feature-gates=Topology=true
         - --volume-name-prefix=pv-{{ .Release.Namespace }}
         - --default-fstype=ext4
@@ -109,25 +105,16 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
-        {{- if .Values.global.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-provisioner
           readOnly: true
-        {{- else }}
-        - name: csi-provisioner
-          mountPath: /var/lib/csi-provisioner
-        {{- end }}
 
       - name: openstack-csi-attacher
         image: {{ index .Values.images "csi-attacher" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(ADDRESS)
-        {{- if .Values.global.useTokenRequestor }}
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --kubeconfig=/var/lib/csi-attacher/kubeconfig
-        {{- end }}
         - --leader-election
         - --leader-election-namespace=kube-system
         - --timeout={{ .Values.timeout }}
@@ -142,25 +129,16 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
-        {{- if .Values.global.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-attacher
           readOnly: true
-        {{- else }}
-        - name: csi-attacher
-          mountPath: /var/lib/csi-attacher
-        {{- end }}
 
       - name: openstack-csi-snapshotter
         image: {{ index .Values.images "csi-snapshotter" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(CSI_ENDPOINT)
-        {{- if .Values.global.useTokenRequestor }}
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --kubeconfig=/var/lib/csi-snapshotter/kubeconfig
-        {{- end }}
         - --leader-election
         - --leader-election-namespace=kube-system
         - --timeout={{ .Values.timeout }}
@@ -175,25 +153,16 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
-        {{- if .Values.global.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-snapshotter
           readOnly: true
-        {{- else }}
-        - name: csi-snapshotter
-          mountPath: /var/lib/csi-snapshotter
-        {{- end }}
 
       - name: openstack-csi-resizer
         image: {{ index .Values.images "csi-resizer" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(ADDRESS)
-        {{- if .Values.global.useTokenRequestor }}
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --kubeconfig=/var/lib/csi-resizer/kubeconfig
-        {{- end }}
         - --leader-election=true
         - --leader-election-namespace=kube-system
         - --csiTimeout={{ .Values.timeout }}
@@ -208,14 +177,9 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
-        {{- if .Values.global.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-resizer
           readOnly: true
-        {{- else }}
-        - name: csi-resizer
-          mountPath: /var/lib/csi-resizer
-        {{- end }}
 
       - name: openstack-csi-liveness-probe
         image: {{ index .Values.images "csi-liveness-probe" }}
@@ -232,85 +196,70 @@ spec:
       volumes:
       - name: socket-dir
         emptyDir: {}
-      {{- if .Values.global.useTokenRequestor }}
       - name: kubeconfig-csi-attacher
         projected:
           defaultMode: 420
           sources:
-            - secret:
-                items:
-                  - key: kubeconfig
-                    path: kubeconfig
-                name: generic-token-kubeconfig
-                optional: false
-            - secret:
-                items:
-                  - key: token
-                    path: token
-                name: shoot-access-csi-attacher
-                optional: false
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ .Values.global.genericTokenKubeconfigSecretName }}
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-csi-attacher
+              optional: false
       - name: kubeconfig-csi-provisioner
         projected:
           defaultMode: 420
           sources:
-            - secret:
-                items:
-                  - key: kubeconfig
-                    path: kubeconfig
-                name: generic-token-kubeconfig
-                optional: false
-            - secret:
-                items:
-                  - key: token
-                    path: token
-                name: shoot-access-csi-provisioner
-                optional: false
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ .Values.global.genericTokenKubeconfigSecretName }}
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-csi-provisioner
+              optional: false
       - name: kubeconfig-csi-snapshotter
         projected:
           defaultMode: 420
           sources:
-            - secret:
-                items:
-                  - key: kubeconfig
-                    path: kubeconfig
-                name: generic-token-kubeconfig
-                optional: false
-            - secret:
-                items:
-                  - key: token
-                    path: token
-                name: shoot-access-csi-snapshotter
-                optional: false
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ .Values.global.genericTokenKubeconfigSecretName }}
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-csi-snapshotter
+              optional: false
       - name: kubeconfig-csi-resizer
         projected:
           defaultMode: 420
           sources:
-            - secret:
-                items:
-                  - key: kubeconfig
-                    path: kubeconfig
-                name: generic-token-kubeconfig
-                optional: false
-            - secret:
-                items:
-                  - key: token
-                    path: token
-                name: shoot-access-csi-resizer
-                optional: false
-      {{- else }}
-      - name: csi-provisioner
-        secret:
-          secretName: csi-provisioner
-      - name: csi-attacher
-        secret:
-          secretName: csi-attacher
-      - name: csi-snapshotter
-        secret:
-          secretName: csi-snapshotter
-      - name: csi-resizer
-        secret:
-          secretName: csi-resizer
-      {{- end }}
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ .Values.global.genericTokenKubeconfigSecretName }}
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-csi-resizer
+              optional: false
       - name: usr-share-ca-certificates
         hostPath:
           path: /usr/share/ca-certificates

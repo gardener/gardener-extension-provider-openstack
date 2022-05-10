@@ -1,7 +1,6 @@
 ---
 name: Enhancement Request
 about: Suggest an enhancement for this extension
-labels: kind/enhancement
 
 ---
 

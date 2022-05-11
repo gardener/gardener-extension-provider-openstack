@@ -20,22 +20,19 @@ webhookConfig:
 resources:
   driver:
     requests:
-      cpu: 20m
-      memory: 50Mi
+      cpu: 15m
+      memory: 42Mi
     limits:
-      cpu: 100m
-      memory: 80Mi
+      memory: 2Gi
   nodeDriverRegistrar:
     requests:
-      cpu: 10m
+      cpu: 11m
       memory: 32Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 1Gi
   livenessProbe:
     requests:
-      cpu: 10m
+      cpu: 11m
       memory: 32Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 200Mi 

@@ -1,4 +1,4 @@
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager-vpa
@@ -12,7 +12,8 @@ spec:
     updateMode: Auto
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: openstack-cloud-controller-manager
       minAllowed:
         cpu: 20m
         memory: 40M
+      controlledValues: RequestsOnly

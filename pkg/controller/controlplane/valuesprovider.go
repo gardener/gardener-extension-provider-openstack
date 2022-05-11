@@ -50,7 +50,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	autoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
 const (
@@ -126,7 +126,7 @@ var (
 					{Type: &corev1.Service{}, Name: openstack.CloudControllerManagerName},
 					{Type: &appsv1.Deployment{}, Name: openstack.CloudControllerManagerName},
 					{Type: &corev1.ConfigMap{}, Name: openstack.CloudControllerManagerName + "-observability-config"},
-					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CloudControllerManagerName + "-vpa"},
+					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CloudControllerManagerName + "-vpa"},
 				},
 			},
 			{
@@ -144,11 +144,11 @@ var (
 				Objects: []*chart.Object{
 					// csi-driver-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSIControllerName},
-					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CSIControllerName + "-vpa"},
+					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIControllerName + "-vpa"},
 					{Type: &corev1.ConfigMap{}, Name: openstack.CSIControllerName + "-observability-config"},
 					// csi-snapshot-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotControllerName},
-					{Type: &autoscalingv1beta2.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
+					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
 					// csi-snapshot-validation-webhook
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotValidation},
 					{Type: &corev1.Service{}, Name: openstack.CSISnapshotValidation},
@@ -381,7 +381,7 @@ func (vp *valuesProvider) getUserAgentHeaders(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) []string {
-	var headers = []string{}
+	headers := []string{}
 
 	// Add the domain and project/tenant to the useragent headers if the secret
 	// could be read and the respective fields in secret are not empty.
@@ -449,7 +449,7 @@ func getConfigChartValues(
 		"internalNetworkName": infraStatus.Networks.Name,
 	}
 
-	var loadBalancerClassesFromCloudProfile = []api.LoadBalancerClass{}
+	loadBalancerClassesFromCloudProfile := []api.LoadBalancerClass{}
 	if floatingPool, err := helper.FindFloatingPool(cloudProfileConfig.Constraints.FloatingPools, infraStatus.Networks.FloatingPool.Name, cp.Spec.Region, nil); err == nil {
 		loadBalancerClassesFromCloudProfile = floatingPool.LoadBalancerClasses
 	}
@@ -457,7 +457,7 @@ func getConfigChartValues(
 	// The LoadBalancerClasses from the CloudProfile will be configured by default.
 	// In case the user specifies own LoadBalancerClasses via via the ControlPlaneConfig
 	// then the ones from the CloudProfile will be overridden.
-	var loadBalancerClasses = loadBalancerClassesFromCloudProfile
+	loadBalancerClasses := loadBalancerClassesFromCloudProfile
 	if cpConfig.LoadBalancerClasses != nil {
 		loadBalancerClasses = cpConfig.LoadBalancerClasses
 	}
@@ -492,7 +492,7 @@ func getConfigChartValues(
 }
 
 func generateLoadBalancerClassValues(lbClasses []api.LoadBalancerClass, infrastructureStatus *api.InfrastructureStatus) []map[string]interface{} {
-	var loadBalancerClassValues = []map[string]interface{}{}
+	loadBalancerClassValues := []map[string]interface{}{}
 
 	for _, lbClass := range lbClasses {
 		values := map[string]interface{}{"name": lbClass.Name}
@@ -652,7 +652,7 @@ func getCSIControllerChartValues(
 		return nil, fmt.Errorf("secret %q not found", csiSnapshotValidationServerName)
 	}
 
-	var values = map[string]interface{}{
+	values := map[string]interface{}{
 		"enabled":  true,
 		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{

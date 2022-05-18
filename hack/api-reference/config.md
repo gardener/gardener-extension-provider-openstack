@@ -98,6 +98,90 @@ BastionConfig
 <p>BastionConfig the config for the Bastion</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>managedApplicationCredential</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ApplicationCredentialConfig">
+ApplicationCredentialConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ApplicationCrednentialConfig defines the configuration for managed application credentials.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.ApplicationCredentialConfig">ApplicationCredentialConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ControllerConfiguration">ControllerConfiguration</a>)
+</p>
+<p>
+<p>ApplicationCredentialConfig defines the configuration for managed application credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled indicate if managed application credentials should be used.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lifetime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Lifetime define how long a managed application credentials are valid.
+Once the creation time + lifetime of an application credential is expired
+it will be renewed once it is next reconciled.
+Defaults to 24h.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>openstackExpirationPeriod</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OpenstackExpirationPeriod is a duration to calculate the expiration time
+of a managed application credential on the Openstack layer.
+The expiration time will be calculated in the following way:</p>
+<p>expiration time = creation time + expiration period</p>
+<p>This is a security measure to ensure that managed appplication credentials
+get deactivated even if the owning user of the application credential
+is not available to the openstack-extension anymore and therefore
+cannot be removed by the openstack-extension on its own.
+Defaults to 72h.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.BastionConfig">BastionConfig

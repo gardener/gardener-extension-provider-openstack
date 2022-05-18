@@ -37,6 +37,8 @@ type ControllerConfiguration struct {
 	HealthCheckConfig *healthcheckconfig.HealthCheckConfig
 	// BastionConfig is the config for the Bastion
 	BastionConfig *BastionConfig
+	// ApplicationCrednentialConfig defines the configuration for managed application credentials.
+	ApplicationCredentialConfig *ApplicationCredentialConfig
 }
 
 // ETCD is an etcd configuration.
@@ -67,4 +69,27 @@ type BastionConfig struct {
 	ImageRef string
 	// FlavorRef is the openstack flavorRef reference
 	FlavorRef string
+}
+
+// ApplicationCredentialConfig defines the configuration for managed application credentials.
+type ApplicationCredentialConfig struct {
+	// Enabled indicate if managed application credentials should be used.
+	Enabled bool
+	// Lifetime define how long a managed application credentials are valid.
+	// Once the creation time + lifetime of an application credential is expired
+	// it will be renewed once it is next reconciled.
+	// Defaults to 24h.
+	Lifetime *metav1.Duration
+	// OpenstackExpirationPeriod is a duration to calculate the expiration time
+	// of a managed application credential on the Openstack layer.
+	// The expiration time will be calculated in the following way:
+	//
+	// expiration time = creation time + expiration period
+	//
+	// This is a security measure to ensure that managed appplication credentials
+	// get deactivated even if the owning user of the application credential
+	// is not available to the openstack-extension anymore and therefore
+	// cannot be removed by the openstack-extension on its own.
+	// Defaults to 72h.
+	OpenstackExpirationPeriod *metav1.Duration
 }

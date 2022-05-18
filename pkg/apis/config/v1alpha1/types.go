@@ -41,6 +41,9 @@ type ControllerConfiguration struct {
 	// BastionConfig the config for the Bastion
 	// +optional
 	BastionConfig *BastionConfig `json:"bastionConfig,omitempty"`
+	// ApplicationCrednentialConfig defines the configuration for managed application credentials.
+	// +optional
+	ApplicationCredentialConfig *ApplicationCredentialConfig `json:"managedApplicationCredential,omitempty"`
 }
 
 // ETCD is an etcd configuration.
@@ -74,4 +77,30 @@ type BastionConfig struct {
 	ImageRef string `json:"imageRef,omitempty"`
 	// FlavorRef is the openstack flavorRef reference
 	FlavorRef string `json:"flavorRef,omitempty"`
+}
+
+// ApplicationCredentialConfig defines the configuration for managed application credentials.
+type ApplicationCredentialConfig struct {
+	// Enabled indicate if managed application credentials should be used.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+	// Lifetime define how long a managed application credentials are valid.
+	// Once the creation time + lifetime of an application credential is expired
+	// it will be renewed once it is next reconciled.
+	// Defaults to 24h.
+	// +optional
+	Lifetime *metav1.Duration `json:"lifetime,omitempty"`
+	// OpenstackExpirationPeriod is a duration to calculate the expiration time
+	// of a managed application credential on the Openstack layer.
+	// The expiration time will be calculated in the following way:
+	//
+	// expiration time = creation time + expiration period
+	//
+	// This is a security measure to ensure that managed appplication credentials
+	// get deactivated even if the owning user of the application credential
+	// is not available to the openstack-extension anymore and therefore
+	// cannot be removed by the openstack-extension on its own.
+	// Defaults to 72h.
+	// +optional
+	OpenstackExpirationPeriod *metav1.Duration `json:"openstackExpirationPeriod,omitempty"`
 }

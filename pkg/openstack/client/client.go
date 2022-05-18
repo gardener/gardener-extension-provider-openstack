@@ -159,6 +159,23 @@ func (oc *OpenstackClientFactory) Networking(options ...Option) (Networking, err
 	}, nil
 }
 
+// Identity returns an Identity client. The client uses Identity v3 API for issuing calls.
+func (oc *OpenstackClientFactory) Identity(options ...Option) (Identity, error) {
+	eo := gophercloud.EndpointOpts{}
+	for _, opt := range options {
+		eo = opt(eo)
+	}
+
+	client, err := openstack.NewIdentityV3(oc.providerClient, eo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &IdentityClient{
+		client: client,
+	}, nil
+}
+
 // IsNotFoundError checks if an error returned by OpenStack is caused by HTTP 404 status code.
 func IsNotFoundError(err error) bool {
 	if err == nil {

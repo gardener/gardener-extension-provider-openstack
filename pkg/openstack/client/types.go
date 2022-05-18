@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,FactoryFactory,Compute,DNS,Networking
+//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,FactoryFactory,Compute,DNS,Networking,Identity
 package client
 
 import (
@@ -24,6 +24,8 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/applicationcredentials"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -55,6 +57,11 @@ type NetworkingClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// IdentityClient is a client for the Identity/Keystone service.
+type IdentityClient struct {
+	client *gophercloud.ServiceClient
+}
+
 // Option can be passed to Factory implementations to modify the produced clients.
 type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
 
@@ -64,6 +71,7 @@ type Factory interface {
 	Storage(options ...Option) (Storage, error)
 	DNS(options ...Option) (DNS, error)
 	Networking(options ...Option) (Networking, error)
+	Identity(options ...Option) (Identity, error)
 }
 
 // Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
@@ -121,7 +129,15 @@ type Networking interface {
 	DeleteRule(ruleID string) error
 }
 
-// FactoryFactory creates instances of Factory.
+type Identity interface {
+	GetApplicationCredential(ctx context.Context, parentUserID, applicationCredentialID string) (*applicationcredentials.ApplicationCredential, error)
+	ListApplicationCredentials(ctx context.Context, parentUserID string) ([]applicationcredentials.ApplicationCredential, error)
+	CreateApplicationCredential(ctx context.Context, parentUserID, name, description, expirationTime string) (*applicationcredentials.ApplicationCredential, error)
+	DeleteApplicationCredential(ctx context.Context, parentUserID, applicationCredentialID string) error
+	GetClientUser() (*tokens.User, error)
+}
+
+// FactoryFactory creates instances of Factory.s
 type FactoryFactory interface {
 	// NewFactory creates a new instance of Factory for the given Openstack credentials.
 	NewFactory(credentials *openstack.Credentials) (Factory, error)

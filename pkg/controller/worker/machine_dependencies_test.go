@@ -39,6 +39,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -83,7 +84,9 @@ var _ = Describe("#MachineDependencies", func() {
 		var (
 			clusterName = "shoot--foobar--openstack"
 			namespace   = clusterName
-			w           *extensionsv1alpha1.Worker
+
+			w                  *extensionsv1alpha1.Worker
+			openstackSecretRef *corev1.SecretReference
 		)
 
 		BeforeEach(func() {
@@ -92,6 +95,12 @@ var _ = Describe("#MachineDependencies", func() {
 					Namespace: namespace,
 				},
 			}
+
+			openstackSecretRef = &corev1.SecretReference{
+				Name:      "secret",
+				Namespace: namespace,
+			}
+
 			osFactory.EXPECT().Compute().AnyTimes().Return(computeClient, nil)
 		})
 
@@ -103,6 +112,7 @@ var _ = Describe("#MachineDependencies", func() {
 				w,
 				newClusterWithDefaultCloudProfileConfig(clusterName),
 				osFactory,
+				openstackSecretRef,
 			)
 
 			ctx := context.Background()
@@ -137,6 +147,7 @@ var _ = Describe("#MachineDependencies", func() {
 				w,
 				newClusterWithDefaultCloudProfileConfig(clusterName),
 				osFactory,
+				openstackSecretRef,
 			)
 
 			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool1)), policy).Return(&servergroups.ServerGroup{
@@ -182,6 +193,7 @@ var _ = Describe("#MachineDependencies", func() {
 				w,
 				newClusterWithDefaultCloudProfileConfig(clusterName),
 				osFactory,
+				openstackSecretRef,
 			)
 
 			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), policy).Return(&servergroups.ServerGroup{
@@ -251,6 +263,7 @@ var _ = Describe("#MachineDependencies", func() {
 				w,
 				newClusterWithDefaultCloudProfileConfig(clusterName),
 				osFactory,
+				openstackSecretRef,
 			)
 
 			computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
@@ -305,6 +318,7 @@ var _ = Describe("#MachineDependencies", func() {
 				w,
 				newClusterWithDefaultCloudProfileConfig(clusterName),
 				osFactory,
+				openstackSecretRef,
 			)
 
 			computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
@@ -367,6 +381,7 @@ var _ = Describe("#MachineDependencies", func() {
 				w,
 				newClusterWithDefaultCloudProfileConfig(clusterName),
 				osFactory,
+				openstackSecretRef,
 			)
 
 			computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{

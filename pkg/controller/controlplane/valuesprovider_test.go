@@ -35,6 +35,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -299,6 +300,7 @@ var _ = Describe("ValuesProvider", func() {
 		}
 
 		It("should return correct config chart values", func() {
+			expectGetManagedApplicationCredentialSecretToFail(ctx, c)
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sLessThan119)
@@ -307,6 +309,7 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct config chart values with load balancer classes", func() {
+			expectGetManagedApplicationCredentialSecretToFail(ctx, c)
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 			var (
@@ -398,6 +401,7 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct config chart values with load balancer classes with purpose", func() {
+			expectGetManagedApplicationCredentialSecretToFail(ctx, c)
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 			var (
@@ -455,6 +459,7 @@ var _ = Describe("ValuesProvider", func() {
 				"applicationCredentialSecret": []byte(`app-secret`),
 			}
 
+			expectGetManagedApplicationCredentialSecretToFail(ctx, c)
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(&secret2))
 
 			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
@@ -658,4 +663,16 @@ func clientGet(result runtime.Object) interface{} {
 		}
 		return nil
 	}
+}
+
+func expectGetManagedApplicationCredentialSecretToFail(ctx context.Context, c *mockclient.MockClient) {
+	c.EXPECT().Get(
+		ctx,
+		client.ObjectKey{Namespace: namespace, Name: "cloudprovider-application-credential"},
+		gomock.AssignableToTypeOf(&corev1.Secret{}),
+	).Return(&apierrors.StatusError{
+		ErrStatus: metav1.Status{
+			Reason: metav1.StatusReasonNotFound,
+		},
+	})
 }

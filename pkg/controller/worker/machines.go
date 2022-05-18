@@ -148,8 +148,8 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 					"kubernetes.io-role-node":                                   "1",
 				},
 				"credentialsSecretRef": map[string]interface{}{
-					"name":      w.worker.Spec.SecretRef.Name,
-					"namespace": w.worker.Spec.SecretRef.Namespace,
+					"name":      w.openstackSecretRef.Name,
+					"namespace": w.openstackSecretRef.Namespace,
 				},
 				"secret": map[string]interface{}{
 					"cloudConfig": string(pool.UserData),

@@ -21,9 +21,12 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/managedappcredential"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionsinfracontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
@@ -52,7 +55,31 @@ func (a *actuator) reconcile(ctx context.Context, logger logr.Logger, infra *ext
 		return err
 	}
 
-	tf, err := internal.NewTerraformerWithAuth(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
+	appCredentialManager := managedappcredential.NewManager(
+		openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials),
+		a.appCredentialConfig,
+		a.Client(),
+		infra.Namespace,
+		infra.Name,
+		extensionsinfracontroller.FinalizerName,
+		a.logger,
+	)
+
+	if err = appCredentialManager.Ensure(ctx, credentials); err != nil {
+		return err
+	}
+
+	appCredentialCredentials, appCredentialSecretRef, err := managedappcredential.GetCredentials(ctx, a.Client(), infra.Namespace)
+	if err != nil {
+		return err
+	}
+	secretReference := &infra.Spec.SecretRef
+	if appCredentialCredentials != nil && appCredentialSecretRef != nil {
+		credentials = appCredentialCredentials
+		secretReference = appCredentialSecretRef
+	}
+
+	tf, err := internal.NewTerraformerWithAuth(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, credentials, secretReference, a.disableProjectedTokenMount)
 	if err != nil {
 		return err
 	}

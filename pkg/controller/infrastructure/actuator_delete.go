@@ -21,9 +21,11 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/managedappcredential"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionsinfracontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +33,38 @@ import (
 
 func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	logger := a.logger.WithValues("infrastructure", client.ObjectKeyFromObject(infra), "operation", "delete")
+
+	// need to known if application credentials are used
+	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
+	if err != nil {
+		return err
+	}
+	userCredentials := credentials
+
+	appCredentialManager := managedappcredential.NewManager(
+		openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials),
+		a.appCredentialConfig,
+		a.Client(),
+		infra.Namespace,
+		infra.Name,
+		extensionsinfracontroller.FinalizerName,
+		a.logger,
+	)
+
+	if err = appCredentialManager.Ensure(ctx, userCredentials); err != nil {
+		return err
+	}
+
+	appCredentialCredentials, appCredentialSecretRef, err := managedappcredential.GetCredentials(ctx, a.Client(), infra.Namespace)
+	if err != nil {
+		return err
+	}
+
+	secretRef := &infra.Spec.SecretRef
+	if appCredentialCredentials != nil && appCredentialSecretRef != nil {
+		credentials = appCredentialCredentials
+		secretRef = appCredentialSecretRef
+	}
 
 	tf, err := internal.NewTerraformer(logger, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
@@ -44,8 +78,11 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 
 	// If the Terraform state is empty then we can exit early as we didn't create anything. Though, we clean up potentially
 	// created configmaps/secrets related to the Terraformer.
-	stateIsEmpty := tf.IsStateEmpty(ctx)
-	if stateIsEmpty {
+	if tf.IsStateEmpty(ctx) {
+		if err := appCredentialManager.Delete(ctx, userCredentials); err != nil {
+			return err
+		}
+
 		a.logger.Info("exiting early as infrastructure state is empty - nothing to do")
 		return tf.CleanupConfiguration(ctx)
 	}
@@ -60,15 +97,13 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 		return err
 	}
 
-	// need to known if application credentials are used
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
-	if err != nil {
+	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
+	if err := tf.
+		InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
+		SetEnvVars(internal.TerraformerEnvVars(*secretRef, credentials)...).
+		Destroy(ctx); err != nil {
 		return err
 	}
 
-	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
-	return tf.
-		InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
-		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...).
-		Destroy(ctx)
+	return appCredentialManager.Delete(ctx, userCredentials)
 }

@@ -106,6 +106,7 @@ func NewTerraformerWithAuth(
 	purpose string,
 	infra *extensionsv1alpha1.Infrastructure,
 	credentials *openstack.Credentials,
+	secretRef *corev1.SecretReference,
 	disableProjectedTokenMount bool,
 ) (
 	terraformer.Terraformer,
@@ -116,7 +117,7 @@ func NewTerraformerWithAuth(
 		return nil, err
 	}
 
-	return tf.SetEnvVars(TerraformerEnvVars(infra.Spec.SecretRef, credentials)...), nil
+	return tf.SetEnvVars(TerraformerEnvVars(*secretRef, credentials)...), nil
 }
 
 func createEnvVar(secretRef corev1.SecretReference, name, key string) corev1.EnvVar {

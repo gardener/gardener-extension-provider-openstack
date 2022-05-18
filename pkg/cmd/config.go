@@ -88,7 +88,7 @@ func (c *Config) Options() config.ControllerConfiguration {
 	return cfg
 }
 
-// ApplyHealthCheckConfig applies the HealthCheckConfig to the config
+// ApplyHealthCheckConfig applies the HealthCheckConfig to the config.
 func (c *Config) ApplyHealthCheckConfig(config *healthcheckconfig.HealthCheckConfig) {
 	if c.Config.HealthCheckConfig != nil {
 		*config = *c.Config.HealthCheckConfig
@@ -99,5 +99,12 @@ func (c *Config) ApplyHealthCheckConfig(config *healthcheckconfig.HealthCheckCon
 func (c *Config) ApplyBastionConfig(config *config.BastionConfig) {
 	if c.Config.BastionConfig != nil {
 		*config = *c.Config.BastionConfig
+	}
+}
+
+// ApplyAppCredentialConfig applies the ApplicationCrendentialConfig to the config.
+func (c *Config) ApplyAppCredentialConfig(config *config.ApplicationCredentialConfig) {
+	if c.Config.ApplicationCredentialConfig != nil {
+		*config = *c.Config.ApplicationCredentialConfig
 	}
 }

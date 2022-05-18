@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	configvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config/validation"
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackcmd "github.com/gardener/gardener-extension-provider-openstack/pkg/cmd"
 	openstackbackupbucket "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
@@ -161,6 +162,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			if err := aggOption.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %w", err)
+			}
+
+			if err := configvalidation.ValidateControllerConfig(configFileOpts.Completed().Config); err != nil {
+				return fmt.Errorf("invalid controller config: %w", err)
 			}
 
 			util.ApplyClientConnectionConfigurationToRESTConfig(configFileOpts.Completed().Config.ClientConnection, restOpts.Completed().Config)

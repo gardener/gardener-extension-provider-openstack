@@ -1,10 +1,10 @@
 {{- define "cloud-provider-config-loadbalancer" -}}
 [LoadBalancer]
 create-monitor=true
-monitor-delay=60s
-monitor-timeout=30s
+monitor-delay="60s"
+monitor-timeout="30s"
 monitor-max-retries=5
-lb-version=v2
+lb-version="v2"
 lb-provider="{{ .Values.lbProvider }}"
 floating-network-id="{{ .Values.floatingNetworkID }}"
 use-octavia="{{ .Values.useOctavia }}"

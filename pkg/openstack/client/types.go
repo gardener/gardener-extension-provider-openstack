@@ -129,6 +129,7 @@ type Networking interface {
 	DeleteRule(ruleID string) error
 }
 
+// Identity describes the operations of a client interacting with OpenStack's Identity/Keystone service.
 type Identity interface {
 	GetApplicationCredential(ctx context.Context, parentUserID, applicationCredentialID string) (*applicationcredentials.ApplicationCredential, error)
 	ListApplicationCredentials(ctx context.Context, parentUserID string) ([]applicationcredentials.ApplicationCredential, error)

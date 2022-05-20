@@ -157,7 +157,7 @@ Kubernetes meta/v1.Duration
 <p>Lifetime define how long a managed application credentials are valid.
 Once the creation time + lifetime of an application credential is expired
 it will be renewed once it is next reconciled.
-Defaults to 24h.</p>
+Defaults to 48h.</p>
 </td>
 </tr>
 <tr>
@@ -179,6 +179,22 @@ The expiration time will be calculated in the following way:</p>
 get deactivated even if the owning user of the application credential
 is not available to the openstack-extension anymore and therefore
 cannot be removed by the openstack-extension on its own.
+Defaults to 720h = 30d.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>renewThreshold</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RenewThreshold defines a threshold before the openstack expiration time.
+Once the threshold is reached the managed application credential need to be renewed.
 Defaults to 72h.</p>
 </td>
 </tr>

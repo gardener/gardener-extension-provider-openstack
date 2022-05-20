@@ -87,7 +87,7 @@ type ApplicationCredentialConfig struct {
 	// Lifetime define how long a managed application credentials are valid.
 	// Once the creation time + lifetime of an application credential is expired
 	// it will be renewed once it is next reconciled.
-	// Defaults to 24h.
+	// Defaults to 48h.
 	// +optional
 	Lifetime *metav1.Duration `json:"lifetime,omitempty"`
 	// OpenstackExpirationPeriod is a duration to calculate the expiration time
@@ -100,7 +100,12 @@ type ApplicationCredentialConfig struct {
 	// get deactivated even if the owning user of the application credential
 	// is not available to the openstack-extension anymore and therefore
 	// cannot be removed by the openstack-extension on its own.
-	// Defaults to 72h.
+	// Defaults to 720h = 30d.
 	// +optional
 	OpenstackExpirationPeriod *metav1.Duration `json:"openstackExpirationPeriod,omitempty"`
+	// RenewThreshold defines a threshold before the openstack expiration time.
+	// Once the threshold is reached the managed application credential need to be renewed.
+	// Defaults to 72h.
+	// +optional
+	RenewThreshold *metav1.Duration `json:"renewThreshold,omitempty"`
 }

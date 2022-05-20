@@ -131,11 +131,7 @@ func (m *Manager) updateParentPasswordIfRequired(ctx context.Context, appCredent
 	patch := client.MergeFrom(appCredential.secret.DeepCopy())
 	appCredential.secret.Data[applicationCredentialSecretParentSecret] = []byte(newParent.secret)
 
-	if err := m.client.Patch(ctx, appCredential.secret, patch); err != nil {
-		return err
-	}
-
-	return nil
+	return m.client.Patch(ctx, appCredential.secret, patch)
 }
 
 func readSecretKey(secret *corev1.Secret, key string) string {

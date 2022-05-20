@@ -36,12 +36,18 @@ func SetDefaults_ControllerConfiguration(obj *ControllerConfiguration) {
 func SetDefaults_ApplicationCrendentialConfig(obj *ApplicationCredentialConfig) {
 	if obj.Lifetime == nil {
 		obj.Lifetime = &metav1.Duration{
-			Duration: time.Hour * 24,
+			Duration: time.Hour * 48,
 		}
 	}
 
 	if obj.OpenstackExpirationPeriod == nil {
 		obj.OpenstackExpirationPeriod = &metav1.Duration{
+			Duration: time.Hour * 720,
+		}
+	}
+
+	if obj.RenewThreshold == nil {
+		obj.RenewThreshold = &metav1.Duration{
 			Duration: time.Hour * 72,
 		}
 	}

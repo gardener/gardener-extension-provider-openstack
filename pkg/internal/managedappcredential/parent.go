@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (m *Manager) newParentFromCredetials(credentials *openstack.Credentials) (*parent, error) {
+func (m *Manager) newParentFromCredentials(credentials *openstack.Credentials) (*parent, error) {
 	factory, err := m.openstackClientFactory.NewFactory(credentials)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (m *Manager) newParentFromCredetials(credentials *openstack.Credentials) (*
 }
 
 func (m *Manager) newParentFromSecret(secret *corev1.Secret) (*parent, error) {
-	return m.newParentFromCredetials(&openstack.Credentials{
+	return m.newParentFromCredentials(&openstack.Credentials{
 		DomainName: readSecretKey(secret, openstack.DomainName),
 		TenantName: readSecretKey(secret, openstack.TenantName),
 		Password:   readSecretKey(secret, applicationCredentialSecretParentSecret),

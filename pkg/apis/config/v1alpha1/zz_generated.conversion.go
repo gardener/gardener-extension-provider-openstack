@@ -109,6 +109,7 @@ func autoConvert_v1alpha1_ApplicationCredentialConfig_To_config_ApplicationCrede
 	out.Enabled = in.Enabled
 	out.Lifetime = (*v1.Duration)(unsafe.Pointer(in.Lifetime))
 	out.OpenstackExpirationPeriod = (*v1.Duration)(unsafe.Pointer(in.OpenstackExpirationPeriod))
+	out.RenewThreshold = (*v1.Duration)(unsafe.Pointer(in.RenewThreshold))
 	return nil
 }
 
@@ -121,6 +122,7 @@ func autoConvert_config_ApplicationCredentialConfig_To_v1alpha1_ApplicationCrede
 	out.Enabled = in.Enabled
 	out.Lifetime = (*v1.Duration)(unsafe.Pointer(in.Lifetime))
 	out.OpenstackExpirationPeriod = (*v1.Duration)(unsafe.Pointer(in.OpenstackExpirationPeriod))
+	out.RenewThreshold = (*v1.Duration)(unsafe.Pointer(in.RenewThreshold))
 	return nil
 }
 

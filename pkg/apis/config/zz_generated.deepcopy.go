@@ -41,6 +41,11 @@ func (in *ApplicationCredentialConfig) DeepCopyInto(out *ApplicationCredentialCo
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.RenewThreshold != nil {
+		in, out := &in.RenewThreshold, &out.RenewThreshold
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

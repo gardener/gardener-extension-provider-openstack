@@ -50,8 +50,9 @@ var _ = Describe("Defaults", func() {
 		It("should default the application crendential config", func() {
 			SetDefaults_ApplicationCrendentialConfig(obj)
 
-			Expect(*obj.Lifetime).To(Equal(metav1.Duration{Duration: time.Hour * 24}))
-			Expect(*obj.OpenstackExpirationPeriod).To(Equal(metav1.Duration{Duration: time.Hour * 48}))
+			Expect(*obj.Lifetime).To(Equal(metav1.Duration{Duration: time.Hour * 48}))
+			Expect(*obj.OpenstackExpirationPeriod).To(Equal(metav1.Duration{Duration: time.Hour * 24 * 30}))
+			Expect(*obj.RenewThreshold).To(Equal(metav1.Duration{Duration: time.Hour * 24 * 3}))
 		})
 	})
 

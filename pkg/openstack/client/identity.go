@@ -21,7 +21,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 )
 
-// Get will return an application credential based a given id and on the id of
+// GetApplicationCredential will return an application credential based a given id and on the id of
 // the parent user/application credential to which the application credential belongs to.
 func (c *IdentityClient) GetApplicationCredential(ctx context.Context, parentUserID, applicationCredentialID string) (*applicationcredentials.ApplicationCredential, error) {
 	return applicationcredentials.Get(c.client, parentUserID, applicationCredentialID).Extract()
@@ -41,32 +41,16 @@ func (c *IdentityClient) ListApplicationCredentials(ctx context.Context, parentU
 // a given parent user/application credential with a randomized name based on a given cluster name.
 func (c *IdentityClient) CreateApplicationCredential(ctx context.Context, parentUserID, name, description, expirationTime string) (*applicationcredentials.ApplicationCredential, error) {
 	return applicationcredentials.Create(c.client, parentUserID, applicationcredentials.CreateOpts{
-		Name:         name,
-		Description:  description,
-		Unrestricted: false,
-		ExpiresAt:    expirationTime,
+		Name:        name,
+		Description: description,
+		ExpiresAt:   expirationTime,
 	}).Extract()
 }
 
-// Delete will delete an application credential based a given id and on the id of
+// DeleteApplicationCredential will delete an application credential based a given id and on the id of
 // the parent user/application credential to which the application credential belongs to.
 func (c *IdentityClient) DeleteApplicationCredential(ctx context.Context, parentUserID, applicationCredentialID string) error {
 	return applicationcredentials.Delete(c.client, parentUserID, applicationCredentialID).ExtractErr()
-}
-
-// LookupClientUserID will try to lookup the id of the user that configure the identity client.
-func (c *IdentityClient) LookupClientUserID() (string, error) {
-	result := tokens.Get(c.client, c.client.Token())
-	if result.Err != nil {
-		return "", result.Err
-	}
-
-	user, err := result.ExtractUser()
-	if err != nil {
-		return "", err
-	}
-
-	return user.ID, nil
 }
 
 // GetClientUser return information about the keystone user which is used

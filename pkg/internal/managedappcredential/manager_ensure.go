@@ -24,8 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// Ensure will ensure the managed application credential of an Openstack Shoot cluster.
 func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials) error {
-	newParentUser, err := m.newParentFromCredetials(credentials)
+	newParentUser, err := m.newParentFromCredentials(credentials)
 	if err != nil {
 		return err
 	}
@@ -141,9 +142,7 @@ func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials
 		return m.storeApplicationCredential(ctx, newAppCredential, newParentUser)
 	}
 
-	// Check if the in-use application credential has been expired.
-	if time.Now().UTC().After(appCredential.creationTime.Add(m.config.Lifetime.Duration)) {
-		fmt.Println("app credential is expired", appCredential.id)
+	if m.isExpired(appCredential) {
 		newAppCredential, err := m.createApplicationCredential(ctx, newParentUser)
 		if err != nil {
 			return err
@@ -153,6 +152,26 @@ func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials
 	}
 
 	return m.storeApplicationCredential(ctx, appCredential, newParentUser)
+}
+
+func (m *Manager) isExpired(appCredential *applicationCredential) bool {
+	var (
+		now                     = time.Now().UTC()
+		creationTime            = appCredential.creationTime
+		lifetime                = creationTime.Add(m.config.Lifetime.Duration)
+		openstackExpirationTime = creationTime.Add(m.config.OpenstackExpirationPeriod.Duration)
+		renewThreshold          = openstackExpirationTime.Add(-m.config.RenewThreshold.Duration)
+	)
+
+	if now.After(renewThreshold) {
+		return true
+	}
+
+	if now.After(lifetime) {
+		return true
+	}
+
+	return false
 }
 
 func (m *Manager) createApplicationCredential(ctx context.Context, parent *parent) (*applicationCredential, error) {

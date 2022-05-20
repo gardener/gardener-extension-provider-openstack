@@ -22,7 +22,7 @@ import (
 
 // Delete deletes the managed application credentials of an Openstack Shoot cluster.
 func (m *Manager) Delete(ctx context.Context, credentials *openstack.Credentials) error {
-	newParentUser, err := m.newParentFromCredetials(credentials)
+	newParentUser, err := m.newParentFromCredentials(credentials)
 	if err != nil {
 		return err
 	}

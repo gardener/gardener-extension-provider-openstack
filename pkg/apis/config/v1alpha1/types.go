@@ -79,6 +79,9 @@ type CSI struct {
 }
 
 type CSIAttacher struct {
+	// CSIBaseArgs Base arguments like verbose or timeout
+	// +optional
+	CSIBaseArgs
 	// RetryIntervalStart The exponential backoff for failures.
 	// +optional
 	RetryIntervalStart *string `json:"retryIntervalStart,omitempty"`
@@ -88,58 +91,45 @@ type CSIAttacher struct {
 	// ReconcileSync Resync frequency of the attached volumes with the driver.
 	// +optional
 	ReconcileSync *string `json:"reconcileSync,omitempty"`
-	// Timeout Timeout of all calls to the container storage interface driver.
-	// +optional
-	Timeout *string `json:"timeout,omitempty"`
-	// Verbose The verbosity level.
-	// +optional
-	Verbose *string `json:"verbose,omitempty"`
 }
 
 type CSIDriverCinder struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
+	// CSIBaseArgs Base arguments like verbose or timeout
 	// +optional
-	Timeout *string `json:"timeout,omitempty"`
-	// Verbose The verbosity level.
-	// +optional
-	Verbose *string `json:"verbose,omitempty"`
+	CSIBaseArgs
 }
 
 type CSILivenessProbe struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
+	// CSIBaseArgs Base arguments like verbose or timeout
 	// +optional
-	Timeout *string `json:"timeout,omitempty"`
-	// Verbose The verbosity level.
-	// +optional
-	Verbose *string `json:"verbose,omitempty"`
+	CSIBaseArgs
 }
 
 type CSIProvisioner struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
+	// CSIBaseArgs Base arguments like verbose or timeout
 	// +optional
-	Timeout *string `json:"timeout,omitempty"`
-	// Verbose The verbosity level.
-	// +optional
-	Verbose *string `json:"verbose,omitempty"`
+	CSIBaseArgs
 }
 
 type CSISnapshotter struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
-	Timeout *string `json:"timeout,omitempty"`
-	// Verbose The verbosity level.
-	Verbose *string `json:"verbose,omitempty"`
+	// CSIBaseArgs Base arguments like verbose or timeout
+	// +optional
+	CSIBaseArgs
 }
 
 type CSIResizer struct {
-	// CSITimeout Timeout of all calls to the container storage interface driver.
+	// CSIBaseArgs Base arguments like verbose or timeout
 	// +optional
-	CSITimeout *string `json:"timeout,omitempty"`
-	// Verbose The verbosity level.
-	// +optional
-	Verbose *string `json:"verbose,omitempty"`
+	CSIBaseArgs
 }
 
 type CSISnapshotController struct {
+	// CSIBaseArgs Base arguments like verbose or timeout
+	// +optional
+	CSIBaseArgs
+}
+
+type CSIBaseArgs struct {
 	// Timeout Timeout of all calls to the container storage interface driver.
 	// +optional
 	Timeout *string `json:"timeout,omitempty"`

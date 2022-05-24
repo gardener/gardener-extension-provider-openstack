@@ -50,71 +50,57 @@ type ETCD struct {
 }
 
 type CSI struct {
-	// CSIAttacher is the configuration for the csi-attacher
+	// CSIAttacher is the configuration for the external-attacher
 	CSIAttacher *CSIAttacher
 	// CSIDriverCinder is the configuration for the csi-driver-cinder
 	CSIDriverCinder *CSIDriverCinder
-	// CSIProvisioner is the configuration for the csi-provisioner
+	// CSIProvisioner is the configuration for the external-provisioner
 	CSIProvisioner *CSIProvisioner
-	// CSIResizer is the configuration for the csi-resizer
+	// CSIResizer is the configuration for the external-resizer
 	CSIResizer *CSIResizer
-	// CSISnapshotController is the configuration for the csi-shapshot-controller
+	// CSISnapshotController is the configuration for the snapshot-controller
 	CSISnapshotController *CSISnapshotController
-	// CSISnapshotter is the configuration for the csi-snapshotter
+	// CSISnapshotter is the configuration for the external-snapshotter
 	CSISnapshotter *CSISnapshotter
-	// CSILivenessProbe is the configuration for the csi-liveness-probe
+	// CSILivenessProbe is the configuration for the livenessprobe
 	CSILivenessProbe *CSILivenessProbe
 }
 
 type CSIAttacher struct {
+	CSIBaseArgs
 	// RetryIntervalStart The exponential backoff for failures.
 	RetryIntervalStart *string
 	// RetryIntervalMax The exponential backoff maximum value.
 	RetryIntervalMax *string
 	// ReconcileSync Resync frequency of the attached volumes with the driver.
 	ReconcileSync *string
-	// Timeout Timeout of all calls to the container storage interface driver.
-	Timeout *string
-	// Verbose The verbosity level.
-	Verbose *string
 }
 
 type CSIDriverCinder struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
-	Timeout *string
-	// Verbose The verbosity level.
-	Verbose *string
+	CSIBaseArgs
 }
 
 type CSILivenessProbe struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
-	Timeout *string
-	// Verbose The verbosity level.
-	Verbose *string
+	CSIBaseArgs
 }
 
 type CSIProvisioner struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
-	Timeout *string
-	// Verbose The verbosity level.
-	Verbose *string
+	CSIBaseArgs
 }
 
 type CSISnapshotter struct {
-	// Timeout Timeout of all calls to the container storage interface driver.
-	Timeout *string
-	// Verbose The verbosity level.
-	Verbose *string
+	CSIBaseArgs
 }
 
 type CSIResizer struct {
-	// CSITimeout Timeout of all calls to the container storage interface driver.
-	CSITimeout *string
-	// Verbose The verbosity level.
-	Verbose *string
+	CSIBaseArgs
 }
 
 type CSISnapshotController struct {
+	CSIBaseArgs
+}
+
+type CSIBaseArgs struct {
 	// Timeout Timeout of all calls to the container storage interface driver.
 	Timeout *string
 	// Verbose The verbosity level.

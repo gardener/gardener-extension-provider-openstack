@@ -245,7 +245,7 @@ var (
 func NewValuesProvider(logger logr.Logger, csi *config.CSI) genericactuator.ValuesProvider {
 	return &valuesProvider{
 		logger: logger.WithName("openstack-values-provider"),
-		csi:                    csi,
+		csi:    csi,
 	}
 }
 
@@ -254,7 +254,7 @@ type valuesProvider struct {
 	genericactuator.NoopValuesProvider
 	common.ClientContext
 	logger logr.Logger
-	csi *config.CSI
+	csi    *config.CSI
 }
 
 // GetConfigChartValues returns the values for the config chart applied by the generic actuator.
@@ -330,7 +330,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
 
-	return getControlPlaneChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, vp.csi)
+	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown, vp.csi)
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
@@ -570,7 +570,7 @@ func getControlPlaneChartValues(
 		return nil, err
 	}
 
-	csiChart, err := getCSIControllerChartValues(cluster, userAgentHeaders, checksums, scaledDown, csi)
+	csiChart, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown, csi)
 	if err != nil {
 		return nil, err
 	}
@@ -776,8 +776,8 @@ func getCSIResizerArgs(resizer *config.CSIResizer) map[string]interface{} {
 	if resizer.Verbose != nil {
 		csiAttacherArgs["verbosity"] = resizer.Verbose
 	}
-	if resizer.CSITimeout != nil {
-		csiAttacherArgs["csiTimeout"] = resizer.CSITimeout
+	if resizer.Timeout != nil {
+		csiAttacherArgs["csiTimeout"] = resizer.Timeout
 	}
 	csiResizer["args"] = csiAttacherArgs
 	return csiResizer

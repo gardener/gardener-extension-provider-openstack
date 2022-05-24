@@ -234,6 +234,20 @@ CSILivenessProbe
 <tbody>
 <tr>
 <td>
+<code>CSIBaseArgs</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>retryIntervalStart</code></br>
 <em>
 string
@@ -268,6 +282,30 @@ string
 <p>ReconcileSync Resync frequency of the attached volumes with the driver.</p>
 </td>
 </tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">CSIBaseArgs
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIAttacher">CSIAttacher</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIDriverCinder">CSIDriverCinder</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSILivenessProbe">CSILivenessProbe</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIProvisioner">CSIProvisioner</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIResizer">CSIResizer</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotController">CSISnapshotController</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotter">CSISnapshotter</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td>
 <code>timeout</code></br>
@@ -312,26 +350,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>timeout</code></br>
+<code>CSIBaseArgs</code></br>
 <em>
-string
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Timeout Timeout of all calls to the container storage interface driver.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>verbose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbose The verbosity level.</p>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>
@@ -354,26 +382,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>timeout</code></br>
+<code>CSIBaseArgs</code></br>
 <em>
-string
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Timeout Timeout of all calls to the container storage interface driver.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>verbose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbose The verbosity level.</p>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>
@@ -396,26 +414,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>timeout</code></br>
+<code>CSIBaseArgs</code></br>
 <em>
-string
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Timeout Timeout of all calls to the container storage interface driver.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>verbose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbose The verbosity level.</p>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>
@@ -438,26 +446,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>timeout</code></br>
+<code>CSIBaseArgs</code></br>
 <em>
-string
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CSITimeout Timeout of all calls to the container storage interface driver.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>verbose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbose The verbosity level.</p>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>
@@ -480,26 +478,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>timeout</code></br>
+<code>CSIBaseArgs</code></br>
 <em>
-string
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Timeout Timeout of all calls to the container storage interface driver.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>verbose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbose The verbosity level.</p>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>
@@ -522,24 +510,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>timeout</code></br>
+<code>CSIBaseArgs</code></br>
 <em>
-string
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
+</a>
 </em>
 </td>
 <td>
-<p>Timeout Timeout of all calls to the container storage interface driver.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>verbose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Verbose The verbosity level.</p>
+<em>(Optional)</em>
+<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>

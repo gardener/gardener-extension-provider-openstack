@@ -67,7 +67,7 @@ csiResizer:
       cpu: 30m
       memory: 50Mi
   args:
-    csiTimeout: 3m
+    timeout: 3m
 
 
 csiLivenessProbe:

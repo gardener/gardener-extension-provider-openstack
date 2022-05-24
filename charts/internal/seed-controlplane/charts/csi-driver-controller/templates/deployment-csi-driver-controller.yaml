@@ -39,7 +39,7 @@ spec:
       - name: openstack-csi-driver
         image: {{ index .Values.images "csi-driver-cinder" }}
         imagePullPolicy: IfNotPresent
-        args :
+        args:
         - /bin/cinder-csi-plugin
         - --nodeid=dummy
         - --endpoint=$(CSI_ENDPOINT)
@@ -176,8 +176,8 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
-        {{- if .Values.csiResizer.args.csiTimeout }}
-        - --csiTimeout={{ .Values.csiResizer.args.csiTimeout }}
+        {{- if .Values.csiResizer.args.timeout }}
+        - --timeout={{ .Values.csiResizer.args.timeout }}
         {{- end }}
         {{- if .Values.csiResizer.args.verbosity }}
         - --v={{ .Values.csiResizer.args.verbosity }}

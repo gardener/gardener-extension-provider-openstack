@@ -264,9 +264,12 @@ var _ = Describe("ValuesProvider", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
-		vp = NewValuesProvider(logger, true, true, &config.CSI{
-			CSIAttacher:    &config.CSIAttacher{RetryIntervalMax: pointer.StringPtr("99m"), ReconcileSync: pointer.StringPtr("42m")},
-			CSISnapshotter: &config.CSISnapshotter{Timeout: pointer.StringPtr("3m")}})
+		vp = NewValuesProvider(logger, &config.CSI{
+			CSIAttacher: &config.CSIAttacher{RetryIntervalMax: pointer.StringPtr("99m"), ReconcileSync: pointer.StringPtr("42m")},
+			CSISnapshotter: &config.CSISnapshotter{CSIBaseArgs: struct {
+				Timeout *string
+				Verbose *string
+			}{Timeout: pointer.StringPtr("3m")}}})
 
 		err := vp.(inject.Scheme).InjectScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
@@ -542,6 +545,9 @@ var _ = Describe("ValuesProvider", func() {
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 					"replicas": 1,
+					"podAnnotations": map[string]interface{}{
+						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+					},
 					"csiAttacher": map[string]interface{}{
 						"args": map[string]interface{}{
 							"retryIntervalMax": pointer.StringPtr("99m"),
@@ -553,15 +559,9 @@ var _ = Describe("ValuesProvider", func() {
 							"timeout": pointer.StringPtr("3m"),
 						},
 					},
-					"podAnnotations": map[string]interface{}{
-						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-					},
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CSISnapshotControllerName: checksums[openstack.CSISnapshotControllerName],
-						},
 					},
 					"csiSnapshotValidationWebhook": map[string]interface{}{
 						"replicas": 1,

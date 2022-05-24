@@ -9,27 +9,27 @@ spec:
     containerPolicies:
     - containerName: openstack-csi-driver
       minAllowed:
-        memory: {{ .Values.resources.driver.requests.memory }}
+        memory: {{ .Values.csiDriverCinder.resources.requests.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-provisioner
       minAllowed:
-        memory: {{ .Values.resources.provisioner.requests.memory }}
+        memory: {{ .Values.csiProvisioner.resources.requests.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-attacher
       minAllowed:
-        memory: {{ .Values.resources.attacher.requests.memory }}
+        memory: {{ .Values.csiAttacher.resources.requests.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-snapshotter
       minAllowed:
-        memory: {{ .Values.resources.snapshotter.requests.memory }}
+        memory: {{ .Values.csiSnapshotter.resources.requests.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-resizer
       minAllowed:
-        memory: {{ .Values.resources.resizer.requests.memory }}
+        memory: {{ .Values.csiResizer.resources.requests.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-liveness-probe
       minAllowed:
-        memory: {{ .Values.resources.livenessProbe.requests.memory }}
+        memory: {{ .Values.csiLivenessProbe.resources.requests.memory }}
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1

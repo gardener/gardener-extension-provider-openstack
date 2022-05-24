@@ -17,6 +17,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -48,18 +49,12 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	var validUntilTime *string
-	if options.Validity > 0 {
-		validUntilTime = pointer.String(unixTime(m.clock.Now().Add(options.Validity)))
-	}
-
 	objectMeta, err := ObjectMeta(
 		m.namespace,
 		m.identity,
 		config,
 		options.IgnoreConfigChecksumForCASecretName,
 		m.lastRotationInitiationTimes[config.GetName()],
-		validUntilTime,
 		options.signingCAChecksum,
 		&options.Persist,
 		bundleFor,
@@ -81,12 +76,18 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		}
 	}
 
+	if err := m.maintainLifetimeLabels(config, secret, desiredLabels, options.Validity); err != nil {
+		return nil, err
+	}
+
 	if !options.isBundleSecret {
 		if err := m.addToStore(config.GetName(), secret, current); err != nil {
 			return nil, err
 		}
 
-		if !options.IgnoreOldSecrets && options.RotationStrategy == KeepOld {
+		if ignore, err := m.shouldIgnoreOldSecrets(desiredLabels[LabelKeyIssuedAtTime], options); err != nil {
+			return nil, err
+		} else if !ignore {
 			if err := m.storeOldSecrets(ctx, config.GetName(), secret.Name); err != nil {
 				return nil, err
 			}
@@ -97,10 +98,6 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		}
 	}
 
-	if err := m.maintainLifetimeLabels(config, secret, desiredLabels); err != nil {
-		return nil, err
-	}
-
 	if err := m.reconcileSecret(ctx, secret, desiredLabels); err != nil {
 		return nil, err
 	}
@@ -109,6 +106,11 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 }
 
 func (m *manager) generateAndCreate(ctx context.Context, config secretutils.ConfigInterface, objectMeta metav1.ObjectMeta) (*corev1.Secret, error) {
+	// Use secret name as common name to make sure the x509 subject names in the CA certificates are always unique.
+	if certConfig := certificateSecretConfig(config); certConfig != nil && certConfig.CertType == secretutils.CACert {
+		certConfig.CommonName = objectMeta.Name
+	}
+
 	data, err := config.Generate()
 	if err != nil {
 		return nil, err
@@ -141,18 +143,6 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
-	case "ca-client":
-		// TODO(rfranzke): Drop this code before promoting the ShootCARotation feature gate to beta. Otherwise, the
-		//  cluster CA will still be used as client CA during the first shoot CA certificate rotation since the `ca`
-		//  secret will still exist. This code is only very temporary to ensure all shoots get a `ca-client` secret.
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ca"), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-		return existingSecret.Data, nil
-
 	case "kube-apiserver-basic-auth", "observability-ingress", "observability-ingress-users":
 		oldSecretName := configName
 		if configName == "observability-ingress" {
@@ -326,6 +316,33 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	return newData, nil
 }
 
+func (m *manager) shouldIgnoreOldSecrets(issuedAt string, options *GenerateOptions) (bool, error) {
+	// unconditionally ignore old secrets
+	if options.RotationStrategy != KeepOld || options.IgnoreOldSecrets {
+		return true, nil
+	}
+
+	// ignore old secrets if current secret is older than IgnoreOldSecretsAfter
+	if options.IgnoreOldSecretsAfter != nil {
+		if issuedAt == "" {
+			// should never happen
+			return false, nil
+		}
+
+		issuedAtUnix, err := strconv.ParseInt(issuedAt, 10, 64)
+		if err != nil {
+			return false, err
+		}
+
+		age := m.clock.Now().UTC().Sub(time.Unix(issuedAtUnix, 0).UTC())
+		if age >= *options.IgnoreOldSecretsAfter {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName string) error {
 	secretList := &corev1.SecretList{}
 	if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
@@ -376,6 +393,19 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 				CertificatePEMs: certs,
 			}
 		}
+
+	case *secretutils.RSASecretConfig:
+		if !c.UsedForSSH {
+			keys := [][]byte{secrets.current.obj.Data[secretutils.DataKeyRSAPrivateKey]}
+			if secrets.old != nil {
+				keys = append(keys, secrets.old.obj.Data[secretutils.DataKeyRSAPrivateKey])
+			}
+
+			bundleConfig = &secretutils.RSAPrivateKeyBundleSecretConfig{
+				Name:           config.GetName() + nameSuffixBundle,
+				PrivateKeyPEMs: keys,
+			}
+		}
 	}
 
 	if bundleConfig == nil {
@@ -390,12 +420,41 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 	return m.addToStore(config.GetName(), secret, bundle)
 }
 
-func (m *manager) maintainLifetimeLabels(config secretutils.ConfigInterface, secret *corev1.Secret, desiredLabels map[string]string) error {
+func (m *manager) maintainLifetimeLabels(
+	config secretutils.ConfigInterface,
+	secret *corev1.Secret,
+	desiredLabels map[string]string,
+	validity time.Duration,
+) error {
 	issuedAt := secret.Labels[LabelKeyIssuedAtTime]
 	if issuedAt == "" {
 		issuedAt = unixTime(m.clock.Now())
 	}
 	desiredLabels[LabelKeyIssuedAtTime] = issuedAt
+
+	if validity > 0 {
+		desiredLabels[LabelKeyValidUntilTime] = unixTime(m.clock.Now().Add(validity))
+
+		// Handle changed validity values in case there already is a valid-until-time label from previous Generate
+		// invocations.
+		if secret.Labels[LabelKeyValidUntilTime] != "" {
+			issuedAtTime, err := strconv.ParseInt(issuedAt, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			existingValidUntilTime, err := strconv.ParseInt(secret.Labels[LabelKeyValidUntilTime], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			if oldValidity := time.Duration(existingValidUntilTime - issuedAtTime); oldValidity != validity {
+				desiredLabels[LabelKeyValidUntilTime] = unixTime(time.Unix(issuedAtTime, 0).UTC().Add(validity))
+				// If this has yielded a valid-until-time which is in the past then the next instantiation of the
+				// secrets manager will regenerate the secret since it has expired.
+			}
+		}
+	}
 
 	var dataKeyCertificate string
 	switch cfg := config.(type) {
@@ -433,9 +492,18 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 		mustPatch = true
 	}
 
+	// Check if desired labels must be added or changed.
 	for k, desired := range labels {
 		if current, ok := secret.Labels[k]; !ok || current != desired {
 			metav1.SetMetaDataLabel(&secret.ObjectMeta, k, desired)
+			mustPatch = true
+		}
+	}
+
+	// Check if existing labels must be removed
+	for k := range secret.Labels {
+		if _, ok := labels[k]; !ok {
+			delete(secret.Labels, k)
 			mustPatch = true
 		}
 	}
@@ -456,8 +524,10 @@ type GenerateOptions struct {
 	Persist bool
 	// RotationStrategy specifies how the secret should be rotated in case it needs to get rotated.
 	RotationStrategy rotationStrategy
-	// IgnoreOldSecrets specifies whether old secrets should be loaded to the internal store.
+	// IgnoreOldSecrets specifies whether old secrets should be dropped.
 	IgnoreOldSecrets bool
+	// IgnoreOldSecretsAfter specifies that old secrets should be dropped once a given duration after rotation has passed.
+	IgnoreOldSecretsAfter *time.Duration
 	// Validity specifies for how long the secret should be valid.
 	Validity time.Duration
 	// IgnoreConfigChecksumForCASecretName specifies whether the secret config checksum should be ignored when
@@ -495,10 +565,10 @@ type SignedByCAOption interface {
 
 // SignedByCAOptions are options for SignedByCA calls.
 type SignedByCAOptions struct {
-	// UseCurrentCA specifies whether the certificate should always be signed by the current CA. This option does only
-	// take effect for server certificates since they are signed by the old CA by default (if it exists). Client
-	// certificates are always signed by the current CA.
-	UseCurrentCA bool
+	// CAClass specifies which CA should be used to sign the requested certificate. Server certificates are signed with
+	// the old CA by default, however one might want to use the current CA instead. Similarly, client certificates are
+	// signed with the current CA by default, however one might want to use the old CA instead.
+	CAClass *secretClass
 }
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
@@ -509,13 +579,19 @@ func (o *SignedByCAOptions) ApplyOptions(opts []SignedByCAOption) *SignedByCAOpt
 	return o
 }
 
-// UseCurrentCA sets the UseCurrentCA field to 'true' in the SignedByCAOptions.
-var UseCurrentCA = useCurrentCAOption{}
+var (
+	// UseCurrentCA sets the CAClass field to 'current' in the SignedByCAOptions.
+	UseCurrentCA = useCAClassOption{current}
+	// UseOldCA sets the CAClass field to 'old' in the SignedByCAOptions.
+	UseOldCA = useCAClassOption{old}
+)
 
-type useCurrentCAOption struct{}
+type useCAClassOption struct {
+	class secretClass
+}
 
-func (useCurrentCAOption) ApplyToOptions(options *SignedByCAOptions) {
-	options.UseCurrentCA = true
+func (o useCAClassOption) ApplyToOptions(options *SignedByCAOptions) {
+	options.CAClass = &o.class
 }
 
 // SignedByCA returns a function which sets the 'SigningCA' field in case the ConfigInterface provided to the
@@ -531,13 +607,8 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 			return nil
 		}
 
-		var certificateConfig *secretutils.CertificateSecretConfig
-		switch cfg := config.(type) {
-		case *secretutils.CertificateSecretConfig:
-			certificateConfig = cfg
-		case *secretutils.ControlPlaneSecretConfig:
-			certificateConfig = cfg.CertificateSecretConfig
-		default:
+		certificateConfig := certificateSecretConfig(config)
+		if certificateConfig == nil {
 			return fmt.Errorf("could not apply option to %T, expected *secrets.CertificateSecretConfig", config)
 		}
 
@@ -546,11 +617,20 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 			return fmt.Errorf("secrets for name %q not found in internal store", name)
 		}
 
-		// Client certificates are always renewed immediately (hence, signed with the current CA), while server
-		// certificates are signed with the old CA until they don't exist anymore in the internal store.
 		secret := secrets.current
-		if certificateConfig.CertType == secretutils.ServerCert && !signedByCAOptions.UseCurrentCA && secrets.old != nil {
-			secret = *secrets.old
+		switch certificateConfig.CertType {
+		case secretutils.ClientCert:
+			// Client certificates are signed with the current CA by default unless the CAClass option was overwritten.
+			if signedByCAOptions.CAClass != nil && *signedByCAOptions.CAClass == old && secrets.old != nil {
+				secret = *secrets.old
+			}
+
+		case secretutils.ServerCert, secretutils.ServerClientCert:
+			// Server certificates are signed with the old CA by default (if it exists) unless the CAClass option was
+			// overwritten.
+			if secrets.old != nil && (signedByCAOptions.CAClass == nil || *signedByCAOptions.CAClass != current) {
+				secret = *secrets.old
+			}
 		}
 
 		ca, err := secretutils.LoadCertificate(name, secret.obj.Data[secretutils.DataKeyPrivateKeyCA], secret.obj.Data[secretutils.DataKeyCertificateCA])
@@ -584,6 +664,14 @@ func Rotate(strategy rotationStrategy) GenerateOption {
 func IgnoreOldSecrets() GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecrets = true
+		return nil
+	}
+}
+
+// IgnoreOldSecretsAfter returns a function which sets the 'IgnoreOldSecretsAfter' field to the given duration.
+func IgnoreOldSecretsAfter(d time.Duration) GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+		options.IgnoreOldSecretsAfter = &d
 		return nil
 	}
 }

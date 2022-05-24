@@ -230,6 +230,7 @@ type SeedSettings struct {
 	// +optional
 	Scheduling *SeedSettingScheduling `json:"scheduling,omitempty" protobuf:"bytes,2,opt,name=scheduling"`
 	// ShootDNS controls the shoot DNS settings for the seed.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
 	// +optional
 	ShootDNS *SeedSettingShootDNS `json:"shootDNS,omitempty" protobuf:"bytes,3,opt,name=shootDNS"`
 	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
@@ -362,6 +363,8 @@ const (
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
 	SeedGardenletReady ConditionType = "GardenletReady"
+	// SeedSystemComponentsHealthy is a constant for a condition type indicating the system components health.
+	SeedSystemComponentsHealthy ConditionType = "SeedSystemComponentsHealthy"
 )
 
 // Resource constants for Gardener object types

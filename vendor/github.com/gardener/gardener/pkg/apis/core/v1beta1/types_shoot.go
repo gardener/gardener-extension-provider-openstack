@@ -188,6 +188,10 @@ type ShootStatus struct {
 	// Credentials contains information about the shoot credentials.
 	// +optional
 	Credentials *ShootCredentials `json:"credentials,omitempty" protobuf:"bytes,15,opt,name=credentials"`
+	// LastHibernationTriggerTime indicates the last time when the hibernation controller
+	// managed to change the hibernation settings of the cluster
+	// +optional
+	LastHibernationTriggerTime *metav1.Time `json:"lastHibernationTriggerTime,omitempty" protobuf:"bytes,16,opt,name=lastHibernationTriggerTime"`
 }
 
 // ShootCredentials contains information about the shoot credentials.
@@ -208,6 +212,12 @@ type ShootCredentialsRotation struct {
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	// +optional
 	SSHKeypair *ShootSSHKeypairRotation `json:"sshKeypair,omitempty" protobuf:"bytes,3,opt,name=sshKeypair"`
+	// Observability contains information about the observability credential rotation.
+	// +optional
+	Observability *ShootObservabilityRotation `json:"observability,omitempty" protobuf:"bytes,4,opt,name=observability"`
+	// ServiceAccountKey contains information about the service account key credential rotation.
+	// +optional
+	ServiceAccountKey *ShootServiceAccountKeyRotation `json:"serviceAccountKey,omitempty" protobuf:"bytes,5,opt,name=serviceAccountKey"`
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
@@ -235,10 +245,33 @@ type ShootKubeconfigRotation struct {
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
 type ShootSSHKeypairRotation struct {
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootObservabilityRotation contains information about the observability credential rotation.
+type ShootObservabilityRotation struct {
+	// LastInitiationTime is the most recent time when the observability credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
+type ShootServiceAccountKeyRotation struct {
+	// Phase describes the phase of the service account key credential rotation.
+	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
+	// completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }
@@ -655,6 +688,7 @@ type ServiceAccountConfig struct {
 	// SigningKeySecret is a reference to a secret that contains an optional private key of the
 	// service account token issuer. The issuer will sign issued ID tokens with this private key.
 	// Only useful if service account tokens are also issued by another external system.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
 	// +optional
 	SigningKeySecret *corev1.LocalObjectReference `json:"signingKeySecretName,omitempty" protobuf:"bytes,2,opt,name=signingKeySecretName"`
 	// ExtendTokenExpiration turns on projected service account expiration extension during token generation, which

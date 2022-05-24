@@ -9,7 +9,6 @@ rules:
 - apiGroups:
   - core.gardener.cloud
   resources:
-  - shoots
   - cloudprofiles
   - secretbindings
   verbs:

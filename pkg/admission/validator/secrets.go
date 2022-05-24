@@ -19,32 +19,21 @@ import (
 	"fmt"
 
 	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
-	secretutil "github.com/gardener/gardener/extensions/pkg/util/secret"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type secret struct {
-	client client.Client
-}
+type secret struct{}
 
 // NewSecretValidator returns a new instance of a secret validator.
 func NewSecretValidator() extensionswebhook.Validator {
 	return &secret{}
 }
 
-// InjectClient injects the given client into the validator.
-func (s *secret) InjectClient(client client.Client) error {
-	s.client = client
-	return nil
-}
-
-// Validate checks whether the given new secret is in use by Shoot with provider.type=openstack
-// and if yes, it check whether the new secret contains valid access keys.
+// Validate checks whether the given new secret contains valid OpenStack credentials.
 func (s *secret) Validate(ctx context.Context, newObj, oldObj client.Object) error {
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
@@ -60,15 +49,6 @@ func (s *secret) Validate(ctx context.Context, newObj, oldObj client.Object) err
 		if equality.Semantic.DeepEqual(secret.Data, oldSecret.Data) {
 			return nil
 		}
-	}
-
-	isInUse, err := secretutil.IsSecretInUseByShoot(ctx, s.client, secret, openstack.Type)
-	if err != nil {
-		return err
-	}
-
-	if !isInUse {
-		return nil
 	}
 
 	return openstackvalidation.ValidateCloudProviderSecret(secret)

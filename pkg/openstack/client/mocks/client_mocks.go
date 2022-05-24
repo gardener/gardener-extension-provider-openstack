@@ -534,21 +534,6 @@ func (mr *MockNetworkingMockRecorder) DeleteSecurityGroup(arg0 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecurityGroup", reflect.TypeOf((*MockNetworking)(nil).DeleteSecurityGroup), arg0)
 }
 
-// GetExternalNetworkInfoByName mocks base method.
-func (m *MockNetworking) GetExternalNetworkInfoByName(arg0 string) ([]networks.Network, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExternalNetworkInfoByName", arg0)
-	ret0, _ := ret[0].([]networks.Network)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetExternalNetworkInfoByName indicates an expected call of GetExternalNetworkInfoByName.
-func (mr *MockNetworkingMockRecorder) GetExternalNetworkInfoByName(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExternalNetworkInfoByName", reflect.TypeOf((*MockNetworking)(nil).GetExternalNetworkInfoByName), arg0)
-}
-
 // GetExternalNetworkNames mocks base method.
 func (m *MockNetworking) GetExternalNetworkNames(arg0 context.Context) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -594,19 +579,19 @@ func (mr *MockNetworkingMockRecorder) GetNetworkByName(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkByName", reflect.TypeOf((*MockNetworking)(nil).GetNetworkByName), arg0)
 }
 
-// GetSecurityGroupbyName mocks base method.
-func (m *MockNetworking) GetSecurityGroupbyName(arg0 string) ([]groups.SecGroup, error) {
+// GetSecurityGroupByName mocks base method.
+func (m *MockNetworking) GetSecurityGroupByName(arg0 string) ([]groups.SecGroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecurityGroupbyName", arg0)
+	ret := m.ctrl.Call(m, "GetSecurityGroupByName", arg0)
 	ret0, _ := ret[0].([]groups.SecGroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSecurityGroupbyName indicates an expected call of GetSecurityGroupbyName.
-func (mr *MockNetworkingMockRecorder) GetSecurityGroupbyName(arg0 interface{}) *gomock.Call {
+// GetSecurityGroupByName indicates an expected call of GetSecurityGroupByName.
+func (mr *MockNetworkingMockRecorder) GetSecurityGroupByName(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupbyName", reflect.TypeOf((*MockNetworking)(nil).GetSecurityGroupbyName), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupByName", reflect.TypeOf((*MockNetworking)(nil).GetSecurityGroupByName), arg0)
 }
 
 // ListFip mocks base method.

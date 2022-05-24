@@ -29,7 +29,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -153,14 +152,6 @@ func findFloatingIDByInstanceID(openstackClientFactory openstackclient.Factory, 
 	return client.FindFloatingIDByInstanceID(id)
 }
 
-func getExternalNetworkInfoByName(openstackClientFactory openstackclient.Factory, name string) ([]networks.Network, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
-	return client.GetExternalNetworkInfoByName(name)
-}
-
 func getFipByName(openstackClientFactory openstackclient.Factory, name string) ([]floatingips.FloatingIP, error) {
 	client, err := openstackClientFactory.Networking()
 	if err != nil {
@@ -190,7 +181,7 @@ func getSecurityGroups(openstackClientFactory openstackclient.Factory, name stri
 	if err != nil {
 		return nil, err
 	}
-	return client.GetSecurityGroupbyName(name)
+	return client.GetSecurityGroupByName(name)
 }
 
 func createRules(openstackClientFactory openstackclient.Factory, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {

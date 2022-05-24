@@ -22,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
@@ -77,17 +78,22 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return fmt.Errorf("could not create Openstack client factory: %w", err)
 	}
 
+	infraStatus, err := getInfrastructureStatus(ctx, a.client, cluster)
+	if err != nil {
+		return err
+	}
+
 	securityGroup, err := ensureSecurityGroup(openstackClientFactory, opt)
 	if err != nil {
 		return err
 	}
 
-	err = ensureSecurityGroupRules(openstackClientFactory, bastion, opt, securityGroup.ID)
+	err = ensureSecurityGroupRules(openstackClientFactory, bastion, opt, infraStatus, securityGroup.ID)
 	if err != nil {
 		return err
 	}
 
-	instance, err := ensureComputeInstance(logger, openstackClientFactory, a.bastionConfig, opt)
+	instance, err := ensureComputeInstance(logger, openstackClientFactory, a.bastionConfig, infraStatus, opt)
 	if err != nil || instance == nil {
 		return err
 	}
@@ -102,7 +108,7 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
 	}
 
-	fipid, err := ensurePublicIPAddress(opt, openstackClientFactory, infrastructureConfig.FloatingPoolName)
+	fipid, err := ensurePublicIPAddress(opt, openstackClientFactory, infraStatus)
 	if err != nil {
 		return err
 	}
@@ -144,7 +150,7 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
-func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.Factory, floatingPoolName string) (*floatingips.FloatingIP, error) {
+func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.Factory, infraStatus *openstackapi.InfrastructureStatus) (*floatingips.FloatingIP, error) {
 	fips, err := getFipByName(openstackClientFactory, opt.BastionInstanceName)
 	if err != nil {
 		return nil, err
@@ -156,17 +162,12 @@ func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.
 
 	logger.Info("creating new bastion Public IP")
 
-	externalFipInfo, err := getExternalNetworkInfoByName(openstackClientFactory, floatingPoolName)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(externalFipInfo) == 0 {
-		return nil, errors.New("externalFipInfo must not be empty")
+	if infraStatus.Networks.FloatingPool.ID == "" {
+		return nil, errors.New("floatingPool must not be empty")
 	}
 
 	createOpts := floatingips.CreateOpts{
-		FloatingNetworkID: externalFipInfo[0].ID,
+		FloatingNetworkID: infraStatus.Networks.FloatingPool.ID,
 		Description:       opt.BastionInstanceName,
 	}
 
@@ -178,7 +179,7 @@ func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.
 	return fip, nil
 }
 
-func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackclient.Factory, bastionConfig *config.BastionConfig, opt *Options) (*servers.Server, error) {
+func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackclient.Factory, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
 	instances, err := getBastionInstance(openstackClientFactory, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return nil, err
@@ -190,18 +191,8 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 
 	logger.Info("Creating new bastion compute instance")
 
-	networkingClient, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
-
-	networkInfo, err := networkingClient.GetNetworkByName(opt.ShootName)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(networkInfo) == 0 {
-		return nil, errors.New("networkInfo must not be empty")
+	if infraStatus.Networks.ID == "" {
+		return nil, errors.New("network id not found")
 	}
 
 	Compute, err := openstackClientFactory.Compute()
@@ -232,7 +223,7 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 		FlavorRef:      flavorID,
 		ImageRef:       images[0].ID,
 		SecurityGroups: []string{opt.SecurityGroup},
-		Networks:       []servers.Network{{UUID: networkInfo[0].ID}},
+		Networks:       []servers.Network{{UUID: infraStatus.Networks.ID}},
 		UserData:       opt.UserData,
 	}
 
@@ -319,28 +310,22 @@ func ensureAssociateFIPWithInstance(openstackClientFactory openstackclient.Facto
 	return nil
 }
 
-func ensureSecurityGroupRules(openstackClientFactory openstackclient.Factory, bastion *extensionsv1alpha1.Bastion, opt *Options, secGroupID string) error {
+func ensureSecurityGroupRules(openstackClientFactory openstackclient.Factory, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
 	ingressPermissions, err := ingressPermissions(bastion)
 	if err != nil {
 		return err
 	}
 
-	shootSecurityGroups, err := getSecurityGroups(openstackClientFactory, opt.ShootName)
-	if err != nil {
-		return err
-	}
-
-	if len(shootSecurityGroups) == 0 {
-		return errors.New("shootSecurityGroups must not be empty")
-	}
 	// The assumption is that the shoot only has one security group
-	shootSecurityGroupID := shootSecurityGroups[0].ID
+	if len(infraStatus.SecurityGroups) == 0 {
+		return errors.New("shoot security groups not found")
+	}
 
 	var wantedRules []rules.CreateOpts
 	for _, ingressPermission := range ingressPermissions {
 		wantedRules = append(wantedRules,
 			IngressAllowSSH(opt, ingressPermission.EtherType, secGroupID, ingressPermission.CIDR),
-			EgressAllowSSHToWorker(opt, secGroupID, shootSecurityGroupID),
+			EgressAllowSSHToWorker(opt, secGroupID, infraStatus.SecurityGroups[0].ID),
 		)
 	}
 
@@ -471,4 +456,18 @@ func ensureSecurityGroup(openstackClientFactory openstackclient.Factory, opt *Op
 
 	logger.Info("Security Group created", "security group", result.Name)
 	return *result, nil
+}
+
+func getInfrastructureStatus(ctx context.Context, c client.Client, cluster *controller.Cluster) (*openstackapi.InfrastructureStatus, error) {
+	worker := &extensionsv1alpha1.Worker{}
+	err := c.Get(ctx, client.ObjectKey{Namespace: cluster.ObjectMeta.Name, Name: cluster.Shoot.Name}, worker)
+	if err != nil {
+		return nil, err
+	}
+
+	if worker == nil || worker.Spec.InfrastructureProviderStatus == nil {
+		return nil, errors.New("infrastructure provider status must be not empty for worker")
+	}
+
+	return helper.InfrastructureStatusFromRaw(worker.Spec.InfrastructureProviderStatus)
 }

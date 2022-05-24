@@ -105,7 +105,6 @@ type Networking interface {
 	GetExternalNetworkNames(ctx context.Context) ([]string, error)
 	ListNetwork(listOpts networks.ListOpts) ([]networks.Network, error)
 	GetNetworkByName(name string) ([]networks.Network, error)
-	GetExternalNetworkInfoByName(name string) ([]networks.Network, error)
 	// FloatingIP
 	CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error)
 	DeleteFloatingIP(id string) error
@@ -115,7 +114,7 @@ type Networking interface {
 	CreateSecurityGroup(listOpts groups.CreateOpts) (*groups.SecGroup, error)
 	DeleteSecurityGroup(groupID string) error
 	ListSecurityGroup(listOpts groups.ListOpts) ([]groups.SecGroup, error)
-	GetSecurityGroupbyName(name string) ([]groups.SecGroup, error)
+	GetSecurityGroupByName(name string) ([]groups.SecGroup, error)
 	// Security Group rules
 	CreateRule(createOpts rules.CreateOpts) (*rules.SecGroupRule, error)
 	ListRules(listOpts rules.ListOpts) ([]rules.SecGroupRule, error)

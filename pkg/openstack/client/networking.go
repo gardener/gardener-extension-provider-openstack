@@ -70,19 +70,6 @@ func (c *NetworkingClient) GetNetworkByName(name string) ([]networks.Network, er
 	return c.ListNetwork(listOpts)
 }
 
-// GetExternalNetworkInfoByName return external network info by name
-func (c *NetworkingClient) GetExternalNetworkInfoByName(name string) ([]networks.Network, error) {
-	allPages, err := networks.List(c.client, external.ListOptsExt{
-		ListOptsBuilder: networks.ListOpts{Name: name},
-		External:        pointer.Bool(true),
-	}).AllPages()
-	if err != nil {
-		return nil, err
-	}
-
-	return networks.ExtractNetworks(allPages)
-}
-
 // CreateFloatingIP create floating ip
 func (c *NetworkingClient) CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
 	return floatingips.Create(c.client, createOpts).Extract()
@@ -148,8 +135,8 @@ func (c *NetworkingClient) ListSecurityGroup(listOpts groups.ListOpts) ([]groups
 	return groups.ExtractGroups(allPages)
 }
 
-// GetSecurityGroupbyName returns a security group info by security group name
-func (c *NetworkingClient) GetSecurityGroupbyName(name string) ([]groups.SecGroup, error) {
+// GetSecurityGroupByName returns a security group info by security group name
+func (c *NetworkingClient) GetSecurityGroupByName(name string) ([]groups.SecGroup, error) {
 	listOpts := groups.ListOpts{
 		Name: name,
 	}

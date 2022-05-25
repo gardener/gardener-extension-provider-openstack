@@ -707,65 +707,50 @@ func getCSIControllerChartValues(
 func getCSISnapshotterArgs(snapshotter *config.CSISnapshotter) map[string]interface{} {
 	csiSnapshotter := make(map[string]interface{})
 	csiSnapshotterArgs := make(map[string]interface{})
-	if snapshotter.Verbose != nil {
-		csiSnapshotterArgs["verbosity"] = snapshotter.Verbose
-	}
-	if snapshotter.Timeout != nil {
-		csiSnapshotterArgs["timeout"] = snapshotter.Timeout
-	}
-	csiSnapshotter["args"] = csiSnapshotterArgs
+
+	baseArgs := getCSIBaseArgs(&snapshotter.CSIBaseArgs)
+	csiSnapshotter["args"] = gardenerutils.MergeMaps(csiSnapshotterArgs, baseArgs)
+
 	return csiSnapshotter
 }
 
 func getCSIProvisionerArgs(provisioner *config.CSIProvisioner) map[string]interface{} {
 	csiProvisioner := make(map[string]interface{})
 	csiProvisionerArgs := make(map[string]interface{})
-	if provisioner.Verbose != nil {
-		csiProvisionerArgs["verbosity"] = provisioner.Verbose
-	}
-	if provisioner.Timeout != nil {
-		csiProvisionerArgs["timeout"] = provisioner.Timeout
-	}
-	csiProvisioner["args"] = csiProvisionerArgs
+
+	baseArgs := getCSIBaseArgs(&provisioner.CSIBaseArgs)
+	csiProvisionerArgs["args"] = gardenerutils.MergeMaps(csiProvisionerArgs, baseArgs)
+
 	return csiProvisioner
 }
 
 func getCSILivenessProbeArgs(livenessProbe *config.CSILivenessProbe) map[string]interface{} {
 	csiLivenessProbe := make(map[string]interface{})
 	csiLivenessProbeArgs := make(map[string]interface{})
-	if livenessProbe.Verbose != nil {
-		csiLivenessProbeArgs["verbosity"] = livenessProbe.Verbose
-	}
-	if livenessProbe.Timeout != nil {
-		csiLivenessProbeArgs["timeout"] = livenessProbe.Timeout
-	}
-	csiLivenessProbe["args"] = csiLivenessProbeArgs
+
+	baseArgs := getCSIBaseArgs(&livenessProbe.CSIBaseArgs)
+	csiLivenessProbe["args"] = gardenerutils.MergeMaps(csiLivenessProbeArgs, baseArgs)
+
 	return csiLivenessProbe
 }
 
 func getCSISnapshotControllerArgs(snapshotController *config.CSISnapshotController) map[string]interface{} {
 	csiSnapshotController := make(map[string]interface{})
 	csiSnapshotControllerArgs := make(map[string]interface{})
-	if snapshotController.Verbose != nil {
-		csiSnapshotControllerArgs["verbosity"] = snapshotController.Verbose
-	}
-	if snapshotController.Timeout != nil {
-		csiSnapshotControllerArgs["timeout"] = snapshotController.Timeout
-	}
-	csiSnapshotController["args"] = csiSnapshotControllerArgs
+
+	baseArgs := getCSIBaseArgs(&snapshotController.CSIBaseArgs)
+	csiSnapshotController["args"] = gardenerutils.MergeMaps(csiSnapshotControllerArgs, baseArgs)
+
 	return csiSnapshotController
 }
 
 func getCSIDriverCinderArgs(driverCinder *config.CSIDriverCinder) map[string]interface{} {
 	csiDriverCinder := make(map[string]interface{})
 	csiDriverCinderArgs := make(map[string]interface{})
-	if driverCinder.Verbose != nil {
-		csiDriverCinderArgs["verbosity"] = driverCinder.Verbose
-	}
-	if driverCinder.Timeout != nil {
-		csiDriverCinderArgs["timeout"] = driverCinder.Timeout
-	}
-	csiDriverCinder["args"] = csiDriverCinderArgs
+
+	baseArgs := getCSIBaseArgs(&driverCinder.CSIBaseArgs)
+	csiDriverCinder["args"] = gardenerutils.MergeMaps(csiDriverCinderArgs, baseArgs)
+
 	return csiDriverCinder
 
 }
@@ -773,23 +758,28 @@ func getCSIDriverCinderArgs(driverCinder *config.CSIDriverCinder) map[string]int
 func getCSIResizerArgs(resizer *config.CSIResizer) map[string]interface{} {
 	csiResizer := make(map[string]interface{})
 	csiAttacherArgs := make(map[string]interface{})
-	if resizer.Verbose != nil {
-		csiAttacherArgs["verbosity"] = resizer.Verbose
-	}
-	if resizer.Timeout != nil {
-		csiAttacherArgs["csiTimeout"] = resizer.Timeout
-	}
-	csiResizer["args"] = csiAttacherArgs
+
+	baseArgs := getCSIBaseArgs(&resizer.CSIBaseArgs)
+	csiResizer["args"] = gardenerutils.MergeMaps(csiAttacherArgs, baseArgs)
+
 	return csiResizer
+}
+
+func getCSIBaseArgs(obj *config.CSIBaseArgs) map[string]interface{} {
+	csiBaseArgs := make(map[string]interface{})
+	if obj.Verbose != nil {
+		csiBaseArgs["verbose"] = obj.Verbose
+	}
+	if obj.Timeout != nil {
+		csiBaseArgs["timeout"] = obj.Timeout
+	}
+	return csiBaseArgs
 
 }
 
 func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
 	csiAttacher := make(map[string]interface{})
 	csiAttacherArgs := make(map[string]interface{})
-	if attacher.Verbose != nil {
-		csiAttacherArgs["verbosity"] = attacher.Verbose
-	}
 	if attacher.RetryIntervalStart != nil {
 		csiAttacherArgs["retryIntervalStart"] = attacher.RetryIntervalStart
 	}
@@ -799,10 +789,9 @@ func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
 	if attacher.RetryIntervalMax != nil {
 		csiAttacherArgs["retryIntervalMax"] = attacher.RetryIntervalMax
 	}
-	if attacher.Timeout != nil {
-		csiAttacherArgs["timeout"] = attacher.Timeout
-	}
-	csiAttacher["args"] = csiAttacherArgs
+	baseArgs := getCSIBaseArgs(&attacher.CSIBaseArgs)
+	csiAttacher["args"] = gardenerutils.MergeMaps(baseArgs, csiAttacherArgs)
+
 	return csiAttacher
 }
 

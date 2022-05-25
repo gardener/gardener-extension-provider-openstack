@@ -549,13 +549,13 @@ var _ = Describe("ValuesProvider", func() {
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
 					"csiAttacher": map[string]interface{}{
-						"args": map[string]interface{}{
+						"extraArgs": map[string]interface{}{
 							"retryIntervalMax": pointer.StringPtr("99m"),
 							"reconcileSync":    pointer.StringPtr("42m"),
 						},
 					},
 					"csiSnapshotter": map[string]interface{}{
-						"args": map[string]interface{}{
+						"extraArgs": map[string]interface{}{
 							"timeout": pointer.StringPtr("3m"),
 						},
 					},

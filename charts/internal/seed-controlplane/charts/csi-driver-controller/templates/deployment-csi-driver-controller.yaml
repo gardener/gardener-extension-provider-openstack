@@ -91,11 +91,11 @@ spec:
         - --default-fstype=ext4
         - --leader-election
         - --leader-election-namespace=kube-system
-        {{- if .Values.csiProvisioner.args.timeout }}
-        - --timeout={{ .Values.csiProvisioner.args.timeout }}
+        {{- if .Values.csiProvisioner.extraArgs.timeout }}
+        - --timeout={{ .Values.csiProvisioner.extraArgs.timeout }}
         {{- end }}
-        {{- if .Values.csiProvisioner.args.verbosity }}
-        - --v={{ .Values.csiProvisioner.args.verbosity }}
+        {{- if .Values.csiProvisioner.extraArgs.verbosity }}
+        - --v={{ .Values.csiProvisioner.extraArgs.verbosity }}
         {{- end }}
         env:
         - name: ADDRESS
@@ -117,20 +117,20 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
-        {{- if .Values.csiAttacher.args.timeout }}
-        - --timeout={{ .Values.csiAttacher.args.timeout }}
+        {{- if .Values.csiAttacher.extraArgs.timeout }}
+        - --timeout={{ .Values.csiAttacher.extraArgs.timeout }}
         {{- end }}
-        {{- if .Values.csiAttacher.args.retryIntervalStart }}
-        - --retry-interval-start={{ .Values.csiAttacher.args.retryIntervalStart }}
+        {{- if .Values.csiAttacher.extraArgs.retryIntervalStart }}
+        - --retry-interval-start={{ .Values.csiAttacher.extraArgs.retryIntervalStart }}
         {{- end }}
-        {{- if .Values.csiAttacher.args.retryIntervalMax }}
-        - --retry-interval-max={{ .Values.csiAttacher.args.retryIntervalMax }}
+        {{- if .Values.csiAttacher.extraArgs.retryIntervalMax }}
+        - --retry-interval-max={{ .Values.csiAttacher.extraArgs.retryIntervalMax }}
         {{- end }}
-        {{- if .Values.csiAttacher.args.reconcileSync }}
-        - --reconcile-sync={{ .Values.csiAttacher.args.reconcileSync }}
+        {{- if .Values.csiAttacher.extraArgs.reconcileSync }}
+        - --reconcile-sync={{ .Values.csiAttacher.extraArgs.reconcileSync }}
         {{- end }}
-        {{- if .Values.csiAttacher.args.verbosity }}
-        - --v={{ .Values.csiAttacher.args.verbosity }}
+        {{- if .Values.csiAttacher.extraArgs.verbosity }}
+        - --v={{ .Values.csiAttacher.extraArgs.verbosity }}
         {{- end }}
         env:
         - name: ADDRESS
@@ -152,8 +152,8 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
-        {{- if .Values.csiSnapshotter.args.timeout }}
-        - --timeout={{ .Values.csiSnapshotter.args.timeout }}
+        {{- if .Values.csiSnapshotter.extraArgs.timeout }}
+        - --timeout={{ .Values.csiSnapshotter.extraArgs.timeout }}
         {{- end }}
         - --snapshot-name-prefix={{ .Release.Namespace }}
         env:
@@ -176,11 +176,11 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
-        {{- if .Values.csiResizer.args.timeout }}
-        - --timeout={{ .Values.csiResizer.args.timeout }}
+        {{- if .Values.csiResizer.extraArgs.timeout }}
+        - --timeout={{ .Values.csiResizer.extraArgs.timeout }}
         {{- end }}
-        {{- if .Values.csiResizer.args.verbosity }}
-        - --v={{ .Values.csiResizer.args.verbosity }}
+        {{- if .Values.csiResizer.extraArgs.verbosity }}
+        - --v={{ .Values.csiResizer.extraArgs.verbosity }}
         {{- end }}
         env:
         - name: ADDRESS

@@ -22,7 +22,7 @@ csiDriverCinder:
     limits:
       cpu: 50m
       memory: 80Mi
-  args:
+  extraArgs:
     timeout: 3m
 
 csiProvisioner:
@@ -33,7 +33,7 @@ csiProvisioner:
     limits:
       cpu: 30m
       memory: 50Mi
-  args:
+  extraArgs:
     timeout: 3m
 
 csiAttacher:
@@ -44,7 +44,7 @@ csiAttacher:
     limits:
       cpu: 30m
       memory: 50Mi
-  args:
+  extraArgs:
     timeout: 3m
 
 csiSnapshotter:
@@ -55,7 +55,7 @@ csiSnapshotter:
     limits:
       cpu: 30m
       memory: 50Mi
-  args:
+  extraArgs:
     timeout: 3m
 
 csiResizer:
@@ -66,7 +66,7 @@ csiResizer:
     limits:
       cpu: 30m
       memory: 50Mi
-  args:
+  extraArgs:
     timeout: 3m
 
 
@@ -78,7 +78,7 @@ csiLivenessProbe:
     limits:
       cpu: 30m
       memory: 50Mi
-  args: {}
+  extraArgs: {}
 
 
 csiSnapshotController:
@@ -91,7 +91,7 @@ csiSnapshotController:
     limits:
       cpu: 30m
       memory: 50Mi
-  args: {}
+  extraArgs: {}
 
 csiSnapshotValidationWebhook:
   replica: 1

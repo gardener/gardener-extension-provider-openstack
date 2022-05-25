@@ -709,7 +709,7 @@ func getCSISnapshotterArgs(snapshotter *config.CSISnapshotter) map[string]interf
 	csiSnapshotterArgs := make(map[string]interface{})
 
 	baseArgs := getCSIBaseArgs(&snapshotter.CSIBaseArgs)
-	csiSnapshotter["args"] = gardenerutils.MergeMaps(csiSnapshotterArgs, baseArgs)
+	csiSnapshotter["extraArgs"] = gardenerutils.MergeMaps(csiSnapshotterArgs, baseArgs)
 
 	return csiSnapshotter
 }
@@ -719,7 +719,7 @@ func getCSIProvisionerArgs(provisioner *config.CSIProvisioner) map[string]interf
 	csiProvisionerArgs := make(map[string]interface{})
 
 	baseArgs := getCSIBaseArgs(&provisioner.CSIBaseArgs)
-	csiProvisionerArgs["args"] = gardenerutils.MergeMaps(csiProvisionerArgs, baseArgs)
+	csiProvisionerArgs["extraArgs"] = gardenerutils.MergeMaps(csiProvisionerArgs, baseArgs)
 
 	return csiProvisioner
 }
@@ -729,7 +729,7 @@ func getCSILivenessProbeArgs(livenessProbe *config.CSILivenessProbe) map[string]
 	csiLivenessProbeArgs := make(map[string]interface{})
 
 	baseArgs := getCSIBaseArgs(&livenessProbe.CSIBaseArgs)
-	csiLivenessProbe["args"] = gardenerutils.MergeMaps(csiLivenessProbeArgs, baseArgs)
+	csiLivenessProbe["extraArgs"] = gardenerutils.MergeMaps(csiLivenessProbeArgs, baseArgs)
 
 	return csiLivenessProbe
 }
@@ -739,7 +739,7 @@ func getCSISnapshotControllerArgs(snapshotController *config.CSISnapshotControll
 	csiSnapshotControllerArgs := make(map[string]interface{})
 
 	baseArgs := getCSIBaseArgs(&snapshotController.CSIBaseArgs)
-	csiSnapshotController["args"] = gardenerutils.MergeMaps(csiSnapshotControllerArgs, baseArgs)
+	csiSnapshotController["extraArgs"] = gardenerutils.MergeMaps(csiSnapshotControllerArgs, baseArgs)
 
 	return csiSnapshotController
 }
@@ -749,7 +749,7 @@ func getCSIDriverCinderArgs(driverCinder *config.CSIDriverCinder) map[string]int
 	csiDriverCinderArgs := make(map[string]interface{})
 
 	baseArgs := getCSIBaseArgs(&driverCinder.CSIBaseArgs)
-	csiDriverCinder["args"] = gardenerutils.MergeMaps(csiDriverCinderArgs, baseArgs)
+	csiDriverCinder["extraArgs"] = gardenerutils.MergeMaps(csiDriverCinderArgs, baseArgs)
 
 	return csiDriverCinder
 
@@ -760,7 +760,7 @@ func getCSIResizerArgs(resizer *config.CSIResizer) map[string]interface{} {
 	csiAttacherArgs := make(map[string]interface{})
 
 	baseArgs := getCSIBaseArgs(&resizer.CSIBaseArgs)
-	csiResizer["args"] = gardenerutils.MergeMaps(csiAttacherArgs, baseArgs)
+	csiResizer["extraArgs"] = gardenerutils.MergeMaps(csiAttacherArgs, baseArgs)
 
 	return csiResizer
 }
@@ -790,7 +790,7 @@ func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
 		csiAttacherArgs["retryIntervalMax"] = attacher.RetryIntervalMax
 	}
 	baseArgs := getCSIBaseArgs(&attacher.CSIBaseArgs)
-	csiAttacher["args"] = gardenerutils.MergeMaps(baseArgs, csiAttacherArgs)
+	csiAttacher["extraArgs"] = gardenerutils.MergeMaps(baseArgs, csiAttacherArgs)
 
 	return csiAttacher
 }

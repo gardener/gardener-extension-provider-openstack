@@ -59,28 +59,16 @@ func (a *actuator) InjectClient(client client.Client) error {
 	return nil
 }
 
-func getBastionInstance(openstackClientFactory openstackclient.Factory, name string) ([]servers.Server, error) {
-	computeclient, err := openstackClientFactory.Compute()
-	if err != nil {
-		return nil, err
-	}
-	return computeclient.FindServersByName(name)
+func getBastionInstance(client openstackclient.Compute, name string) ([]servers.Server, error) {
+	return client.FindServersByName(name)
 }
 
-func createBastionInstance(openstackClientFactory openstackclient.Factory, parameters servers.CreateOpts) (*servers.Server, error) {
-	computeclient, err := openstackClientFactory.Compute()
-	if err != nil {
-		return nil, err
-	}
-	return computeclient.CreateServer(parameters)
+func createBastionInstance(client openstackclient.Compute, parameters servers.CreateOpts) (*servers.Server, error) {
+	return client.CreateServer(parameters)
 }
 
-func deleteBastionInstance(openstackClientFactory openstackclient.Factory, id string) error {
-	computeclient, err := openstackClientFactory.Compute()
-	if err != nil {
-		return err
-	}
-	return computeclient.DeleteServer(id)
+func deleteBastionInstance(client openstackclient.Compute, id string) error {
+	return client.DeleteServer(id)
 }
 
 // GetIPs return privateip, publicip
@@ -120,95 +108,50 @@ func GetIPs(s *servers.Server, opt *Options) (string, string, error) {
 	return privateIP, publicIp, nil
 }
 
-func createFloatingIP(openstackClientFactory openstackclient.Factory, parameters floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
+func createFloatingIP(client openstackclient.Networking, parameters floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
 	return client.CreateFloatingIP(parameters)
 }
 
-func deleteFloatingIP(openstackClientFactory openstackclient.Factory, id string) error {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return err
-	}
+func deleteFloatingIP(client openstackclient.Networking, id string) error {
 	return client.DeleteFloatingIP(id)
 }
 
-func associateFIPWithInstance(openstackClientFactory openstackclient.Factory, id string, parameter computefip.AssociateOpts) error {
-	client, err := openstackClientFactory.Compute()
-	if err != nil {
-		return err
-	}
+func associateFIPWithInstance(client openstackclient.Compute, id string, parameter computefip.AssociateOpts) error {
 	return client.AssociateFIPWithInstance(id, parameter)
 }
 
-func findFloatingIDByInstanceID(openstackClientFactory openstackclient.Factory, id string) (string, error) {
-	client, err := openstackClientFactory.Compute()
-	if err != nil {
-		return "", err
-	}
+func findFloatingIDByInstanceID(client openstackclient.Compute, id string) (string, error) {
 	return client.FindFloatingIDByInstanceID(id)
 }
 
-func getFipByName(openstackClientFactory openstackclient.Factory, name string) ([]floatingips.FloatingIP, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
+func getFipByName(client openstackclient.Networking, name string) ([]floatingips.FloatingIP, error) {
 	return client.GetFipByName(name)
 }
 
-func createSecurityGroup(openstackClientFactory openstackclient.Factory, createOpts groups.CreateOpts) (*groups.SecGroup, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
+func createSecurityGroup(client openstackclient.Networking, createOpts groups.CreateOpts) (*groups.SecGroup, error) {
 	return client.CreateSecurityGroup(createOpts)
 }
 
-func deleteSecurityGroup(openstackClientFactory openstackclient.Factory, groupid string) error {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return err
-	}
+func deleteSecurityGroup(client openstackclient.Networking, groupid string) error {
 	return client.DeleteSecurityGroup(groupid)
 }
 
-func getSecurityGroups(openstackClientFactory openstackclient.Factory, name string) ([]groups.SecGroup, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
+func getSecurityGroups(client openstackclient.Networking, name string) ([]groups.SecGroup, error) {
 	return client.GetSecurityGroupByName(name)
 }
 
-func createRules(openstackClientFactory openstackclient.Factory, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
+func createRules(client openstackclient.Networking, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
 	return client.CreateRule(createOpts)
 }
 
-func listRules(openstackClientFactory openstackclient.Factory, secGroupID string) ([]rules.SecGroupRule, error) {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return nil, err
-	}
-
+func listRules(client openstackclient.Networking, secGroupID string) ([]rules.SecGroupRule, error) {
 	listOpts := rules.ListOpts{
 		SecGroupID: secGroupID,
 	}
 	return client.ListRules(listOpts)
 }
 
-func deleteRule(openstackClientFactory openstackclient.Factory, ruleID string) error {
-	client, err := openstackClientFactory.Networking()
-	if err != nil {
-		return err
-	}
+func deleteRule(client openstackclient.Networking, ruleID string) error {
 	return client.DeleteRule(ruleID)
 }
 

@@ -78,22 +78,32 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return fmt.Errorf("could not create Openstack client factory: %w", err)
 	}
 
+	computeClient, err := openstackClientFactory.Compute()
+	if err != nil {
+		return err
+	}
+
+	networkingClient, err := openstackClientFactory.Networking()
+	if err != nil {
+		return err
+	}
+
 	infraStatus, err := getInfrastructureStatus(ctx, a.client, cluster)
 	if err != nil {
 		return err
 	}
 
-	securityGroup, err := ensureSecurityGroup(openstackClientFactory, opt)
+	securityGroup, err := ensureSecurityGroup(networkingClient, opt)
 	if err != nil {
 		return err
 	}
 
-	err = ensureSecurityGroupRules(openstackClientFactory, bastion, opt, infraStatus, securityGroup.ID)
+	err = ensureSecurityGroupRules(networkingClient, bastion, opt, infraStatus, securityGroup.ID)
 	if err != nil {
 		return err
 	}
 
-	instance, err := ensureComputeInstance(logger, openstackClientFactory, a.bastionConfig, infraStatus, opt)
+	instance, err := ensureComputeInstance(logger, computeClient, a.bastionConfig, infraStatus, opt)
 	if err != nil || instance == nil {
 		return err
 	}
@@ -108,18 +118,18 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
 	}
 
-	fipid, err := ensurePublicIPAddress(opt, openstackClientFactory, infraStatus)
+	fipid, err := ensurePublicIPAddress(opt, networkingClient, infraStatus)
 	if err != nil {
 		return err
 	}
 
-	err = ensureAssociateFIPWithInstance(openstackClientFactory, instance, fipid)
+	err = ensureAssociateFIPWithInstance(computeClient, instance, fipid)
 	if err != nil {
 		return err
 	}
 
 	// refresh instance after public ip attached/created
-	instances, err := getBastionInstance(openstackClientFactory, opt.BastionInstanceName)
+	instances, err := getBastionInstance(computeClient, opt.BastionInstanceName)
 	if err != nil {
 		return err
 	}
@@ -150,8 +160,8 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
-func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.Factory, infraStatus *openstackapi.InfrastructureStatus) (*floatingips.FloatingIP, error) {
-	fips, err := getFipByName(openstackClientFactory, opt.BastionInstanceName)
+func ensurePublicIPAddress(opt *Options, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (*floatingips.FloatingIP, error) {
+	fips, err := getFipByName(client, opt.BastionInstanceName)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +181,7 @@ func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.
 		Description:       opt.BastionInstanceName,
 	}
 
-	fip, err := createFloatingIP(openstackClientFactory, createOpts)
+	fip, err := createFloatingIP(client, createOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get (create) public ip address: %w", err)
 	}
@@ -179,8 +189,8 @@ func ensurePublicIPAddress(opt *Options, openstackClientFactory openstackclient.
 	return fip, nil
 }
 
-func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackclient.Factory, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
-	instances, err := getBastionInstance(openstackClientFactory, opt.BastionInstanceName)
+func ensureComputeInstance(logger logr.Logger, client openstackclient.Compute, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
+	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return nil, err
 	}
@@ -195,12 +205,7 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 		return nil, errors.New("network id not found")
 	}
 
-	Compute, err := openstackClientFactory.Compute()
-	if err != nil {
-		return nil, err
-	}
-
-	flavorID, err := Compute.FindFlavorID(bastionConfig.FlavorRef)
+	flavorID, err := client.FindFlavorID(bastionConfig.FlavorRef)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +214,7 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 		return nil, errors.New("flavorID not found")
 	}
 
-	images, err := Compute.FindImages(bastionConfig.ImageRef)
+	images, err := client.FindImages(bastionConfig.ImageRef)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +232,7 @@ func ensureComputeInstance(logger logr.Logger, openstackClientFactory openstackc
 		UserData:       opt.UserData,
 	}
 
-	instance, err := createBastionInstance(openstackClientFactory, createOpts)
+	instance, err := createBastionInstance(client, createOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bastion compute instance: %w ", err)
 	}
@@ -286,8 +291,8 @@ func addressToIngress(dnsName *string, ipAddress *string) *corev1.LoadBalancerIn
 	return ingress
 }
 
-func ensureAssociateFIPWithInstance(openstackClientFactory openstackclient.Factory, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
-	fipid, err := findFloatingIDByInstanceID(openstackClientFactory, instance.ID)
+func ensureAssociateFIPWithInstance(client openstackclient.Compute, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
+	fipid, err := findFloatingIDByInstanceID(client, instance.ID)
 	if err != nil {
 		return err
 	}
@@ -304,13 +309,13 @@ func ensureAssociateFIPWithInstance(openstackClientFactory openstackclient.Facto
 		FloatingIP: floatingIP.FloatingIP,
 	}
 
-	if err := associateFIPWithInstance(openstackClientFactory, instance.ID, associateOpts); err != nil {
+	if err := associateFIPWithInstance(client, instance.ID, associateOpts); err != nil {
 		return fmt.Errorf("failed to associate public ip address %s to instance %s: %w", floatingIP.FloatingIP, instance.Name, err)
 	}
 	return nil
 }
 
-func ensureSecurityGroupRules(openstackClientFactory openstackclient.Factory, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
+func ensureSecurityGroupRules(client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
 	ingressPermissions, err := ingressPermissions(bastion)
 	if err != nil {
 		return err
@@ -329,7 +334,7 @@ func ensureSecurityGroupRules(openstackClientFactory openstackclient.Factory, ba
 		)
 	}
 
-	currentRules, err := listRules(openstackClientFactory, secGroupID)
+	currentRules, err := listRules(client, secGroupID)
 	if err != nil {
 		return fmt.Errorf("failed to list rules: %w", err)
 	}
@@ -337,13 +342,13 @@ func ensureSecurityGroupRules(openstackClientFactory openstackclient.Factory, ba
 	rulesToAdd, rulesToDelete := rulesSymmetricDifference(wantedRules, currentRules)
 
 	for _, rule := range rulesToAdd {
-		if err := createSecurityGroupRuleIfNotExist(openstackClientFactory, rule); err != nil {
+		if err := createSecurityGroupRuleIfNotExist(client, rule); err != nil {
 			return fmt.Errorf("failed to add security group rule %s: %w", rule.Description, err)
 		}
 	}
 
 	for _, rule := range rulesToDelete {
-		if err := deleteRule(openstackClientFactory, rule.ID); err != nil {
+		if err := deleteRule(client, rule.ID); err != nil {
 			if openstackclient.IsNotFoundError(err) {
 				continue
 			}
@@ -425,8 +430,8 @@ func ruleEqual(a rules.CreateOpts, b rules.SecGroupRule) bool {
 	return true
 }
 
-func createSecurityGroupRuleIfNotExist(openstackClientFactory openstackclient.Factory, createOpts rules.CreateOpts) error {
-	if _, err := createRules(openstackClientFactory, createOpts); err != nil {
+func createSecurityGroupRuleIfNotExist(client openstackclient.Networking, createOpts rules.CreateOpts) error {
+	if _, err := createRules(client, createOpts); err != nil {
 		if _, ok := err.(gophercloud.ErrDefault409); ok {
 			return nil
 		}
@@ -436,8 +441,8 @@ func createSecurityGroupRuleIfNotExist(openstackClientFactory openstackclient.Fa
 	return nil
 }
 
-func ensureSecurityGroup(openstackClientFactory openstackclient.Factory, opt *Options) (groups.SecGroup, error) {
-	securityGroups, err := getSecurityGroups(openstackClientFactory, opt.SecurityGroup)
+func ensureSecurityGroup(client openstackclient.Networking, opt *Options) (groups.SecGroup, error) {
+	securityGroups, err := getSecurityGroups(client, opt.SecurityGroup)
 	if err != nil {
 		return groups.SecGroup{}, err
 	}
@@ -446,7 +451,7 @@ func ensureSecurityGroup(openstackClientFactory openstackclient.Factory, opt *Op
 		return securityGroups[0], nil
 	}
 
-	result, err := createSecurityGroup(openstackClientFactory, groups.CreateOpts{
+	result, err := createSecurityGroup(client, groups.CreateOpts{
 		Name:        opt.SecurityGroup,
 		Description: opt.SecurityGroup,
 	})

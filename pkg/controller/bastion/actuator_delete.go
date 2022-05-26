@@ -48,17 +48,27 @@ func (a *actuator) Delete(ctx context.Context, bastion *extensionsv1alpha1.Basti
 		return fmt.Errorf("could not create openstack client factory: %w", err)
 	}
 
-	err = removeBastionInstance(logger, openstackClientFactory, opt)
+	computeClient, err := openstackClientFactory.Compute()
+	if err != nil {
+		return err
+	}
+
+	networkingClient, err := openstackClientFactory.Networking()
+	if err != nil {
+		return err
+	}
+
+	err = removeBastionInstance(logger, computeClient, opt)
 	if err != nil {
 		return fmt.Errorf("failed to remove bastion instance: %w", err)
 	}
 
-	err = removePublicIPAddress(logger, openstackClientFactory, opt)
+	err = removePublicIPAddress(logger, networkingClient, opt)
 	if err != nil {
 		return fmt.Errorf("failed to remove public ip address: %w", err)
 	}
 
-	deleted, err := isInstanceDeleted(openstackClientFactory, opt)
+	deleted, err := isInstanceDeleted(computeClient, opt)
 	if err != nil {
 		return fmt.Errorf("failed to check for bastion instance: %w", err)
 	}
@@ -70,11 +80,11 @@ func (a *actuator) Delete(ctx context.Context, bastion *extensionsv1alpha1.Basti
 		}
 	}
 
-	return removeSecurityGroup(openstackClientFactory, opt)
+	return removeSecurityGroup(networkingClient, opt)
 }
 
-func removeBastionInstance(logger logr.Logger, openstackClientFactory openstackclient.Factory, opt *Options) error {
-	instances, err := getBastionInstance(openstackClientFactory, opt.BastionInstanceName)
+func removeBastionInstance(logger logr.Logger, client openstackclient.Compute, opt *Options) error {
+	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return err
 	}
@@ -83,7 +93,7 @@ func removeBastionInstance(logger logr.Logger, openstackClientFactory openstackc
 		return nil
 	}
 
-	err = deleteBastionInstance(openstackClientFactory, instances[0].ID)
+	err = deleteBastionInstance(client, instances[0].ID)
 	if err != nil {
 		return fmt.Errorf("failed to terminate bastion instance: %w", err)
 	}
@@ -92,8 +102,8 @@ func removeBastionInstance(logger logr.Logger, openstackClientFactory openstackc
 	return nil
 }
 
-func removePublicIPAddress(logger logr.Logger, openstackClientFactory openstackclient.Factory, opt *Options) error {
-	fips, err := getFipByName(openstackClientFactory, opt.BastionInstanceName)
+func removePublicIPAddress(logger logr.Logger, client openstackclient.Networking, opt *Options) error {
+	fips, err := getFipByName(client, opt.BastionInstanceName)
 	if err != nil {
 		return err
 	}
@@ -102,7 +112,7 @@ func removePublicIPAddress(logger logr.Logger, openstackClientFactory openstackc
 		return nil
 	}
 
-	err = deleteFloatingIP(openstackClientFactory, fips[0].ID)
+	err = deleteFloatingIP(client, fips[0].ID)
 	if err != nil {
 		return fmt.Errorf("failed to terminate bastion Public IP: %w", err)
 	}
@@ -111,8 +121,8 @@ func removePublicIPAddress(logger logr.Logger, openstackClientFactory openstackc
 	return nil
 }
 
-func removeSecurityGroup(openstackClientFactory openstackclient.Factory, opt *Options) error {
-	bastionSecurityGroups, err := getSecurityGroups(openstackClientFactory, opt.SecurityGroup)
+func removeSecurityGroup(client openstackclient.Networking, opt *Options) error {
+	bastionSecurityGroups, err := getSecurityGroups(client, opt.SecurityGroup)
 	if err != nil {
 		return err
 	}
@@ -121,11 +131,11 @@ func removeSecurityGroup(openstackClientFactory openstackclient.Factory, opt *Op
 		return nil
 	}
 
-	return deleteSecurityGroup(openstackClientFactory, bastionSecurityGroups[0].ID)
+	return deleteSecurityGroup(client, bastionSecurityGroups[0].ID)
 }
 
-func isInstanceDeleted(openstackClientFactory openstackclient.Factory, opt *Options) (bool, error) {
-	instances, err := getBastionInstance(openstackClientFactory, opt.BastionInstanceName)
+func isInstanceDeleted(client openstackclient.Compute, opt *Options) (bool, error) {
+	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return false, err
 	}

@@ -30,10 +30,7 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -59,15 +56,6 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 		return csiEnabled
 	}
 
-	skiphealthCheck := func(ctx context.Context, client client.Client, obj client.Object, cluster *extensionscontroller.Cluster) bool {
-		deployment := &appsv1.Deployment{}
-		if err := client.Get(ctx, kutil.Key(cluster.ObjectMeta.Name, "csi-snapshot-validation"), deployment); err != nil {
-			return !apierrors.IsNotFound(err)
-		}
-
-		return true
-	}
-
 	if err := healthcheck.DefaultRegistration(
 		openstack.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ControlPlaneResource),
@@ -91,11 +79,10 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CSISnapshotControllerName),
 				PreCheckFunc:  csiEnabledPreCheckFunc,
 			},
-			// TODO(acumino): Enable this health check in v1.26 and use csiEnabledPreCheckFunc for PreCheckFunc.
 			{
 				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
 				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CSISnapshotValidation),
-				PreCheckFunc:  skiphealthCheck,
+				PreCheckFunc:  csiEnabledPreCheckFunc,
 			},
 			{
 				ConditionType: string(gardencorev1beta1.ShootSystemComponentsHealthy),

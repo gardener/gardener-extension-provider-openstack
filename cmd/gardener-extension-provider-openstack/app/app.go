@@ -118,7 +118,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		gardenerVersion    = new(string)
 		controllerSwitches = openstackcmd.ControllerSwitchOptions()
 		webhookSwitches    = openstackcmd.WebhookSwitchOptions(gardenerVersion)
-		webhookOptions     = webhookcmd.NewAddToManagerOptions(openstack.Name, webhookServerOptions, webhookSwitches)
+		webhookOptions     = webhookcmd.NewAddToManagerOptions(openstack.Name, openstack.Type, webhookServerOptions, webhookSwitches)
 
 		aggOption = controllercmd.NewOptionAggregator(
 			generalOpts,
@@ -198,7 +198,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 
-			if _, _, err := webhookOptions.Completed().AddToManager(ctx, mgr); err != nil {
+			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}
 

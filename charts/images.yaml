@@ -23,7 +23,12 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager
   tag: "v1.23.1"
-  targetVersion: ">= 1.23"
+  targetVersion: "1.23.x"
+- name: cloud-controller-manager
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: k8scloudprovider/openstack-cloud-controller-manager
+  tag: "v1.24.0"
+  targetVersion: "1.24"
 
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
@@ -58,7 +63,12 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: docker.io/k8scloudprovider/cinder-csi-plugin
   tag: "v1.23.0"
-  targetVersion: ">= 1.23"
+  targetVersion: "1.23.x"
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: docker.io/k8scloudprovider/cinder-csi-plugin
+  tag: "v1.24.0"
+  targetVersion: ">= 1.24"
 
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner

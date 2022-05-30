@@ -77,8 +77,6 @@ github.com/gardener/gardener/extensions/pkg/controller/worker/helper
 github.com/gardener/gardener/extensions/pkg/predicate
 github.com/gardener/gardener/extensions/pkg/terraformer
 github.com/gardener/gardener/extensions/pkg/util
-github.com/gardener/gardener/extensions/pkg/util/index
-github.com/gardener/gardener/extensions/pkg/util/secret
 github.com/gardener/gardener/extensions/pkg/util/secret/manager
 github.com/gardener/gardener/extensions/pkg/webhook
 github.com/gardener/gardener/extensions/pkg/webhook/certificates

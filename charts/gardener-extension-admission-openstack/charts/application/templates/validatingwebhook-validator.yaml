@@ -15,6 +15,7 @@ webhooks:
     - UPDATE
     resources:
     - cloudprofiles
+    - secretbindings
     - shoots
   failurePolicy: Fail
   timeoutSeconds: 10
@@ -49,7 +50,9 @@ webhooks:
     resources:
     - secrets
   failurePolicy: Fail
-  objectSelector: {}
+  objectSelector:
+    matchLabels:
+      provider.shoot.gardener.cloud/openstack: "true"
   namespaceSelector: {}
   sideEffects: None
   admissionReviewVersions:

@@ -1635,3 +1635,56 @@ func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 
 	f(shoot.Status.Credentials.Rotation.ServiceAccountKey)
 }
+
+// GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
+// string.
+func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.ShootCredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
+		return credentials.Rotation.ETCDEncryptionKey.Phase
+	}
+	return ""
+}
+
+// MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
+// provided mutation function. If the field is nil then it is initialized.
+func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootETCDEncryptionKeyRotation)) {
+	if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
+	}
+	if shoot.Status.Credentials.Rotation == nil {
+		shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
+	}
+	if shoot.Status.Credentials.Rotation.ETCDEncryptionKey == nil {
+		shoot.Status.Credentials.Rotation.ETCDEncryptionKey = &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}
+	}
+
+	f(shoot.Status.Credentials.Rotation.ETCDEncryptionKey)
+}
+
+// IsValidShootOperation checks whether the provided operation annotation value is valid. It returns two bools: The
+// first value specifies whether it's valid, and the second bool value specifies whether the gardener-apiserver removes
+// the annotation before the Shoot is persisted to etcd.
+func IsValidShootOperation(operation string, lastOperation *gardencorev1beta1.LastOperation) (isValid bool) {
+	if lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
+		return operation == v1beta1constants.ShootOperationRetry
+	}
+
+	switch operation {
+	case v1beta1constants.GardenerOperationReconcile,
+		v1beta1constants.ShootOperationRotateCredentialsStart,
+		v1beta1constants.ShootOperationRotateCredentialsComplete,
+		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+		v1beta1constants.ShootOperationRotateObservabilityCredentials,
+		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.ShootOperationRotateCAStart,
+		v1beta1constants.ShootOperationRotateCAComplete,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete:
+		return true
+
+	default:
+		return false
+	}
+}

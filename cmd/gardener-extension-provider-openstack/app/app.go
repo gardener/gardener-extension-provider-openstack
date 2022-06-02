@@ -35,6 +35,7 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
@@ -118,7 +119,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		gardenerVersion    = new(string)
 		controllerSwitches = openstackcmd.ControllerSwitchOptions()
 		webhookSwitches    = openstackcmd.WebhookSwitchOptions(gardenerVersion)
-		webhookOptions     = webhookcmd.NewAddToManagerOptions(openstack.Name, openstack.Type, webhookServerOptions, webhookSwitches)
+		webhookOptions     = webhookcmd.NewAddToManagerOptions(
+			openstack.Name,
+			genericactuator.ShootWebhooksResourceName,
+			genericactuator.ShootWebhookNamespaceSelector(openstack.Type),
+			webhookServerOptions,
+			webhookSwitches,
+		)
 
 		aggOption = controllercmd.NewOptionAggregator(
 			generalOpts,

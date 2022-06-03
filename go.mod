@@ -9,7 +9,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gardener/etcd-druid v0.8.0
 	github.com/gardener/gardener v1.48.0
-	github.com/gardener/machine-controller-manager v0.44.1
+	github.com/gardener/machine-controller-manager v0.45.0
 	github.com/go-logr/logr v1.2.3
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.1.2

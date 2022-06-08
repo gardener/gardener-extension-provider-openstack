@@ -25,3 +25,6 @@ data:
 {{- if .Values.config.etcd.backup }}
 {{ toYaml .Values.config.etcd.backup | indent 6 }}
 {{- end }}
+    bastionConfig:
+      imageRef:  {{ .Values.config.bastionConfig.imageRef }}
+      flavorRef: {{ .Values.config.bastionConfig.flavorRef }}

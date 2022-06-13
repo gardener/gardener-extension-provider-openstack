@@ -17,7 +17,11 @@
 package client
 
 import (
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
 const (
@@ -73,4 +77,78 @@ func (c *ComputeClient) ListServerGroups() ([]servergroups.ServerGroup, error) {
 	}
 
 	return servergroups.ExtractServerGroups(pages)
+}
+
+// CreateServer retrieves the Create of Compute service.
+func (c *ComputeClient) CreateServer(createOpts servers.CreateOpts) (*servers.Server, error) {
+	return servers.Create(c.client, createOpts).Extract()
+}
+
+// DeleteServer delete the Compute service.
+func (c *ComputeClient) DeleteServer(id string) error {
+	return servers.Delete(c.client, id).ExtractErr()
+}
+
+// FindServersByName retrieves the Compute Server by Name
+func (c *ComputeClient) FindServersByName(name string) ([]servers.Server, error) {
+	listOpts := servers.ListOpts{
+		Name: name,
+	}
+	allPages, err := servers.List(c.client, listOpts).AllPages()
+	if err != nil {
+		return nil, err
+	}
+
+	allServers, err := servers.ExtractServers(allPages)
+	if err != nil {
+		return nil, err
+	}
+	return allServers, nil
+}
+
+// AssociateFIPWithInstance associate floating ip with instance
+func (c *ComputeClient) AssociateFIPWithInstance(serverID string, associateOpts floatingips.AssociateOpts) error {
+	return floatingips.AssociateInstance(c.client, serverID, associateOpts).ExtractErr()
+}
+
+// FindFloatingIDByInstanceID find floating id by instance id
+func (c *ComputeClient) FindFloatingIDByInstanceID(id string) (string, error) {
+	allPages, err := floatingips.List(c.client).AllPages()
+	if err != nil {
+		return "", err
+	}
+
+	allFloatingIPs, err := floatingips.ExtractFloatingIPs(allPages)
+	if err != nil {
+		return "", err
+	}
+
+	for _, fip := range allFloatingIPs {
+		if fip.InstanceID == id {
+			return fip.ID, nil
+		}
+	}
+	return "", nil
+}
+
+// FindFlavorID find flavor ID by flavor name
+func (c *ComputeClient) FindFlavorID(name string) (string, error) {
+	return flavors.IDFromName(c.client, name)
+}
+
+//FindImages find image ID by images name
+func (c *ComputeClient) FindImages(name string) ([]images.Image, error) {
+	listOpts := images.ListOpts{
+		Name: name,
+	}
+	return c.ListImages(listOpts)
+}
+
+//ListImages list all images
+func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, error) {
+	allPages, err := images.ListDetail(c.client, listOpts).AllPages()
+	if err != nil {
+		return nil, err
+	}
+	return images.ExtractImages(allPages)
 }

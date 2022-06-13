@@ -24,6 +24,8 @@ controllers:
     concurrentSyncs: 5
   backupentry:
     concurrentSyncs: 5
+  bastion:
+    concurrentSyncs: 5
   controlplane:
     concurrentSyncs: 5
   csimigration:
@@ -37,7 +39,6 @@ controllers:
   worker:
     concurrentSyncs: 5
   ignoreOperationAnnotation: false
-
 
 disableControllers: []
 disableWebhooks: []
@@ -74,8 +75,11 @@ config:
       className: gardener.cloud-fast
       capacity: 25Gi
       provisioner: kubernetes.io/cinder
-#      parameters:
-#        type: volumetype-nameOrID
+ #      parameters:
+ #        type: volumetype-nameOrID
+  bastionConfig:
+    imageRef: ""
+    flavorRef: ""
 
 gardener:
   version: ""

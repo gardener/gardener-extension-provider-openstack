@@ -23,6 +23,7 @@ import (
 	openstackcmd "github.com/gardener/gardener-extension-provider-openstack/pkg/cmd"
 	openstackbackupbucket "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
 	openstackbackupentry "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupentry"
+	openstackbastion "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	openstackcontrolplane "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
 	openstackcsimigration "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/csimigration"
 	openstackdnsrecord "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
@@ -73,6 +74,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 		// options for the backupentry controller
 		backupEntryCtrlOpts = &controllercmd.ControllerOptions{
+			MaxConcurrentReconciles: 5,
+		}
+
+		// options for the bastion controller
+		bastionCtrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
@@ -133,6 +139,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			mgrOpts,
 			controllercmd.PrefixOption("backupbucket-", backupBucketCtrlOpts),
 			controllercmd.PrefixOption("backupentry-", backupEntryCtrlOpts),
+			controllercmd.PrefixOption("bastion-", bastionCtrlOpts),
 			controllercmd.PrefixOption("controlplane-", controlPlaneCtrlOpts),
 			controllercmd.PrefixOption("csimigration-", csiMigrationCtrlOpts),
 			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
@@ -193,9 +200,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
+			configFileOpts.Completed().ApplyBastionConfig(&openstackbastion.DefaultAddOptions.BastionConfig)
 			healthCheckCtrlOpts.Completed().Apply(&healthcheck.DefaultAddOptions.Controller)
 			backupBucketCtrlOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.Controller)
 			backupEntryCtrlOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.Controller)
+			bastionCtrlOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.Controller)
 			controlPlaneCtrlOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.Controller)
@@ -203,6 +212,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
 			csiMigrationCtrlOpts.Completed().Apply(&openstackcsimigration.DefaultAddOptions.Controller)
 			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 
 			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr); err != nil {

@@ -173,3 +173,16 @@ integration-test-infra:
 		--tenant-name='$(shell cat $(TENANT_NAME))' \
 		--user-name='$(shell cat $(USER_NAME))' \
 		--region='$(shell cat $(REGION))'
+
+.PHONY: integration-test-bastion
+integration-test-bastion:
+	@go test -timeout=0 -mod=vendor ./test/integration/bastion \
+		--v -ginkgo.v -ginkgo.progress \
+		--kubeconfig=${KUBECONFIG} \
+		--auth-url='$(shell cat $(AUTH_URL))' \
+		--domain-name='$(shell cat $(DOMAIN_NAME))' \
+		--floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
+		--password='$(shell cat $(PASSWORD))' \
+		--tenant-name='$(shell cat $(TENANT_NAME))' \
+		--user-name='$(shell cat $(USER_NAME))' \
+		--region='$(shell cat $(REGION))'

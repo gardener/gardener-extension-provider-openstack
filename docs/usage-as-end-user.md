@@ -40,6 +40,23 @@ Alternatively, for authentication with application credentials see [Keystone App
 ⚠️ Depending on your API usage it can be problematic to reuse the same provider credentials for different Shoot clusters due to rate limits.
 Please consider spreading your Shoots over multiple credentials from different tenants if you are hitting those limits.
 
+### Managed Application Credentials
+
+The Gardener Openstack extension is capable to manage for each Shoot cluster an own application credential that is used to interact with the Openstack layer on behalf of the provided Openstack user.
+
+Those application credentials are managed by the Gardener Openstack extension.
+The extension will take care that the managed application credential get created, deleted and constanntly rotated and exchanged (including the case when the Openstack user changes) as part of the regular Shoot operations like reconcilation or deletion.
+
+Managed application credentials will be used by default
+- if the operator of the Gardener installation enables the managed application credential usage (find more information [here](usage-as-operator.md#Managed-application-credentials))
+- if the provided Openstack user itself is not an application credential
+- for Shoot cluster larger or equal than `v1.19`
+
+Using managed application credentials to interact with the Openstack layer has several advantages compared to the usage of the Openstack user itself e.g. the application credential will be still functional even if the credentials of the owning Openstack user are rotated and not propagated to the system or that a managed application credential does exclusivly belong to one Shoot cluster and does therefore not get influenced/throttled by other operation run with the same Openstack user etc.
+
+Be aware: In case the Openstack user for a Shoot cluster is changed the managed application credential can end up in an orphan state where the Gardener Openstack extension cannot manage it anymore.
+Therefore each managed application credential has set an expiration date on the Openstack layer.
+
 ## `InfrastructureConfig`
 
 The infrastructure configuration mainly describes how the network layout looks like in order to create the shoot worker nodes in a later step, thus, prepares everything relevant to create VMs, load balancers, volumes, etc.

@@ -178,3 +178,29 @@ spec:
       loadBalancerProviders:
       - name: haproxy
 ```
+
+
+## Miscellaneous
+
+### Managed application credentials
+
+The Gardener Openstack extension is able to manage for each Shoot cluster an application credential to interact with the Openstack layer.
+Find more general information about managed application credentials [here](usage-as-end-user.md#managed-application-credentials).
+
+As an operator you can define the managed application credential configuration via the controller configuration of the Gardener Openstack extension.
+Here is an example for the managed application configuration as part of the controller configuration.
+
+```yaml
+managedApplicationCredential:
+  enabled: true
+  lifetime: 48h
+  openstackExpirationPeriod: 720h
+  renewThreshold: 48h
+```
+
+Via `.managedApplicationCredential.enabled` the managed application credential usage can be globally enabled or disabled.
+The `.managedApplicationCredential.lifetime` field define how long an application credential should stay after creation before it get replaced during the next Shoot operation.
+The fields `.managedApplicationCredential.openstackExpirationPeriod` and `managedApplicationCredential.renewThreshold` are related to expiration on the Openstack layer.
+The `openstackExpirationPeriod` field define how long an application credential live after creation before it get disabled by Openstack itself.
+The `renewThreshold` is a threshold before the Openstack expiration date.
+Once the threshold is reached the managed application credential will be renewed during the next Shoot operation.

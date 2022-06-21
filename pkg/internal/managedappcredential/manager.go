@@ -41,7 +41,7 @@ func NewManager(openstackClientFactory openstackclient.FactoryFactory, config *c
 	}
 }
 
-func (m *Manager) runGarbageCollection(ctx context.Context, parent *parent, inUseAppCredentialID string, deleteInUseAppCredential bool) error {
+func (m *Manager) runGarbageCollection(ctx context.Context, parent *parent, managedApplicationCredentialID *string) error {
 	appCredentialList, err := parent.identityClient.ListApplicationCredentials(ctx, parent.id)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (m *Manager) runGarbageCollection(ctx context.Context, parent *parent, inUs
 		}
 
 		// Skip the is-use application credential.
-		if ac.ID == inUseAppCredentialID && !deleteInUseAppCredential {
+		if managedApplicationCredentialID != nil && ac.ID == *managedApplicationCredentialID {
 			continue
 		}
 

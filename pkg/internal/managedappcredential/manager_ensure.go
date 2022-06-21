@@ -40,8 +40,7 @@ func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials
 		appCredentialExists bool
 		parentChanged       bool
 		oldParentUserUsable bool
-
-		oldParentUser *parent
+		oldParentUser       *parent
 	)
 
 	if appCredential != nil {
@@ -63,7 +62,6 @@ func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials
 				parentChanged = true
 			}
 		}
-
 	}
 
 	if parentChanged {
@@ -71,84 +69,52 @@ func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials
 		// This might not work as the information about this user could be stale,
 		// because the user credentials are rotated, the user is not associated to
 		// Openstack project anymore or it is deleted.
-		if err := m.runGarbageCollection(ctx, oldParentUser, appCredential.id, false); err != nil {
+		if err := m.runGarbageCollection(ctx, oldParentUser, nil); err != nil {
 			m.logger.Error(err, "could not clean up application credential(s) as the owning user has changed and information about owning user might be stale")
 		}
 	}
 
-	// In case the application credential usage is disabled, it is tried to
-	// clean up old application credentials before aborting.
-	if !m.config.Enabled {
-		if !appCredentialExists {
+	// In case the application credential usage is disabled or the new parent user
+	// itself is an appplication, it is tried to clean up old application credentials before aborting.
+	if !m.config.Enabled || newParentUser.isApplicationCredential() {
+		if oldParentUserUsable {
+			if err := m.runGarbageCollection(ctx, oldParentUser, nil); err != nil {
+				return err
+			}
+		}
+
+		if appCredential != nil {
 			return m.removeApplicationCredentialStore(ctx, appCredential.secret)
 		}
 
-		if oldParentUserUsable {
-			if err := m.runGarbageCollection(ctx, oldParentUser, "", true); err != nil {
-				return err
-			}
-		}
-
-		return m.removeApplicationCredentialStore(ctx, appCredential.secret)
+		return nil
 	}
 
-	// If the new parent user is itself an application credential, then no managed
-	// application credential can be used. It will be tried to clean up with the
-	// old user if this one is usuable.
-	if newParentUser.isApplicationCredential() {
-		if appCredentialExists {
-			if err := m.runGarbageCollection(ctx, oldParentUser, appCredential.id, true); err != nil {
-				return err
-			}
-		}
-
-		return m.removeApplicationCredentialStore(ctx, appCredential.secret)
-	}
-
-	// No application credential exists so a new one need to be created.
-	if !appCredentialExists {
-		if err := m.runGarbageCollection(ctx, newParentUser, "", false); err != nil {
-			return err
-		}
-
+	if !appCredentialExists || m.isExpired(appCredential) || parentChanged {
 		newAppCredential, err := m.createApplicationCredential(ctx, newParentUser)
 		if err != nil {
 			return err
 		}
 
+		if parentChanged {
+			// Try to delete the old application credential owned by the old user.
+			// This might not work as the information about this user could be stale,
+			// because the user credentials are rotated, the user is not associated to
+			// Openstack project anymore or it is deleted.
+			if err := m.runGarbageCollection(ctx, oldParentUser, nil); err != nil {
+				m.logger.Error(err, "could not delete application credential as the owning user has changed and information about owning user might be stale")
+			}
+		} else {
+			if err := m.runGarbageCollection(ctx, newParentUser, &newAppCredential.id); err != nil {
+				return err
+			}
+		}
+
 		return m.storeApplicationCredential(ctx, newAppCredential, newParentUser)
 	}
 
-	if err := m.runGarbageCollection(ctx, newParentUser, appCredential.id, false); err != nil {
+	if err := m.runGarbageCollection(ctx, newParentUser, &appCredential.id); err != nil {
 		return err
-	}
-
-	// In case the parent users have changed a new app credential need to be created
-	// and it is tried to remove the one managed by the old user.
-	if parentChanged {
-		newAppCredential, err := m.createApplicationCredential(ctx, newParentUser)
-		if err != nil {
-			return err
-		}
-
-		// Try to delete the old application credential owned by the old user.
-		// This might not work as the information about this user could be stale,
-		// because the user credentials are rotated, the user is not associated to
-		// Openstack project anymore or it is deleted.
-		if err := oldParentUser.identityClient.DeleteApplicationCredential(ctx, oldParentUser.id, appCredential.id); err != nil {
-			m.logger.Error(err, "could not delete application credential as the owning user has changed and information about owning user might be stale")
-		}
-
-		return m.storeApplicationCredential(ctx, newAppCredential, newParentUser)
-	}
-
-	if m.isExpired(appCredential) {
-		newAppCredential, err := m.createApplicationCredential(ctx, newParentUser)
-		if err != nil {
-			return err
-		}
-
-		return m.storeApplicationCredential(ctx, newAppCredential, newParentUser)
 	}
 
 	return m.storeApplicationCredential(ctx, appCredential, newParentUser)

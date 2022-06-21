@@ -33,7 +33,7 @@ func (m *Manager) Delete(ctx context.Context, credentials *openstack.Credentials
 	}
 
 	if appCredential == nil {
-		return m.runGarbageCollection(ctx, newParentUser, "", false)
+		return m.runGarbageCollection(ctx, newParentUser, nil)
 	}
 
 	var oldParentUser *parent
@@ -46,7 +46,7 @@ func (m *Manager) Delete(ctx context.Context, credentials *openstack.Credentials
 		// This might not work as the information about this user could be stale,
 		// because the user credentials are rotated, the user is not associated to
 		// Openstack project anymore or it is deleted.
-		if err := m.runGarbageCollection(ctx, oldParentUser, appCredential.id, true); err != nil {
+		if err := m.runGarbageCollection(ctx, oldParentUser, nil); err != nil {
 			m.logger.Error(err, "could not clean up application credential(s) as the owning user has changed and information about owning user might be stale")
 		}
 
@@ -57,7 +57,7 @@ func (m *Manager) Delete(ctx context.Context, credentials *openstack.Credentials
 		return m.removeApplicationCredentialStore(ctx, appCredential.secret)
 	}
 
-	if err := m.runGarbageCollection(ctx, newParentUser, appCredential.id, true); err != nil {
+	if err := m.runGarbageCollection(ctx, newParentUser, &appCredential.id); err != nil {
 		return err
 	}
 

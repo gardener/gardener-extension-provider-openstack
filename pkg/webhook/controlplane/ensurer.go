@@ -156,6 +156,38 @@ func (e *ensurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gconte
 	return nil
 }
 
+// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
+func (e *ensurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, _ *appsv1.Deployment) error {
+	template := &new.Spec.Template
+	ps := &template.Spec
+
+	cluster, err := gctx.GetCluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	// cluster-autoscaler supports the "--feature-gates" flag starting 1.20.
+	// Exit early and do not add the "--feature-gates" flag for K8s < 1.20 Shoots.
+	k8sLessThan120, err := versionutils.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", "1.20")
+	if err != nil {
+		return err
+	}
+	if k8sLessThan120 {
+		return nil
+	}
+
+	// At this point K8s >= 1.20. As CSIMigrationKubernetesVersion is 1.19, we can assume that CSI is enabled and CSI migration is complete.
+	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return err
+	}
+
+	if c := extensionswebhook.ContainerWithName(ps.Containers, "cluster-autoscaler"); c != nil {
+		ensureClusterAutoscalerCommandLineArgs(c, csiMigrationCompleteFeatureGate)
+	}
+	return nil
+}
+
 func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, csiEnabled, csiMigrationComplete bool, csiMigrationCompleteFeatureGate string) {
 	if csiEnabled {
 		c.Command = extensionswebhook.EnsureStringWithPrefixContains(c.Command, "--feature-gates=",
@@ -221,6 +253,18 @@ func ensureKubeSchedulerCommandLineArgs(c *corev1.Container, csiEnabled, csiMigr
 			return
 		}
 	}
+}
+
+// ensureClusterAutoscalerCommandLineArgs ensures the cluster-autoscaler command line args.
+// cluster-autoscaler supports the "--feature-gates" flag starting 1.20. This func assumes that
+// the K8s version is >= 1.20 which means that CSI is enabled and CSI migration is complete.
+func ensureClusterAutoscalerCommandLineArgs(c *corev1.Container, csiMigrationCompleteFeatureGate string) {
+	c.Command = extensionswebhook.EnsureStringWithPrefixContains(c.Command, "--feature-gates=",
+		"CSIMigration=true", ",")
+	c.Command = extensionswebhook.EnsureStringWithPrefixContains(c.Command, "--feature-gates=",
+		"CSIMigrationOpenStack=true", ",")
+	c.Command = extensionswebhook.EnsureStringWithPrefixContains(c.Command, "--feature-gates=",
+		csiMigrationCompleteFeatureGate+"=true", ",")
 }
 
 func ensureKubeControllerManagerLabels(t *corev1.PodTemplateSpec, csiEnabled, csiMigrationComplete bool) {

@@ -32,8 +32,8 @@ func SetDefaults_ControllerConfiguration(obj *ControllerConfiguration) {
 	}
 }
 
-// SetDefaults_ApplicationCrendentialConfig sets defaults for the ApplicationCrendentialConfig.
-func SetDefaults_ApplicationCrendentialConfig(obj *ApplicationCredentialConfig) {
+// SetDefaults_ApplicationCredentialConfig sets defaults for the ApplicationCrendentialConfig.
+func SetDefaults_ApplicationCredentialConfig(obj *ApplicationCredentialConfig) {
 	if obj.Lifetime == nil {
 		obj.Lifetime = &metav1.Duration{
 			Duration: time.Hour * 48,

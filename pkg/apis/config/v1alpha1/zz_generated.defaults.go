@@ -35,4 +35,7 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 
 func SetObjectDefaults_ControllerConfiguration(in *ControllerConfiguration) {
 	SetDefaults_ControllerConfiguration(in)
+	if in.ApplicationCredentialConfig != nil {
+		SetDefaults_ApplicationCredentialConfig(in.ApplicationCredentialConfig)
+	}
 }

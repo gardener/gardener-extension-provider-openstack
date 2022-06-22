@@ -29,7 +29,7 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-      - name: csi-snapshot-controller
+      - name: openstack-csi-snapshot-controller
         image: {{ index .Values.images "csi-snapshot-controller" }}
         imagePullPolicy: IfNotPresent
         args:

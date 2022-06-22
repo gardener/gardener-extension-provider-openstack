@@ -37,10 +37,6 @@ func ValidateControllerConfig(cfg *config.ControllerConfiguration) error {
 func validateApplicationCredentialConfig(cfg *config.ApplicationCredentialConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !cfg.Enabled {
-		return allErrs
-	}
-
 	if cfg.Lifetime.Duration > cfg.OpenstackExpirationPeriod.Duration {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("lifetime"), cfg.Lifetime.Duration, "application credential lifetime cannot be lower than the openstack layer expiration time"))
 	}

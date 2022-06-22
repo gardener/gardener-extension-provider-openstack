@@ -39,6 +39,10 @@ type ControllerConfiguration struct {
 	BastionConfig *BastionConfig
 	// ApplicationCrednentialConfig defines the configuration for managed application credentials.
 	ApplicationCredentialConfig *ApplicationCredentialConfig
+	// FeatureGates is a map of feature names to bools that enable
+	// or disable alpha/experimental features.
+	// Default: nil
+	FeatureGates map[string]bool
 }
 
 // ETCD is an etcd configuration.
@@ -73,8 +77,6 @@ type BastionConfig struct {
 
 // ApplicationCredentialConfig defines the configuration for managed application credentials.
 type ApplicationCredentialConfig struct {
-	// Enabled indicate if managed application credentials should be used.
-	Enabled bool
 	// Lifetime define how long a managed application credentials are valid.
 	// Once the creation time + lifetime of an application credential is expired
 	// it will be renewed once it is next reconciled.

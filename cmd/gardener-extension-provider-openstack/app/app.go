@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
 	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/features"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
 
@@ -166,6 +167,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			if err := configvalidation.ValidateControllerConfig(configFileOpts.Completed().Config); err != nil {
 				return fmt.Errorf("invalid controller config: %w", err)
+			}
+
+			if err := features.ExtensionFeatureGate.SetFromMap(configFileOpts.Completed().Config.FeatureGates); err != nil {
+				return err
 			}
 
 			util.ApplyClientConnectionConfigurationToRESTConfig(configFileOpts.Completed().Config.ClientConnection, restOpts.Completed().Config)

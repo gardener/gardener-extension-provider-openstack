@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"github.com/gardener/gardener-extension-provider-openstack/cmd/gardener-extension-provider-openstack/app"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/features"
 
 	"github.com/gardener/gardener/pkg/logger"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -25,6 +26,7 @@ import (
 )
 
 func main() {
+	features.RegisterExtensionFeatureGate()
 	runtimelog.SetLogger(logger.ZapLogger(false))
 	cmd := app.NewControllerManagerCommand(signals.SetupSignalHandler())
 

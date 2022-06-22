@@ -106,7 +106,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_ApplicationCredentialConfig_To_config_ApplicationCredentialConfig(in *ApplicationCredentialConfig, out *config.ApplicationCredentialConfig, s conversion.Scope) error {
-	out.Enabled = in.Enabled
 	out.Lifetime = (*v1.Duration)(unsafe.Pointer(in.Lifetime))
 	out.OpenstackExpirationPeriod = (*v1.Duration)(unsafe.Pointer(in.OpenstackExpirationPeriod))
 	out.RenewThreshold = (*v1.Duration)(unsafe.Pointer(in.RenewThreshold))
@@ -119,7 +118,6 @@ func Convert_v1alpha1_ApplicationCredentialConfig_To_config_ApplicationCredentia
 }
 
 func autoConvert_config_ApplicationCredentialConfig_To_v1alpha1_ApplicationCredentialConfig(in *config.ApplicationCredentialConfig, out *ApplicationCredentialConfig, s conversion.Scope) error {
-	out.Enabled = in.Enabled
 	out.Lifetime = (*v1.Duration)(unsafe.Pointer(in.Lifetime))
 	out.OpenstackExpirationPeriod = (*v1.Duration)(unsafe.Pointer(in.OpenstackExpirationPeriod))
 	out.RenewThreshold = (*v1.Duration)(unsafe.Pointer(in.RenewThreshold))
@@ -161,6 +159,7 @@ func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfigurat
 	out.HealthCheckConfig = (*healthcheckconfig.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
 	out.BastionConfig = (*config.BastionConfig)(unsafe.Pointer(in.BastionConfig))
 	out.ApplicationCredentialConfig = (*config.ApplicationCredentialConfig)(unsafe.Pointer(in.ApplicationCredentialConfig))
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -177,6 +176,7 @@ func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfigurat
 	out.HealthCheckConfig = (*healthcheckconfigv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
 	out.BastionConfig = (*BastionConfig)(unsafe.Pointer(in.BastionConfig))
 	out.ApplicationCredentialConfig = (*ApplicationCredentialConfig)(unsafe.Pointer(in.ApplicationCredentialConfig))
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 

@@ -35,17 +35,8 @@ var _ = Describe("ControllerConfig validation", func() {
 		Entry("should pass with valid application credential config",
 			&config.ControllerConfiguration{
 				ApplicationCredentialConfig: &config.ApplicationCredentialConfig{
-					Enabled:                   true,
 					Lifetime:                  &metav1.Duration{Duration: 24 * time.Hour},
 					OpenstackExpirationPeriod: &metav1.Duration{Duration: 72 * time.Hour},
-				},
-			},
-			BeNil(),
-		),
-		Entry("should pass when application credential usage is disabled",
-			&config.ControllerConfiguration{
-				ApplicationCredentialConfig: &config.ApplicationCredentialConfig{
-					Enabled: false,
 				},
 			},
 			BeNil(),
@@ -53,7 +44,6 @@ var _ = Describe("ControllerConfig validation", func() {
 		Entry("should forbid application credential lifetime larger than openstack expiration time",
 			&config.ControllerConfiguration{
 				ApplicationCredentialConfig: &config.ApplicationCredentialConfig{
-					Enabled:                   true,
 					Lifetime:                  &metav1.Duration{Duration: 73 * time.Hour},
 					OpenstackExpirationPeriod: &metav1.Duration{Duration: 72 * time.Hour},
 				},

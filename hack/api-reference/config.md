@@ -112,6 +112,20 @@ ApplicationCredentialConfig
 <p>ApplicationCrednentialConfig defines the configuration for managed application credentials.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates is a map of feature names to bools that enable
+or disable alpha/experimental features.
+Default: nil</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.ApplicationCredentialConfig">ApplicationCredentialConfig
@@ -131,18 +145,6 @@ ApplicationCredentialConfig
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Enabled indicate if managed application credentials should be used.</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>lifetime</code></br>

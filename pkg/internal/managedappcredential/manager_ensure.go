@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/features"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/pkg/utils"
@@ -76,7 +77,7 @@ func (m *Manager) Ensure(ctx context.Context, credentials *openstack.Credentials
 
 	// In case the application credential usage is disabled or the new parent user
 	// itself is an appplication, it is tried to clean up old application credentials before aborting.
-	if !m.config.Enabled || newParentUser.isApplicationCredential() {
+	if newParentUser.isApplicationCredential() || !features.ExtensionFeatureGate.Enabled(features.ManagedApplicationCredential) {
 		if oldParentUserUsable {
 			if err := m.runGarbageCollection(ctx, oldParentUser, nil); err != nil {
 				return err

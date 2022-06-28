@@ -6,7 +6,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: csi-snapshot-validation
+    - containerName: openstack-csi-snapshot-validation
       minAllowed:
         memory: {{ .Values.csiSnapshotValidationWebhook.resources.requests.memory }}
       controlledValues: RequestsOnly

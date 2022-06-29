@@ -36,6 +36,9 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
+        {{- range $key, $value := .Values.csiSnapshotController.extraArgs }}
+        - "-{{ $key }}={{ $value }}"
+        {{- end }}
         resources:
           {{- toYaml .Values.csiSnapshotController.resources | nindent 10 }}
         volumeMounts:

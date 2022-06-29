@@ -20,8 +20,7 @@ csiDriverCinder:
       cpu: 20m
       memory: 50Mi
     limits:
-      cpu: 50m
-      memory: 80Mi
+      memory: 360Mi
   extraArgs:
     timeout: 3m
 
@@ -31,8 +30,7 @@ csiProvisioner:
       cpu: 11m
       memory: 38Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 400Mi
   extraArgs:
     timeout: 3m
 
@@ -42,8 +40,7 @@ csiAttacher:
       cpu: 11m
       memory: 36Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 320Mi
   extraArgs:
     timeout: 3m
 
@@ -53,8 +50,7 @@ csiSnapshotter:
       cpu: 11m
       memory: 36Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 220Mi
   extraArgs:
     timeout: 3m
 
@@ -64,8 +60,7 @@ csiResizer:
       cpu: 11m
       memory: 32Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 220Mi
   extraArgs:
     timeout: 3m
 
@@ -76,8 +71,7 @@ csiLivenessProbe:
       cpu: 11m
       memory: 32Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 220Mi
   extraArgs: {}
 
 
@@ -89,8 +83,7 @@ csiSnapshotController:
       cpu: 11m
       memory: 32Mi
     limits:
-      cpu: 30m
-      memory: 50Mi
+      memory: 2.2Gi
   extraArgs: {}
 
 csiSnapshotValidationWebhook:
@@ -102,3 +95,6 @@ csiSnapshotValidationWebhook:
     requests:
       cpu: 10m
       memory: 32Mi
+    limits:
+      memory: 200Mi
+  extraArgs: {}

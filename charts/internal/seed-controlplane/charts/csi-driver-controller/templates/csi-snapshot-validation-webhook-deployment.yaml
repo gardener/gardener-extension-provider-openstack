@@ -25,7 +25,12 @@ spec:
       - name: openstack-csi-snapshot-validation
         image: {{ index .Values.images "csi-snapshot-validation-webhook" }}
         imagePullPolicy: IfNotPresent
-        args: ['--tls-cert-file=/etc/csi-snapshot-validation/tls.crt', '--tls-private-key-file=etc/csi-snapshot-validation/tls.key']
+        args:
+        - "--tls-cert-file=/etc/csi-snapshot-validation/tls.crt"
+        - "--tls-private-key-file=etc/csi-snapshot-validation/tls.key"
+        {{- range $key, $value := .Values.csiSnapshotValidationWebhook.extraArgs }}
+        - "-{{ $key }}={{ $value }}"
+        {{- end }}
         ports:
         - containerPort: 443
 {{- if .Values.csiSnapshotValidationWebhook.resources }}

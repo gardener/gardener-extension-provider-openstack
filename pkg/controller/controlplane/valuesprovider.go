@@ -676,25 +676,25 @@ func getCSIControllerChartValues(
 
 	if csi != nil {
 		if csi.CSIAttacher != nil {
-			values["csiAttacher"] = getCSIAttacherArgs(csi.CSIAttacher)
+			values["csiAttacher"] = makeCSIExtraArgs(getCSIAttacherArgs(csi.CSIAttacher), getCSIBaseArgs(&csi.CSIAttacher.CSIBaseArgs))
 		}
 		if csi.CSIResizer != nil {
-			values["csiResizer"] = getCSIResizerArgs(csi.CSIResizer)
+			values["csiResizer"] = makeCSIExtraArgs(getCSIBaseArgs(csi.CSIResizer))
 		}
 		if csi.CSIDriverCinder != nil {
-			values["csiDriverCinder"] = getCSIDriverCinderArgs(csi.CSIDriverCinder)
+			values["csiDriverCinder"] = makeCSIExtraArgs(getCSIBaseArgs(csi.CSIDriverCinder))
 		}
 		if csi.CSISnapshotController != nil {
-			values["csiSnapshotController"] = getCSISnapshotControllerArgs(csi.CSISnapshotController)
+			values["csiSnapshotController"] = makeCSIExtraArgs(getCSIBaseArgs(csi.CSISnapshotController))
 		}
 		if csi.CSILivenessProbe != nil {
-			values["csiLivenessProbe"] = getCSILivenessProbeArgs(csi.CSILivenessProbe)
+			values["csiLivenessProbe"] = makeCSIExtraArgs(getCSIBaseArgs(csi.CSILivenessProbe))
 		}
 		if csi.CSIProvisioner != nil {
-			values["csiProvisioner"] = getCSIProvisionerArgs(csi.CSIProvisioner)
+			values["csiProvisioner"] = makeCSIExtraArgs(getCSIBaseArgs(csi.CSIProvisioner))
 		}
 		if csi.CSISnapshotter != nil {
-			values["csiSnapshotter"] = getCSISnapshotterArgs(csi.CSISnapshotter)
+			values["csiSnapshotter"] = makeCSIExtraArgs(getCSIBaseArgs(csi.CSISnapshotter))
 		}
 	}
 
@@ -704,95 +704,45 @@ func getCSIControllerChartValues(
 	return values, nil
 }
 
-func getCSISnapshotterArgs(snapshotter *config.CSISnapshotter) map[string]interface{} {
-	csiSnapshotter := make(map[string]interface{})
-	csiSnapshotterArgs := make(map[string]interface{})
+func makeCSIExtraArgs(args ...map[string]interface{}) map[string]interface{} {
+	csiExtraArgs := make(map[string]interface{})
 
-	baseArgs := getCSIBaseArgs(&snapshotter.CSIBaseArgs)
-	csiSnapshotter["extraArgs"] = gardenerutils.MergeMaps(csiSnapshotterArgs, baseArgs)
+	for _, argList := range args {
+		if val, ok := csiExtraArgs["extraArgs"]; ok {
+			csiExtraArgs["extraArgs"] = gardenerutils.MergeMaps(val.(map[string]interface{}), argList)
+		} else {
+			csiExtraArgs["extraArgs"] = argList
+		}
+	}
 
-	return csiSnapshotter
-}
-
-func getCSIProvisionerArgs(provisioner *config.CSIProvisioner) map[string]interface{} {
-	csiProvisioner := make(map[string]interface{})
-	csiProvisionerArgs := make(map[string]interface{})
-
-	baseArgs := getCSIBaseArgs(&provisioner.CSIBaseArgs)
-	csiProvisionerArgs["extraArgs"] = gardenerutils.MergeMaps(csiProvisionerArgs, baseArgs)
-
-	return csiProvisioner
-}
-
-func getCSILivenessProbeArgs(livenessProbe *config.CSILivenessProbe) map[string]interface{} {
-	csiLivenessProbe := make(map[string]interface{})
-	csiLivenessProbeArgs := make(map[string]interface{})
-
-	baseArgs := getCSIBaseArgs(&livenessProbe.CSIBaseArgs)
-	csiLivenessProbe["extraArgs"] = gardenerutils.MergeMaps(csiLivenessProbeArgs, baseArgs)
-
-	return csiLivenessProbe
-}
-
-func getCSISnapshotControllerArgs(snapshotController *config.CSISnapshotController) map[string]interface{} {
-	csiSnapshotController := make(map[string]interface{})
-	csiSnapshotControllerArgs := make(map[string]interface{})
-
-	baseArgs := getCSIBaseArgs(&snapshotController.CSIBaseArgs)
-	csiSnapshotController["extraArgs"] = gardenerutils.MergeMaps(csiSnapshotControllerArgs, baseArgs)
-
-	return csiSnapshotController
-}
-
-func getCSIDriverCinderArgs(driverCinder *config.CSIDriverCinder) map[string]interface{} {
-	csiDriverCinder := make(map[string]interface{})
-	csiDriverCinderArgs := make(map[string]interface{})
-
-	baseArgs := getCSIBaseArgs(&driverCinder.CSIBaseArgs)
-	csiDriverCinder["extraArgs"] = gardenerutils.MergeMaps(csiDriverCinderArgs, baseArgs)
-
-	return csiDriverCinder
-
-}
-
-func getCSIResizerArgs(resizer *config.CSIResizer) map[string]interface{} {
-	csiResizer := make(map[string]interface{})
-	csiAttacherArgs := make(map[string]interface{})
-
-	baseArgs := getCSIBaseArgs(&resizer.CSIBaseArgs)
-	csiResizer["extraArgs"] = gardenerutils.MergeMaps(csiAttacherArgs, baseArgs)
-
-	return csiResizer
+	return csiExtraArgs
 }
 
 func getCSIBaseArgs(obj *config.CSIBaseArgs) map[string]interface{} {
 	csiBaseArgs := make(map[string]interface{})
 	if obj.Verbose != nil {
-		csiBaseArgs["verbose"] = obj.Verbose
+		csiBaseArgs["--v"] = obj.Verbose
 	}
 	if obj.Timeout != nil {
-		csiBaseArgs["timeout"] = obj.Timeout
+		csiBaseArgs["--timeout"] = obj.Timeout
 	}
 	return csiBaseArgs
 
 }
 
 func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
-	csiAttacher := make(map[string]interface{})
 	csiAttacherArgs := make(map[string]interface{})
 	if attacher.RetryIntervalStart != nil {
-		csiAttacherArgs["retryIntervalStart"] = attacher.RetryIntervalStart
+		csiAttacherArgs["--retry-interval-start"] = attacher.RetryIntervalStart
 	}
 	if attacher.ReconcileSync != nil {
-		csiAttacherArgs["reconcileSync"] = attacher.ReconcileSync
+		csiAttacherArgs["--reconcile-sync"] = attacher.ReconcileSync
 	}
 	if attacher.RetryIntervalMax != nil {
-		csiAttacherArgs["retryIntervalMax"] = attacher.RetryIntervalMax
+		csiAttacherArgs["--retry-interval-max"] = attacher.RetryIntervalMax
 	}
-	baseArgs := getCSIBaseArgs(&attacher.CSIBaseArgs)
-	csiAttacher["extraArgs"] = gardenerutils.MergeMaps(baseArgs, csiAttacherArgs)
 
-	return csiAttacher
+	return csiAttacherArgs
 }
 
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.

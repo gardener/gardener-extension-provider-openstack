@@ -53,17 +53,17 @@ type CSI struct {
 	// CSIAttacher is the configuration for the external-attacher
 	CSIAttacher *CSIAttacher
 	// CSIDriverCinder is the configuration for the csi-driver-cinder
-	CSIDriverCinder *CSIDriverCinder
+	CSIDriverCinder *CSIBaseArgs
 	// CSIProvisioner is the configuration for the external-provisioner
-	CSIProvisioner *CSIProvisioner
+	CSIProvisioner *CSIBaseArgs
 	// CSIResizer is the configuration for the external-resizer
-	CSIResizer *CSIResizer
+	CSIResizer *CSIBaseArgs
 	// CSISnapshotController is the configuration for the snapshot-controller
-	CSISnapshotController *CSISnapshotController
+	CSISnapshotController *CSIBaseArgs
 	// CSISnapshotter is the configuration for the external-snapshotter
-	CSISnapshotter *CSISnapshotter
+	CSISnapshotter *CSIBaseArgs
 	// CSILivenessProbe is the configuration for the livenessprobe
-	CSILivenessProbe *CSILivenessProbe
+	CSILivenessProbe *CSIBaseArgs
 }
 
 type CSIAttacher struct {
@@ -74,30 +74,6 @@ type CSIAttacher struct {
 	RetryIntervalMax *string
 	// ReconcileSync Resync frequency of the attached volumes with the driver.
 	ReconcileSync *string
-}
-
-type CSIDriverCinder struct {
-	CSIBaseArgs
-}
-
-type CSILivenessProbe struct {
-	CSIBaseArgs
-}
-
-type CSIProvisioner struct {
-	CSIBaseArgs
-}
-
-type CSISnapshotter struct {
-	CSIBaseArgs
-}
-
-type CSIResizer struct {
-	CSIBaseArgs
-}
-
-type CSISnapshotController struct {
-	CSIBaseArgs
 }
 
 type CSIBaseArgs struct {

@@ -189,8 +189,8 @@ CSIAttacher
 <td>
 <code>csiDriverCinder</code></br>
 <em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIDriverCinder">
-CSIDriverCinder
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
 </a>
 </em>
 </td>
@@ -203,8 +203,8 @@ CSIDriverCinder
 <td>
 <code>csiProvisioner</code></br>
 <em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIProvisioner">
-CSIProvisioner
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
 </a>
 </em>
 </td>
@@ -217,8 +217,8 @@ CSIProvisioner
 <td>
 <code>csiResizer</code></br>
 <em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIResizer">
-CSIResizer
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
 </a>
 </em>
 </td>
@@ -231,8 +231,8 @@ CSIResizer
 <td>
 <code>csiSnapshotController</code></br>
 <em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotController">
-CSISnapshotController
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
 </a>
 </em>
 </td>
@@ -245,8 +245,8 @@ CSISnapshotController
 <td>
 <code>csiSnapshotter</code></br>
 <em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotter">
-CSISnapshotter
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
 </a>
 </em>
 </td>
@@ -259,8 +259,8 @@ CSISnapshotter
 <td>
 <code>csiLivenessProbe</code></br>
 <em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSILivenessProbe">
-CSILivenessProbe
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
+CSIBaseArgs
 </a>
 </em>
 </td>
@@ -343,13 +343,8 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIAttacher">CSIAttacher</a>, 
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIDriverCinder">CSIDriverCinder</a>, 
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSILivenessProbe">CSILivenessProbe</a>, 
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIProvisioner">CSIProvisioner</a>, 
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIResizer">CSIResizer</a>, 
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotController">CSISnapshotController</a>, 
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotter">CSISnapshotter</a>)
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>, 
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIAttacher">CSIAttacher</a>)
 </p>
 <p>
 </p>
@@ -383,198 +378,6 @@ string
 <td>
 <em>(Optional)</em>
 <p>Verbose The verbosity level.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIDriverCinder">CSIDriverCinder
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>CSIBaseArgs</code></br>
-<em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
-CSIBaseArgs
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CSIBaseArgs Base arguments like verbose or timeout</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSILivenessProbe">CSILivenessProbe
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>CSIBaseArgs</code></br>
-<em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
-CSIBaseArgs
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CSIBaseArgs Base arguments like verbose or timeout</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIProvisioner">CSIProvisioner
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>CSIBaseArgs</code></br>
-<em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
-CSIBaseArgs
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CSIBaseArgs Base arguments like verbose or timeout</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIResizer">CSIResizer
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>CSIBaseArgs</code></br>
-<em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
-CSIBaseArgs
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CSIBaseArgs Base arguments like verbose or timeout</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotController">CSISnapshotController
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>CSIBaseArgs</code></br>
-<em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
-CSIBaseArgs
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CSIBaseArgs Base arguments like verbose or timeout</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSISnapshotter">CSISnapshotter
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>CSIBaseArgs</code></br>
-<em>
-<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIBaseArgs">
-CSIBaseArgs
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CSIBaseArgs Base arguments like verbose or timeout</p>
 </td>
 </tr>
 </tbody>

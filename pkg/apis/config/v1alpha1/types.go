@@ -60,22 +60,22 @@ type CSI struct {
 	CSIAttacher *CSIAttacher `json:"csiAttacher,omitempty"`
 	// CSIDriverCinder is the configuration for the csi-driver-cinder
 	// +optional
-	CSIDriverCinder *CSIDriverCinder `json:"csiDriverCinder,omitempty"`
+	CSIDriverCinder *CSIBaseArgs `json:"csiDriverCinder,omitempty"`
 	// CSIProvisioner is the configuration for the csi-provisioner
 	// +optional
-	CSIProvisioner *CSIProvisioner `json:"csiProvisioner,omitempty"`
+	CSIProvisioner *CSIBaseArgs `json:"csiProvisioner,omitempty"`
 	// CSIResizer is the configuration for the csi-resizer
 	// +optional
-	CSIResizer *CSIResizer `json:"csiResizer,omitempty"`
+	CSIResizer *CSIBaseArgs `json:"csiResizer,omitempty"`
 	// CSISnapshotController is the configuration for the csi-shapshot-controller
 	// +optional
-	CSISnapshotController *CSISnapshotController `json:"csiSnapshotController,omitempty"`
+	CSISnapshotController *CSIBaseArgs `json:"csiSnapshotController,omitempty"`
 	// CSISnapshotter is the configuration for the csi-snapshotter
 	// +optional
-	CSISnapshotter *CSISnapshotter `json:"csiSnapshotter,omitempty"`
+	CSISnapshotter *CSIBaseArgs `json:"csiSnapshotter,omitempty"`
 	// CSILivenessProbe is the configuration for the csi-liveness-probe
 	// +optional
-	CSILivenessProbe *CSILivenessProbe `json:"csiLivenessProbe,omitempty"`
+	CSILivenessProbe *CSIBaseArgs `json:"csiLivenessProbe,omitempty"`
 }
 
 type CSIAttacher struct {
@@ -91,42 +91,6 @@ type CSIAttacher struct {
 	// ReconcileSync Resync frequency of the attached volumes with the driver.
 	// +optional
 	ReconcileSync *string `json:"reconcileSync,omitempty"`
-}
-
-type CSIDriverCinder struct {
-	// CSIBaseArgs Base arguments like verbose or timeout
-	// +optional
-	CSIBaseArgs
-}
-
-type CSILivenessProbe struct {
-	// CSIBaseArgs Base arguments like verbose or timeout
-	// +optional
-	CSIBaseArgs
-}
-
-type CSIProvisioner struct {
-	// CSIBaseArgs Base arguments like verbose or timeout
-	// +optional
-	CSIBaseArgs
-}
-
-type CSISnapshotter struct {
-	// CSIBaseArgs Base arguments like verbose or timeout
-	// +optional
-	CSIBaseArgs
-}
-
-type CSIResizer struct {
-	// CSIBaseArgs Base arguments like verbose or timeout
-	// +optional
-	CSIBaseArgs
-}
-
-type CSISnapshotController struct {
-	// CSIBaseArgs Base arguments like verbose or timeout
-	// +optional
-	CSIBaseArgs
 }
 
 type CSIBaseArgs struct {

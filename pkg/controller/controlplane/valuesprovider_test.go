@@ -265,11 +265,16 @@ var _ = Describe("ValuesProvider", func() {
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
 		vp = NewValuesProvider(logger, &config.CSI{
-			CSIAttacher: &config.CSIAttacher{RetryIntervalMax: pointer.StringPtr("99m"), ReconcileSync: pointer.StringPtr("42m")},
-			CSISnapshotter: &config.CSISnapshotter{CSIBaseArgs: struct {
-				Timeout *string
-				Verbose *string
-			}{Timeout: pointer.StringPtr("3m")}}})
+			CSIAttacher: &config.CSIAttacher{
+				CSIBaseArgs: config.CSIBaseArgs{
+					Timeout: pointer.StringPtr("10m"),
+					Verbose: pointer.StringPtr("5"),
+				},
+				RetryIntervalMax: pointer.StringPtr("99m"),
+				ReconcileSync:    pointer.StringPtr("42m"),
+			},
+			CSISnapshotter: &config.CSIBaseArgs{Timeout: pointer.StringPtr("3m")},
+		})
 
 		err := vp.(inject.Scheme).InjectScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
@@ -550,13 +555,15 @@ var _ = Describe("ValuesProvider", func() {
 					},
 					"csiAttacher": map[string]interface{}{
 						"extraArgs": map[string]interface{}{
-							"retryIntervalMax": pointer.StringPtr("99m"),
-							"reconcileSync":    pointer.StringPtr("42m"),
+							"--retry-interval-max": pointer.StringPtr("99m"),
+							"--reconcile-sync":     pointer.StringPtr("42m"),
+							"--timeout":            pointer.StringPtr("10m"),
+							"--v":                  pointer.StringPtr("5"),
 						},
 					},
 					"csiSnapshotter": map[string]interface{}{
 						"extraArgs": map[string]interface{}{
-							"timeout": pointer.StringPtr("3m"),
+							"--timeout": pointer.StringPtr("3m"),
 						},
 					},
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},

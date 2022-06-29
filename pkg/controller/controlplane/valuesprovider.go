@@ -721,10 +721,10 @@ func makeCSIExtraArgs(args ...map[string]interface{}) map[string]interface{} {
 func getCSIBaseArgs(obj *config.CSIBaseArgs) map[string]interface{} {
 	csiBaseArgs := make(map[string]interface{})
 	if obj.Verbose != nil {
-		csiBaseArgs["--v"] = obj.Verbose
+		csiBaseArgs["v"] = obj.Verbose
 	}
 	if obj.Timeout != nil {
-		csiBaseArgs["--timeout"] = obj.Timeout
+		csiBaseArgs["timeout"] = obj.Timeout
 	}
 	return csiBaseArgs
 
@@ -733,13 +733,14 @@ func getCSIBaseArgs(obj *config.CSIBaseArgs) map[string]interface{} {
 func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
 	csiAttacherArgs := make(map[string]interface{})
 	if attacher.RetryIntervalStart != nil {
-		csiAttacherArgs["--retry-interval-start"] = attacher.RetryIntervalStart
+
+		csiAttacherArgs["retry-interval-start"] = attacher.RetryIntervalStart
 	}
 	if attacher.ReconcileSync != nil {
-		csiAttacherArgs["--reconcile-sync"] = attacher.ReconcileSync
+		csiAttacherArgs["reconcile-sync"] = attacher.ReconcileSync
 	}
 	if attacher.RetryIntervalMax != nil {
-		csiAttacherArgs["--retry-interval-max"] = attacher.RetryIntervalMax
+		csiAttacherArgs["retry-interval-max"] = attacher.RetryIntervalMax
 	}
 
 	return csiAttacherArgs

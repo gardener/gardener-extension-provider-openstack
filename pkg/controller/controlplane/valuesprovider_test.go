@@ -555,15 +555,15 @@ var _ = Describe("ValuesProvider", func() {
 					},
 					"csiAttacher": map[string]interface{}{
 						"extraArgs": map[string]interface{}{
-							"--retry-interval-max": pointer.StringPtr("99m"),
-							"--reconcile-sync":     pointer.StringPtr("42m"),
-							"--timeout":            pointer.StringPtr("10m"),
-							"--v":                  pointer.StringPtr("5"),
+							"retry-interval-max": pointer.StringPtr("99m"),
+							"reconcile-sync":     pointer.StringPtr("42m"),
+							"timeout":            pointer.StringPtr("10m"),
+							"v":                  pointer.StringPtr("5"),
 						},
 					},
 					"csiSnapshotter": map[string]interface{}{
 						"extraArgs": map[string]interface{}{
-							"--timeout": pointer.StringPtr("3m"),
+							"timeout": pointer.StringPtr("3m"),
 						},
 					},
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},

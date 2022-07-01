@@ -179,7 +179,7 @@ var (
 				Objects: []*chart.Object{
 					// csi-driver
 					{Type: &appsv1.DaemonSet{}, Name: openstack.CSINodeName},
-					{Type: &storagev1.CSIDriver{}, Name: "cinder.csi.openstack.org"},
+					{Type: &storagev1.CSIDriver{}, Name: openstack.CSIStorageProvisioner},
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIDriverName},
 					{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
@@ -377,75 +377,71 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", kutil.ObjectName(controlPlane))
 		}
 	}
-
 	values := make(map[string]interface{})
 	if providerConfig.StorageClasses != nil && len(providerConfig.StorageClasses) != 0 {
 		allSc := make([]map[string]interface{}, len(providerConfig.StorageClasses))
 		for i, sc := range providerConfig.StorageClasses {
-			allSc[i] = make(map[string]interface{})
-			allSc[i]["name"] = sc.Name
-			if sc.Default != nil && *sc.Default {
-				allSc[i]["default"] = true
+			var storageClassValues = map[string]interface{}{
+				"name": sc.Name,
 			}
+
+			if sc.Default != nil && *sc.Default {
+				storageClassValues["default"] = true
+			}
+
 			if len(sc.Annotations) != 0 {
-				allSc[i]["annotations"] = sc.Annotations
+				storageClassValues["annotations"] = sc.Annotations
 			}
 			if len(sc.Labels) != 0 {
-				allSc[i]["labels"] = sc.Labels
+				storageClassValues["labels"] = sc.Labels
 			}
 			if len(sc.Parameters) != 0 {
-				allSc[i]["parameters"] = sc.Parameters
+				storageClassValues["parameters"] = sc.Parameters
 			}
+
+			storageClassValues["provisioner"] = openstack.CSIStorageProvisioner
 			if sc.Provisioner != nil && *sc.Provisioner != "" {
-				allSc[i]["provisioner"] = sc.Provisioner
-			} else {
-				allSc[i]["provisioner"] = "cinder.csi.openstack.org"
+				storageClassValues["provisioner"] = sc.Provisioner
 			}
+
 			if sc.ReclaimPolicy != nil && *sc.ReclaimPolicy != "" {
-				allSc[i]["reclaimPolicy"] = sc.ReclaimPolicy
+				storageClassValues["reclaimPolicy"] = sc.ReclaimPolicy
 			}
+
 			if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode != "" {
-				allSc[i]["volumeBindingMode"] = sc.VolumeBindingMode
+				storageClassValues["volumeBindingMode"] = sc.VolumeBindingMode
 			}
+
+			allSc[i] = storageClassValues
 		}
 		values["storageclasses"] = allSc
 		return values, err
 	}
-	bindMode := "Immediate"
+
+	storageclasses := []map[string]interface{}{
+		{
+			"name":              "default",
+			"default":           true,
+			"provisioner":       openstack.CSIStorageProvisioner,
+			"volumeBindingMode": storagev1.VolumeBindingImmediate,
+		},
+		{
+			"name":              "default-class",
+			"provisioner":       openstack.CSIStorageProvisioner,
+			"volumeBindingMode": storagev1.VolumeBindingImmediate,
+		}}
+
 	if k8sVersionLessThan119 {
 		if k8sVersionLessThan112 {
-			bindMode = "WaitForFirstConsumer"
+			storageclasses[0]["volumeBindingMode"] = storagev1.VolumeBindingImmediate
+			storageclasses[1]["volumeBindingMode"] = storagev1.VolumeBindingWaitForFirstConsumer
 		}
-		values = map[string]interface{}{
-			"storageclasses": []map[string]interface{}{{
-				"name":              "default",
-				"default":           true,
-				"provisioner":       "kubernetes.io/cinder",
-				"volumeBindingMode": bindMode,
-			},
-				{
-					"name":              "default-class",
-					"provisioner":       "kubernetes.io/cinder",
-					"volumeBindingMode": bindMode,
-				},
-			},
-		}
-	} else {
-		values = map[string]interface{}{
-			"storageclasses": []map[string]interface{}{{
-				"name":              "default",
-				"default":           true,
-				"provisioner":       "cinder.csi.openstack.org",
-				"volumeBindingMode": bindMode,
-			},
-				{
-					"name":              "default-class",
-					"provisioner":       "cinder.csi.openstack.org",
-					"volumeBindingMode": bindMode,
-				},
-			},
-		}
+
+		storageclasses[0]["provisioner"] = openstack.StorageProvisionerBeforeCSI
+		storageclasses[2]["provisioner"] = openstack.StorageProvisionerBeforeCSI
 	}
+	values["storageclasses"] = storageclasses
+
 	return values, nil
 }
 

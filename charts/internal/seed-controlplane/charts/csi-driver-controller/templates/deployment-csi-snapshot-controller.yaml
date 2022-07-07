@@ -28,6 +28,7 @@ spec:
         networking.gardener.cloud/to-shoot-apiserver: allowed
     spec:
       automountServiceAccountToken: false
+      priorityClassName: gardener-system-200
       containers:
       - name: openstack-csi-snapshot-controller
         image: {{ index .Values.images "csi-snapshot-controller" }}

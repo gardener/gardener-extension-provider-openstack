@@ -20,6 +20,7 @@ spec:
         app: snapshot-validation
         networking.gardener.cloud/from-shoot-apiserver: allowed
     spec:
+      priorityClassName: gardener-system-200
       containers:
       - name: openstack-csi-snapshot-validation
         image: {{ index .Values.images "csi-snapshot-validation-webhook" }}

@@ -35,6 +35,7 @@ spec:
         networking.gardener.cloud/to-private-networks: allowed
     spec:
       automountServiceAccountToken: false
+      priorityClassName: gardener-system-300
       containers:
       - name: openstack-csi-driver
         image: {{ index .Values.images "csi-driver-cinder" }}

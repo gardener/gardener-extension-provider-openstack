@@ -36,6 +36,7 @@ spec:
 {{- end }}
     spec:
       serviceAccountName: machine-controller-manager
+      priorityClassName: gardener-system-300
       terminationGracePeriodSeconds: 5
       containers:
       - name: openstack-machine-controller-manager

@@ -697,17 +697,17 @@ var _ = Describe("ValuesProvider", func() {
 		It("should return correct storage class chart values (k8s < 1.19)", func() {
 			values, err := vp.GetStorageClassesChartValues(ctx, cp, clusterK8sLessThan119)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(values).To(Equal(map[string]interface{}{
-				"useLegacyProvisioner": true,
-			}))
+			Expect(values["storageclasses"]).To(HaveLen(2))
+			Expect(values["storageclasses"].([]map[string]interface{})[0]["provisioner"]).To(Equal(openstack.StorageProvisionerBeforeCSI))
+			Expect(values["storageclasses"].([]map[string]interface{})[1]["provisioner"]).To(Equal(openstack.StorageProvisionerBeforeCSI))
 		})
 
 		It("should return correct storage class chart values (k8s >= 1.19)", func() {
 			values, err := vp.GetStorageClassesChartValues(ctx, cp, clusterK8sAtLeast119)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(values).To(Equal(map[string]interface{}{
-				"useLegacyProvisioner": false,
-			}))
+			Expect(values["storageclasses"]).To(HaveLen(2))
+			Expect(values["storageclasses"].([]map[string]interface{})[0]["provisioner"]).To(Equal(openstack.CSIStorageProvisioner))
+			Expect(values["storageclasses"].([]map[string]interface{})[1]["provisioner"]).To(Equal(openstack.CSIStorageProvisioner))
 		})
 	})
 })

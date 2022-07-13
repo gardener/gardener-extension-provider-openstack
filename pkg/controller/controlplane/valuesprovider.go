@@ -438,7 +438,7 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 		}
 
 		storageclasses[0]["provisioner"] = openstack.StorageProvisionerBeforeCSI
-		storageclasses[2]["provisioner"] = openstack.StorageProvisionerBeforeCSI
+		storageclasses[1]["provisioner"] = openstack.StorageProvisionerBeforeCSI
 	}
 	values["storageclasses"] = storageclasses
 

@@ -17,10 +17,16 @@ spec:
       minAllowed:
         cpu: {{ .Values.resources.mcmProviderOpenstack.requests.cpu }}
         memory: {{ .Values.resources.mcmProviderOpenstack.requests.memory }}
+      maxAllowed:
+        cpu: {{ .Values.vpa.resourcePolicy.mcmProviderOpenstack.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.mcmProviderOpenstack.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-machine-controller-manager
       minAllowed:
         cpu: {{ .Values.resources.mcm.requests.cpu }}
         memory: {{ .Values.resources.mcm.requests.memory }}
+      maxAllowed:
+        cpu: {{ .Values.vpa.resourcePolicy.mcm.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.mcm.maxAllowed.memory }}
       controlledValues: RequestsOnly
 {{- end }}

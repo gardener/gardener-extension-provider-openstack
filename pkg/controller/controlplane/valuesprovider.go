@@ -733,7 +733,6 @@ func getCSIBaseArgs(obj *config.CSIBaseArgs) map[string]interface{} {
 func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
 	csiAttacherArgs := make(map[string]interface{})
 	if attacher.RetryIntervalStart != nil {
-
 		csiAttacherArgs["retry-interval-start"] = attacher.RetryIntervalStart
 	}
 	if attacher.ReconcileSync != nil {

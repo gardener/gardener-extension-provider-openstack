@@ -82,11 +82,11 @@ config:
     flavorRef: ""
   csi: {}
 #    csiAttacher:
-#      args:
-#        verbosity: 3
-#        retryIntervalStart: 1m
-#        retryIntervalMax: 15m
-#        reconcileSync: 5m
+#      extraArgs:
+#        v: 3
+#        retry-interval-start: 1m
+#        reconcile-sync: 15m
+#        retry-interval-max: 5m
 
 gardener:
   version: ""

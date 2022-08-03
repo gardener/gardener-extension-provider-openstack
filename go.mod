@@ -158,13 +158,12 @@ replace (
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.2
 	k8s.io/code-generator => k8s.io/code-generator v0.24.2
 	k8s.io/component-base => k8s.io/component-base v0.24.2
-	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.2
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.12.1
 )
 
 // workaround for https://github.com/gardener/hvpa-controller/issues/92, remove once it's fixed
 replace (
-	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.4.0
-	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.4.0
+	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
+	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 )

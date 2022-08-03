@@ -54,6 +54,9 @@ spec:
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
+        {{- if .Values.metricsPort }}
+        - --metrics-bind-address=:{{ .Values.metricsPort }}
+        {{- end }}
         - --health-bind-address=:{{ .Values.healthPort }}
         - --gardener-version={{ .Values.gardener.version }}
         env:

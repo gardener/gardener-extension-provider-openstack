@@ -42,8 +42,9 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 	var (
 		restOpts = &controllercmd.RESTOptions{}
 		mgrOpts  = &controllercmd.ManagerOptions{
-			WebhookServerPort: 443,
-			HealthBindAddress: ":8081",
+			WebhookServerPort:  443,
+			MetricsBindAddress: ":8080",
+			HealthBindAddress:  ":8081",
 		}
 
 		webhookSwitches = admissioncmd.GardenWebhookSwitchOptions()

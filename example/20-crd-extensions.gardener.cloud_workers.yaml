@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.8.0
+    controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
   name: workers.extensions.gardener.cloud
 spec:
@@ -70,6 +70,10 @@ spec:
                       description: Annotations is a map of key/value pairs for annotations
                         for all the `Node` objects in this worker pool.
                       type: object
+                    architecture:
+                      description: Architecture is the CPU architecture of the worker
+                        pool machines and machine image.
+                      type: string
                     dataVolumes:
                       description: DataVolumes contains a list of additional worker
                         volumes.
@@ -291,11 +295,11 @@ spec:
                   cloud provider specific credentials.
                 properties:
                   name:
-                    description: Name is unique within a namespace to reference a
+                    description: name is unique within a namespace to reference a
                       secret resource.
                     type: string
                   namespace:
-                    description: Namespace defines the space within which the secret
+                    description: namespace defines the space within which the secret
                       name must be unique.
                     type: string
                 type: object
@@ -494,9 +498,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

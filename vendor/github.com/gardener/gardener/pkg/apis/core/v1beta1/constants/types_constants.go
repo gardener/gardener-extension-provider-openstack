@@ -29,6 +29,9 @@ const (
 	// SecretNameCAETCD is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the etcd of a shoot cluster.
 	SecretNameCAETCD = "ca-etcd"
+	// SecretNameCAETCDPeer is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate of the etcd peer network of a shoot cluster.
+	SecretNameCAETCDPeer = "ca-etcd-peer"
 	// SecretNameCAFrontProxy is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the kube-aggregator a shoot cluster.
 	SecretNameCAFrontProxy = "ca-front-proxy"
@@ -63,6 +66,9 @@ const (
 	// SecretNameETCDEncryptionKey is a constant for the name of a Kubernetes secret object that contains the key
 	// for encryption data in ETCD.
 	SecretNameETCDEncryptionKey = "kube-apiserver-etcd-encryption-key"
+	// SecretNamePrefixETCDEncryptionConfiguration is a constant for the name prefix of a Kubernetes secret object that
+	// contains the configuration for encryption data in ETCD.
+	SecretNamePrefixETCDEncryptionConfiguration = "kube-apiserver-etcd-encryption-configuration"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension
@@ -135,6 +141,10 @@ const (
 	// the machine-controller-manager pod.
 	DeploymentNameMachineControllerManager = "machine-controller-manager"
 
+	// ConfigMapNameShootInfo is the name of a ConfigMap in the kube-system namespace of shoot clusters which contains
+	// information about the shoot cluster.
+	ConfigMapNameShootInfo = "shoot-info"
+
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
@@ -157,6 +167,8 @@ const (
 	GardenerPurpose = "gardener.cloud/purpose"
 	// GardenerDescription is a constant for a key in an annotation describing what the resource is used for.
 	GardenerDescription = "gardener.cloud/description"
+	// GardenerWarning is a constant for a key in an annotation containing a warning message.
+	GardenerWarning = "gardener.cloud/warning"
 
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
@@ -238,6 +250,8 @@ const (
 	// GardenRoleControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
 	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
 	GardenRoleControlPlaneWildcardCert = "controlplane-cert"
+	// GardenRoleExposureClassHandler is the value of the GardenRole key indicating type 'exposureclass-handler'.
+	GardenRoleExposureClassHandler = "exposureclass-handler"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
@@ -267,6 +281,24 @@ const (
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
+	// ShootAlphaControlPlaneHighAvailability is a constant for an annotation on the Shoot resource stating that the
+	// high availability setup for the control plane should be enabled.
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaControlPlaneHighAvailability = "alpha.control-plane.shoot.gardener.cloud/high-availability"
+	// ShootAlphaControlPlaneHighAvailabilitySingleZone is a specific value that can be set for the shoot control
+	// plane high availability annotation, that allows gardener to spread the shoot control plane across
+	// multiple nodes within a single availability zone if it is possible.
+	// This enables shoot clusters having a control plane with a higher failure tolerance as well as zero downtime maintenance,
+	// especially for infrastructure providers that provide less than three zones in a region and thus a multi-zone setup
+	// is not possible there.
+	ShootAlphaControlPlaneHighAvailabilitySingleZone = "single-zone"
+	// ShootAlphaControlPlaneHighAvailabilityMultiZone is a specific value that can be set for the shoot control
+	// plane high availability annotation, that allows gardener to spread the shoot control plane across
+	// multiple availability zones if it is possible.
+	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
+	// LabelSeedMultiZonal is used to identify whether the seed supports multi-zonal control planes for shoots.
+	LabelSeedMultiZonal = "seed.gardener.cloud/multi-zonal"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
@@ -275,6 +307,10 @@ const (
 	ShootStatus = "shoot.gardener.cloud/status"
 	// FailedShootNeedsRetryOperation is a constant for an annotation on a Shoot in a failed state indicating that a retry operation should be triggered during the next maintenance time window.
 	FailedShootNeedsRetryOperation = "maintenance.shoot.gardener.cloud/needs-retry-operation"
+	// LabelExcludeWebhookFromRemediation is a constant for a label on a webhook in the shoot which makes it being
+	// excluded from automatic remediation.
+	LabelExcludeWebhookFromRemediation = "remediation.webhook.shoot.gardener.cloud/exclude"
+
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
 	ShootTasks = "shoot.gardener.cloud/tasks"
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the
@@ -445,6 +481,12 @@ const (
 	// LabelAPIServerExposureGardenerManaged is a constant for label value which gardener sets on the label key
 	// "core.gardener.cloud/apiserver-exposure" to indicate that it's responsible for apiserver exposure (via SNI).
 	LabelAPIServerExposureGardenerManaged = "gardener-managed"
+	// LabelExposureClassHandlerName is the label key for exposure class handler names.
+	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
+
+	// LabelNodeLocalDNS is a constant for a label key, which the provider extensions set on the nodes.
+	// The value can be true or false.
+	LabelNodeLocalDNS = "networking.gardener.cloud/node-local-dns-enabled"
 
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
@@ -485,6 +527,15 @@ const (
 	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
 	// controllers to gracefully cleanup everything (default behaviour is 300s).
 	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
+	// AnnotationShootCloudConfigExecutionMaxDelaySeconds is a key for an annotation on a Shoot resource that declares
+	// the maximum delay in seconds when potentially updated cloud-config user data is executed on the worker nodes.
+	// Concretely, the cloud-config-downloader systemd service running on all worker nodes will wait for a random
+	// duration based on the configured value before executing the user data (default value is 300) plus an additional
+	// offset of 30s. If set to 0 then no random delay will be applied and the minimum delay (30s) applies. Any value
+	// above 1800 is ignored (in this case the default value is used).
+	// Note that changing this value only applies to new nodes. Existing nodes which already computed their individual
+	// delays will not recompute it.
+	AnnotationShootCloudConfigExecutionMaxDelaySeconds = "shoot.gardener.cloud/cloud-config-execution-max-delay-seconds"
 	// AnnotationShootForceRestore is a key for an annotation on a Shoot or BackupEntry resource to trigger a forceful restoration to a different seed.
 	AnnotationShootForceRestore = "shoot.gardener.cloud/force-restore"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
@@ -552,9 +603,6 @@ const (
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
 	EventResourceReferenced = "ResourceReferenced"
 
-	// PriorityClassNameShootControlPlane is the name of a priority class for critical pods of a shoot control plane.
-	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
-
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.
 	ReferencedResourcesPrefix = "ref-"
@@ -612,11 +660,78 @@ const (
 	DNSRecordExternalName = "external"
 	// DNSRecordOwnerName is a constant for DNSRecord objects used for the owner domain name.
 	DNSRecordOwnerName = "owner"
+
+	// ArchitectureAMD64 is a constant for the 'amd64' architecture.
+	ArchitectureAMD64 = "amd64"
+	// ArchitectureARM64 is a constant for the 'arm64' architecture.
+	ArchitectureARM64 = "arm64"
 )
 
-// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
-var ControlPlaneSecretRoles = []string{
-	GardenRoleKubeconfig,
-	GardenRoleSSHKeyPair,
-	GardenRoleMonitoring,
-}
+var (
+	// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
+	ControlPlaneSecretRoles = []string{
+		GardenRoleKubeconfig,
+		GardenRoleSSHKeyPair,
+		GardenRoleMonitoring,
+	}
+
+	// ValidArchitectures contains all CPU architectures which are supported by the Shoot.
+	ValidArchitectures = []string{
+		ArchitectureAMD64,
+		ArchitectureARM64,
+	}
+)
+
+// constants for well-known PriorityClass names
+const (
+	// PriorityClassNameShootSystem900 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem900 = "gardener-shoot-system-900"
+	// PriorityClassNameShootSystem800 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem800 = "gardener-shoot-system-800"
+	// PriorityClassNameShootSystem700 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem700 = "gardener-shoot-system-700"
+	// PriorityClassNameShootSystem600 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem600 = "gardener-shoot-system-600"
+
+	// PriorityClassNameSeedSystemCritical is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystemCritical = "gardener-system-critical"
+	// PriorityClassNameSeedSystem900 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem900 = "gardener-system-900"
+	// PriorityClassNameSeedSystem800 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem800 = "gardener-system-800"
+	// PriorityClassNameSeedSystem700 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem700 = "gardener-system-700"
+	// PriorityClassNameSeedSystem600 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem600 = "gardener-system-600"
+	// PriorityClassNameReserveExcessCapacity is the name of a PriorityClass for reserving excess capacity on a Seed cluster.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameReserveExcessCapacity = "gardener-reserve-excess-capacity"
+
+	// PriorityClassNameShootControlPlane500 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane500 = "gardener-system-500"
+	// PriorityClassNameShootControlPlane400 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane400 = "gardener-system-400"
+	// PriorityClassNameShootControlPlane300 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane300 = "gardener-system-300"
+	// PriorityClassNameShootControlPlane200 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane200 = "gardener-system-200"
+	// PriorityClassNameShootControlPlane100 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane100 = "gardener-system-100"
+	// PriorityClassNameShootControlPlane is the name of a PriorityClass for Shoot control plane components.
+	// Deprecated: this PriorityClass will be removed in a future version, use the fine-granular PriorityClasses above instead.
+	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
+)

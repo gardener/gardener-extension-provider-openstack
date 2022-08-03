@@ -30,7 +30,7 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 
 // Package-wide variables from generator "generated".
-option go_package = "v1beta1";
+option go_package = "github.com/gardener/gardener/pkg/apis/core/v1beta1";
 
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
@@ -551,6 +551,7 @@ message ControllerResource {
 // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
 message CoreDNS {
   // Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+  // +optional
   optional CoreDNSAutoscaling autoscaling = 1;
 }
 
@@ -1197,6 +1198,10 @@ message Machine {
   // latest version of the first image stated in the referenced CloudProfile if no value has been provided.
   // +optional
   optional ShootMachineImage image = 2;
+
+  // Architecture is CPU architecture of machines in this worker pool.
+  // +optional
+  optional string architecture = 3;
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
@@ -1240,6 +1245,10 @@ message MachineImageVersion {
   // CRI list of supported container runtime and interfaces supported by this version
   // +optional
   repeated CRI cri = 2;
+
+  // Architectures is the list of CPU architectures of the machine image in this version.
+  // +optional
+  repeated string architectures = 3;
 }
 
 // MachineType contains certain properties of a machine type.
@@ -1263,6 +1272,10 @@ message MachineType {
   // Usable defines if the machine type can be used for shoot clusters.
   // +optional
   optional bool usable = 6;
+
+  // Architecture is the CPU architecture of this machine type.
+  // +optional
+  optional string architecture = 7;
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
@@ -1376,6 +1389,22 @@ message NginxIngress {
   // exposing the nginx-ingress. Defaults to `Cluster`.
   // +optional
   optional string externalTrafficPolicy = 4;
+}
+
+// NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
+message NodeLocalDNS {
+  // Enabled indicates whether node local DNS is enabled or not.
+  optional bool enabled = 1;
+
+  // ForceTCPToClusterDNS indicates whether the connection from the node local DNS to the cluster DNS (Core DNS) will be forced to TCP or not.
+  // Default, if unspecified, is to enforce TCP.
+  // +optional
+  optional bool forceTCPToClusterDNS = 2;
+
+  // ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.
+  // Default, if unspecified, is to enforce TCP.
+  // +optional
+  optional bool forceTCPToUpstreamDNS = 3;
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.
@@ -2464,6 +2493,10 @@ message SystemComponents {
   // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
   // +optional
   optional CoreDNS coreDNS = 1;
+
+  // NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
+  // +optional
+  optional NodeLocalDNS nodeLocalDNS = 2;
 }
 
 // Toleration is a toleration for a seed taint.

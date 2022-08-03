@@ -83,9 +83,12 @@ func defaultSubject(obj *rbacv1.Subject) {
 
 // SetDefaults_MachineType sets default values for MachineType objects.
 func SetDefaults_MachineType(obj *MachineType) {
+	if obj.Architecture == nil {
+		obj.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+	}
+
 	if obj.Usable == nil {
-		trueVar := true
-		obj.Usable = &trueVar
+		obj.Usable = pointer.Bool(true)
 	}
 }
 
@@ -270,6 +273,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 			kubernetesVersion = *worker.Kubernetes.Version
 		}
 
+		if worker.Machine.Architecture == nil {
+			obj.Spec.Provider.Workers[i].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+		}
+
 		if k8sVersionGreaterOrEqualThan122, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.22"); !k8sVersionGreaterOrEqualThan122 {
 			// Error is ignored here because we cannot do anything meaningful with it.
 			// k8sVersionLessThan116 and k8sVersionGreaterOrEqualThan122 will default to `false`.
@@ -414,6 +421,13 @@ func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDep
 	p := ControllerDeploymentPolicyOnDemand
 	if obj.Policy == nil {
 		obj.Policy = &p
+	}
+}
+
+// SetDefaults_MachineImageVersion sets default values for MachineImageVersion objects.
+func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
+	if len(obj.Architectures) == 0 {
+		obj.Architectures = []string{v1beta1constants.ArchitectureAMD64}
 	}
 }
 

@@ -204,6 +204,8 @@ github.com/gardener/external-dns-management v0.7.18 h1:15uIyFfZSbR8fivnXvqb1Dvv4
 github.com/gardener/external-dns-management v0.7.18/go.mod h1:oHhauLQ3/sop0c1urS6n304Wqv/WM4me0geLn9nTAcY=
 github.com/gardener/gardener v1.50.1 h1:crSoXqFsquARZnm2NeCt8vT8L2tDMfcmfw7N5AuD92c=
 github.com/gardener/gardener v1.50.1/go.mod h1:Rc2JNnGPMEH+0Wm04EOVLmu9VonyU4JCk1VjOjHUGx8=
+github.com/gardener/gardener-extension-networking-calico v1.25.0 h1:mkdroxXFkMDNgX0wMrqGWKBGuB4YaXnNFIJFSgeyyCk=
+github.com/gardener/gardener-extension-networking-calico v1.25.0/go.mod h1:A6pG11WJwT0WD7fY6nNupfm/w9YNla7P9YTcC/Baz5I=
 github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=
 github.com/gardener/hvpa-controller/api v0.5.0/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
 github.com/gardener/machine-controller-manager v0.45.0 h1:rpf0PHRXJMGY93oMruNP+tnMawKJXhhzCACyNJsT8Lo=

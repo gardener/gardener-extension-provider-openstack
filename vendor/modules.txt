@@ -104,6 +104,7 @@ github.com/gardener/gardener/extensions/pkg/webhook/context
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator
 github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test
+github.com/gardener/gardener/extensions/pkg/webhook/network
 github.com/gardener/gardener/extensions/pkg/webhook/shoot
 github.com/gardener/gardener/hack
 github.com/gardener/gardener/hack/.ci
@@ -188,6 +189,13 @@ github.com/gardener/gardener/test/framework/reporter
 github.com/gardener/gardener/test/testmachinery/extensions/generator
 github.com/gardener/gardener/test/testmachinery/extensions/healthcheck
 github.com/gardener/gardener/test/testmachinery/extensions/operation
+# github.com/gardener/gardener-extension-networking-calico v1.25.0
+## explicit; go 1.18
+github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico
+github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/install
+github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1
+github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1/helper
+github.com/gardener/gardener-extension-networking-calico/pkg/calico
 # github.com/gardener/hvpa-controller/api v0.5.0 => github.com/gardener/hvpa-controller/api v0.5.0
 ## explicit; go 1.15
 github.com/gardener/hvpa-controller/api/v1alpha1

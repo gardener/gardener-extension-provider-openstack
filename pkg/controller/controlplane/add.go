@@ -23,15 +23,12 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
-
-	logger = log.Log.WithName("openstack-controlplane-controller")
 )
 
 // AddOptions are options to apply when adding the OpenStack controlplane controller to the manager.
@@ -49,8 +46,8 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		Actuator: genericactuator.NewActuator(openstack.Name,
 			secretConfigsFunc, shootAccessSecretsFunc, nil, nil,
 			configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassChart, nil,
-			NewValuesProvider(logger), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-			imagevector.ImageVector(), "", nil, mgr.GetWebhookServer().Port, logger),
+			NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
+			imagevector.ImageVector(), "", nil, mgr.GetWebhookServer().Port),
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,

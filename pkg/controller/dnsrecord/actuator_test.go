@@ -83,7 +83,7 @@ var _ = Describe("Actuator", func() {
 		ctx = context.TODO()
 		logger = log.Log.WithName("test")
 
-		a = NewActuator(openstackClientFactoryFactory, logger)
+		a = NewActuator(openstackClientFactoryFactory)
 
 		err := a.(inject.Client).InjectClient(c)
 		Expect(err).NotTo(HaveOccurred())
@@ -161,7 +161,7 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 
-			err := a.Reconcile(ctx, dns, nil)
+			err := a.Reconcile(ctx, logger, dns, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -180,7 +180,7 @@ var _ = Describe("Actuator", func() {
 			openstackClientFactory.EXPECT().DNS().Return(dnsClient, nil)
 			dnsClient.EXPECT().DeleteRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA)).Return(nil)
 
-			err := a.Delete(ctx, dns, nil)
+			err := a.Delete(ctx, logger, dns, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

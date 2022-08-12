@@ -20,15 +20,12 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
 	// DefaultAddOptions are the default DefaultAddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
-
-	logger = log.Log.WithName("openstack-backupentry-actuator")
 )
 
 // AddOptions are options to apply when adding the Openstack backupbucket controller to the manager.
@@ -43,7 +40,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return backupentry.Add(mgr, backupentry.AddArgs{
-		Actuator:          genericactuator.NewActuator(newActuator(), logger),
+		Actuator:          genericactuator.NewActuator(newActuator()),
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,

@@ -55,9 +55,7 @@ func (be *bastionEndpoints) ready() bool {
 	return be != nil && IngressReady(be.private) && IngressReady(be.public)
 }
 
-func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
-	logger := a.logger.WithValues("bastion", client.ObjectKeyFromObject(bastion), "operation", "reconcile")
-
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
 	err := bastionConfigCheck(a.bastionConfig)
 	if err != nil {
 		return err
@@ -93,17 +91,17 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return err
 	}
 
-	securityGroup, err := ensureSecurityGroup(networkingClient, opt)
+	securityGroup, err := ensureSecurityGroup(log, networkingClient, opt)
 	if err != nil {
 		return err
 	}
 
-	err = ensureSecurityGroupRules(networkingClient, bastion, opt, infraStatus, securityGroup.ID)
+	err = ensureSecurityGroupRules(log, networkingClient, bastion, opt, infraStatus, securityGroup.ID)
 	if err != nil {
 		return err
 	}
 
-	instance, err := ensureComputeInstance(logger, computeClient, a.bastionConfig, infraStatus, opt)
+	instance, err := ensureComputeInstance(log, computeClient, a.bastionConfig, infraStatus, opt)
 	if err != nil || instance == nil {
 		return err
 	}
@@ -118,7 +116,7 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
 	}
 
-	fipid, err := ensurePublicIPAddress(opt, networkingClient, infraStatus)
+	fipid, err := ensurePublicIPAddress(opt, log, networkingClient, infraStatus)
 	if err != nil {
 		return err
 	}
@@ -160,7 +158,7 @@ func (a *actuator) Reconcile(ctx context.Context, bastion *extensionsv1alpha1.Ba
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
-func ensurePublicIPAddress(opt *Options, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (*floatingips.FloatingIP, error) {
+func ensurePublicIPAddress(opt *Options, log logr.Logger, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (*floatingips.FloatingIP, error) {
 	fips, err := getFipByName(client, opt.BastionInstanceName)
 	if err != nil {
 		return nil, err
@@ -170,7 +168,7 @@ func ensurePublicIPAddress(opt *Options, client openstackclient.Networking, infr
 		return &fips[0], nil
 	}
 
-	logger.Info("creating new bastion Public IP")
+	log.Info("creating new bastion Public IP")
 
 	if infraStatus.Networks.FloatingPool.ID == "" {
 		return nil, errors.New("floatingPool must not be empty")
@@ -189,7 +187,7 @@ func ensurePublicIPAddress(opt *Options, client openstackclient.Networking, infr
 	return fip, nil
 }
 
-func ensureComputeInstance(logger logr.Logger, client openstackclient.Compute, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
+func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
 	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return nil, err
@@ -199,7 +197,7 @@ func ensureComputeInstance(logger logr.Logger, client openstackclient.Compute, b
 		return &instances[0], nil
 	}
 
-	logger.Info("Creating new bastion compute instance")
+	log.Info("Creating new bastion compute instance")
 
 	if infraStatus.Networks.ID == "" {
 		return nil, errors.New("network id not found")
@@ -315,7 +313,7 @@ func ensureAssociateFIPWithInstance(client openstackclient.Compute, instance *se
 	return nil
 }
 
-func ensureSecurityGroupRules(client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
+func ensureSecurityGroupRules(log logr.Logger, client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
 	ingressPermissions, err := ingressPermissions(bastion)
 	if err != nil {
 		return err
@@ -342,7 +340,7 @@ func ensureSecurityGroupRules(client openstackclient.Networking, bastion *extens
 	rulesToAdd, rulesToDelete := rulesSymmetricDifference(wantedRules, currentRules)
 
 	for _, rule := range rulesToAdd {
-		if err := createSecurityGroupRuleIfNotExist(client, rule); err != nil {
+		if err := createSecurityGroupRuleIfNotExist(log, client, rule); err != nil {
 			return fmt.Errorf("failed to add security group rule %s: %w", rule.Description, err)
 		}
 	}
@@ -354,7 +352,7 @@ func ensureSecurityGroupRules(client openstackclient.Networking, bastion *extens
 			}
 			return fmt.Errorf("failed to delete security group rule %s (%s): %w", rule.Description, rule.ID, err)
 		}
-		logger.Info("Unwanted security group rule deleted", "rule", rule.Description, "ruleID", rule.ID)
+		log.Info("Unwanted security group rule deleted", "rule", rule.Description, "ruleID", rule.ID)
 	}
 
 	return nil
@@ -430,18 +428,18 @@ func ruleEqual(a rules.CreateOpts, b rules.SecGroupRule) bool {
 	return true
 }
 
-func createSecurityGroupRuleIfNotExist(client openstackclient.Networking, createOpts rules.CreateOpts) error {
+func createSecurityGroupRuleIfNotExist(log logr.Logger, client openstackclient.Networking, createOpts rules.CreateOpts) error {
 	if _, err := createRules(client, createOpts); err != nil {
 		if _, ok := err.(gophercloud.ErrDefault409); ok {
 			return nil
 		}
 		return fmt.Errorf("failed to create Security Group rule %s: %w", createOpts.Description, err)
 	}
-	logger.Info("Security Group Rule created", "rule", createOpts.Description)
+	log.Info("Security Group Rule created", "rule", createOpts.Description)
 	return nil
 }
 
-func ensureSecurityGroup(client openstackclient.Networking, opt *Options) (groups.SecGroup, error) {
+func ensureSecurityGroup(log logr.Logger, client openstackclient.Networking, opt *Options) (groups.SecGroup, error) {
 	securityGroups, err := getSecurityGroups(client, opt.SecurityGroup)
 	if err != nil {
 		return groups.SecGroup{}, err
@@ -459,7 +457,7 @@ func ensureSecurityGroup(client openstackclient.Networking, opt *Options) (group
 		return groups.SecGroup{}, err
 	}
 
-	logger.Info("Security Group created", "security group", result.Name)
+	log.Info("Security Group created", "security group", result.Name)
 	return *result, nil
 }
 

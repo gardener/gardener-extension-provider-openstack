@@ -31,25 +31,18 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type delegateFactory struct {
-	logger logr.Logger
-
 	common.RESTConfigContext
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
 func NewActuator() worker.Actuator {
-	delegateFactory := &delegateFactory{
-		logger: log.Log.WithName("worker-actuator"),
-	}
+	delegateFactory := &delegateFactory{}
 
 	return genericactuator.NewActuator(
-		log.Log.WithName("openstack-worker-actuator"),
 		delegateFactory,
 		openstack.MachineControllerManagerName,
 		mcmChart,

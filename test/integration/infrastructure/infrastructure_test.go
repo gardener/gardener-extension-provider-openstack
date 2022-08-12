@@ -24,8 +24,10 @@ import (
 	gardenerv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -33,7 +35,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,8 +91,8 @@ func validateFlags() {
 }
 
 var (
-	ctx    = context.Background()
-	logger *logrus.Entry
+	ctx = context.Background()
+	log logr.Logger
 
 	testEnv   *envtest.Environment
 	mgrCancel context.CancelFunc
@@ -110,11 +111,9 @@ var _ = BeforeSuite(func() {
 	openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
 
 	// enable manager logs
-	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 
-	log := logrus.New()
-	log.SetOutput(GinkgoWriter)
-	logger = logrus.NewEntry(log)
+	log = logf.Log.WithName("bastion-test")
 
 	DeferCleanup(func() {
 		defer func() {
@@ -190,7 +189,7 @@ var _ = Describe("Infrastructure tests", func() {
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
-			err = runTest(ctx, logger, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -207,12 +206,12 @@ var _ = Describe("Infrastructure tests", func() {
 
 			cloudRouterName := namespace + "-cloud-router"
 
-			routerID, err := prepareNewRouter(ctx, logger, cloudRouterName, openstackClient)
+			routerID, err := prepareNewRouter(ctx, log, cloudRouterName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownRouter(ctx, logger, *routerID, openstackClient)
+				err := teardownRouter(ctx, log, *routerID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -221,7 +220,7 @@ var _ = Describe("Infrastructure tests", func() {
 			providerConfig := newProviderConfig(*routerID, nil)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
-			err = runTest(ctx, logger, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -237,12 +236,12 @@ var _ = Describe("Infrastructure tests", func() {
 
 			networkName := namespace + "-network"
 
-			networkID, err := prepareNewNetwork(ctx, logger, networkName, openstackClient)
+			networkID, err := prepareNewNetwork(ctx, log, networkName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownNetwork(ctx, logger, *networkID, openstackClient)
+				err := teardownNetwork(ctx, log, *networkID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -251,7 +250,7 @@ var _ = Describe("Infrastructure tests", func() {
 			providerConfig := newProviderConfig("", networkID)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
-			err = runTest(ctx, logger, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -269,19 +268,19 @@ var _ = Describe("Infrastructure tests", func() {
 			networkName := namespace + "-network"
 			cloudRouterName := namespace + "-cloud-router"
 
-			networkID, err := prepareNewNetwork(ctx, logger, networkName, openstackClient)
+			networkID, err := prepareNewNetwork(ctx, log, networkName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
-			routerID, err := prepareNewRouter(ctx, logger, cloudRouterName, openstackClient)
+			routerID, err := prepareNewRouter(ctx, log, cloudRouterName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
 				By("Tearing down network")
-				err := teardownNetwork(ctx, logger, *networkID, openstackClient)
+				err := teardownNetwork(ctx, log, *networkID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Tearing down router")
-				err = teardownRouter(ctx, logger, *routerID, openstackClient)
+				err = teardownRouter(ctx, log, *routerID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -290,7 +289,7 @@ var _ = Describe("Infrastructure tests", func() {
 			providerConfig := newProviderConfig(*routerID, networkID)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
-			err = runTest(ctx, logger, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
 
 			Expect(err).NotTo(HaveOccurred())
 
@@ -300,7 +299,7 @@ var _ = Describe("Infrastructure tests", func() {
 
 func runTest(
 	ctx context.Context,
-	logger *logrus.Entry,
+	log logr.Logger,
 	c client.Client,
 	namespaceName string,
 	providerConfig *openstackv1alpha1.InfrastructureConfig,
@@ -324,7 +323,7 @@ func runTest(
 		err := extensions.WaitUntilExtensionObjectDeleted(
 			ctx,
 			c,
-			logger,
+			log,
 			infra,
 			"Infrastructure",
 			10*time.Second,
@@ -430,7 +429,7 @@ func runTest(
 	if err := extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c,
-		logger,
+		log,
 		infra,
 		extensionsv1alpha1.InfrastructureResource,
 		10*time.Second,
@@ -535,8 +534,8 @@ func generateNamespaceName() (string, error) {
 	return "openstack--infra-it--" + suffix, nil
 }
 
-func prepareNewRouter(ctx context.Context, logger *logrus.Entry, routerName string, openstackClient *OpenstackClient) (*string, error) {
-	logger.Infof("Waiting until router '%s' is created...", routerName)
+func prepareNewRouter(ctx context.Context, log logr.Logger, routerName string, openstackClient *OpenstackClient) (*string, error) {
+	log.Info("Waiting until router '%s' is created...", routerName)
 
 	createOpts := routers.CreateOpts{
 		Name: routerName,
@@ -544,22 +543,22 @@ func prepareNewRouter(ctx context.Context, logger *logrus.Entry, routerName stri
 	router, err := routers.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Router '%s' is created...", routerName)
+	log.Info("Router '%s' is created...", routerName)
 	return &router.ID, nil
 }
 
-func teardownRouter(ctx context.Context, logger *logrus.Entry, routerID string, openstackClient *OpenstackClient) error {
-	logger.Infof("Waiting until router '%s' is deleted...", routerID)
+func teardownRouter(ctx context.Context, log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
+	log.Info("Waiting until router '%s' is deleted...", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Router '%s' is deleted...", routerID)
+	log.Info("Router '%s' is deleted...", routerID)
 	return nil
 }
 
-func prepareNewNetwork(ctx context.Context, logger *logrus.Entry, networkName string, openstackClient *OpenstackClient) (*string, error) {
-	logger.Infof("Waiting until network '%s' is created...", networkName)
+func prepareNewNetwork(ctx context.Context, log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
+	log.Info("Waiting until network '%s' is created...", networkName)
 
 	createOpts := networks.CreateOpts{
 		Name: networkName,
@@ -567,17 +566,17 @@ func prepareNewNetwork(ctx context.Context, logger *logrus.Entry, networkName st
 	network, err := networks.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Network '%s' is created...", networkName)
+	log.Info("Network '%s' is created...", networkName)
 	return &network.ID, nil
 }
 
-func teardownNetwork(ctx context.Context, logger *logrus.Entry, networkID string, openstackClient *OpenstackClient) error {
-	logger.Infof("Waiting until network '%s' is deleted...", networkID)
+func teardownNetwork(ctx context.Context, log logr.Logger, networkID string, openstackClient *OpenstackClient) error {
+	log.Info("Waiting until network '%s' is deleted...", networkID)
 
 	err := networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Network '%s' is deleted...", networkID)
+	log.Info("Network '%s' is deleted...", networkID)
 	return nil
 }
 

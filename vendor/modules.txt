@@ -84,8 +84,8 @@ github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactua
 github.com/gardener/gardener/extensions/pkg/controller/csimigration
 github.com/gardener/gardener/extensions/pkg/controller/dnsrecord
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck
-github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config
-github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1
+github.com/gardener/gardener/extensions/pkg/apis/config
+github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/general
 github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker
 github.com/gardener/gardener/extensions/pkg/controller/infrastructure

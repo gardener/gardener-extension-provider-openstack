@@ -80,6 +80,11 @@ func (in *AdmissionPlugin) DeepCopyInto(out *AdmissionPlugin) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Disabled != nil {
+		in, out := &in.Disabled, &out.Disabled
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
@@ -1769,6 +1774,11 @@ func (in *KubeSchedulerConfig) DeepCopyInto(out *KubeSchedulerConfig) {
 	if in.KubeMaxPDVols != nil {
 		in, out := &in.KubeMaxPDVols, &out.KubeMaxPDVols
 		*out = new(string)
+		**out = **in
+	}
+	if in.Profile != nil {
+		in, out := &in.Profile, &out.Profile
+		*out = new(SchedulingProfile)
 		**out = **in
 	}
 	return

@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the infrastructure controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/infrastructure"
 	// ControllerName is the name of the controller.
-	ControllerName = "infrastructure_controller"
+	ControllerName = "infrastructure"
 )
 
 // AddArgs are arguments for adding an infrastructure controller to a manager.
@@ -88,7 +88,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToInfrastructureMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToInfrastructureMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

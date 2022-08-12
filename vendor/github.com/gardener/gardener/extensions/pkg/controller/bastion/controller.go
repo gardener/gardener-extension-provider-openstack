@@ -29,13 +29,15 @@ const (
 	// FinalizerName is the bastion controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/bastion"
 	// ControllerName is the name of the controller
-	ControllerName = "bastion_controller"
+	ControllerName = "bastion"
 )
 
 // AddArgs are arguments for adding a Bastion controller to a manager.
 type AddArgs struct {
 	// Actuator is a Bastion actuator.
 	Actuator Actuator
+	// ConfigValidator is a bastion config validator.
+	ConfigValidator ConfigValidator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
 	// given actuator.
@@ -55,7 +57,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Bastion Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator, args.ConfigValidator)
 	args.ControllerOptions.RecoverPanic = true
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	return add(mgr, args, predicates)

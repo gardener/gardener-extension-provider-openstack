@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the backupentry controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/backupentry"
 	// ControllerName is the name of the controller
-	ControllerName = "backupentry_controller"
+	ControllerName = "backupentry"
 )
 
 // AddArgs are arguments for adding a BackupEntry controller to a manager.
@@ -77,14 +77,14 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Namespace{}},
-			mapper.EnqueueRequestsFrom(NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}
 
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

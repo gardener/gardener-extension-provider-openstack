@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,13 +33,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Actuator contains all the health checks and the means to execute them
 type Actuator struct {
-	logger logr.Logger
-
 	restConfig *rest.Config
 	seedClient client.Client
 	scheme     *runtime.Scheme
@@ -48,16 +46,17 @@ type Actuator struct {
 	extensionKind       string
 	getExtensionObjFunc GetExtensionObjectFunc
 	healthChecks        []ConditionTypeToHealthCheck
+	shootRESTOptions    extensionsconfig.RESTOptions
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck) HealthCheckActuator {
+func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfig.RESTOptions) HealthCheckActuator {
 	return &Actuator{
 		healthChecks:        healthChecks,
 		getExtensionObjFunc: getExtensionObjFunc,
 		provider:            provider,
 		extensionKind:       extensionKind,
-		logger:              log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-actuator", provider, extensionKind)),
+		shootRESTOptions:    shootRESTOptions,
 	}
 }
 
@@ -105,7 +104,7 @@ type checkResultForConditionType struct {
 
 // ExecuteHealthCheckFunctions executes all the health check functions, injects clients and logger & aggregates the results.
 // returns an Result for each HealthConditionType (e.g  ControlPlaneHealthy)
-func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request types.NamespacedName) (*[]Result, error) {
+func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Logger, request types.NamespacedName) (*[]Result, error) {
 	var (
 		shootClient client.Client
 		channel     = make(chan channelResult, len(a.healthChecks))
@@ -119,7 +118,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 		if _, ok := check.(ShootClient); ok {
 			if shootClient == nil {
 				var err error
-				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
+				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{}, a.shootRESTOptions)
 				if err != nil {
 					// don't return here, as we might have started some goroutines already to prevent leakage
 					channel <- channelResult{
@@ -170,7 +169,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 				}
 
 				if !preCheckFunc(ctx, a.seedClient, obj, cluster) {
-					a.logger.V(6).Info("Skipping health check as pre check function returned false", "conditionType", healthConditionType)
+					log.V(1).Info("Skipping health check as pre check function returned false", "conditionType", healthConditionType)
 					channel <- channelResult{
 						healthCheckResult: &SingleCheckResult{
 							Status: gardencorev1beta1.ConditionTrue,

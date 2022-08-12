@@ -20,26 +20,24 @@ import (
 	"fmt"
 	"sort"
 
+	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type genericStateActuator struct {
-	logger logr.Logger
-
 	client client.Client
 }
 
 // NewStateActuator creates a new Actuator that reconciles Worker's State subresource
 // It provides a default implementation that allows easier integration of providers.
-func NewStateActuator(logger logr.Logger) StateActuator {
-	return &genericStateActuator{logger: logger.WithName("worker-state-actuator")}
+func NewStateActuator() StateActuator {
+	return &genericStateActuator{}
 }
 
 func (a *genericStateActuator) InjectClient(client client.Client) error {
@@ -48,7 +46,7 @@ func (a *genericStateActuator) InjectClient(client client.Client) error {
 }
 
 // Reconcile update the Worker state with the latest.
-func (a *genericStateActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
+func (a *genericStateActuator) Reconcile(ctx context.Context, _ logr.Logger, worker *extensionsv1alpha1.Worker) error {
 	copyOfWorker := worker.DeepCopy()
 	if err := a.updateWorkerState(ctx, copyOfWorker); err != nil {
 		return fmt.Errorf("failed to update the state in worker status: %w", err)
@@ -141,13 +139,13 @@ func (a *genericStateActuator) getExistingMachinesMap(ctx context.Context, names
 		return nil, err
 	}
 
-	// We temporarily filter out machines without provider ID or node status (VMs which got created but not yet joined the cluster)
+	// We temporarily filter out machines without provider ID or node label (VMs which got created but not yet joined the cluster)
 	// to prevent unnecessarily persisting them in the Worker state.
 	// TODO: Remove this again once machine-controller-manager supports backing off creation/deletion of failed machines, see
 	// https://github.com/gardener/machine-controller-manager/issues/483.
 	var filteredMachines []machinev1alpha1.Machine
 	for _, machine := range existingMachines.Items {
-		if machine.Spec.ProviderID != "" || machine.Status.Node != "" {
+		if _, ok := machine.Labels["node"]; ok || machine.Spec.ProviderID != "" {
 			filteredMachines = append(filteredMachines, machine)
 		}
 	}
@@ -192,9 +190,7 @@ func addMachineToMachineDeploymentState(machine *machinev1alpha1.Machine, machin
 		Labels:      machine.Labels,
 	}
 	machine.OwnerReferences = nil
-	machine.Status = machinev1alpha1.MachineStatus{
-		Node: machine.Status.Node,
-	}
+	machine.Status = machinev1alpha1.MachineStatus{}
 
 	machineDeploymentState.Machines = append(machineDeploymentState.Machines, *machine)
 }

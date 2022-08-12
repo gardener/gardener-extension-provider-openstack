@@ -124,9 +124,12 @@ const (
 	// DeploymentNameGrafanaUsers is a constant for the name of a Kubernetes deployment object that contains
 	// the grafana-users pod.
 	DeploymentNameGrafanaUsers = "grafana-users"
-	// DeploymentNameKubeStateMetricsShoot is a constant for the name of a Kubernetes deployment object that contains
+	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
+	// the event-logger pod.
+	DeploymentNameEventLogger = "event-logger"
+	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
-	DeploymentNameKubeStateMetricsShoot = "kube-state-metrics"
+	DeploymentNameKubeStateMetrics = "kube-state-metrics"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
@@ -492,10 +495,16 @@ const (
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.
 	GardenNamespace = "garden"
+	// IstioSystemNamespace is the istio-system namespace.
+	IstioSystemNamespace = "istio-system"
 
-	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
-	// Garden cluster once successfully created.
-	AnnotationShootUseAsSeed = "shoot.gardener.cloud/use-as-seed"
+	// DefaultSNIIngressNamespace is the default sni ingress namespace.
+	DefaultSNIIngressNamespace = "istio-ingress"
+	// DefaultSNIIngressServiceName is the default sni ingress service name.
+	DefaultSNIIngressServiceName = "istio-ingressgateway"
+	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
+	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
+
 	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
 	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates

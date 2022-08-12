@@ -18,6 +18,14 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# Friendly reminder if workspace location is not in $GOPATH
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+if [ "${SCRIPT_DIR}" != "$(realpath $GOPATH)/src/github.com/gardener/gardener/hack" ]; then
+  echo "'hack/update-codegen.sh' script does not work correctly if your workspace is outside GOPATH"
+  echo "Please check https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#get-the-sources"
+  exit 1
+fi
+
 # We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
 export GO111MODULE=off
@@ -312,6 +320,21 @@ provider_local_groups() {
 }
 export -f provider_local_groups
 
+# extensions/pkg/apis deepcopy methods
+
+extensions_config_groups() {
+  echo "Generating API groups for extensions/pkg/apis/config"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    "deepcopy" \
+    github.com/gardener/gardener/extensions/pkg/apis \
+    github.com/gardener/gardener/extensions/pkg/apis \
+    github.com/gardener/gardener/extensions/pkg/apis \
+    "config:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f extensions_config_groups
+
 # OpenAPI definitions
 
 openapi_definitions() {
@@ -358,7 +381,8 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     scheduler_groups \
     gardenlet_groups \
     shoottolerationrestriction_groups \
-    provider_local_groups
+    provider_local_groups \
+    extensions_config_groups
 else
   authentication_groups
   core_groups
@@ -373,6 +397,7 @@ else
   gardenlet_groups
   shoottolerationrestriction_groups
   provider_local_groups
+  extensions_config_groups
 fi
 
 openapi_definitions "$@"

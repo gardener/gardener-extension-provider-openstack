@@ -24,14 +24,13 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 const (
 	// FinalizerName is the dnsrecord controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/dnsrecord"
 	// ControllerName is the name of the controller
-	ControllerName = "dnsrecord_controller"
+	ControllerName = "dnsrecord"
 )
 
 // AddArgs are arguments for adding an dnsrecord controller to a manager.
@@ -60,7 +59,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 		// 'garden' namespace and don't belong to a Shoot. Most other DNSRecord resources are created in regular shoot
 		// namespaces (in such cases we want to check whether the respective Shoot is failed). Consequently, we add both
 		// preconditions and ensure at least one of them applies.
-		predicateutils.Or(
+		predicate.Or(
 			extensionspredicate.IsInGardenNamespacePredicate,
 			extensionspredicate.ShootNotFailedPredicate(),
 		),
@@ -81,7 +80,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToDNSRecordMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToDNSRecordMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

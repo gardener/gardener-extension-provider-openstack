@@ -74,7 +74,9 @@ ETCD
 <td>
 <code>healthCheckConfig</code></br>
 <em>
-invalid type
+<a href="https://github.com/gardener/gardener/extensions/pkg/apis/config">
+github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1.HealthCheckConfig
+</a>
 </em>
 </td>
 <td>

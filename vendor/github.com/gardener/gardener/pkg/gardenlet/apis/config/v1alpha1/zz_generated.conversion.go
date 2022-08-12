@@ -34,7 +34,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	klog "k8s.io/klog"
 )
 
 func init() {
@@ -441,6 +440,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.ShootControllerConfiguration)(nil), (*ShootControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_ShootControllerConfiguration_To_v1alpha1_ShootControllerConfiguration(a.(*config.ShootControllerConfiguration), b.(*ShootControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootEventLogging)(nil), (*config.ShootEventLogging)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootEventLogging_To_config_ShootEventLogging(a.(*ShootEventLogging), b.(*config.ShootEventLogging), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ShootEventLogging)(nil), (*ShootEventLogging)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ShootEventLogging_To_v1alpha1_ShootEventLogging(a.(*config.ShootEventLogging), b.(*ShootEventLogging), scope)
 	}); err != nil {
 		return err
 	}
@@ -922,13 +931,6 @@ func Convert_config_GardenClientConnection_To_v1alpha1_GardenClientConnection(in
 }
 
 func autoConvert_v1alpha1_GardenLoki_To_config_GardenLoki(in *GardenLoki, out *config.GardenLoki, s conversion.Scope) error {
-	if in.Priority != nil {
-		in, out := &in.Priority, &out.Priority
-		*out = new(int32)
-		**out = int32(**in)
-	} else {
-		out.Priority = nil
-	}
 	out.Storage = (*resource.Quantity)(unsafe.Pointer(in.Storage))
 	return nil
 }
@@ -939,13 +941,6 @@ func Convert_v1alpha1_GardenLoki_To_config_GardenLoki(in *GardenLoki, out *confi
 }
 
 func autoConvert_config_GardenLoki_To_v1alpha1_GardenLoki(in *config.GardenLoki, out *GardenLoki, s conversion.Scope) error {
-	if in.Priority != nil {
-		in, out := &in.Priority, &out.Priority
-		*out = new(int)
-		**out = int(**in)
-	} else {
-		out.Priority = nil
-	}
 	out.Storage = (*resource.Quantity)(unsafe.Pointer(in.Storage))
 	return nil
 }
@@ -996,7 +991,6 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	}
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
 	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
-	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*config.ServerConfiguration)(unsafe.Pointer(in.Server))
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging
@@ -1017,15 +1011,7 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	if in.Logging != nil {
-		in, out := &in.Logging, &out.Logging
-		*out = new(config.Logging)
-		if err := Convert_v1alpha1_Logging_To_config_Logging(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Logging = nil
-	}
+	out.Logging = (*config.Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*config.SNI)(unsafe.Pointer(in.SNI))
 	out.ETCDConfig = (*config.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	out.ExposureClassHandlers = *(*[]config.ExposureClassHandler)(unsafe.Pointer(&in.ExposureClassHandlers))
@@ -1079,7 +1065,6 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	}
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
 	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
-	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*ServerConfiguration)(unsafe.Pointer(in.Server))
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging
@@ -1100,15 +1085,7 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	if in.Logging != nil {
-		in, out := &in.Logging, &out.Logging
-		*out = new(Logging)
-		if err := Convert_config_Logging_To_v1alpha1_Logging(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Logging = nil
-	}
+	out.Logging = (*Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*SNI)(unsafe.Pointer(in.SNI))
 	out.ETCDConfig = (*ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	out.ExposureClassHandlers = *(*[]ExposureClassHandler)(unsafe.Pointer(&in.ExposureClassHandlers))
@@ -1220,16 +1197,9 @@ func Convert_config_LoadBalancerServiceConfig_To_v1alpha1_LoadBalancerServiceCon
 func autoConvert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.FluentBit = (*config.FluentBit)(unsafe.Pointer(in.FluentBit))
-	if in.Loki != nil {
-		in, out := &in.Loki, &out.Loki
-		*out = new(config.Loki)
-		if err := Convert_v1alpha1_Loki_To_config_Loki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Loki = nil
-	}
+	out.Loki = (*config.Loki)(unsafe.Pointer(in.Loki))
 	out.ShootNodeLogging = (*config.ShootNodeLogging)(unsafe.Pointer(in.ShootNodeLogging))
+	out.ShootEventLogging = (*config.ShootEventLogging)(unsafe.Pointer(in.ShootEventLogging))
 	return nil
 }
 
@@ -1241,16 +1211,9 @@ func Convert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging
 func autoConvert_config_Logging_To_v1alpha1_Logging(in *config.Logging, out *Logging, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.FluentBit = (*FluentBit)(unsafe.Pointer(in.FluentBit))
-	if in.Loki != nil {
-		in, out := &in.Loki, &out.Loki
-		*out = new(Loki)
-		if err := Convert_config_Loki_To_v1alpha1_Loki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Loki = nil
-	}
+	out.Loki = (*Loki)(unsafe.Pointer(in.Loki))
 	out.ShootNodeLogging = (*ShootNodeLogging)(unsafe.Pointer(in.ShootNodeLogging))
+	out.ShootEventLogging = (*ShootEventLogging)(unsafe.Pointer(in.ShootEventLogging))
 	return nil
 }
 
@@ -1261,15 +1224,7 @@ func Convert_config_Logging_To_v1alpha1_Logging(in *config.Logging, out *Logging
 
 func autoConvert_v1alpha1_Loki_To_config_Loki(in *Loki, out *config.Loki, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	if in.Garden != nil {
-		in, out := &in.Garden, &out.Garden
-		*out = new(config.GardenLoki)
-		if err := Convert_v1alpha1_GardenLoki_To_config_GardenLoki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Garden = nil
-	}
+	out.Garden = (*config.GardenLoki)(unsafe.Pointer(in.Garden))
 	return nil
 }
 
@@ -1280,15 +1235,7 @@ func Convert_v1alpha1_Loki_To_config_Loki(in *Loki, out *config.Loki, s conversi
 
 func autoConvert_config_Loki_To_v1alpha1_Loki(in *config.Loki, out *Loki, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	if in.Garden != nil {
-		in, out := &in.Garden, &out.Garden
-		*out = new(GardenLoki)
-		if err := Convert_config_GardenLoki_To_v1alpha1_GardenLoki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Garden = nil
-	}
+	out.Garden = (*GardenLoki)(unsafe.Pointer(in.Garden))
 	return nil
 }
 
@@ -1683,6 +1630,26 @@ func Convert_config_ShootControllerConfiguration_To_v1alpha1_ShootControllerConf
 	return autoConvert_config_ShootControllerConfiguration_To_v1alpha1_ShootControllerConfiguration(in, out, s)
 }
 
+func autoConvert_v1alpha1_ShootEventLogging_To_config_ShootEventLogging(in *ShootEventLogging, out *config.ShootEventLogging, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	return nil
+}
+
+// Convert_v1alpha1_ShootEventLogging_To_config_ShootEventLogging is an autogenerated conversion function.
+func Convert_v1alpha1_ShootEventLogging_To_config_ShootEventLogging(in *ShootEventLogging, out *config.ShootEventLogging, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootEventLogging_To_config_ShootEventLogging(in, out, s)
+}
+
+func autoConvert_config_ShootEventLogging_To_v1alpha1_ShootEventLogging(in *config.ShootEventLogging, out *ShootEventLogging, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	return nil
+}
+
+// Convert_config_ShootEventLogging_To_v1alpha1_ShootEventLogging is an autogenerated conversion function.
+func Convert_config_ShootEventLogging_To_v1alpha1_ShootEventLogging(in *config.ShootEventLogging, out *ShootEventLogging, s conversion.Scope) error {
+	return autoConvert_config_ShootEventLogging_To_v1alpha1_ShootEventLogging(in, out, s)
+}
+
 func autoConvert_v1alpha1_ShootMigrationControllerConfiguration_To_config_ShootMigrationControllerConfiguration(in *ShootMigrationControllerConfiguration, out *config.ShootMigrationControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
@@ -1710,6 +1677,7 @@ func Convert_config_ShootMigrationControllerConfiguration_To_v1alpha1_ShootMigra
 }
 
 func autoConvert_v1alpha1_ShootMonitoringConfig_To_config_ShootMonitoringConfig(in *ShootMonitoringConfig, out *config.ShootMonitoringConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.RemoteWrite = (*config.RemoteWriteMonitoringConfig)(unsafe.Pointer(in.RemoteWrite))
 	out.ExternalLabels = *(*map[string]string)(unsafe.Pointer(&in.ExternalLabels))
 	return nil
@@ -1721,6 +1689,7 @@ func Convert_v1alpha1_ShootMonitoringConfig_To_config_ShootMonitoringConfig(in *
 }
 
 func autoConvert_config_ShootMonitoringConfig_To_v1alpha1_ShootMonitoringConfig(in *config.ShootMonitoringConfig, out *ShootMonitoringConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.RemoteWrite = (*RemoteWriteMonitoringConfig)(unsafe.Pointer(in.RemoteWrite))
 	out.ExternalLabels = *(*map[string]string)(unsafe.Pointer(&in.ExternalLabels))
 	return nil

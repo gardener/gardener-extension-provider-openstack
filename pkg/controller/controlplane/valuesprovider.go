@@ -722,6 +722,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 			"url":      "https://" + openstack.CSISnapshotValidation + "." + cp.Namespace + "/volumesnapshot",
 			"caBundle": caBundle,
 		},
+		"pspDisabled": gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot),
 	}
 	if userAgentHeader != nil {
 		csiNodeDriverValues["userAgentHeaders"] = userAgentHeader

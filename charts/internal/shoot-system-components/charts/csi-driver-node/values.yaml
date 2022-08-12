@@ -36,3 +36,5 @@ resources:
       memory: 32Mi
     limits:
       memory: 200Mi 
+
+pspDisabled: false

@@ -149,16 +149,16 @@ require (
 
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.1 // keep this value in sync with sigs.k8s.io/controller-runtime
-	k8s.io/api => k8s.io/api v0.24.2
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.24.2
-	k8s.io/apiserver => k8s.io/apiserver v0.24.2
+	k8s.io/api => k8s.io/api v0.24.3
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.3
+	k8s.io/apimachinery => k8s.io/apimachinery v0.24.3
+	k8s.io/apiserver => k8s.io/apiserver v0.24.3
 	k8s.io/autoscaler => k8s.io/autoscaler v0.0.0-20220531185024-cc90d57b7fe1 // translates to k8s.io/autoscaler/vertical-pod-autoscaler@v0.11.0
 	k8s.io/autoscaler/vertical-pod-autoscaler => k8s.io/autoscaler/vertical-pod-autoscaler v0.11.0
-	k8s.io/client-go => k8s.io/client-go v0.24.2
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.2
-	k8s.io/code-generator => k8s.io/code-generator v0.24.2
-	k8s.io/component-base => k8s.io/component-base v0.24.2
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.2
+	k8s.io/client-go => k8s.io/client-go v0.24.3
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.3
+	k8s.io/code-generator => k8s.io/code-generator v0.24.3
+	k8s.io/component-base => k8s.io/component-base v0.24.3
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.3
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.12.1
 )

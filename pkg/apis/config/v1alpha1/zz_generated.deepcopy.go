@@ -22,7 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	healthcheckconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config/v1alpha1"
+	apisconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
@@ -55,8 +55,8 @@ func (in *ControllerConfiguration) DeepCopyInto(out *ControllerConfiguration) {
 	in.ETCD.DeepCopyInto(&out.ETCD)
 	if in.HealthCheckConfig != nil {
 		in, out := &in.HealthCheckConfig, &out.HealthCheckConfig
-		*out = new(healthcheckconfigv1alpha1.HealthCheckConfig)
-		**out = **in
+		*out = new(apisconfigv1alpha1.HealthCheckConfig)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.BastionConfig != nil {
 		in, out := &in.BastionConfig, &out.BastionConfig

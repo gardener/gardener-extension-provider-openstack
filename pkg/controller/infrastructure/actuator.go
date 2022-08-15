@@ -24,14 +24,11 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type actuator struct {
-	logger logr.Logger
 	common.RESTConfigContext
 	disableProjectedTokenMount bool
 }
@@ -39,7 +36,6 @@ type actuator struct {
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
 func NewActuator(disableProjectedTokenMount bool) infrastructure.Actuator {
 	return &actuator{
-		logger:                     log.Log.WithName("infrastructure-actuator"),
 		disableProjectedTokenMount: disableProjectedTokenMount,
 	}
 }

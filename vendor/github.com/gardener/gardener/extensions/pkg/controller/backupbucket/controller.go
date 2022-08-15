@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the backupbucket controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/backupbucket"
 	// ControllerName is the name of the controller
-	ControllerName = "backupbucket_controller"
+	ControllerName = "backupbucket"
 )
 
 // AddArgs are arguments for adding a BackupBucket controller to a manager.
@@ -78,7 +78,7 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

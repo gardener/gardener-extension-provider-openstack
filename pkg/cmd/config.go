@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	configloader "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config/loader"
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
+	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 
 	"github.com/spf13/pflag"
 )

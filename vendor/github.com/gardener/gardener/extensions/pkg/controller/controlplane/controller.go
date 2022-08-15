@@ -30,7 +30,7 @@ const (
 	// FinalizerName is the controlplane controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/controlplane"
 	// ControllerName is the name of the controller
-	ControllerName = "controlplane_controller"
+	ControllerName = "controlplane"
 )
 
 // AddArgs are arguments for adding an controlplane controller to a manager.
@@ -72,7 +72,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToControlPlaneMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToControlPlaneMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,37 +41,41 @@ import (
 )
 
 // WaitUntilDaemonSetIsRunning waits until the daemon set with <daemonSetName> is running
-func (f *CommonFramework) WaitUntilDaemonSetIsRunning(ctx context.Context, k8sClient client.Client, daemonSetName, daemonSetNamespace string) error {
+func (f *CommonFramework) WaitUntilDaemonSetIsRunning(ctx context.Context, k8sClient client.Client, name, namespace string) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
-		daemonSet := &appsv1.DaemonSet{}
-		if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: daemonSetNamespace, Name: daemonSetName}, daemonSet); err != nil {
+		daemonSet := &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+		log := f.Logger.WithValues("daemonSet", client.ObjectKeyFromObject(daemonSet))
+
+		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet); err != nil {
 			return retry.MinorError(err)
 		}
 
 		if err := health.CheckDaemonSet(daemonSet); err != nil {
-			f.Logger.Infof("Waiting for %q to be ready!", daemonSetName)
-			return retry.MinorError(fmt.Errorf("daemon set %q is not healthy: %v", daemonSetName, err))
+			log.Info("Waiting for DaemonSet to be ready")
+			return retry.MinorError(fmt.Errorf("daemon set %q is not healthy: %v", name, err))
 		}
 
-		f.Logger.Infof("Daemon set %q is now ready!", daemonSetName)
+		log.Info("DaemonSet is ready now")
 		return retry.Ok()
 	})
 }
 
 // WaitUntilStatefulSetIsRunning waits until the stateful set with <statefulSetName> is running
-func (f *CommonFramework) WaitUntilStatefulSetIsRunning(ctx context.Context, statefulSetName, statefulSetNamespace string, c kubernetes.Interface) error {
+func (f *CommonFramework) WaitUntilStatefulSetIsRunning(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
-		statefulSet := &appsv1.StatefulSet{}
-		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: statefulSetNamespace, Name: statefulSetName}, statefulSet); err != nil {
+		statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+		log := f.Logger.WithValues("statefulSet", client.ObjectKeyFromObject(statefulSet))
+
+		if err := c.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet); err != nil {
 			return retry.MinorError(err)
 		}
 
 		if err := health.CheckStatefulSet(statefulSet); err != nil {
-			f.Logger.Infof("Waiting for %q to be ready!", statefulSetName)
-			return retry.MinorError(fmt.Errorf("stateful set %q is not healthy: %v", statefulSetName, err))
+			log.Info("Waiting for StatefulSet to be ready")
+			return retry.MinorError(fmt.Errorf("stateful set %q is not healthy: %v", name, err))
 		}
 
-		f.Logger.Infof("%s is now ready!!", statefulSetName)
+		log.Info("StatefulSet is ready now")
 		return retry.Ok()
 	})
 }
@@ -79,31 +83,36 @@ func (f *CommonFramework) WaitUntilStatefulSetIsRunning(ctx context.Context, sta
 // WaitUntilDeploymentIsReady waits until the given deployment is ready
 func (f *CommonFramework) WaitUntilDeploymentIsReady(ctx context.Context, name string, namespace string, k8sClient kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
-		deployment := &appsv1.Deployment{}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+		log := f.Logger.WithValues("deployment", client.ObjectKeyFromObject(deployment))
+
 		if err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil {
 			if apierrors.IsNotFound(err) {
-				f.Logger.Infof("Waiting for deployment '%s/%s' to be ready!", namespace, name)
+				log.Info("Waiting for Deployment to be ready")
 				return retry.MinorError(fmt.Errorf("deployment %q in namespace %q does not exist", name, namespace))
 			}
 			return retry.SevereError(err)
 		}
 
-		err = health.CheckDeployment(deployment)
-		if err != nil {
-			f.Logger.Infof("Waiting for deployment '%s/%s' to be ready!", namespace, name)
+		if err := health.CheckDeployment(deployment); err != nil {
+			log.Info("Waiting for Deployment to be ready")
 			return retry.MinorError(fmt.Errorf("deployment %q in namespace %q is not healthy", name, namespace))
 		}
+
+		log.Info("Deployment is ready now")
 		return retry.Ok()
 	})
 }
 
 // WaitUntilDeploymentsWithLabelsIsReady wait until pod with labels <podLabels> is running
 func (f *CommonFramework) WaitUntilDeploymentsWithLabelsIsReady(ctx context.Context, deploymentLabels labels.Selector, namespace string, k8sClient kubernetes.Interface) error {
+	log := f.Logger.WithValues("labelSelector", client.MatchingLabelsSelector{Selector: deploymentLabels}.String())
+
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		deployments := &appsv1.DeploymentList{}
 		if err := k8sClient.Client().List(ctx, deployments, client.MatchingLabelsSelector{Selector: deploymentLabels}, client.InNamespace(namespace)); err != nil {
 			if apierrors.IsNotFound(err) {
-				f.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels.String())
+				log.Info("Waiting for deployments to be ready")
 				return retry.MinorError(fmt.Errorf("no deployments with labels '%s' exist", deploymentLabels.String()))
 			}
 			return retry.SevereError(err)
@@ -112,10 +121,12 @@ func (f *CommonFramework) WaitUntilDeploymentsWithLabelsIsReady(ctx context.Cont
 		for _, deployment := range deployments.Items {
 			err = health.CheckDeployment(&deployment)
 			if err != nil {
-				f.Logger.Infof("Waiting for deployments with labels: %v to be ready!", deploymentLabels)
+				log.Info("Waiting for deployments to be ready")
 				return retry.MinorError(fmt.Errorf("deployment %q is not healthy: %v", deployment.Name, err))
 			}
 		}
+
+		log.Info("Deployments are ready now")
 		return retry.Ok()
 	})
 }
@@ -129,7 +140,7 @@ func (f *CommonFramework) WaitUntilNamespaceIsDeleted(ctx context.Context, k8sCl
 			}
 			return retry.MinorError(err)
 		}
-		return retry.MinorError(fmt.Errorf("Namespace %q is not deleted yet", ns))
+		return retry.MinorError(fmt.Errorf("namespace %q is not deleted yet", ns))
 	})
 }
 
@@ -308,10 +319,20 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 		return false, "no conditions and last operation present yet"
 	}
 
+	shootConditions := map[gardencorev1beta1.ConditionType]struct{}{
+		gardencorev1beta1.ShootAPIServerAvailable:      {},
+		gardencorev1beta1.ShootControlPlaneHealthy:     {},
+		gardencorev1beta1.ShootEveryNodeReady:          {},
+		gardencorev1beta1.ShootSystemComponentsHealthy: {},
+	}
+
 	for _, condition := range shoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {
+			// Only return false if the status of a shoot condition is not True during hibernation. If the shoot also acts as a seed and
+			// the `gardenlet` that operates the seed has already been shut down as part of the hibernation, the seed conditions will never
+			// be updated to True if they were previously not True.
 			hibernation := shoot.Spec.Hibernation
-			if condition.Type == gardencorev1beta1.SeedGardenletReady && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
+			if _, ok := shootConditions[condition.Type]; !ok && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
 				continue
 			}
 			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
@@ -399,17 +420,21 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 }
 
 // WaitUntilPodIsRunning waits until the pod with <podName> is running
-func WaitUntilPodIsRunning(ctx context.Context, log *logrus.Logger, podName, podNamespace string, c kubernetes.Interface) error {
+func WaitUntilPodIsRunning(ctx context.Context, log logr.Logger, name, namespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
-		pod := &corev1.Pod{}
-		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: podNamespace, Name: podName}, pod); err != nil {
+		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+		log = log.WithValues("pod", client.ObjectKeyFromObject(pod))
+
+		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, pod); err != nil {
 			return retry.SevereError(err)
 		}
+
 		if !health.IsPodReady(pod) {
-			log.Infof("Waiting for %s to be ready!!", podName)
-			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, podNamespace, podName, err))
+			log.Info("Waiting for Pod to be ready")
+			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, namespace, name, err))
 		}
 
+		log.Info("Pod is ready now")
 		return retry.Ok()
 	})
 }
@@ -418,16 +443,18 @@ func WaitUntilPodIsRunning(ctx context.Context, log *logrus.Logger, podName, pod
 func (f *CommonFramework) WaitUntilPodIsRunningWithLabels(ctx context.Context, labels labels.Selector, podNamespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		pod, err := GetFirstRunningPodWithLabels(ctx, labels, podNamespace, c)
-
 		if err != nil {
 			return retry.SevereError(err)
 		}
 
+		log := f.Logger.WithValues("pod", client.ObjectKeyFromObject(pod))
+
 		if !health.IsPodReady(pod) {
-			f.Logger.Infof("Waiting for %s to be ready!!", pod.GetName())
+			log.Info("Waiting for Pod to be ready")
 			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, pod.GetNamespace(), pod.GetName(), err))
 		}
 
+		log.Info("Pod is ready now")
 		return retry.Ok()
 	})
 }
@@ -445,15 +472,12 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("rootpod-%s", id),
 			Namespace: namespace,
-			Annotations: map[string]string{
-				"kubernetes.io/psp": "gardener.privileged",
-			},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
 					Name:  "root-container",
-					Image: "eu.gcr.io/gardener-project/3rd/busybox:1.29.2",
+					Image: "eu.gcr.io/gardener-project/3rd/busybox:1.29.3",
 					Command: []string{
 						"sleep",
 						"10000000",

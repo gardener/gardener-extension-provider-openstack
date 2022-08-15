@@ -28,12 +28,14 @@ import (
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	"github.com/go-logr/logr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -46,7 +48,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -95,8 +96,8 @@ func validateFlags() {
 
 var _ = Describe("Bastion tests", func() {
 	var (
-		ctx    = context.Background()
-		logger *logrus.Entry
+		ctx = context.Background()
+		log logr.Logger
 
 		extensionscluster *extensionsv1alpha1.Cluster
 		controllercluster *controller.Cluster
@@ -127,11 +128,9 @@ var _ = Describe("Bastion tests", func() {
 		openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
 
 		// enable manager logs
-		logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
+		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 
-		log := logrus.New()
-		log.SetOutput(GinkgoWriter)
-		logger = logrus.NewEntry(log)
+		log = logf.Log.WithName("bastion-test")
 
 		By("starting test environment")
 		testEnv = &envtest.Environment{
@@ -213,29 +212,29 @@ var _ = Describe("Bastion tests", func() {
 		subnetName := name + "-subnet"
 
 		By("setup Infrastructure ")
-		shootSecurityGroupID, err := prepareShootSecurityGroup(logger, name, openstackClient)
+		shootSecurityGroupID, err := prepareShootSecurityGroup(log, name, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		networkID, err := prepareNewNetwork(logger, name, openstackClient)
+		networkID, err := prepareNewNetwork(log, name, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		subNetID, err := prepareSubNet(logger, subnetName, *networkID, openstackClient)
+		subNetID, err := prepareSubNet(log, subnetName, *networkID, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		routerID, err := prepareNewRouter(logger, cloudRouterName, *subNetID, openstackClient)
+		routerID, err := prepareNewRouter(log, cloudRouterName, *subNetID, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
 			By("Tearing down Shoot Security Group")
-			err = teardownShootSecurityGroup(logger, *shootSecurityGroupID, openstackClient)
+			err = teardownShootSecurityGroup(log, *shootSecurityGroupID, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Tearing down network")
-			err := teardownNetwork(logger, *networkID, *routerID, *subNetID, openstackClient)
+			err := teardownNetwork(log, *networkID, *routerID, *subNetID, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Tearing down router")
-			err = teardownRouter(logger, *routerID, openstackClient)
+			err = teardownRouter(log, *routerID, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 		})
@@ -251,7 +250,7 @@ var _ = Describe("Bastion tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
-			teardownBastion(ctx, logger, c, bastion)
+			teardownBastion(ctx, log, c, bastion)
 
 			By("verify bastion deletion")
 			verifyDeletion(openstackClient, name)
@@ -261,7 +260,7 @@ var _ = Describe("Bastion tests", func() {
 		Expect(extensions.WaitUntilExtensionObjectReady(
 			ctx,
 			c,
-			logger,
+			log,
 			bastion,
 			extensionsv1alpha1.BastionResource,
 			60*time.Second,
@@ -313,8 +312,8 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 	Expect(conn).To(BeNil())
 }
 
-func prepareNewRouter(logger *logrus.Entry, routerName, subnetID string, openstackClient *OpenstackClient) (*string, error) {
-	logger.Infof("Waiting until router '%s' is created...", routerName)
+func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackClient *OpenstackClient) (*string, error) {
+	log.Info("Waiting until router '%s' is created...", routerName)
 
 	allPages, err := networks.List(openstackClient.NetworkingClient, external.ListOptsExt{
 		ListOptsBuilder: networks.ListOpts{
@@ -342,32 +341,32 @@ func prepareNewRouter(logger *logrus.Entry, routerName, subnetID string, opensta
 	_, err = routers.AddInterface(openstackClient.NetworkingClient, router.ID, intOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Router '%s' is created...", routerName)
+	log.Info("Router '%s' is created...", routerName)
 	return &router.ID, nil
 }
 
-func teardownRouter(logger *logrus.Entry, routerID string, openstackClient *OpenstackClient) error {
-	logger.Infof("Waiting until router '%s' is deleted...", routerID)
+func teardownRouter(log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
+	log.Info("Waiting until router '%s' is deleted...", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Router '%s' is deleted...", routerID)
+	log.Info("Router '%s' is deleted...", routerID)
 	return nil
 }
 
-func prepareNewNetwork(logger *logrus.Entry, networkName string, openstackClient *OpenstackClient) (*string, error) {
-	logger.Infof("Waiting until network '%s' is created...", networkName)
+func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
+	log.Info("Waiting until network '%s' is created...", networkName)
 
 	network, err := networks.Create(openstackClient.NetworkingClient, networks.CreateOpts{Name: networkName}).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Network '%s' is created...", networkName)
+	log.Info("Network '%s' is created...", networkName)
 	return &network.ID, nil
 }
 
-func prepareSubNet(logger *logrus.Entry, subnetName, networkid string, openstackClient *OpenstackClient) (*string, error) {
-	logger.Infof("Waiting until Subnet '%s' is created...", subnetName)
+func prepareSubNet(log logr.Logger, subnetName, networkid string, openstackClient *OpenstackClient) (*string, error) {
+	log.Info("Waiting until Subnet '%s' is created...", subnetName)
 
 	createOpts := subnets.CreateOpts{
 		Name:      subnetName,
@@ -384,29 +383,29 @@ func prepareSubNet(logger *logrus.Entry, subnetName, networkid string, openstack
 	}
 	subnet, err := subnets.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
-	logger.Infof("Subnet '%s' is created...", subnetName)
+	log.Info("Subnet '%s' is created...", subnetName)
 	return &subnet.ID, nil
 }
 
 // prepareShootSecurityGroup create fake shoot security group which will be used in EgressAllowSSHToWorker remoteGroupID
-func prepareShootSecurityGroup(logger *logrus.Entry, shootSgName string, openstackClient *OpenstackClient) (*string, error) {
-	logger.Infof("Waiting until Shoot Security Group '%s' is created...", shootSgName)
+func prepareShootSecurityGroup(log logr.Logger, shootSgName string, openstackClient *OpenstackClient) (*string, error) {
+	log.Info("Waiting until Shoot Security Group '%s' is created...", shootSgName)
 
 	sgroups, err := groups.Create(openstackClient.NetworkingClient, groups.CreateOpts{Name: shootSgName, Description: shootSgName}).Extract()
 	Expect(err).NotTo(HaveOccurred())
-	logger.Infof("Shoot Security Group '%s' is created...", shootSgName)
+	log.Info("Shoot Security Group '%s' is created...", shootSgName)
 	return &sgroups.ID, nil
 }
 
-func teardownShootSecurityGroup(logger *logrus.Entry, groupID string, openstackClient *OpenstackClient) error {
+func teardownShootSecurityGroup(log logr.Logger, groupID string, openstackClient *OpenstackClient) error {
 	err := groups.Delete(openstackClient.NetworkingClient, groupID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
-	logger.Infof("Shoot Security Group '%s' is deleted...", groupID)
+	log.Info("Shoot Security Group '%s' is deleted...", groupID)
 	return nil
 }
 
-func teardownNetwork(logger *logrus.Entry, networkID, routerID, subnetID string, openstackClient *OpenstackClient) error {
-	logger.Infof("Waiting until network '%s' is deleted...", networkID)
+func teardownNetwork(log logr.Logger, networkID, routerID, subnetID string, openstackClient *OpenstackClient) error {
+	log.Info("Waiting until network '%s' is deleted...", networkID)
 
 	_, err := routers.RemoveInterface(openstackClient.NetworkingClient, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID}).Extract()
 	Expect(err).NotTo(HaveOccurred())
@@ -414,7 +413,7 @@ func teardownNetwork(logger *logrus.Entry, networkID, routerID, subnetID string,
 	err = networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	logger.Infof("Network '%s' is deleted...", networkID)
+	log.Info("Network '%s' is deleted...", networkID)
 	return nil
 }
 
@@ -526,12 +525,12 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 	return bastion, options
 }
 
-func teardownBastion(ctx context.Context, logger *logrus.Entry, c client.Client, bastion *extensionsv1alpha1.Bastion) {
+func teardownBastion(ctx context.Context, log logr.Logger, c client.Client, bastion *extensionsv1alpha1.Bastion) {
 	By("delete bastion")
 	Expect(client.IgnoreNotFound(c.Delete(ctx, bastion))).To(Succeed())
 
 	By("wait until bastion is deleted")
-	err := extensions.WaitUntilExtensionObjectDeleted(ctx, c, logger, bastion, extensionsv1alpha1.BastionResource, 10*time.Second, 16*time.Minute)
+	err := extensions.WaitUntilExtensionObjectDeleted(ctx, c, log, bastion, extensionsv1alpha1.BastionResource, 10*time.Second, 16*time.Minute)
 	Expect(err).NotTo(HaveOccurred())
 }
 

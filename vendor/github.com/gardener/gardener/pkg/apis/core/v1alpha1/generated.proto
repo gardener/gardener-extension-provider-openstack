@@ -58,6 +58,10 @@ message AdmissionPlugin {
   // Config is the configuration of the plugin.
   // +optional
   optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+
+  // Disabled specifies whether this plugin should be disabled.
+  // +optional
+  optional bool disabled = 3;
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).
@@ -881,7 +885,7 @@ message KubeAPIServerConfig {
 
   // WatchCacheSizes contains configuration of the API server's watch cache sizes.
   // Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
-  // and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's
+  // and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's
   // capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
   // might happen that controller watches are permanently stopped with `too old resource version` errors.
   // Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
@@ -965,6 +969,11 @@ message KubeSchedulerConfig {
   // of all the side-effects and consequences when changing it.
   // +optional
   optional string kubeMaxPDVols = 2;
+
+  // Profile configures the scheduling profile for the cluster.
+  // If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).
+  // +optional
+  optional string profile = 3;
 }
 
 // KubeletConfig contains configuration settings for the kubelet.
@@ -1830,7 +1839,7 @@ message SecretBinding {
   repeated k8s.io.api.core.v1.ObjectReference quotas = 3;
 
   // Provider defines the provider type of the SecretBinding.
-  // This field is immutable when the SecretBindingProviderValidation feature gate is enabled.
+  // This field is immutable.
   // +optional
   optional SecretBindingProvider provider = 4;
 }
@@ -2202,8 +2211,7 @@ message ServiceAccountConfig {
   // MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
   // otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
   // with a validity duration of this value.
-  // This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
-  // This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
+  // This field must be within [30d,90d].
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 4;
 

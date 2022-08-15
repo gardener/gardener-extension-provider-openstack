@@ -23,7 +23,6 @@ import (
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
-	"github.com/go-logr/logr"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -42,14 +41,12 @@ type actuator struct {
 	client client.Client
 
 	openstackClientFactory openstackclient.FactoryFactory
-	logger                 logr.Logger
 	bastionConfig          *controllerconfig.BastionConfig
 }
 
 func newActuator(openstackClientFactory openstackclient.FactoryFactory, bastionConfig *controllerconfig.BastionConfig) bastion.Actuator {
 	return &actuator{
 		openstackClientFactory: openstackClientFactory,
-		logger:                 logger,
 		bastionConfig:          bastionConfig,
 	}
 }

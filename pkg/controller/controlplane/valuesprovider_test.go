@@ -40,7 +40,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
@@ -251,8 +250,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		enabledTrue  = map[string]interface{}{"enabled": true}
 		enabledFalse = map[string]interface{}{"enabled": false}
-
-		logger = log.Log.WithName("test")
 	)
 
 	BeforeEach(func() {
@@ -263,7 +260,7 @@ var _ = Describe("ValuesProvider", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
-		vp = NewValuesProvider(logger)
+		vp = NewValuesProvider()
 		err := vp.(inject.Scheme).InjectScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		err = vp.(inject.Client).InjectClient(c)

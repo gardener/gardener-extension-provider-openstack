@@ -27,12 +27,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	ctrlerror "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (a *actuator) Delete(ctx context.Context, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
-	logger := a.logger.WithValues("bastion", client.ObjectKeyFromObject(bastion), "operation", "delete")
-
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
 	opt, err := DetermineOptions(bastion, cluster)
 	if err != nil {
 		return err
@@ -58,12 +55,12 @@ func (a *actuator) Delete(ctx context.Context, bastion *extensionsv1alpha1.Basti
 		return err
 	}
 
-	err = removeBastionInstance(logger, computeClient, opt)
+	err = removeBastionInstance(log, computeClient, opt)
 	if err != nil {
 		return fmt.Errorf("failed to remove bastion instance: %w", err)
 	}
 
-	err = removePublicIPAddress(logger, networkingClient, opt)
+	err = removePublicIPAddress(log, networkingClient, opt)
 	if err != nil {
 		return fmt.Errorf("failed to remove public ip address: %w", err)
 	}
@@ -83,7 +80,7 @@ func (a *actuator) Delete(ctx context.Context, bastion *extensionsv1alpha1.Basti
 	return removeSecurityGroup(networkingClient, opt)
 }
 
-func removeBastionInstance(logger logr.Logger, client openstackclient.Compute, opt *Options) error {
+func removeBastionInstance(log logr.Logger, client openstackclient.Compute, opt *Options) error {
 	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return err
@@ -98,11 +95,11 @@ func removeBastionInstance(logger logr.Logger, client openstackclient.Compute, o
 		return fmt.Errorf("failed to terminate bastion instance: %w", err)
 	}
 
-	logger.Info("Instance removed", "instance", opt.BastionInstanceName)
+	log.Info("Instance removed", "instance", opt.BastionInstanceName)
 	return nil
 }
 
-func removePublicIPAddress(logger logr.Logger, client openstackclient.Networking, opt *Options) error {
+func removePublicIPAddress(log logr.Logger, client openstackclient.Networking, opt *Options) error {
 	fips, err := getFipByName(client, opt.BastionInstanceName)
 	if err != nil {
 		return err
@@ -117,7 +114,7 @@ func removePublicIPAddress(logger logr.Logger, client openstackclient.Networking
 		return fmt.Errorf("failed to terminate bastion Public IP: %w", err)
 	}
 
-	logger.Info("Public IP removed", "public IP ID", fips[0].ID)
+	log.Info("Public IP removed", "public IP ID", fips[0].ID)
 	return nil
 }
 

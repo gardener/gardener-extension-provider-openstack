@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/chart"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -73,7 +72,7 @@ func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfig
 				Name:                        cloudControllerManagerServerName,
 				CommonName:                  openstack.CloudControllerManagerName,
 				DNSNames:                    kutil.DNSNamesForService(openstack.CloudControllerManagerName, namespace),
-				CertType:                    secrets.ServerCert,
+				CertType:                    secretutils.ServerCert,
 				SkipPublishingCACertificate: true,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
@@ -83,7 +82,7 @@ func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfig
 				Name:                        csiSnapshotValidationServerName,
 				CommonName:                  openstack.UsernamePrefix + openstack.CSISnapshotValidation,
 				DNSNames:                    kutil.DNSNamesForService(openstack.CSISnapshotValidation, namespace),
-				CertType:                    secrets.ServerCert,
+				CertType:                    secretutils.ServerCert,
 				SkipPublishingCACertificate: true,
 			},
 			// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook
@@ -722,6 +721,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 			"url":      "https://" + openstack.CSISnapshotValidation + "." + cp.Namespace + "/volumesnapshot",
 			"caBundle": caBundle,
 		},
+		"pspDisabled": gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot),
 	}
 	if userAgentHeader != nil {
 		csiNodeDriverValues["userAgentHeaders"] = userAgentHeader

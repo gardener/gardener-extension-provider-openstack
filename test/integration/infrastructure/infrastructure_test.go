@@ -458,7 +458,7 @@ func runTest(
 
 // newProviderConfig creates a providerConfig with the network and router details.
 // If routerID is set to "", it requests a new router creation.
-// Else it reuses the suppiled routerID.
+// Else it reuses the supplied routerID.
 func newProviderConfig(routerID string, networkID *string) *openstackv1alpha1.InfrastructureConfig {
 	var router *openstackv1alpha1.Router
 
@@ -535,7 +535,7 @@ func generateNamespaceName() (string, error) {
 }
 
 func prepareNewRouter(ctx context.Context, log logr.Logger, routerName string, openstackClient *OpenstackClient) (*string, error) {
-	log.Info("Waiting until router '%s' is created...", routerName)
+	log.Info("Waiting until router is created", "routerName", routerName)
 
 	createOpts := routers.CreateOpts{
 		Name: routerName,
@@ -543,22 +543,22 @@ func prepareNewRouter(ctx context.Context, log logr.Logger, routerName string, o
 	router, err := routers.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Router '%s' is created...", routerName)
+	log.Info("Router is created", "routerName", routerName)
 	return &router.ID, nil
 }
 
 func teardownRouter(ctx context.Context, log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
-	log.Info("Waiting until router '%s' is deleted...", routerID)
+	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Router '%s' is deleted...", routerID)
+	log.Info("Router is deleted", "routerID", routerID)
 	return nil
 }
 
 func prepareNewNetwork(ctx context.Context, log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
-	log.Info("Waiting until network '%s' is created...", networkName)
+	log.Info("Waiting until network is created", "networkName", networkName)
 
 	createOpts := networks.CreateOpts{
 		Name: networkName,
@@ -566,17 +566,17 @@ func prepareNewNetwork(ctx context.Context, log logr.Logger, networkName string,
 	network, err := networks.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Network '%s' is created...", networkName)
+	log.Info("Network is created", "networkName", networkName)
 	return &network.ID, nil
 }
 
 func teardownNetwork(ctx context.Context, log logr.Logger, networkID string, openstackClient *OpenstackClient) error {
-	log.Info("Waiting until network '%s' is deleted...", networkID)
+	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	err := networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Network '%s' is deleted...", networkID)
+	log.Info("Network is deleted", "networkID", networkID)
 	return nil
 }
 

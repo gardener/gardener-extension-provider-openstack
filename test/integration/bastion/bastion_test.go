@@ -313,7 +313,7 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 }
 
 func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackClient *OpenstackClient) (*string, error) {
-	log.Info("Waiting until router '%s' is created...", routerName)
+	log.Info("Waiting until router is created", "routerName", routerName)
 
 	allPages, err := networks.List(openstackClient.NetworkingClient, external.ListOptsExt{
 		ListOptsBuilder: networks.ListOpts{
@@ -341,32 +341,32 @@ func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackCli
 	_, err = routers.AddInterface(openstackClient.NetworkingClient, router.ID, intOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Router '%s' is created...", routerName)
+	log.Info("Router is created", "routerName", routerName)
 	return &router.ID, nil
 }
 
 func teardownRouter(log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
-	log.Info("Waiting until router '%s' is deleted...", routerID)
+	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Router '%s' is deleted...", routerID)
+	log.Info("Router is deleted", "routerID", routerID)
 	return nil
 }
 
 func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
-	log.Info("Waiting until network '%s' is created...", networkName)
+	log.Info("Waiting until network is created", "networkName", networkName)
 
 	network, err := networks.Create(openstackClient.NetworkingClient, networks.CreateOpts{Name: networkName}).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Network '%s' is created...", networkName)
+	log.Info("Network is created", "networkName", networkName)
 	return &network.ID, nil
 }
 
 func prepareSubNet(log logr.Logger, subnetName, networkid string, openstackClient *OpenstackClient) (*string, error) {
-	log.Info("Waiting until Subnet '%s' is created...", subnetName)
+	log.Info("Waiting until Subnet is created", "subnetName", subnetName)
 
 	createOpts := subnets.CreateOpts{
 		Name:      subnetName,
@@ -383,29 +383,29 @@ func prepareSubNet(log logr.Logger, subnetName, networkid string, openstackClien
 	}
 	subnet, err := subnets.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
-	log.Info("Subnet '%s' is created...", subnetName)
+	log.Info("Subnet is created", "subnetName", subnetName)
 	return &subnet.ID, nil
 }
 
 // prepareShootSecurityGroup create fake shoot security group which will be used in EgressAllowSSHToWorker remoteGroupID
 func prepareShootSecurityGroup(log logr.Logger, shootSgName string, openstackClient *OpenstackClient) (*string, error) {
-	log.Info("Waiting until Shoot Security Group '%s' is created...", shootSgName)
+	log.Info("Waiting until Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 
 	sgroups, err := groups.Create(openstackClient.NetworkingClient, groups.CreateOpts{Name: shootSgName, Description: shootSgName}).Extract()
 	Expect(err).NotTo(HaveOccurred())
-	log.Info("Shoot Security Group '%s' is created...", shootSgName)
+	log.Info("Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 	return &sgroups.ID, nil
 }
 
 func teardownShootSecurityGroup(log logr.Logger, groupID string, openstackClient *OpenstackClient) error {
 	err := groups.Delete(openstackClient.NetworkingClient, groupID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
-	log.Info("Shoot Security Group '%s' is deleted...", groupID)
+	log.Info("Shoot Security Group is deleted", "shootSecurityGroupID", groupID)
 	return nil
 }
 
 func teardownNetwork(log logr.Logger, networkID, routerID, subnetID string, openstackClient *OpenstackClient) error {
-	log.Info("Waiting until network '%s' is deleted...", networkID)
+	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	_, err := routers.RemoveInterface(openstackClient.NetworkingClient, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID}).Extract()
 	Expect(err).NotTo(HaveOccurred())
@@ -413,7 +413,7 @@ func teardownNetwork(log logr.Logger, networkID, routerID, subnetID string, open
 	err = networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 
-	log.Info("Network '%s' is deleted...", networkID)
+	log.Info("Network is deleted", "networkID", networkID)
 	return nil
 }
 

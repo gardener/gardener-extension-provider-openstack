@@ -13,4 +13,5 @@ parameters:
 {{- end }}
 provisioner: {{ .Values.config.etcd.storage.provisioner }}
 allowVolumeExpansion: true
+volumeBindingMode: {{ .Values.config.etcd.storage.volumeBindingMode }}
 {{- end }}

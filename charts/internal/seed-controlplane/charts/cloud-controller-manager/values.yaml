@@ -19,3 +19,8 @@ resources:
 tlsCipherSuites: []
 secrets:
   server: cloud-controller-manager-server
+vpa:
+  resourcePolicy:
+    maxAllowed:
+      cpu: 4
+      memory: 10G

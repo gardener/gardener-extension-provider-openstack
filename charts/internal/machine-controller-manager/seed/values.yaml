@@ -23,6 +23,15 @@ vpa:
   enabled: true
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    mcm:
+      maxAllowed:
+        cpu: 2
+        memory: 5G
+    mcmProviderOpenstack:
+      maxAllowed:
+        cpu: 2
+        memory: 5G
 
 resources:
   mcm:

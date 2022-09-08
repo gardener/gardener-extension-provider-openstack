@@ -13,11 +13,25 @@ gardener-extension-provider-openstack:
             image: 'eu.gcr.io/gardener-project/gardener/extensions/provider-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-provider-openstack
+            resource_labels:
+            - name: 'cloud.gardener.cnudie/responsibles'
+              value:
+              - type: 'githubUser'
+                username: 'dkistner'
+              - type: 'githubUser'
+                username: 'kon-angelo'
           gardener-extension-admission-openstack:
             registry: 'gcr-readwrite'
             image: 'eu.gcr.io/gardener-project/gardener/extensions/admission-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-admission-openstack
+            resource_labels:
+            - name: 'cloud.gardener.cnudie/responsibles'
+              value:
+              - type: 'githubUser'
+                username: 'dkistner'
+              - type: 'githubUser'
+                username: 'kon-angelo'
   jobs:
     head-update:
       traits:

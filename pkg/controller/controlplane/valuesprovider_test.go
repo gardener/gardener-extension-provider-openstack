@@ -162,7 +162,7 @@ var _ = Describe("ValuesProvider", func() {
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.15.4",
+						Version: "1.17.1",
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -273,7 +273,7 @@ var _ = Describe("ValuesProvider", func() {
 
 	Describe("#GetConfigChartValues", func() {
 		configChartValues := map[string]interface{}{
-			"kubernetesVersion":           "1.15.4",
+			"kubernetesVersion":           "1.17.1",
 			"domainName":                  "domain-name",
 			"tenantName":                  "tenant-name",
 			"username":                    "username",
@@ -470,7 +470,7 @@ var _ = Describe("ValuesProvider", func() {
 	Describe("#GetControlPlaneChartValues", func() {
 		ccmChartValues := utils.MergeMaps(enabledTrue, map[string]interface{}{
 			"replicas":          1,
-			"kubernetesVersion": "1.15.4",
+			"kubernetesVersion": "1.17.1",
 			"clusterName":       namespace,
 			"podNetwork":        cidr,
 			"podAnnotations": map[string]interface{}{
@@ -569,7 +569,7 @@ var _ = Describe("ValuesProvider", func() {
 				openstack.CloudControllerManagerName: enabledTrue,
 				openstack.CSINodeName: utils.MergeMaps(enabledFalse, map[string]interface{}{
 					"vpaEnabled":        false,
-					"kubernetesVersion": "1.15.4",
+					"kubernetesVersion": "1.17.1",
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: "",
 					},

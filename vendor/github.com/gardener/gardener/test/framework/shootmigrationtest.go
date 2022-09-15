@@ -328,15 +328,22 @@ func (t *ShootMigrationTest) compareElementsAfterMigration() error {
 		}
 	}
 
-	differingSecrets := []string{}
+	var errorMsg string
 	for name, secret := range t.ComparisonElementsBeforeMigration.SecretsMap {
-		if !reflect.DeepEqual(secret.Data, t.ComparisonElementsAfterMigration.SecretsMap[name].Data) ||
-			!reflect.DeepEqual(secret.Labels, t.ComparisonElementsAfterMigration.SecretsMap[name].Labels) {
-			differingSecrets = append(differingSecrets, name)
+		if !reflect.DeepEqual(secret.Data, t.ComparisonElementsAfterMigration.SecretsMap[name].Data) {
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's data persisted.\n", secret.Namespace, secret.Name)
+		}
+		if !reflect.DeepEqual(secret.Labels, t.ComparisonElementsAfterMigration.SecretsMap[name].Labels) {
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's labels persisted: labels before migration: %v, labels after migration: %v\n",
+				secret.Namespace,
+				secret.Name,
+				secret.Labels,
+				t.ComparisonElementsAfterMigration.SecretsMap[name].Labels,
+			)
 		}
 	}
-	if len(differingSecrets) > 0 {
-		return fmt.Errorf("the following secrets did not have their data or labels persisted during control plane migration: %v", differingSecrets)
+	if len(errorMsg) > 0 {
+		return fmt.Errorf("control plane secrets did not have their data or labels persisted during control plane migration:\n %s", errorMsg)
 	}
 
 	return nil
@@ -379,10 +386,11 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 					}
 
 					creationTimestamp := obj.GetCreationTimestamp()
-					log = log.WithValues("objectKind", obj.GetKind(), "objectNamespace", obj.GetNamespace(), "objectName", obj.GetName(), "creationTimestamp", creationTimestamp)
-					log.Info("Found object")
+					objectLog := log.WithValues("objectKind", obj.GetKind(), "objectNamespace", obj.GetNamespace(), "objectName", obj.GetName(), "creationTimestamp", creationTimestamp)
+
+					objectLog.Info("Found object")
 					if t.MigrationTime.Before(&creationTimestamp) {
-						log.Info("Object is created after shoot migration", "migrationTime", t.MigrationTime)
+						objectLog.Info("Object is created after shoot migration", "migrationTime", t.MigrationTime)
 						return fmt.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp, t.MigrationTime)
 					}
 				}

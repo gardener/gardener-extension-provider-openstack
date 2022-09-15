@@ -105,6 +105,8 @@ type ShootSpec struct {
 	ExposureClassName *string
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	SystemComponents *SystemComponents
+	// ControlPlane contains general settings for the control plane of the shoot.
+	ControlPlane *ControlPlane
 }
 
 // GetProviderType gets the type of the provider.
@@ -302,6 +304,17 @@ type NginxIngress struct {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
+// ControlPlane relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ControlPlane holds information about the general settings for the control plane of a shoot.
+type ControlPlane struct {
+	// HighAvailability holds the configuration settings for high availability of the
+	// control plane of a shoot.
+	HighAvailability *HighAvailability
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // DNS relevant types                                                                           //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -401,7 +414,8 @@ type HibernationSchedule struct {
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
-	// AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot (default: true).
+	// AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
+	// Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.
 	AllowPrivilegedContainers *bool
 	// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 	ClusterAutoscaler *ClusterAutoscaler
@@ -801,6 +815,13 @@ type KubeletConfig struct {
 	ImageGCLowThresholdPercent *int32
 	// SerializeImagePulls describes whether the images are pulled one at a time.
 	SerializeImagePulls *bool
+	// RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
+	// Setting it to 0 means no limit.
+	RegistryPullQPS *int32
+	// RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number,
+	// while still not exceeding registryPullQPS. The value must not be a negative number.
+	// Only used if registryPullQPS is greater than 0.
+	RegistryBurst *int32
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1131,6 +1152,8 @@ type SystemComponents struct {
 type CoreDNS struct {
 	// Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
 	Autoscaling *CoreDNSAutoscaling
+	// Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.
+	Rewriting *CoreDNSRewriting
 }
 
 // CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
@@ -1149,6 +1172,12 @@ const (
 	// CoreDNSAutoscalingModeClusterProportional is a constant for cluster-proportional Core DNS autoscaling mode.
 	CoreDNSAutoscalingModeClusterProportional CoreDNSAutoscalingMode = "cluster-proportional"
 )
+
+// CoreDNSRewriting contains the setting related to rewriting requests, which are obviously incorrect due to the unnecessary application of the search path.
+type CoreDNSRewriting struct {
+	// CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
+	CommonSuffixes []string
+}
 
 // NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
 type NodeLocalDNS struct {

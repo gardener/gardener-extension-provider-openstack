@@ -256,6 +256,9 @@ const (
 	// GardenRoleExposureClassHandler is the value of the GardenRole key indicating type 'exposureclass-handler'.
 	GardenRoleExposureClassHandler = "exposureclass-handler"
 
+	// ShootControlPlaneEnforceZone is an annotation key which is used to pin or schedule all control-plane pods
+	// to the very same availability zone.
+	ShootControlPlaneEnforceZone = "control-plane.shoot.gardener.cloud/enforce-zone"
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
 	ShootUID = "shoot.gardener.cloud/uid"
@@ -279,11 +282,14 @@ const (
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
+
 	// ShootAlphaControlPlaneScaleDownDisabled is a constant for an annotation on the Shoot resource stating that the
 	// automatic scale-down shall be disabled for the etcd, kube-apiserver, kube-controller-manager.
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
+	// TODO(shreyas-s-rao): Deprecate HA annotation with the stable release of zonal clusters feature.
 	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
+
 	// ShootAlphaControlPlaneHighAvailability is a constant for an annotation on the Shoot resource stating that the
 	// high availability setup for the control plane should be enabled.
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
@@ -555,6 +561,8 @@ const (
 	AnnotationNodeLocalDNSForceTcpToClusterDns = "alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns"
 	// AnnotationNodeLocalDNSForceTcpToUpstreamDns enforces upgrade to tcp connections for communication between node local and upstream dns.
 	AnnotationNodeLocalDNSForceTcpToUpstreamDns = "alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns"
+	// AnnotationCoreDNSRewritingDisabled disables core dns query rewriting even if the corresponding feature gate is enabled.
+	AnnotationCoreDNSRewritingDisabled = "alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled"
 
 	// AnnotationShootAPIServerSNIPodInjector is the key for an annotation of a Shoot cluster whose value indicates
 	// if pod injection of 'KUBERNETES_SERVICE_HOST' environment variable should happen for clusters where APIServerSNI
@@ -564,6 +572,15 @@ const (
 	// AnnotationShootAPIServerSNIPodInjectorDisableValue is the value of the
 	// `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation that disables the pod injection.
 	AnnotationShootAPIServerSNIPodInjectorDisableValue = "disable"
+
+	// AnnotationSeccompDefaultProfile is the key for an annotation applied to a PodSecurityPolicy which specifies
+	// which is the default seccomp profile to apply to containers.
+	AnnotationSeccompDefaultProfile = "seccomp.security.alpha.kubernetes.io/defaultProfileName"
+	// AnnotationSeccompAllowedProfiles is the key for an annotation applied to a PodSecurityPolicy which specifies
+	// which values are allowed for the pod seccomp annotations.
+	AnnotationSeccompAllowedProfiles = "seccomp.security.alpha.kubernetes.io/allowedProfileNames"
+	// AnnotationSeccompAllowedProfilesRuntimeDefaultValue is the value for the default container runtime profile.
+	AnnotationSeccompAllowedProfilesRuntimeDefaultValue = "runtime/default"
 
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"

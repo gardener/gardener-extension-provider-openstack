@@ -141,9 +141,9 @@ spec:
   type: openstack
   kubernetes:
     versions:
-    - version: 1.16.1
-    - version: 1.16.0
-      expirationDate: "2020-04-05T01:02:03Z"
+    - version: 1.24.3
+    - version: 1.23.8
+      expirationDate: "2022-10-31T23:59:59Z"
   machineImages:
   - name: coreos
     versions:

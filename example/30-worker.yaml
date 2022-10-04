@@ -41,7 +41,7 @@ spec:
     spec:
       region: eu-de-2
       kubernetes:
-        version: 1.15.4
+        version: 1.24.3
       cloud:
         openstack:
           networks:

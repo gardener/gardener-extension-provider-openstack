@@ -126,9 +126,8 @@ spec:
     spec:
       containers:
       - command:
-        - /hyperkube
-        - apiserver
-        - --enable-admission-plugins=Priority,NamespaceLifecycle,LimitRanger,PodSecurityPolicy,ServiceAccount,NodeRestriction,DefaultStorageClass,Initializers,DefaultTolerationSeconds,ResourceQuota,StorageObjectInUseProtection,MutatingAdmissionWebhook,ValidatingAdmissionWebhook
+        - /usr/local/bin/kube-apiserver
+        - --enable-admission-plugins=Priority,NamespaceLifecycle,LimitRanger,PodSecurityPolicy,ServiceAccount,NodeRestriction,DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota,StorageObjectInUseProtection,MutatingAdmissionWebhook,ValidatingAdmissionWebhook
         - --disable-admission-plugins=PersistentVolumeLabel
         - --allow-privileged=true
         - --anonymous-auth=false
@@ -147,7 +146,7 @@ spec:
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --v=2
-        image: k8s.gcr.io/hyperkube:v1.15.6
+        image: registry.k8s.io/kube-apiserver:v1.17.17
         imagePullPolicy: IfNotPresent
         name: kube-apiserver
         ports:

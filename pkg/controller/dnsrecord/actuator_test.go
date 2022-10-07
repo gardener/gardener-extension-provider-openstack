@@ -142,7 +142,7 @@ var _ = Describe("Actuator", func() {
 	Describe("#Reconcile", func() {
 		It("should reconcile the DNSRecord", func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 					*obj = *secret
 					return nil
 				},
@@ -171,7 +171,7 @@ var _ = Describe("Actuator", func() {
 			dns.Status.Zone = pointer.String(zone)
 
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 					*obj = *secret
 					return nil
 				},

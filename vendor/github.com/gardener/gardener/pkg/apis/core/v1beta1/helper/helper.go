@@ -77,6 +77,7 @@ func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1
 	utilruntime.Must(err)
 	newCondition, _ := builder.
 		WithOldCondition(condition).
+		WithNowFunc(Now).
 		WithStatus(status).
 		WithReason(reason).
 		WithMessage(message).
@@ -157,8 +158,9 @@ func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resou
 // installed.
 func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1.ControllerInstallation) bool {
 	var (
-		installed bool
-		healthy   bool
+		installed      bool
+		healthy        bool
+		notProgressing bool
 	)
 
 	for _, condition := range controllerInstallation.Status.Conditions {
@@ -168,9 +170,12 @@ func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1
 		if condition.Type == gardencorev1beta1.ControllerInstallationHealthy && condition.Status == gardencorev1beta1.ConditionTrue {
 			healthy = true
 		}
+		if condition.Type == gardencorev1beta1.ControllerInstallationProgressing && condition.Status == gardencorev1beta1.ConditionFalse {
+			notProgressing = true
+		}
 	}
 
-	return installed && healthy
+	return installed && healthy && notProgressing
 }
 
 // IsControllerInstallationRequired returns true if a ControllerInstallation has been marked as "required".
@@ -521,13 +526,29 @@ func SeedUsesNginxIngressController(seed *gardencorev1beta1.Seed) bool {
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.
-func DetermineMachineImageForName(cloudProfile *gardencorev1beta1.CloudProfile, name string) (bool, gardencorev1beta1.MachineImage, error) {
+func DetermineMachineImageForName(cloudProfile *gardencorev1beta1.CloudProfile, name string) (bool, gardencorev1beta1.MachineImage) {
 	for _, image := range cloudProfile.Spec.MachineImages {
 		if strings.EqualFold(image.Name, name) {
-			return true, image, nil
+			return true, image
 		}
 	}
-	return false, gardencorev1beta1.MachineImage{}, nil
+	return false, gardencorev1beta1.MachineImage{}
+}
+
+// FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
+// In case no machine image version can be found with the given <name> or <version>, false is being returned.
+func FindMachineImageVersion(cloudProfile *gardencorev1beta1.CloudProfile, name, version string) (bool, gardencorev1beta1.MachineImageVersion) {
+	for _, image := range cloudProfile.Spec.MachineImages {
+		if image.Name == name {
+			for _, imageVersion := range image.Versions {
+				if imageVersion.Version == version {
+					return true, imageVersion
+				}
+			}
+		}
+	}
+
+	return false, gardencorev1beta1.MachineImageVersion{}
 }
 
 // ShootMachineImageVersionExists checks if the shoot machine image (name, version) exists in the machine image constraint and returns true if yes and the index in the versions slice
@@ -1111,6 +1132,12 @@ func IsCoreDNSAutoscalingModeUsed(systemComponents *gardencorev1beta1.SystemComp
 	return systemComponents.CoreDNS.Autoscaling.Mode == autoscalingMode
 }
 
+// IsCoreDNSRewritingEnabled indicates whether automatic query rewriting in CoreDNS is enabled or not.
+func IsCoreDNSRewritingEnabled(featureGate bool, annotations map[string]string) bool {
+	_, disabled := annotations[v1beta1constants.AnnotationCoreDNSRewritingDisabled]
+	return featureGate && !disabled
+}
+
 // IsNodeLocalDNSEnabled indicates whether the node local DNS cache is enabled or not.
 // It can be enabled via the annotation (legacy) or via the shoot specification.
 func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string) bool {
@@ -1334,4 +1361,44 @@ func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
 		}
 	}
 	return false
+}
+
+// IsFailureToleranceTypeZone returns true if failureToleranceType is zone else returns false.
+func IsFailureToleranceTypeZone(failureToleranceType *gardencorev1beta1.FailureToleranceType) bool {
+	return failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
+}
+
+// IsFailureToleranceTypeNode returns true if failureToleranceType is node else returns false.
+func IsFailureToleranceTypeNode(failureToleranceType *gardencorev1beta1.FailureToleranceType) bool {
+	return failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode
+}
+
+// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either
+// via an alpha-annotation or ControlPlane Spec.
+func IsHAControlPlaneConfigured(shoot *gardencorev1beta1.Shoot) bool {
+	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
+}
+
+// IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane.
+func IsMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
+	hasZonalAnnotation := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == gardencorev1beta1.FailureToleranceTypeZone
+	return hasZonalAnnotation || hasZoneFailureToleranceTypeSetInSpec
+}
+
+// GetFailureToleranceType determines the FailureToleranceType by looking at both the alpha HA annotations and shoot spec ControlPlane.
+func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.FailureToleranceType {
+	if haAnnot, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+		var failureToleranceType gardencorev1beta1.FailureToleranceType
+		if haAnnot == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+			failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
+		} else {
+			failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
+		}
+		return &failureToleranceType
+	}
+	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
+		return &shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
+	}
+	return nil
 }

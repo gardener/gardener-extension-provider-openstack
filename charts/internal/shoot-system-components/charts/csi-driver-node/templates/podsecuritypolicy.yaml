@@ -3,6 +3,9 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
   name: {{ include "csi-driver-node.extensionsGroup" . }}.{{ include "csi-driver-node.name" . }}.csi-driver-node
 spec:
   privileged: true

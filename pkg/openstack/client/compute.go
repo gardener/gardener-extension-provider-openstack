@@ -136,7 +136,7 @@ func (c *ComputeClient) FindFlavorID(name string) (string, error) {
 	return flavors.IDFromName(c.client, name)
 }
 
-//FindImages find image ID by images name
+// FindImages find image ID by images name
 func (c *ComputeClient) FindImages(name string) ([]images.Image, error) {
 	listOpts := images.ListOpts{
 		Name: name,
@@ -144,7 +144,7 @@ func (c *ComputeClient) FindImages(name string) ([]images.Image, error) {
 	return c.ListImages(listOpts)
 }
 
-//ListImages list all images
+// ListImages list all images
 func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, error) {
 	allPages, err := images.ListDetail(c.client, listOpts).AllPages()
 	if err != nil {

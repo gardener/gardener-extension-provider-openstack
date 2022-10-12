@@ -19,4 +19,4 @@ spec:
     --region="$REGION"
     --tenant-name="$TENANT_NAME"
     --user-name="$USER_NAME"
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.5
+  image: golang:1.19.2

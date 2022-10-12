@@ -47,6 +47,7 @@ USER_NAME          := .kube-secrets/openstack/user_name.secret
 #########################################
 
 TOOLS_DIR := hack/tools
+GOLANGCI_LINT_VERSION := v1.50.0
 include vendor/github.com/gardener/gardener/hack/tools.mk
 
 #########################################

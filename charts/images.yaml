@@ -17,7 +17,7 @@ images:
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager
-  tag: "v1.22.1"
+  tag: "v1.22.0"
   targetVersion: "1.22.x"
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack

@@ -16,6 +16,13 @@ package infrastructure
 
 import (
 	"context"
+	"strings"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
@@ -23,9 +30,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+const (
+	// AnnotationKeyUseFlow is the annotation key used to enable reconciliation with flow instead of terraformer.
+	AnnotationKeyUseFlow = "openstack.provider.extensions.gardener.cloud/use-flow"
 )
 
 type actuator struct {
@@ -42,7 +51,7 @@ func NewActuator(disableProjectedTokenMount bool) infrastructure.Actuator {
 
 // Helper functions
 
-func (a *actuator) updateProviderStatus(
+func (a *actuator) updateProviderStatusWithTerraformer(
 	ctx context.Context,
 	tf terraformer.Terraformer,
 	infra *extensionsv1alpha1.Infrastructure,
@@ -58,13 +67,32 @@ func (a *actuator) updateProviderStatus(
 		return err
 	}
 
-	stateByte, err := state.Marshal()
+	stateBytes, err := state.Marshal()
 	if err != nil {
 		return err
 	}
 
+	return a.updateProviderStatus(ctx, infra, status, stateBytes)
+}
+
+func (a *actuator) updateProviderStatus(
+	ctx context.Context,
+	infra *extensionsv1alpha1.Infrastructure,
+	status *openstackv1alpha1.InfrastructureStatus,
+	stateBytes []byte,
+) error {
 	patch := client.MergeFrom(infra.DeepCopy())
 	infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
-	infra.Status.State = &runtime.RawExtension{Raw: stateByte}
+	infra.Status.State = &runtime.RawExtension{Raw: stateBytes}
 	return a.Client().Status().Patch(ctx, infra, patch)
+}
+
+func (a *actuator) addErrorCodes(err error) error {
+	if err == nil {
+		return nil
+	}
+	if msg := err.Error(); strings.Contains(msg, "PolicyNotAuthorized") {
+		return helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorInfraUnauthorized)
+	}
+	return err
 }

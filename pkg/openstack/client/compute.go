@@ -18,6 +18,7 @@ package client
 
 import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -151,4 +152,24 @@ func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, er
 		return nil, err
 	}
 	return images.ExtractImages(allPages)
+}
+
+// CreateKeyPair creates an SSH key pair
+func (c *ComputeClient) CreateKeyPair(name, publicKey string) (*keypairs.KeyPair, error) {
+	opts := keypairs.CreateOpts{
+		Name:      name,
+		PublicKey: publicKey,
+	}
+	return keypairs.Create(c.client, opts).Extract()
+}
+
+// GetKeyPair gets an SSH key pair by name
+func (c *ComputeClient) GetKeyPair(name string) (*keypairs.KeyPair, error) {
+	keypair, err := keypairs.Get(c.client, name).Extract()
+	return keypair, IgnoreNotFoundError(err)
+}
+
+// DeleteKeyPair deletes an SSH key pair by name
+func (c *ComputeClient) DeleteKeyPair(name string) error {
+	return keypairs.Delete(c.client, name).ExtractErr()
 }

@@ -24,7 +24,7 @@ metadata:
   name: shoot--foobar--openstack
 spec:
   cloudProfile:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: CloudProfile
     spec:
       providerConfig:
@@ -34,10 +34,10 @@ spec:
       # dnsServers:
       # - 1.1.1.1
   seed:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Seed
   shoot:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Shoot
     status:
       lastOperation:

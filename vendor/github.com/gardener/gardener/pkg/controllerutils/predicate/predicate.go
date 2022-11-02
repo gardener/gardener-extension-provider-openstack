@@ -20,22 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
 func IsDeleting() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetDeletionTimestamp() != nil
-	})
-}
-
-// ShootIsUnassigned is a predicate that returns true if a shoot is not assigned to a seed.
-func ShootIsUnassigned() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
-			return shoot.Spec.SeedName == nil
-		}
-		return false
 	})
 }
 
@@ -57,6 +48,39 @@ func Not(p predicate.Predicate) predicate.Predicate {
 	}
 }
 
+// EventType is an alias for byte.
+type EventType byte
+
+const (
+	// Create is a constant for an event of type 'create'.
+	Create EventType = iota
+	// Update is a constant for an event of type 'update'.
+	Update
+	// Delete is a constant for an event of type 'delete'.
+	Delete
+	// Generic is a constant for an event of type 'generic'.
+	Generic
+)
+
+// ForEventTypes is a predicate which returns true only for the provided event types.
+func ForEventTypes(events ...EventType) predicate.Predicate {
+	has := func(event EventType) bool {
+		for _, e := range events {
+			if e == event {
+				return true
+			}
+		}
+		return false
+	}
+
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return has(Create) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return has(Update) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return has(Delete) },
+		GenericFunc: func(e event.GenericEvent) bool { return has(Generic) },
+	}
+}
+
 // EvalGeneric returns true if all predicates match for the given object.
 func EvalGeneric(obj client.Object, predicates ...predicate.Predicate) bool {
 	e := event.GenericEvent{Object: obj}
@@ -67,4 +91,38 @@ func EvalGeneric(obj client.Object, predicates ...predicate.Predicate) bool {
 	}
 
 	return true
+}
+
+// RelevantConditionsChanged returns true for all events except for 'UPDATE'. Here, true is only returned when the
+// status, reason or message of a relevant condition has changed.
+func RelevantConditionsChanged(
+	getConditionsFromObject func(obj client.Object) []gardencorev1beta1.Condition,
+	relevantConditionTypes ...gardencorev1beta1.ConditionType,
+) predicate.Predicate {
+	wasConditionStatusReasonOrMessageUpdated := func(oldCondition, newCondition *gardencorev1beta1.Condition) bool {
+		return (oldCondition == nil && newCondition != nil) ||
+			(oldCondition != nil && newCondition == nil) ||
+			(oldCondition != nil && newCondition != nil &&
+				(oldCondition.Status != newCondition.Status || oldCondition.Reason != newCondition.Reason || oldCondition.Message != newCondition.Message))
+	}
+
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			var (
+				oldConditions = getConditionsFromObject(e.ObjectOld)
+				newConditions = getConditionsFromObject(e.ObjectNew)
+			)
+
+			for _, condition := range relevantConditionTypes {
+				if wasConditionStatusReasonOrMessageUpdated(
+					gardencorev1beta1helper.GetCondition(oldConditions, condition),
+					gardencorev1beta1helper.GetCondition(newConditions, condition),
+				) {
+					return true
+				}
+			}
+
+			return false
+		},
+	}
 }

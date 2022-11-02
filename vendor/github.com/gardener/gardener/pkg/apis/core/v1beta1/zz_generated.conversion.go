@@ -3064,6 +3064,7 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
 	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
+	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
 	return nil
 }
 
@@ -3095,6 +3096,7 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
 	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
+	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
 	return nil
 }
 
@@ -4680,6 +4682,7 @@ func autoConvert_v1beta1_SeedSpec_To_core_SeedSpec(in *SeedSpec, out *core.SeedS
 	out.Volume = (*core.SeedVolume)(unsafe.Pointer(in.Volume))
 	out.Settings = (*core.SeedSettings)(unsafe.Pointer(in.Settings))
 	out.Ingress = (*core.Ingress)(unsafe.Pointer(in.Ingress))
+	out.HighAvailability = (*core.HighAvailability)(unsafe.Pointer(in.HighAvailability))
 	return nil
 }
 
@@ -4704,6 +4707,7 @@ func autoConvert_core_SeedSpec_To_v1beta1_SeedSpec(in *core.SeedSpec, out *SeedS
 	out.Taints = *(*[]SeedTaint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*SeedVolume)(unsafe.Pointer(in.Volume))
 	out.Ingress = (*Ingress)(unsafe.Pointer(in.Ingress))
+	out.HighAvailability = (*HighAvailability)(unsafe.Pointer(in.HighAvailability))
 	return nil
 }
 

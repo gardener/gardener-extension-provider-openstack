@@ -18,10 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	"regexp"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -29,8 +26,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // MachineClassKind yields the name of the machine class kind used by OpenStack provider.
@@ -143,10 +145,10 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				"networkID":        infrastructureStatus.Networks.ID,
 				"podNetworkCidr":   extensionscontroller.GetPodNetwork(w.cluster),
 				"securityGroups":   []string{nodesSecurityGroup.Name},
-				"tags": map[string]string{
+				"tags": utils.MergeStringMaps(NormalizeLabelsForMachineClass(pool.Labels), map[string]string{
 					fmt.Sprintf("kubernetes.io-cluster-%s", w.worker.Namespace): "1",
 					"kubernetes.io-role-node":                                   "1",
-				},
+				}),
 				"credentialsSecretRef": map[string]interface{}{
 					"name":      w.worker.Spec.SecretRef.Name,
 					"namespace": w.worker.Spec.SecretRef.Namespace,
@@ -222,7 +224,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 }
 
 func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency) (string, error) {
-	additionalHashData := []string{}
+	var additionalHashData []string
 
 	// Include the given worker pool dependencies into the hash.
 	if serverGroupDependency != nil {
@@ -231,4 +233,16 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 
 	// Generate the worker pool hash.
 	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData...)
+}
+
+// NormalizeLabelsForMachineClass because metadata in OpenStack resources do not allow for certain characters that present in k8s labels e.g. "/",
+// normalize the label by replacing illegal characters with "-"
+func NormalizeLabelsForMachineClass(in map[string]string) map[string]string {
+	notAllowedChars := regexp.MustCompile(`[^a-zA-Z0-9-_:. ]`)
+	res := make(map[string]string)
+	for k, v := range in {
+		newKey := notAllowedChars.ReplaceAllLiteralString(k, "-")
+		res[newKey] = v
+	}
+	return res
 }

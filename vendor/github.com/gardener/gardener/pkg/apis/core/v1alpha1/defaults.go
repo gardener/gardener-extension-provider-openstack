@@ -304,11 +304,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 			continue
 		}
 
-		if worker.CRI != nil {
-			continue
+		if worker.CRI == nil {
+			obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 		}
-
-		obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 	}
 
 	if obj.Spec.SystemComponents == nil {

@@ -67,7 +67,7 @@ github.com/fsnotify/fsnotify
 # github.com/gardener/etcd-druid v0.12.3
 ## explicit; go 1.17
 github.com/gardener/etcd-druid/api/v1alpha1
-# github.com/gardener/gardener v1.58.0
+# github.com/gardener/gardener v1.59.0
 ## explicit; go 1.19
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -155,9 +155,10 @@ github.com/gardener/gardener/pkg/logger
 github.com/gardener/gardener/pkg/mock/controller-runtime/client
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd
+github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker
+github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
-github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
 github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
 github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
 github.com/gardener/gardener/pkg/utils

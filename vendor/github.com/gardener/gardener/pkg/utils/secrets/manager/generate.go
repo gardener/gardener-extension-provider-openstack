@@ -23,7 +23,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -143,122 +142,6 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
-	case "kube-apiserver-basic-auth", "observability-ingress", "observability-ingress-users":
-		oldSecretName := configName
-		if configName == "observability-ingress" {
-			oldSecretName = "monitoring-ingress-credentials"
-		} else if configName == "observability-ingress-users" {
-			oldSecretName = "monitoring-ingress-credentials-users"
-		}
-
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, oldSecretName), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-
-		existingPassword, ok := existingSecret.Data[secretutils.DataKeyPassword]
-		if !ok {
-			existingBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", existingSecret.Data[secretutils.DataKeyCSV])
-			if err != nil {
-				return nil, err
-			}
-			existingPassword = []byte(existingBasicAuth.Password)
-		}
-
-		newBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", newData[secretutils.DataKeyCSV])
-		if err != nil {
-			return nil, err
-		}
-
-		if configName == "observability-ingress" || configName == "observability-ingress-users" {
-			newBasicAuth.Format = secretutils.BasicAuthFormatNormal
-		}
-
-		newBasicAuth.Password = string(existingPassword)
-		return newBasicAuth.SecretData(), nil
-
-	case "kube-apiserver-static-token":
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "static-token"), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-
-		existingStaticToken, err := secretutils.LoadStaticTokenFromCSV("", existingSecret.Data[secretutils.DataKeyStaticTokenCSV])
-		if err != nil {
-			return nil, err
-		}
-		newStaticToken, err := secretutils.LoadStaticTokenFromCSV("", newData[secretutils.DataKeyStaticTokenCSV])
-		if err != nil {
-			return nil, err
-		}
-
-		for i, token := range newStaticToken.Tokens {
-			for _, existingToken := range existingStaticToken.Tokens {
-				if existingToken.Username == token.Username {
-					newStaticToken.Tokens[i].Token = existingToken.Token
-					break
-				}
-			}
-		}
-		return newStaticToken.SecretData(), nil
-
-	case "ssh-keypair":
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ssh-keypair"), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-
-		// Before returning the existing data, check whether there is an ssh-keypair.old secret and label it so that it
-		// will be picked up by the `m.storeOldSecrets` function call.
-		existingSecretOld := &corev1.Secret{}
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ssh-keypair.old"), existingSecretOld); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-		} else {
-			patch := client.MergeFrom(existingSecretOld.DeepCopy())
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyName, configName)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyManagedBy, LabelValueSecretsManager)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyManagerIdentity, m.identity)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyPersist, LabelValueTrue)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyLastRotationInitiationTime, "")
-			existingSecretOld.Immutable = pointer.Bool(true)
-			if err := m.client.Patch(ctx, existingSecretOld, patch); err != nil {
-				return nil, err
-			}
-
-			// Wait until cache reflects changes to prevent losing the old secret.
-			timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
-			defer cancel()
-
-			if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
-				secretList := &corev1.SecretList{}
-				if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-					LabelKeyName:            configName,
-					LabelKeyManagedBy:       LabelValueSecretsManager,
-					LabelKeyManagerIdentity: m.identity,
-				}); err != nil {
-					return retry.SevereError(err)
-				}
-
-				if len(secretList.Items) == 0 {
-					return retry.MinorError(fmt.Errorf("cache does not yet reflect the labeled ssh-keypair.old secret"))
-				}
-
-				return retry.Ok()
-			}); err != nil {
-				return nil, err
-			}
-		}
-
-		return existingSecret.Data, nil
-
 	case "kube-apiserver-etcd-encryption-key":
 		if err := m.client.Get(ctx, kutil.Key(m.namespace, "etcd-encryption-secret"), existingSecret); err != nil {
 			if !apierrors.IsNotFound(err) {

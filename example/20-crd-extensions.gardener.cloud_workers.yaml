@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: workers.extensions.gardener.cloud
 spec:
@@ -413,7 +413,7 @@ spec:
                     type: string
                   type:
                     description: Type of the last operation, one of Create, Reconcile,
-                      Delete.
+                      Delete, Migrate, Restore.
                     type: string
                 required:
                 - description

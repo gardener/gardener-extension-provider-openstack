@@ -42,15 +42,17 @@ rules:
   - leases
   verbs:
   - create
+  - list 
+  - watch 
 - apiGroups:
   - coordination.k8s.io
   resources:
   - leases
   resourceNames:
   - provider-openstack-leader-election
+  - gardener-extension-heartbeat
   verbs:
   - get
-  - watch
   - update
 - apiGroups:
   - ""

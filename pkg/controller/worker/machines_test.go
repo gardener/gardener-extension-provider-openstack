@@ -85,6 +85,24 @@ var _ = Describe("Machines", func() {
 			})
 		})
 
+		Describe("#TestLabelNormalization", func() {
+			It("should return the correct list of labels", func() {
+				input := map[string]string{
+					"a/b/c":     "value",
+					"test/node": "value",
+					"node-role": "value",
+				}
+
+				output := NormalizeLabelsForMachineClass(input)
+				expected := map[string]string{
+					"a-b-c":     "value",
+					"test-node": "value",
+					"node-role": "value",
+				}
+				Expect(output).To(Equal(expected))
+			})
+		})
+
 		Describe("#GenerateMachineDeployments, #DeployMachineClasses", func() {
 			var (
 				namespace        string

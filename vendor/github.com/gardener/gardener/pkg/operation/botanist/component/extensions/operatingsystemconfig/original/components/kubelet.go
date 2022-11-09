@@ -16,8 +16,8 @@ package components
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 // ConfigurableKubeletCLIFlags is the set of configurable kubelet command line parameters.
@@ -39,6 +39,8 @@ func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(kubeletConfig *gardencorev1beta
 
 // ConfigurableKubeletConfigParameters is the set of configurable kubelet config parameters.
 type ConfigurableKubeletConfigParameters struct {
+	ContainerLogMaxSize              *string
+	ContainerLogMaxFiles             *int32
 	CpuCFSQuota                      *bool
 	CpuManagerPolicy                 *string
 	EvictionHard                     map[string]string
@@ -51,12 +53,15 @@ type ConfigurableKubeletConfigParameters struct {
 	FeatureGates                     map[string]bool
 	ImageGCHighThresholdPercent      *int32
 	ImageGCLowThresholdPercent       *int32
+	SeccompDefault                   *bool
 	SerializeImagePulls              *bool
+	StreamingConnectionIdleTimeout   *metav1.Duration
 	RegistryPullQPS                  *int32
 	RegistryBurst                    *int32
 	KubeReserved                     map[string]string
 	MaxPods                          *int32
 	PodPidsLimit                     *int64
+	ProtectKernelDefaults            *bool
 	SystemReserved                   map[string]string
 }
 
@@ -79,6 +84,10 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 	var out ConfigurableKubeletConfigParameters
 
 	if kubeletConfig != nil {
+		out.ContainerLogMaxFiles = kubeletConfig.ContainerLogMaxFiles
+		if val := kubeletConfig.ContainerLogMaxSize; val != nil {
+			out.ContainerLogMaxSize = pointer.String(val.String())
+		}
 		out.CpuCFSQuota = kubeletConfig.CPUCFSQuota
 		out.CpuManagerPolicy = kubeletConfig.CPUManagerPolicy
 		out.EvictionMaxPodGracePeriod = kubeletConfig.EvictionMaxPodGracePeriod
@@ -86,6 +95,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.FailSwapOn = kubeletConfig.FailSwapOn
 		out.ImageGCHighThresholdPercent = kubeletConfig.ImageGCHighThresholdPercent
 		out.ImageGCLowThresholdPercent = kubeletConfig.ImageGCLowThresholdPercent
+		out.SeccompDefault = kubeletConfig.SeccompDefault
 		out.SerializeImagePulls = kubeletConfig.SerializeImagePulls
 		out.RegistryPullQPS = kubeletConfig.RegistryPullQPS
 		out.RegistryBurst = kubeletConfig.RegistryBurst
@@ -93,6 +103,8 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.KubeReserved = reservedFromKubeletConfig(kubeletConfig.KubeReserved)
 		out.MaxPods = kubeletConfig.MaxPods
 		out.PodPidsLimit = kubeletConfig.PodPIDsLimit
+		out.ProtectKernelDefaults = kubeletConfig.ProtectKernelDefaults
+		out.StreamingConnectionIdleTimeout = kubeletConfig.StreamingConnectionIdleTimeout
 		out.SystemReserved = reservedFromKubeletConfig(kubeletConfig.SystemReserved)
 
 		if eviction := kubeletConfig.EvictionHard; eviction != nil {
@@ -182,6 +194,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 				out.EvictionSoftGracePeriod[NodeFSInodesFree] = val.Duration.String()
 			}
 		}
+
 	}
 
 	return out

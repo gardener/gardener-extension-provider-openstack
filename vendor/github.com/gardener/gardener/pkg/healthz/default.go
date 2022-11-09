@@ -15,6 +15,7 @@
 package healthz
 
 import (
+	"context"
 	"sync"
 )
 
@@ -38,12 +39,13 @@ func (d *defaultHealthz) Name() string {
 }
 
 // Start starts the health manager.
-func (d *defaultHealthz) Start() {
+func (d *defaultHealthz) Start(_ context.Context) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
 	d.started = true
 	d.health = true
+	return nil
 }
 
 // Stop stops the health manager.
@@ -66,5 +68,5 @@ func (d *defaultHealthz) Get() bool {
 func (d *defaultHealthz) Set(health bool) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	d.health = health && d.started
+	d.health = health
 }

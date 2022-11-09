@@ -133,8 +133,6 @@ const (
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
-	// DeploymentNameVPAExporter is a constant for the name of the VPA exporter deployment.
-	DeploymentNameVPAExporter = "vpa-exporter"
 	// DeploymentNameVPARecommender is a constant for the name of the VPA recommender deployment.
 	DeploymentNameVPARecommender = "vpa-recommender"
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
@@ -224,6 +222,8 @@ const (
 	GardenRoleControlPlane = "controlplane"
 	// GardenRoleSystemComponent is the value of the GardenRole key indicating type 'system-component'.
 	GardenRoleSystemComponent = "system-component"
+	// GardenRoleSeedSystemComponent is the value of the GardenRole key indicating type 'seed-system-component'.
+	GardenRoleSeedSystemComponent = "seed-system-component"
 	// GardenRoleMonitoring is the value of the GardenRole key indicating type 'monitoring'.
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
@@ -258,6 +258,7 @@ const (
 
 	// ShootControlPlaneEnforceZone is an annotation key which is used to pin or schedule all control-plane pods
 	// to the very same availability zone.
+	// Deprecated: Only kept for removal of the label.
 	ShootControlPlaneEnforceZone = "control-plane.shoot.gardener.cloud/enforce-zone"
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
@@ -306,8 +307,6 @@ const (
 	// plane high availability annotation, that allows gardener to spread the shoot control plane across
 	// multiple availability zones if it is possible.
 	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
-	// LabelSeedMultiZonal is used to identify whether the seed supports multi-zonal control planes for shoots.
-	LabelSeedMultiZonal = "seed.gardener.cloud/multi-zonal"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
@@ -757,7 +756,7 @@ const (
 	// PriorityClassNameShootControlPlane100 is the name of a PriorityClass for Shoot control plane components.
 	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
 	PriorityClassNameShootControlPlane100 = "gardener-system-100"
-	// PriorityClassNameShootControlPlane is the name of a PriorityClass for Shoot control plane components.
-	// Deprecated: this PriorityClass will be removed in a future version, use the fine-granular PriorityClasses above instead.
-	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
+
+	// TechnicalIDPrefix is a prefix used for a shoot's technical id.
+	TechnicalIDPrefix = "shoot--"
 )

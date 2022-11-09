@@ -755,6 +755,10 @@ const (
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig
+	// ContainerLogMaxSize defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+	ContainerLogMaxSize *resource.Quantity
+	// ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.
+	ContainerLogMaxFiles *int32
 	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
 	CPUCFSQuota *bool
 	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
@@ -822,6 +826,19 @@ type KubeletConfig struct {
 	// while still not exceeding registryPullQPS. The value must not be a negative number.
 	// Only used if registryPullQPS is greater than 0.
 	RegistryBurst *int32
+	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
+	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
+	// This field is only available for Kubernetes v1.25 or later.
+	SeccompDefault *bool
+	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+	// Defaults to true for Kubernetes v1.26 or later.
+	ProtectKernelDefaults *bool
+	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
+	// This field cannot be set lower than "30s" or greater than "4h".
+	// Default:
+	//  "4h" for Kubernetes < v1.26.
+	//  "5m" for Kubernetes >= v1.26.
+	StreamingConnectionIdleTimeout *metav1.Duration
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

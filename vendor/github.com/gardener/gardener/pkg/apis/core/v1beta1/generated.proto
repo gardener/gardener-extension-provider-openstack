@@ -1012,6 +1012,34 @@ message KubeletConfig {
   // Default: 10
   // +optional
   optional int32 registryBurst = 20;
+
+  // SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
+  // This requires the corresponding SeccompDefault feature gate to be enabled as well.
+  // This field is only available for Kubernetes v1.25 or later.
+  // +optional
+  optional bool seccompDefault = 21;
+
+  // A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+  // +optional
+  // Default: 100Mi
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity containerLogMaxSize = 22;
+
+  // Maximum number of container log files that can be present for a container.
+  // +optional
+  optional int32 containerLogMaxFiles = 23;
+
+  // ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+  // Defaults to true for Kubernetes v1.26 or later.
+  // +optional
+  optional bool protectKernelDefaults = 24;
+
+  // StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
+  // This field cannot be set lower than "30s" or greater than "4h".
+  // Default:
+  //  "4h" for Kubernetes < v1.26.
+  //  "5m" for Kubernetes >= v1.26.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 25;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1204,7 +1232,7 @@ message LastOperation {
   // Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
   optional string state = 4;
 
-  // Type of the last operation, one of Create, Reconcile, Delete.
+  // Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
   optional string type = 5;
 }
 
@@ -1825,7 +1853,7 @@ message SeedNetworks {
   repeated string blockCIDRs = 5;
 }
 
-// SeedProvider defines the provider type and region for this Seed cluster.
+// SeedProvider defines the provider-specific information of this Seed cluster.
 message SeedProvider {
   // Type is the name of the provider.
   optional string type = 1;
@@ -1836,6 +1864,10 @@ message SeedProvider {
 
   // Region is a name of a region.
   optional string region = 3;
+
+  // Zones is the list of availability zones the seed cluster is deployed to.
+  // +optional
+  repeated string zones = 4;
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -1991,6 +2023,14 @@ message SeedSpec {
   // Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
   // +optional
   optional Ingress ingress = 9;
+
+  // HighAvailability describes the high availability configuration for seed system components. A highly available
+  // seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
+  // allowing spreading of system components across the configured failure domain.
+  // Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+  // `.spec.provider.zones` instead.
+  // +optional
+  optional HighAvailability highAvailability = 10;
 }
 
 // SeedStatus is the status of a Seed.

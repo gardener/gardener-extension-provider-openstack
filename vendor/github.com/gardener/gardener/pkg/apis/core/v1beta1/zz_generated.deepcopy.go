@@ -1770,6 +1770,31 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.SeccompDefault != nil {
+		in, out := &in.SeccompDefault, &out.SeccompDefault
+		*out = new(bool)
+		**out = **in
+	}
+	if in.ContainerLogMaxSize != nil {
+		in, out := &in.ContainerLogMaxSize, &out.ContainerLogMaxSize
+		x := (*in).DeepCopy()
+		*out = &x
+	}
+	if in.ContainerLogMaxFiles != nil {
+		in, out := &in.ContainerLogMaxFiles, &out.ContainerLogMaxFiles
+		*out = new(int32)
+		**out = **in
+	}
+	if in.ProtectKernelDefaults != nil {
+		in, out := &in.ProtectKernelDefaults, &out.ProtectKernelDefaults
+		*out = new(bool)
+		**out = **in
+	}
+	if in.StreamingConnectionIdleTimeout != nil {
+		in, out := &in.StreamingConnectionIdleTimeout, &out.StreamingConnectionIdleTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 
@@ -3223,6 +3248,11 @@ func (in *SeedProvider) DeepCopyInto(out *SeedProvider) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Zones != nil {
+		in, out := &in.Zones, &out.Zones
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -3507,6 +3537,11 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 		in, out := &in.Ingress, &out.Ingress
 		*out = new(Ingress)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.HighAvailability != nil {
+		in, out := &in.HighAvailability, &out.HighAvailability
+		*out = new(HighAvailability)
+		**out = **in
 	}
 	return
 }

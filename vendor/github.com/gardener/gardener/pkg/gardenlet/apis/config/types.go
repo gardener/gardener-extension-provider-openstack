@@ -44,11 +44,11 @@ type GardenletConfiguration struct {
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
-	LogLevel *string
+	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
-	LogFormat *string
+	LogFormat string
 	// Server defines the configuration of the HTTP server.
-	Server *ServerConfiguration
+	Server ServerConfiguration
 	// Debugging holds configuration for Debugging related features.
 	Debugging *componentbaseconfig.DebuggingConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
@@ -145,12 +145,12 @@ type GardenletControllerConfiguration struct {
 	ControllerInstallationRequired *ControllerInstallationRequiredControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
+	// SeedCare defines the configuration of the SeedCare controller.
+	SeedCare *SeedCareControllerConfiguration
 	// Shoot defines the configuration of the Shoot controller.
 	Shoot *ShootControllerConfiguration
 	// ShootCare defines the configuration of the ShootCare controller.
 	ShootCare *ShootCareControllerConfiguration
-	// SeedCare defines the configuration of the SeedCare controller.
-	SeedCare *SeedCareControllerConfiguration
 	// ShootMigration defines the configuration of the ShootMigration controller.
 	ShootMigration *ShootMigrationControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
@@ -234,9 +234,6 @@ type ControllerInstallationRequiredControllerConfiguration struct {
 
 // SeedControllerConfiguration defines the configuration of the Seed controller.
 type SeedControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
 	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
@@ -350,8 +347,6 @@ type ShootStateSyncControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
-	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
-	SyncPeriod *metav1.Duration
 }
 
 // SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
@@ -460,8 +455,10 @@ type Logging struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTPS is the configuration for the HTTPS server.
-	HTTPS HTTPSServer
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	HealthProbes *Server
+	// Metrics is the configuration for serving the metrics endpoint.
+	Metrics *Server
 }
 
 // Server contains information for HTTP(S) server configuration.
@@ -470,23 +467,6 @@ type Server struct {
 	BindAddress string
 	// Port is the port on which to serve unsecured, unauthenticated access.
 	Port int
-}
-
-// HTTPSServer is the configuration for the HTTPSServer server.
-type HTTPSServer struct {
-	// Server is the configuration for the bind address and the port.
-	Server
-	// TLSServer contains information about the TLS configuration for a HTTPS server. If empty then a proper server
-	// certificate will be self-generated during startup.
-	TLS *TLSServer
-}
-
-// TLSServer contains information about the TLS configuration for a HTTPS server.
-type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string
 }
 
 // SNI contains an optional configuration for the APIServerSNI feature used

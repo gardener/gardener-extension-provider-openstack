@@ -52,14 +52,11 @@ type GardenletConfiguration struct {
 	// +optional
 	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
-	// +optional
-	LogLevel *string `json:"logLevel,omitempty"`
+	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
-	// +optional
-	LogFormat *string `json:"logFormat,omitempty"`
+	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
-	// +optional
-	Server *ServerConfiguration `json:"server,omitempty"`
+	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
@@ -180,15 +177,15 @@ type GardenletControllerConfiguration struct {
 	// Seed defines the configuration of the Seed controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
+	// SeedCare defines the configuration of the SeedCare controller.
+	// +optional
+	SeedCare *SeedCareControllerConfiguration `json:"seedCare,omitempty"`
 	// Shoot defines the configuration of the Shoot controller.
 	// +optional
 	Shoot *ShootControllerConfiguration `json:"shoot,omitempty"`
 	// ShootCare defines the configuration of the ShootCare controller.
 	// +optional
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
-	// SeedCare defines the configuration of the SeedCare controller.
-	// +optional
-	SeedCare *SeedCareControllerConfiguration `json:"seedCare,omitempty"`
 	// ShootMigration defines the configuration of the ShootMigration controller.
 	// +optional
 	ShootMigration *ShootMigrationControllerConfiguration `json:"shootMigration,omitempty"`
@@ -290,10 +287,6 @@ type ControllerInstallationRequiredControllerConfiguration struct {
 
 // SeedControllerConfiguration defines the configuration of the Seed controller.
 type SeedControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
@@ -431,9 +424,6 @@ type ShootStateSyncControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
-	// +optional
-	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
@@ -564,8 +554,12 @@ type Logging struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTPS is the configuration for the HTTPS server.
-	HTTPS HTTPSServer `json:"https"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
 }
 
 // Server contains information for HTTP(S) server configuration.
@@ -574,24 +568,6 @@ type Server struct {
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
 	Port int `json:"port"`
-}
-
-// HTTPSServer is the configuration for the HTTPSServer server.
-type HTTPSServer struct {
-	// Server is the configuration for the bind address and the port.
-	Server `json:",inline"`
-	// TLSServer contains information about the TLS configuration for a HTTPS server. If empty then a proper server
-	// certificate will be self-generated during startup.
-	// +optional
-	TLS *TLSServer `json:"tls,omitempty"`
-}
-
-// TLSServer contains information about the TLS configuration for a HTTPS server.
-type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string `json:"serverCertPath"`
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string `json:"serverKeyPath"`
 }
 
 // SNI contains an optional configuration for the APIServerSNI feature used

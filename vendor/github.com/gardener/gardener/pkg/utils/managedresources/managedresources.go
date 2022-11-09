@@ -17,6 +17,8 @@ package managedresources
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,7 +88,12 @@ func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *bui
 
 // NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
 func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
-	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, nil, nil, nil)
+	var labels map[string]string
+	if !strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix) {
+		labels = map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeedSystemComponent}
+	}
+
+	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, labels, nil, nil)
 }
 
 // NewSecret initiates a new Secret object which can be reconciled.
@@ -98,7 +105,16 @@ func NewSecret(client client.Client, namespace, name string, data map[string][]b
 }
 
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
-func CreateFromUnstructured(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
+func CreateFromUnstructured(
+	ctx context.Context,
+	client client.Client,
+	namespace, name string,
+	secretNameWithPrefix bool,
+	class string,
+	objs []*unstructured.Unstructured,
+	keepObjects bool,
+	injectedLabels map[string]string,
+) error {
 	var data []byte
 	for _, obj := range objs {
 		bytes, err := obj.MarshalJSON()
@@ -108,14 +124,25 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.Bool(false))
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.Bool(false))
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
-func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, data map[string][]byte, keepObjects *bool, injectedLabels map[string]string, forceOverwriteAnnotations *bool) error {
+func Create(
+	ctx context.Context,
+	client client.Client,
+	namespace, name string,
+	labels map[string]string,
+	secretNameWithPrefix bool,
+	class string,
+	data map[string][]byte,
+	keepObjects *bool,
+	injectedLabels map[string]string,
+	forceOverwriteAnnotations *bool,
+) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
-		managedResource    = New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
+		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)
@@ -220,7 +247,8 @@ func WaitUntilListDeleted(ctx context.Context, client client.Client, mrList *res
 			if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 				(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 				deleteError := fmt.Errorf("%w:\n%s", err, resourcesAppliedCondition.Message)
-				allErrs.Append(gardencorev1beta1helper.DeprecatedDetermineError(deleteError))
+
+				allErrs.Append(gardencorev1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...))
 			}
 		}
 	}
@@ -241,7 +269,7 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 		if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 			(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 			deleteError := fmt.Errorf("error while waiting for all resources to be deleted: %w:\n%s", err, resourcesAppliedCondition.Message)
-			return gardencorev1beta1helper.DeprecatedDetermineError(deleteError)
+			return gardencorev1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...)
 		}
 		return err
 	}
@@ -280,5 +308,18 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.Bool(false), injectedLabels, &forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.Bool(false), injectedLabels, &forceOverwriteAnnotations)
+}
+
+func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
+	var (
+		errorCodes                 []gardencorev1beta1.ErrorCode
+		configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+	)
+
+	if configurationProblemRegexp.MatchString(err.Error()) {
+		errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
+	}
+
+	return errorCodes
 }

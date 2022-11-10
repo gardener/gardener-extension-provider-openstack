@@ -32,6 +32,7 @@ useOctavia: false
 #   floatingNetworkID: "1234"
 #   floatingSubnetTags: tag1,tag2
 # [Networking]
+# routerID: 25611bee-3143-4e81-be81-2d867fcd909f
 # internalNetworkName: shoot--my-project--my-cluster
 # [BlockStorage]
 rescanBlockStorageOnResize: false

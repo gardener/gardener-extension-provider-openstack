@@ -63,14 +63,17 @@ If you don't know which floating pools are available look it up in the respectiv
 
 With `floatingPoolSubnetName` you can explicitly define to which subnet in the floating pool network (defined via `floatingPoolName`) the router should be attached to.
 
-If `networks.id` is an optional field. If it is given, you can specify the uuid of an existing private Neutron network (created manually, by other tooling, ...) that should be reused. A new subnet for the Shoot will be created in it.
+`networks.id` is an optional field. If it is given, you can specify the uuid of an existing private Neutron network (created manually, by other tooling, ...) that should be reused. A new subnet for the Shoot will be created in it.
+
+If a `networks.id` is given and calico shoot clusters are created without a network overlay within one network make sure that the pod CIDR specified in `shoot.spec.networking.pods` is not overlapping with any other pod CIDR used in that network.
+Overlapping pod CIDRs will lead to disfunctional shoot clusters.
 
 The `networks.router` section describes whether you want to create the shoot cluster in an already existing router or whether to create a new one:
 
 * If `networks.router.id` is given then you have to specify the router id of the existing router that was created by other means (manually, other tooling, ...).
 If you want to get a fresh router for the shoot then just omit the `networks.router` field.
 
-* In any case, the shoot cluster will be created in a **new** subnet. 
+* In any case, the shoot cluster will be created in a **new** subnet.
 
 The `networks.workers` section describes the CIDR for a subnet that is used for all shoot worker nodes, i.e., VMs which later run your applications.
 

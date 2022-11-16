@@ -442,6 +442,7 @@ func getConfigChartValues(
 		// detect internal network.
 		// See https://github.com/kubernetes/cloud-provider-openstack/blob/v1.22.1/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#networking
 		"internalNetworkName": infraStatus.Networks.Name,
+		"routerID":            infraStatus.Networks.Router.ID,
 	}
 
 	loadBalancerClassesFromCloudProfile := []api.LoadBalancerClass{}

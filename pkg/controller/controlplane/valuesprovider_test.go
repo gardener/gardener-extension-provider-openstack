@@ -131,6 +131,7 @@ var _ = Describe("ValuesProvider", func() {
 		ignoreVolumeAZ                   = true
 		nodeVoluemAttachLimit      int32 = 25
 		technicalID                      = technicalID
+		routerID                         = ""
 
 		cloudProfileConfig = &api.CloudProfileConfig{
 			KeyStoneURL:                authURL,
@@ -293,6 +294,7 @@ var _ = Describe("ValuesProvider", func() {
 			"applicationCredentialSecret": "",
 			"applicationCredentialName":   "",
 			"internalNetworkName":         technicalID,
+			"routerID":                    routerID,
 		}
 
 		It("should return correct config chart values", func() {

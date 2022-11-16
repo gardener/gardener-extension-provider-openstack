@@ -25,6 +25,8 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -119,6 +121,10 @@ type Networking interface {
 	CreateRule(createOpts rules.CreateOpts) (*rules.SecGroupRule, error)
 	ListRules(listOpts rules.ListOpts) ([]rules.SecGroupRule, error)
 	DeleteRule(ruleID string) error
+	// Routers
+	GetRouterByID(id string) ([]routers.Router, error)
+	ListRouters(listOpts routers.ListOpts) ([]routers.Router, error)
+	UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error)
 }
 
 // FactoryFactory creates instances of Factory.

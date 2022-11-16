@@ -16,6 +16,7 @@ import (
 	images "github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	servers "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	floatingips0 "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
+	routers "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	groups "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	rules "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	networks "github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -579,6 +580,21 @@ func (mr *MockNetworkingMockRecorder) GetNetworkByName(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkByName", reflect.TypeOf((*MockNetworking)(nil).GetNetworkByName), arg0)
 }
 
+// GetRouterByID mocks base method.
+func (m *MockNetworking) GetRouterByID(arg0 string) ([]routers.Router, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRouterByID", arg0)
+	ret0, _ := ret[0].([]routers.Router)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRouterByID indicates an expected call of GetRouterByID.
+func (mr *MockNetworkingMockRecorder) GetRouterByID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRouterByID", reflect.TypeOf((*MockNetworking)(nil).GetRouterByID), arg0)
+}
+
 // GetSecurityGroupByName mocks base method.
 func (m *MockNetworking) GetSecurityGroupByName(arg0 string) ([]groups.SecGroup, error) {
 	m.ctrl.T.Helper()
@@ -624,6 +640,21 @@ func (mr *MockNetworkingMockRecorder) ListNetwork(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNetwork", reflect.TypeOf((*MockNetworking)(nil).ListNetwork), arg0)
 }
 
+// ListRouters mocks base method.
+func (m *MockNetworking) ListRouters(arg0 routers.ListOpts) ([]routers.Router, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRouters", arg0)
+	ret0, _ := ret[0].([]routers.Router)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRouters indicates an expected call of ListRouters.
+func (mr *MockNetworkingMockRecorder) ListRouters(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRouters", reflect.TypeOf((*MockNetworking)(nil).ListRouters), arg0)
+}
+
 // ListRules mocks base method.
 func (m *MockNetworking) ListRules(arg0 rules.ListOpts) ([]rules.SecGroupRule, error) {
 	m.ctrl.T.Helper()
@@ -652,4 +683,19 @@ func (m *MockNetworking) ListSecurityGroup(arg0 groups.ListOpts) ([]groups.SecGr
 func (mr *MockNetworkingMockRecorder) ListSecurityGroup(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSecurityGroup", reflect.TypeOf((*MockNetworking)(nil).ListSecurityGroup), arg0)
+}
+
+// UpdateRoutesForRouter mocks base method.
+func (m *MockNetworking) UpdateRoutesForRouter(arg0 []routers.Route, arg1 string) (*routers.Router, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRoutesForRouter", arg0, arg1)
+	ret0, _ := ret[0].(*routers.Router)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateRoutesForRouter indicates an expected call of UpdateRoutesForRouter.
+func (mr *MockNetworkingMockRecorder) UpdateRoutesForRouter(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRoutesForRouter", reflect.TypeOf((*MockNetworking)(nil).UpdateRoutesForRouter), arg0, arg1)
 }

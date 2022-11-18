@@ -366,10 +366,6 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 	if err != nil {
 		return nil, err
 	}
-	k8sVersionLessThan112, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", "1.12")
-	if err != nil {
-		return nil, err
-	}
 
 	providerConfig := api.CloudProfileConfig{}
 	if cluster.CloudProfile.Spec.ProviderConfig != nil {
@@ -423,20 +419,15 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 			"name":              "default",
 			"default":           true,
 			"provisioner":       openstack.CSIStorageProvisioner,
-			"volumeBindingMode": storagev1.VolumeBindingImmediate,
+			"volumeBindingMode": storagev1.VolumeBindingWaitForFirstConsumer,
 		},
 		{
 			"name":              "default-class",
 			"provisioner":       openstack.CSIStorageProvisioner,
-			"volumeBindingMode": storagev1.VolumeBindingImmediate,
+			"volumeBindingMode": storagev1.VolumeBindingWaitForFirstConsumer,
 		}}
 
 	if k8sVersionLessThan119 {
-		if k8sVersionLessThan112 {
-			storageclasses[0]["volumeBindingMode"] = storagev1.VolumeBindingImmediate
-			storageclasses[1]["volumeBindingMode"] = storagev1.VolumeBindingWaitForFirstConsumer
-		}
-
 		storageclasses[0]["provisioner"] = openstack.StorageProvisionerBeforeCSI
 		storageclasses[1]["provisioner"] = openstack.StorageProvisionerBeforeCSI
 	}

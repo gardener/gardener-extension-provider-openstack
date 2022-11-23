@@ -15,9 +15,37 @@
 package v1alpha1
 
 import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
+}
+
+// SetDefaults_ControllerConfiguration initializes an empty CSI config object.
+func SetDefaults_ControllerConfiguration(obj *ControllerConfiguration) {
+	if obj.CSI == nil {
+		obj.CSI = &CSI{}
+	}
+}
+
+// SetDefaults_CSI initializes an empty CSIAttacher object.
+func SetDefaults_CSI(obj *CSI) {
+	if obj.CSIAttacher == nil {
+		obj.CSIAttacher = &CSIAttacher{}
+	}
+}
+
+// SetDefaults_CSIAttacher sets the default timeout of the csi-attacher component to 3m and verbosity to 5.
+func SetDefaults_CSIAttacher(obj *CSIAttacher) {
+	if obj.Timeout == nil {
+		obj.Timeout = &metav1.Duration{Duration: time.Minute * 3}
+	}
+	if obj.Verbosity == nil {
+		obj.Verbosity = pointer.Int32(5)
+	}
 }

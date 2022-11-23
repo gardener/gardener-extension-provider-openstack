@@ -29,5 +29,16 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&ControllerConfiguration{}, func(obj interface{}) { SetObjectDefaults_ControllerConfiguration(obj.(*ControllerConfiguration)) })
 	return nil
+}
+
+func SetObjectDefaults_ControllerConfiguration(in *ControllerConfiguration) {
+	SetDefaults_ControllerConfiguration(in)
+	if in.CSI != nil {
+		SetDefaults_CSI(in.CSI)
+		if in.CSI.CSIAttacher != nil {
+			SetDefaults_CSIAttacher(in.CSI.CSIAttacher)
+		}
+	}
 }

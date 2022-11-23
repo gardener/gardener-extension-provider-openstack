@@ -19,6 +19,7 @@ import (
 
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -141,4 +142,30 @@ func (c *NetworkingClient) GetSecurityGroupByName(name string) ([]groups.SecGrou
 		Name: name,
 	}
 	return c.ListSecurityGroup(listOpts)
+}
+
+// GetRouterByID return a router info by name
+func (c *NetworkingClient) GetRouterByID(id string) ([]routers.Router, error) {
+	listOpts := routers.ListOpts{
+		ID: id,
+	}
+	return c.ListRouters(listOpts)
+}
+
+// ListRouters returns a list of routers
+func (c *NetworkingClient) ListRouters(listOpts routers.ListOpts) ([]routers.Router, error) {
+	allPages, err := routers.List(c.client, listOpts).AllPages()
+	if err != nil {
+		return nil, err
+	}
+	return routers.ExtractRouters(allPages)
+}
+
+// UpdateRoutesForRouter updates the route list for a router
+func (c *NetworkingClient) UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error) {
+
+	updateOpts := routers.UpdateOpts{
+		Routes: routes,
+	}
+	return routers.Update(c.client, routerID, updateOpts).Extract()
 }

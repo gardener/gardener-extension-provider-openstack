@@ -194,7 +194,7 @@ type RegionIDMapping struct {
 	ID string
 }
 
-//StorageClassDefinition is a definition of a storageClass
+// StorageClassDefinition is a definition of a storageClass
 type StorageClassDefinition struct {
 	// Name is the name of the storageclass
 	Name string

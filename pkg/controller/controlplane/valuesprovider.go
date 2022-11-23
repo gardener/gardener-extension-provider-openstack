@@ -17,7 +17,6 @@ package controlplane
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"path/filepath"
 	"strings"
 
@@ -41,6 +40,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
+	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

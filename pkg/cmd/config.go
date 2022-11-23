@@ -76,6 +76,13 @@ func (c *Config) ApplyETCDStorage(etcdStorage *config.ETCDStorage) {
 	*etcdStorage = c.Config.ETCD.Storage
 }
 
+// ApplyCSIConfig sets the given csi component config to that of this Config.
+func (c *Config) ApplyCSIConfig(csi *config.CSI) {
+	if c.Config.CSI != nil {
+		*csi = *c.Config.CSI
+	}
+}
+
 // ApplyETCDBackup sets the given etcd backup configuration to that of this Config.
 func (c *Config) ApplyETCDBackup(etcdBackup *config.ETCDBackup) {
 	*etcdBackup = c.Config.ETCD.Backup

@@ -20,9 +20,12 @@ import (
 	"reflect"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
-
+	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
+	ciliumv1alpha1 "github.com/gardener/gardener-extension-networking-cilium/pkg/apis/cilium/v1alpha1"
+	"github.com/gardener/gardener-extension-networking-cilium/pkg/cilium"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +48,6 @@ func (s *shoot) InjectScheme(scheme *runtime.Scheme) error {
 
 // Mutate mutates the given shoot object.
 func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
-	overlay := &calicov1alpha1.Overlay{Enabled: false}
 
 	shoot, ok := new.(*gardencorev1beta1.Shoot)
 	if !ok {
@@ -79,33 +81,83 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 		return nil
 	}
 
-	networkConfig, err := s.decodeNetworkingConfig(shoot.Spec.Networking.ProviderConfig)
-	if err != nil {
-		return err
-	}
+	switch shoot.Spec.Networking.Type {
+	case calico.ReleaseName:
+		overlay := &calicov1alpha1.Overlay{Enabled: false}
 
-	if oldShoot == nil && networkConfig.Overlay == nil {
-		networkConfig.Overlay = overlay
-	}
-
-	if oldShoot != nil && networkConfig.Overlay == nil {
-		oldNetworkConfig, err := s.decodeNetworkingConfig(oldShoot.Spec.Networking.ProviderConfig)
+		networkConfig, err := s.decodeCalicoNetworkConfig(shoot.Spec.Networking.ProviderConfig)
 		if err != nil {
 			return err
 		}
-		if oldNetworkConfig.Overlay != nil {
-			networkConfig.Overlay = oldNetworkConfig.Overlay
+
+		if oldShoot == nil && networkConfig.Overlay == nil {
+			networkConfig.Overlay = overlay
 		}
-	}
-	shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
-		Object: networkConfig,
+
+		if oldShoot != nil && networkConfig.Overlay == nil {
+			oldNetworkConfig, err := s.decodeCalicoNetworkConfig(oldShoot.Spec.Networking.ProviderConfig)
+			if err != nil {
+				return err
+			}
+
+			if oldNetworkConfig.Overlay != nil {
+				networkConfig.Overlay = oldNetworkConfig.Overlay
+			}
+		}
+
+		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+			Object: networkConfig,
+		}
+
+	case cilium.ReleaseName:
+		overlay := &ciliumv1alpha1.Overlay{Enabled: false}
+
+		networkConfig, err := s.decodeCiliumNetworkConfig(shoot.Spec.Networking.ProviderConfig)
+		if err != nil {
+			return err
+		}
+
+		if oldShoot == nil && networkConfig.Overlay == nil {
+			networkConfig.Overlay = overlay
+		}
+
+		if oldShoot != nil && networkConfig.Overlay == nil {
+			oldNetworkConfig, err := s.decodeCiliumNetworkConfig(oldShoot.Spec.Networking.ProviderConfig)
+			if err != nil {
+				return err
+			}
+
+			if oldNetworkConfig.Overlay != nil {
+				networkConfig.Overlay = oldNetworkConfig.Overlay
+			}
+		}
+
+		if networkConfig.Overlay != nil && !networkConfig.Overlay.Enabled {
+			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: true}
+		} else {
+			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: false}
+		}
+
+		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+			Object: networkConfig,
+		}
 	}
 
 	return nil
 }
 
-func (s *shoot) decodeNetworkingConfig(network *runtime.RawExtension) (*calicov1alpha1.NetworkConfig, error) {
+func (s *shoot) decodeCalicoNetworkConfig(network *runtime.RawExtension) (*calicov1alpha1.NetworkConfig, error) {
 	networkConfig := &calicov1alpha1.NetworkConfig{}
+	if network != nil && network.Raw != nil {
+		if _, _, err := s.decoder.Decode(network.Raw, nil, networkConfig); err != nil {
+			return nil, err
+		}
+	}
+	return networkConfig, nil
+}
+
+func (s *shoot) decodeCiliumNetworkConfig(network *runtime.RawExtension) (*ciliumv1alpha1.NetworkConfig, error) {
+	networkConfig := &ciliumv1alpha1.NetworkConfig{}
 	if network != nil && network.Raw != nil {
 		if _, _, err := s.decoder.Decode(network.Raw, nil, networkConfig); err != nil {
 			return nil, err

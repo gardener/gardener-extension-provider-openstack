@@ -23,6 +23,8 @@ import (
 	"github.com/Masterminds/semver"
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
+	ciliumv1alpha1 "github.com/gardener/gardener-extension-networking-cilium/pkg/apis/cilium/v1alpha1"
+	"github.com/gardener/gardener-extension-networking-cilium/pkg/cilium"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
@@ -829,6 +831,16 @@ func (vp *valuesProvider) isOverlayEnabled(network v1beta1.Networking) (bool, er
 	switch network.Type {
 	case calico.ReleaseName:
 		networkConfig := &calicov1alpha1.NetworkConfig{}
+		if _, _, err := vp.Decoder().Decode(networkProviderConfig, nil, networkConfig); err != nil {
+			return false, err
+		}
+		o := networkConfig.Overlay
+		if o == nil {
+			return true, nil
+		}
+		return o.Enabled, nil
+	case cilium.ReleaseName:
+		networkConfig := &ciliumv1alpha1.NetworkConfig{}
 		if _, _, err := vp.Decoder().Decode(networkProviderConfig, nil, networkConfig); err != nil {
 			return false, err
 		}

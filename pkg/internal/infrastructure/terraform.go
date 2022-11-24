@@ -37,6 +37,8 @@ const (
 	TerraformOutputKeySSHKeyName = "key_name"
 	// TerraformOutputKeyRouterID is the id the router between provider network and the worker subnet.
 	TerraformOutputKeyRouterID = "router_id"
+	// TerraformOutputKeyRouterIP is the ip address of the router.
+	TerraformOutputKeyRouterIP = "router_ip"
 	// TerraformOutputKeyNetworkID is the private worker network.
 	TerraformOutputKeyNetworkID = "network_id"
 	// TerraformOutputKeyNetworkName is the private worker network name.
@@ -75,6 +77,7 @@ func ComputeTerraformerTemplateValues(
 		}
 		outputKeysConfig = map[string]interface{}{
 			"routerID":          TerraformOutputKeyRouterID,
+			"routerIP":          TerraformOutputKeyRouterIP,
 			"networkID":         TerraformOutputKeyNetworkID,
 			"networkName":       TerraformOutputKeyNetworkName,
 			"keyName":           TerraformOutputKeySSHKeyName,
@@ -196,6 +199,8 @@ type TerraformState struct {
 	SSHKeyName string
 	// RouterID is the id the router between provider network and the worker subnet.
 	RouterID string
+	// RouterIP is the ip address of the router.
+	RouterIP string
 	// NetworkID is the private worker network.
 	NetworkID string
 	// NetworkName is the private worker network name.
@@ -215,6 +220,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer) (*Te
 	outputKeys := []string{
 		TerraformOutputKeySSHKeyName,
 		TerraformOutputKeyRouterID,
+		TerraformOutputKeyRouterIP,
 		TerraformOutputKeyNetworkID,
 		TerraformOutputKeyNetworkName,
 		TerraformOutputKeySubnetID,
@@ -231,6 +237,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer) (*Te
 	return &TerraformState{
 		SSHKeyName:        vars[TerraformOutputKeySSHKeyName],
 		RouterID:          vars[TerraformOutputKeyRouterID],
+		RouterIP:          vars[TerraformOutputKeyRouterIP],
 		NetworkID:         vars[TerraformOutputKeyNetworkID],
 		NetworkName:       vars[TerraformOutputKeyNetworkName],
 		SubnetID:          vars[TerraformOutputKeySubnetID],
@@ -256,6 +263,7 @@ func StatusFromTerraformState(state *TerraformState) *apiv1alpha1.Infrastructure
 			},
 			Router: apiv1alpha1.RouterStatus{
 				ID: state.RouterID,
+				IP: state.RouterIP,
 			},
 			Subnets: []apiv1alpha1.Subnet{
 				{

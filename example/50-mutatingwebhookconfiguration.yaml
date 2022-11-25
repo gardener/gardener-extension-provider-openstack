@@ -8,7 +8,6 @@ webhooks:
   - apiGroups:
     - "core.gardener.cloud"
     apiVersions:
-    - v1alpha1
     - v1beta1
     operations:
     - CREATE
@@ -16,6 +15,7 @@ webhooks:
     resources:
     - shoots
   failurePolicy: Fail
+  matchPolicy: Equivalent
   # Please make sure you are running `gardener@v1.42` or later before enabling this object selector.
   objectSelector:
     matchLabels:

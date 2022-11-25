@@ -11,7 +11,6 @@ rules:
   resources:
   - cloudprofiles
   - secretbindings
-  - shoots
   verbs:
   - get
   - list

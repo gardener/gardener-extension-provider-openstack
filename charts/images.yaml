@@ -16,20 +16,6 @@ images:
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager
-  tag: "v1.17.0"
-  targetVersion: "< 1.18"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'protected'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: cloud-controller-manager
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: k8scloudprovider/openstack-cloud-controller-manager
   tag: "v1.21.0"
   targetVersion: ">= 1.18, < 1.22"
   labels:
@@ -110,20 +96,6 @@ images:
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: docker.io/k8scloudprovider/cinder-csi-plugin
-  tag: "v1.19.0"
-  targetVersion: "< 1.20"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'protected'
-      authentication_enforced: false
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-driver-cinder
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: docker.io/k8scloudprovider/cinder-csi-plugin
   tag: "v1.20.3"
   targetVersion: "1.20.x"
   labels:
@@ -195,20 +167,6 @@ images:
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
-  tag: "v2.0.4"
-  targetVersion: "< 1.20"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'private'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-provisioner
-  sourceRepository: github.com/kubernetes-csi/external-provisioner
-  repository: registry.k8s.io/sig-storage/csi-provisioner
   tag: "v3.2.1"
   targetVersion: ">= 1.20"
   labels:
@@ -236,20 +194,6 @@ images:
 - name: csi-snapshotter
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/csi-snapshotter
-  tag: "v3.0.3"
-  targetVersion: "< 1.20"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'private'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-snapshotter
-  sourceRepository: github.com/kubernetes-csi/external-snapshotter
-  repository: registry.k8s.io/sig-storage/csi-snapshotter
   tag: "v4.2.1"
   targetVersion: ">= 1.20"
   labels:
@@ -264,36 +208,8 @@ images:
 - name: csi-snapshot-controller
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/snapshot-controller
-  tag: "v3.0.3"
-  targetVersion: "< 1.20"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'private'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-snapshot-controller
-  sourceRepository: github.com/kubernetes-csi/external-snapshotter
-  repository: registry.k8s.io/sig-storage/snapshot-controller
   tag: "v4.2.1"
   targetVersion: ">= 1.20"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'private'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-snapshot-validation-webhook
-  sourceRepository: github.com/kubernetes-csi/external-snapshotter
-  repository: registry.k8s.io/sig-storage/snapshot-validation-webhook
-  tag: "v3.0.3"
-  targetVersion: "< 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

@@ -20,6 +20,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
+	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -278,7 +282,11 @@ func (vp *valuesProvider) GetConfigChartValues(
 		return nil, fmt.Errorf("could not get service account from secret '%s/%s': %w", cp.Spec.SecretRef.Namespace, cp.Spec.SecretRef.Name, err)
 	}
 
-	return getConfigChartValues(cpConfig, infraStatus, cloudProfileConfig, cp, credentials, cluster)
+	overlayEnabled, err := vp.isOverlayEnabled(cluster.Shoot.Spec.Networking)
+	if err != nil {
+		return nil, fmt.Errorf("could not determine overlay status: %v", err)
+	}
+	return getConfigChartValues(cpConfig, infraStatus, cloudProfileConfig, overlayEnabled, cp, credentials, cluster)
 }
 
 // GetControlPlaneChartValues returns the values for the control plane chart applied by the generic actuator.
@@ -401,6 +409,7 @@ func getConfigChartValues(
 	cpConfig *api.ControlPlaneConfig,
 	infraStatus *api.InfrastructureStatus,
 	cloudProfileConfig *api.CloudProfileConfig,
+	isUsingOverlay bool,
 	cp *extensionsv1alpha1.ControlPlane,
 	c *openstack.Credentials,
 	cluster *extensionscontroller.Cluster,
@@ -442,7 +451,10 @@ func getConfigChartValues(
 		// detect internal network.
 		// See https://github.com/kubernetes/cloud-provider-openstack/blob/v1.22.1/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#networking
 		"internalNetworkName": infraStatus.Networks.Name,
-		"routerID":            infraStatus.Networks.Router.ID,
+	}
+
+	if !isUsingOverlay {
+		values["routerID"] = infraStatus.Networks.Router.ID
 	}
 
 	loadBalancerClassesFromCloudProfile := []api.LoadBalancerClass{}
@@ -732,4 +744,34 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName:                csiNodeDriverValues,
 	}, nil
+}
+
+func (vp *valuesProvider) isOverlayEnabled(network v1beta1.Networking) (bool, error) {
+	if network.ProviderConfig == nil {
+		return true, nil
+	}
+
+	// should not happen in practice because we will receive a RawExtension with Raw populated in production.
+	networkProviderConfig, err := network.ProviderConfig.MarshalJSON()
+	if err != nil {
+		return false, err
+	}
+	if string(networkProviderConfig) == "null" {
+		return true, nil
+	}
+
+	switch network.Type {
+	case calico.ReleaseName:
+		networkConfig := &calicov1alpha1.NetworkConfig{}
+		if _, _, err := vp.Decoder().Decode(networkProviderConfig, nil, networkConfig); err != nil {
+			return false, err
+		}
+		o := networkConfig.Overlay
+		if o == nil {
+			return true, nil
+		}
+		return o.Enabled, nil
+	}
+
+	return true, nil
 }

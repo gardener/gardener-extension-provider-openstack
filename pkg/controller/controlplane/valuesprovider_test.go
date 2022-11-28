@@ -19,6 +19,9 @@ import (
 	"encoding/json"
 	"time"
 
+	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
+	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
@@ -95,6 +98,9 @@ func controlPlane(floatingPoolID string, cfg *api.ControlPlaneConfig) *extension
 						FloatingPool: api.FloatingPoolStatus{
 							ID: floatingPoolID,
 						},
+						Router: api.RouterStatus{
+							ID: "routerID",
+						},
 						Subnets: []api.Subnet{
 							{
 								ID:      "subnet-acbd1234",
@@ -131,7 +137,6 @@ var _ = Describe("ValuesProvider", func() {
 		ignoreVolumeAZ                   = true
 		nodeVoluemAttachLimit      int32 = 25
 		technicalID                      = technicalID
-		routerID                         = ""
 
 		cloudProfileConfig = &api.CloudProfileConfig{
 			KeyStoneURL:                authURL,
@@ -191,6 +196,45 @@ var _ = Describe("ValuesProvider", func() {
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.19.4",
+						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					TechnicalID: technicalID,
+				},
+			},
+		}
+		clusterNoOverlay = &extensionscontroller.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"generic-token-kubeconfig.secret.gardener.cloud/name": genericTokenKubeconfigSecretName,
+				},
+			},
+			CloudProfile: &gardencorev1beta1.CloudProfile{
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					ProviderConfig: &runtime.RawExtension{
+						Raw: cloudProfileConfigJSON,
+					},
+				},
+			},
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: gardencorev1beta1.Networking{
+						Type: calico.ReleaseName,
+						ProviderConfig: &runtime.RawExtension{
+							Object: &calicov1alpha1.NetworkConfig{
+								TypeMeta: metav1.TypeMeta{},
+								Overlay: &calicov1alpha1.Overlay{
+									Enabled: false,
+								},
+							},
+						},
+						Pods: &cidr,
+					},
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.25.4",
 						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},
@@ -294,7 +338,6 @@ var _ = Describe("ValuesProvider", func() {
 			"applicationCredentialSecret": "",
 			"applicationCredentialName":   "",
 			"internalNetworkName":         technicalID,
-			"routerID":                    routerID,
 		}
 
 		It("should return correct config chart values", func() {
@@ -467,6 +510,16 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(values).To(Equal(expectedValues))
 		})
 
+		It("should configure cloud routes when not using overlay", func() {
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
+				"kubernetesVersion": "1.25.4",
+				"routerID":          "routerID",
+			})
+			values, err := vp.GetConfigChartValues(ctx, cp, clusterNoOverlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(expectedValues))
+		})
 	})
 
 	Describe("#GetControlPlaneChartValues", func() {

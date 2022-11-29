@@ -17,16 +17,20 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"time"
 
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/go-logr/logr"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
@@ -64,9 +68,65 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 		return err
 	}
 
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
+	if err != nil {
+		return err
+	}
+
+	networkingClient, err := openstackClient.Networking()
+	if err != nil {
+		return err
+	}
+
 	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
-	return tf.
-		InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
-		SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...).
-		Destroy(ctx)
+	tf = tf.InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...)
+
+	configExists, err := tf.ConfigExists(ctx)
+	if err != nil {
+		return err
+	}
+
+	vars, err := tf.GetStateOutputVariables(ctx, infrastructure.TerraformOutputKeyRouterID)
+	if err != nil && !terraformer.IsVariablesNotFoundError(err) {
+		return err
+	}
+
+	var (
+		g = flow.NewGraph("Openstack infrastructure destruction")
+
+		destroyKubernetesRoutes = g.Add(flow.Task{
+			Name: "Destroying Kubernetes route entries",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return a.cleanupKubernetesRoutes(ctx, config, networkingClient, infra.Namespace, vars[infrastructure.TerraformOutputKeyRouterID])
+			}).
+				RetryUntilTimeout(10*time.Second, 5*time.Minute).
+				DoIf(configExists),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Destroying Shoot infrastructure",
+			Fn:           tf.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyKubernetesRoutes),
+		})
+
+		f = g.Compile()
+	)
+
+	if err := f.Run(ctx, flow.Opts{}); err != nil {
+		return flow.Causes(err)
+	}
+	return nil
+}
+
+func (a *actuator) cleanupKubernetesRoutes(
+	ctx context.Context,
+	config *api.InfrastructureConfig,
+	client openstackclient.Networking,
+	shootSeedNamespace string,
+	routerID string,
+) error {
+	if routerID == "" {
+		return nil
+	}
+	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, config.Networks.Workers)
 }

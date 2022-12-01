@@ -69,7 +69,7 @@ type NetworkConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// Backend defines whether a backend should be used or not (e.g., bird or none)
 	// +optional
-	Backend *Backend `json:"backend"`
+	Backend *Backend `json:"backend,omitempty"`
 	// IPAM to use for the Calico Plugin (e.g., host-local or Calico)
 	// +optional
 	IPAM *IPAM `json:"ipam,omitempty"`

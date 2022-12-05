@@ -20,13 +20,19 @@ spec:
       labels:
         app: snapshot-validation
         networking.gardener.cloud/from-shoot-apiserver: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
     spec:
+      automountServiceAccountToken: false
       priorityClassName: gardener-system-200
       containers:
       - name: openstack-csi-snapshot-validation
         image: {{ index .Values.images "csi-snapshot-validation-webhook" }}
         imagePullPolicy: IfNotPresent
-        args: ['--tls-cert-file=/etc/csi-snapshot-validation/tls.crt', '--tls-private-key-file=etc/csi-snapshot-validation/tls.key']
+        args:
+          - --tls-cert-file=/etc/csi-snapshot-validation/tls.crt
+          - --tls-private-key-file=etc/csi-snapshot-validation/tls.key
+          - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         ports:
         - containerPort: 443
 {{- if .Values.csiSnapshotValidationWebhook.resources }}
@@ -34,10 +40,29 @@ spec:
 {{ toYaml .Values.csiSnapshotValidationWebhook.resources | indent 10 }}
 {{- end }}
         volumeMounts:
+          - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
+            name: kubeconfig
+            readOnly: true
           - name: csi-snapshot-validation
             mountPath: /etc/csi-snapshot-validation
             readOnly: true
       volumes:
+        - name: kubeconfig
+          projected:
+            defaultMode: 420
+            sources:
+              - secret:
+                  items:
+                    - key: kubeconfig
+                      path: kubeconfig
+                  name: {{ .Values.global.genericTokenKubeconfigSecretName }}
+                  optional: false
+              - secret:
+                  items:
+                    - key: token
+                      path: token
+                  name: shoot-access-csi-snapshot-validation
+                  optional: false
         - name: csi-snapshot-validation
           secret:
             secretName: {{ .Values.csiSnapshotValidationWebhook.secrets.server }}

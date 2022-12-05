@@ -1,7 +1,6 @@
-{{- $storageVersion := (include "storageclassversion" .) }}
 {{- range $key, $value := .Values.storageclasses }}
 ---
-apiVersion: {{ $storageVersion }}
+apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: {{ $value.name }}

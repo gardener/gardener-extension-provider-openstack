@@ -121,8 +121,8 @@ const (
 	CSILivenessProbeName = "csi-liveness-probe"
 	// CSISnapshotControllerName is a constant for the name of the csi-snapshot-controller component.
 	CSISnapshotControllerName = "csi-snapshot-controller"
-	// CSISnapshotValidation is the constant for the name of the csi-snapshot-validation-webhook component.
-	CSISnapshotValidation = "csi-snapshot-validation"
+	// CSISnapshotValidationName is the constant for the name of the csi-snapshot-validation-webhook component.
+	CSISnapshotValidationName = "csi-snapshot-validation"
 	// CSIStorageProvisioner is a constant with the storage provisioner name which is used in storageclasses.
 	CSIStorageProvisioner = "cinder.csi.openstack.org"
 	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.

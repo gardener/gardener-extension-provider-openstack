@@ -18,6 +18,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -36,7 +37,10 @@ func CleanupKubernetesRoutes(ctx context.Context, client openstackclient.Network
 	}
 
 	routes := []routers.Route{}
-	_, workersNet, _ := net.ParseCIDR(workers)
+	_, workersNet, err := net.ParseCIDR(workers)
+	if err != nil {
+		return err
+	}
 
 	for _, route := range router[0].Routes {
 		ipNode, _, err := net.ParseCIDR(route.NextHop + "/32")
@@ -52,4 +56,19 @@ func CleanupKubernetesRoutes(ctx context.Context, client openstackclient.Network
 		return err
 	}
 	return nil
+}
+
+// WorkersCIDR determines the Workers CIDR from the given InfrastructureConfig.
+func WorkersCIDR(config *openstack.InfrastructureConfig) string {
+	if config == nil {
+		return ""
+	}
+
+	workersCIDR := config.Networks.Workers
+	// Backwards compatibility - remove this code in a future version.
+	if workersCIDR == "" {
+		workersCIDR = config.Networks.Worker
+	}
+
+	return workersCIDR
 }

@@ -108,12 +108,7 @@ func ComputeTerraformerTemplateValues(
 		routerConfig["enableSNAT"] = *cloudProfileConfig.UseSNAT
 	}
 
-	workersCIDR := config.Networks.Workers
-	// Backwards compatibility - remove this code in a future version.
-	if workersCIDR == "" {
-		workersCIDR = config.Networks.Worker
-	}
-
+	workersCIDR := WorkersCIDR(config)
 	networksConfig := map[string]interface{}{
 		"workers": workersCIDR,
 	}

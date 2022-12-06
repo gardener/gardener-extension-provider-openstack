@@ -19,18 +19,18 @@ import (
 	"fmt"
 	"time"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/go-logr/logr"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/go-logr/logr"
-
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/terraformer"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
@@ -97,7 +97,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 		destroyKubernetesRoutes = g.Add(flow.Task{
 			Name: "Destroying Kubernetes route entries",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return a.cleanupKubernetesRoutes(ctx, config, networkingClient, infra.Namespace, vars[infrastructure.TerraformOutputKeyRouterID])
+				return a.cleanupKubernetesRoutes(ctx, config, networkingClient, vars[infrastructure.TerraformOutputKeyRouterID])
 			}).
 				RetryUntilTimeout(10*time.Second, 5*time.Minute).
 				DoIf(configExists),
@@ -122,11 +122,14 @@ func (a *actuator) cleanupKubernetesRoutes(
 	ctx context.Context,
 	config *api.InfrastructureConfig,
 	client openstackclient.Networking,
-	shootSeedNamespace string,
 	routerID string,
 ) error {
 	if routerID == "" {
 		return nil
 	}
-	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, config.Networks.Workers)
+	workesCIDR := infrastructure.WorkersCIDR(config)
+	if workesCIDR == "" {
+		return nil
+	}
+	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, workesCIDR)
 }

@@ -18,18 +18,20 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/go-logr/logr"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	tf, err := internal.NewTerraformer(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
-		return fmt.Errorf("could not create the Terraformer: %+v", err)
+		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)
 	}
 
 	if err := tf.CleanupConfiguration(ctx); err != nil {

@@ -25,6 +25,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 )
@@ -52,14 +53,14 @@ func (a *actuator) reconcile(ctx context.Context, log logr.Logger, infra *extens
 
 	tf, err := internal.NewTerraformerWithAuth(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	if err := tf.
 		InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
 		Apply(ctx); err != nil {
 
-		return fmt.Errorf("failed to apply the terraform config: %w", err)
+		return util.DetermineError(fmt.Errorf("failed to apply the terraform config: %w", err), helper.KnownCodes)
 	}
 
 	return a.updateProviderStatus(ctx, tf, infra, config)

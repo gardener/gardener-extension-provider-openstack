@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -62,17 +64,17 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dns *extensio
 	}
 	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
 	if err != nil {
-		return fmt.Errorf("could not create Openstack client factory: %w", err)
+		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %w", err), helper.KnownCodes)
 	}
 	dnsClient, err := openstackClientFactory.DNS()
 	if err != nil {
-		return fmt.Errorf("could not create Openstack DNS client: %w", err)
+		return util.DetermineError(fmt.Errorf("could not create Openstack DNS client: %w", err), helper.KnownCodes)
 	}
 
 	// Determine DNS zone ID
 	zone, err := a.getZone(ctx, log, dns, dnsClient)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	// Create or update DNS recordset
@@ -112,17 +114,17 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, dns *extensionsv
 	}
 	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
 	if err != nil {
-		return fmt.Errorf("could not create Openstack client factory: %+v", err)
+		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %+v", err), helper.KnownCodes)
 	}
 	dnsClient, err := openstackClientFactory.DNS()
 	if err != nil {
-		return fmt.Errorf("could not create Openstack DNS client: %+v", err)
+		return util.DetermineError(fmt.Errorf("could not create Openstack DNS client: %+v", err), helper.KnownCodes)
 	}
 
 	// Determine DNS zone ID
 	zone, err := a.getZone(ctx, log, dns, dnsClient)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	// Delete DNS recordset

@@ -21,6 +21,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
@@ -36,7 +37,7 @@ import (
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	tf, err := internal.NewTerraformer(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
-		return fmt.Errorf("could not create the Terraformer: %+v", err)
+		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)
 	}
 
 	// terraform pod from previous reconciliation might still be running, ensure they are gone before doing any operations
@@ -65,17 +66,17 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 	// need to known if application credentials are used
 	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	networkingClient, err := openstackClient.Networking()
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
@@ -83,12 +84,12 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 
 	configExists, err := tf.ConfigExists(ctx)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	vars, err := tf.GetStateOutputVariables(ctx, infrastructure.TerraformOutputKeyRouterID)
 	if err != nil && !terraformer.IsVariablesNotFoundError(err) {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	var (
@@ -113,7 +114,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 	)
 
 	if err := f.Run(ctx, flow.Opts{}); err != nil {
-		return flow.Causes(err)
+		return util.DetermineError(flow.Errors(err), helper.KnownCodes)
 	}
 	return nil
 }

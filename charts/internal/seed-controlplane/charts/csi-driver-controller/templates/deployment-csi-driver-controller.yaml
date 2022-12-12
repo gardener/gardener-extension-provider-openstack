@@ -6,6 +6,7 @@ metadata:
   labels:
     app: csi
     role: controller
+    high-availability-config.resources.gardener.cloud/type: controller
 spec:
   replicas: {{ .Values.replicas }}
   revisionHistoryLimit: 1

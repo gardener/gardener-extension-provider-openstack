@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
 {{ include "labels" . | indent 4 }}
+    high-availability-config.resources.gardener.cloud/type: server
 spec:
   revisionHistoryLimit: 1
   replicas: {{ .Values.global.replicaCount }}

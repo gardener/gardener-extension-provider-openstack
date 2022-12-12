@@ -190,7 +190,7 @@ github.com/gardener/gardener/test/framework/reporter
 github.com/gardener/gardener/test/testmachinery/extensions/generator
 github.com/gardener/gardener/test/testmachinery/extensions/healthcheck
 github.com/gardener/gardener/test/testmachinery/extensions/operation
-# github.com/gardener/gardener-extension-networking-calico v1.27.0
+# github.com/gardener/gardener-extension-networking-calico v1.27.1
 ## explicit; go 1.19
 github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico
 github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1

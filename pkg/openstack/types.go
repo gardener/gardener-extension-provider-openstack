@@ -123,6 +123,8 @@ const (
 	CSISnapshotControllerName = "csi-snapshot-controller"
 	// CSISnapshotValidation is the constant for the name of the csi-snapshot-validation-webhook component.
 	CSISnapshotValidation = "csi-snapshot-validation"
+	// CSIStorageProvisioner is a constant with the storage provisioner name which is used in storageclasses.
+	CSIStorageProvisioner = "cinder.csi.openstack.org"
 	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
 	MachineControllerManagerName = "machine-controller-manager"
 	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager deployment.
@@ -133,6 +135,8 @@ const (
 	// CSIMigrationKubernetesVersion is a constant for the Kubernetes version for which the Shoot's CSI migration will be
 	// performed.
 	CSIMigrationKubernetesVersion = "1.19"
+	// StorageProvisionerBeforeCSI is a constant with the storage provisioner name before CSI which is used in storageclasses.
+	StorageProvisionerBeforeCSI = "kubernetes.io/cinder"
 )
 
 var (

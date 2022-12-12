@@ -70,6 +70,9 @@ type CloudProfileConfig struct {
 	// ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers
 	// +optional
 	ResolvConfOptions []string `json:"resolvConfOptions,omitempty"`
+	// StorageClasses defines storageclasses for the shoot
+	// +optional
+	StorageClasses []StorageClassDefinition `json:"storageClasses,omitempty"`
 }
 
 // Constraints is an object containing constraints for the shoots.
@@ -167,4 +170,31 @@ type RegionIDMapping struct {
 	Name string `json:"name"`
 	// ID is the ID for the machine image in the given region.
 	ID string `json:"id"`
+}
+
+// StorageClassDefinition is a definition of a storageClass
+type StorageClassDefinition struct {
+	// Name is the name of the storageclass
+	Name string `json:"name"`
+	// Default set the storageclass to the default one
+	// +optional
+	Default *bool `json:"default,omitempty"`
+	// Provisioner set the Provisioner inside the storageclass
+	// +optional
+	Provisioner *string `json:"provisioner,omitempty"`
+	// Parameters adds parameters to the storageclass (storageclass.parameters)
+	// +optional
+	Parameters map[string]string `json:"parameters,omitempty"`
+	// Annotations sets annotations for the storageclass
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// Labels sets labels for the storageclass
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// ReclaimPolicy sets reclaimPolicy for the storageclass
+	// +optional
+	ReclaimPolicy *string `json:"reclaimPolicy,omitempty"`
+	// VolumeBindingMode sets bindingMode for the storageclass
+	// +optional
+	VolumeBindingMode *string `json:"volumeBindingMode,omitempty"`
 }

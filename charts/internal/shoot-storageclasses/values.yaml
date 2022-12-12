@@ -1,1 +1,16 @@
-useLegacyProvisioner: true
+#storageclasses:
+#  - name: sample
+#    default: false
+#    annotations:
+#      resources.gardener.cloud/delete-on-invalid-update-lkala: "true"
+#    labels:
+#      resources.gardener.cloud/delete-on-invalid-update: "true"
+#    parameters:
+#      type: perf0
+#      availability: eu01-m
+#    provisioner: cinder.csi.openstack.org
+#    reclaimPolicy: Delete
+#    volumeBindingMode: Immediate
+#  - name: default
+#    default: true
+#    provisioner: cinder.csi.openstack.org

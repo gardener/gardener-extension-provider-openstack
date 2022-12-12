@@ -37,6 +37,9 @@ To enable this feature, an operator should:
 + specify the allowed policy values (e.g. `affintity`, `anti-affinity`) in this section. Only the policies in the allow-list will be available for end-users.
 + make sure that your OpenStack project has enough server group capacity. Otherwise, shoot creation will fail.
 
+If your OpenStack system has multiple `volume-types`, the `storageClasses` property enables the creation of kubernetes `storageClasses` for shoots.
+Set `storageClasses[].parameters.type` to map it with an openstack `volume-type`. Specifying `storageClasses` is optional and can be omitted.
+
 An example `CloudProfileConfig` for the OpenStack extension looks as follows:
 
 ```yaml
@@ -68,6 +71,13 @@ machineImages:
 # resolvConfOptions:
 # - rotate
 # - timeout:1
+# storageClasses:
+# - name: example-sc
+#   default: false
+#   provisioner: cinder.csi.openstack.org
+#   volumeBindingMode: WaitForFirstConsumer
+#   parameters:
+#     type: storage_premium_perf0
 constraints:
   floatingPools:
   - name: fp-pool-1

@@ -228,6 +228,20 @@ bool
 <p>ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>storageClasses</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.StorageClassDefinition">
+[]StorageClassDefinition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StorageClasses defines storageclasses for the shoot</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig
@@ -1479,6 +1493,120 @@ string
 </td>
 <td>
 <p>Name is the name of the server group</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.StorageClassDefinition">StorageClassDefinition
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>)
+</p>
+<p>
+<p>StorageClassDefinition is a definition of a storageClass</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the storageclass</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>default</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Default set the storageclass to the default one</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>provisioner</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Provisioner set the Provisioner inside the storageclass</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parameters</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Parameters adds parameters to the storageclass (storageclass.parameters)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations sets annotations for the storageclass</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>labels</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Labels sets labels for the storageclass</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reclaimPolicy</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReclaimPolicy sets reclaimPolicy for the storageclass</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volumeBindingMode</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VolumeBindingMode sets bindingMode for the storageclass</p>
 </td>
 </tr>
 </tbody>

@@ -44,6 +44,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
+	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -182,7 +183,7 @@ var (
 				Objects: []*chart.Object{
 					// csi-driver
 					{Type: &appsv1.DaemonSet{}, Name: openstack.CSINodeName},
-					{Type: &storagev1.CSIDriver{}, Name: "cinder.csi.openstack.org"},
+					{Type: &storagev1.CSIDriver{}, Name: openstack.CSIStorageProvisioner},
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIDriverName},
 					{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
@@ -366,7 +367,7 @@ func (vp *valuesProvider) GetControlPlaneShootCRDsChartValues(
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
 func (vp *valuesProvider) GetStorageClassesChartValues(
 	_ context.Context,
-	_ *extensionsv1alpha1.ControlPlane,
+	controlPlane *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) (map[string]interface{}, error) {
 	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
@@ -374,9 +375,73 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 		return nil, err
 	}
 
-	return map[string]interface{}{
-		"useLegacyProvisioner": k8sVersionLessThan119,
-	}, nil
+	providerConfig := api.CloudProfileConfig{}
+	if cluster.CloudProfile.Spec.ProviderConfig != nil {
+		if _, _, err := vp.Decoder().Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, &providerConfig); err != nil {
+			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane '%s'", kutil.ObjectName(controlPlane))
+		}
+	}
+	values := make(map[string]interface{})
+	if providerConfig.StorageClasses != nil && len(providerConfig.StorageClasses) != 0 {
+		allSc := make([]map[string]interface{}, len(providerConfig.StorageClasses))
+		for i, sc := range providerConfig.StorageClasses {
+			var storageClassValues = map[string]interface{}{
+				"name": sc.Name,
+			}
+
+			if sc.Default != nil && *sc.Default {
+				storageClassValues["default"] = true
+			}
+
+			if len(sc.Annotations) != 0 {
+				storageClassValues["annotations"] = sc.Annotations
+			}
+			if len(sc.Labels) != 0 {
+				storageClassValues["labels"] = sc.Labels
+			}
+			if len(sc.Parameters) != 0 {
+				storageClassValues["parameters"] = sc.Parameters
+			}
+
+			storageClassValues["provisioner"] = openstack.CSIStorageProvisioner
+			if sc.Provisioner != nil && *sc.Provisioner != "" {
+				storageClassValues["provisioner"] = sc.Provisioner
+			}
+
+			if sc.ReclaimPolicy != nil && *sc.ReclaimPolicy != "" {
+				storageClassValues["reclaimPolicy"] = sc.ReclaimPolicy
+			}
+
+			if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode != "" {
+				storageClassValues["volumeBindingMode"] = sc.VolumeBindingMode
+			}
+
+			allSc[i] = storageClassValues
+		}
+		values["storageclasses"] = allSc
+		return values, err
+	}
+
+	storageclasses := []map[string]interface{}{
+		{
+			"name":              "default",
+			"default":           true,
+			"provisioner":       openstack.CSIStorageProvisioner,
+			"volumeBindingMode": storagev1.VolumeBindingWaitForFirstConsumer,
+		},
+		{
+			"name":              "default-class",
+			"provisioner":       openstack.CSIStorageProvisioner,
+			"volumeBindingMode": storagev1.VolumeBindingWaitForFirstConsumer,
+		}}
+
+	if k8sVersionLessThan119 {
+		storageclasses[0]["provisioner"] = openstack.StorageProvisionerBeforeCSI
+		storageclasses[1]["provisioner"] = openstack.StorageProvisionerBeforeCSI
+	}
+	values["storageclasses"] = storageclasses
+
+	return values, nil
 }
 
 func (vp *valuesProvider) getUserAgentHeaders(

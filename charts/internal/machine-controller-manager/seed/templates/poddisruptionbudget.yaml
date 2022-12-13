@@ -5,12 +5,14 @@ apiVersion: policy/v1beta1
 {{- end }}
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "name" . }}
+  name: machine-controller-manager
   namespace: {{ .Release.Namespace }}
   labels:
-{{ include "labels" . | indent 4 }}
+    app: kubernetes
+    role: machine-controller-manager
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-{{ include "labels" . | indent 6 }}
+      app: kubernetes
+      role: machine-controller-manager

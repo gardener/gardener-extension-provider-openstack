@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: snapshot-validation
+    high-availability-config.resources.gardener.cloud/type: server
 spec:
   replicas: {{ .Values.csiSnapshotValidationWebhook.replicas }}
   selector:

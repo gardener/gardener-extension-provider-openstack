@@ -5,12 +5,14 @@ apiVersion: policy/v1beta1
 {{- end }}
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "name" . }}
+  name: csi-snapshot-controller
   namespace: {{ .Release.Namespace }}
   labels:
-{{ include "labels" . | indent 4 }}
+    app: csi-snapshot-controller
+    role: controller
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-{{ include "labels" . | indent 6 }}
+      app: csi-snapshot-controller
+      role: controller

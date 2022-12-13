@@ -19,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
-	credentials "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -32,44 +31,12 @@ import (
 )
 
 var _ = Describe("Shoot validation", func() {
-	Describe("#ValidateShootCredentialsForK8sVersion", func() {
-		versionPath := field.NewPath("spec", "kubernetes", "version")
-
-		It("should allow using application credentials for k8s version >=1.19", func() {
-			errorList := ValidateShootCredentialsForK8sVersion("1.19.0", credentials.Credentials{ApplicationCredentialSecret: "secret"}, versionPath)
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should forbid using application credentials for k8s version <1.19", func() {
-			lowerThan119 := "1.18.20"
-
-			errorList := ValidateShootCredentialsForK8sVersion(lowerThan119, credentials.Credentials{ApplicationCredentialSecret: "secret"}, versionPath)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("spec.kubernetes.version"),
-					"BadValue": Equal(lowerThan119),
-				})),
-			))
-		})
-
-		It("should using user credentials for k8s version >=1.19", func() {
-			errorList := ValidateShootCredentialsForK8sVersion("1.19.0", credentials.Credentials{Username: "user", Password: "pwd"}, versionPath)
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should allow using user credentials for k8s version < 1.19", func() {
-			errorList := ValidateShootCredentialsForK8sVersion("1.18.20", credentials.Credentials{Username: "user", Password: "pwd"}, versionPath)
-			Expect(errorList).To(BeEmpty())
-		})
-	})
-
 	Describe("#ValidateNetworking", func() {
 		networkingPath := field.NewPath("spec", "networking")
 
 		It("should return no error because nodes CIDR was provided", func() {
 			networking := core.Networking{
-				Nodes: pointer.StringPtr("1.2.3.4/5"),
+				Nodes: pointer.String("1.2.3.4/5"),
 			}
 
 			errorList := ValidateNetworking(networking, networkingPath)
@@ -101,7 +68,7 @@ var _ = Describe("Shoot validation", func() {
 				{
 					Name: "worker1",
 					Volume: &core.Volume{
-						Type:       pointer.StringPtr("Volume"),
+						Type:       pointer.String("Volume"),
 						VolumeSize: "30G",
 					},
 					Minimum: 1,
@@ -111,7 +78,7 @@ var _ = Describe("Shoot validation", func() {
 				{
 					Name: "worker2",
 					Volume: &core.Volume{
-						Type:       pointer.StringPtr("Volume"),
+						Type:       pointer.String("Volume"),
 						VolumeSize: "20G",
 					},
 					Minimum: 1,
@@ -122,35 +89,6 @@ var _ = Describe("Shoot validation", func() {
 		})
 
 		Describe("#ValidateWorkers", func() {
-			It("should pass when the kubernetes version is equal to the CSI migration version", func() {
-				workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.19.0")}
-
-				errorList := ValidateWorkers(workers, nil, field.NewPath(""))
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should pass when the kubernetes version is higher to the CSI migration version", func() {
-				workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.0")}
-
-				errorList := ValidateWorkers(workers, nil, field.NewPath(""))
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should not allow when the kubernetes version is lower than the CSI migration version", func() {
-				workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18.0")}
-
-				errorList := ValidateWorkers(workers, nil, field.NewPath("workers"))
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("workers[0].kubernetes.version"),
-					})),
-				))
-			})
-
 			It("should pass because workers are configured correctly", func() {
 				errorList := ValidateWorkers(workers, nil, nilPath)
 

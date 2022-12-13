@@ -17,7 +17,7 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: k8scloudprovider/openstack-cloud-controller-manager
   tag: "v1.21.0"
-  targetVersion: ">= 1.18, < 1.22"
+  targetVersion: "< 1.22"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -182,7 +182,6 @@ images:
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
   tag: "v3.4.0"
-  targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -209,7 +208,6 @@ images:
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/csi-snapshotter
   tag: "v6.2.1"
-  targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -223,7 +221,6 @@ images:
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/snapshot-controller
   tag: "v6.2.1"
-  targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -237,7 +234,6 @@ images:
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/snapshot-validation-webhook
   tag: "v6.2.1"
-  targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

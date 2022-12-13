@@ -131,12 +131,6 @@ const (
 	MachineControllerManagerVpaName = "machine-controller-manager-vpa"
 	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack configurations for machine-controller-manager.
 	MachineControllerManagerMonitoringConfigName = "machine-controller-manager-monitoring-config"
-
-	// CSIMigrationKubernetesVersion is a constant for the Kubernetes version for which the Shoot's CSI migration will be
-	// performed.
-	CSIMigrationKubernetesVersion = "1.19"
-	// StorageProvisionerBeforeCSI is a constant with the storage provisioner name before CSI which is used in storageclasses.
-	StorageProvisionerBeforeCSI = "kubernetes.io/cinder"
 )
 
 var (

@@ -119,7 +119,7 @@ func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, cr
 
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
-	allErrs = append(allErrs, s.validateShoot(valContext, credentials)...)
+	allErrs = append(allErrs, s.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
@@ -160,13 +160,12 @@ func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 		return errList.ToAggregate()
 	}
 
-	allErrs = append(allErrs, s.validateShoot(valContext, credentials)...)
+	allErrs = append(allErrs, s.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (s *shoot) validateShoot(context *validationContext, credentials openstack.Credentials) field.ErrorList {
+func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, openstackvalidation.ValidateShootCredentialsForK8sVersion(context.shoot.Spec.Kubernetes.Version, credentials, specPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.shoot.Spec.Kubernetes.Version, cpConfigPath)...)

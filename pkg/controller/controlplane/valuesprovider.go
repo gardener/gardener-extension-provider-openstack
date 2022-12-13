@@ -37,7 +37,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -317,20 +316,13 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	}
 	checksums[openstack.CloudProviderConfigName] = gardenerutils.ComputeChecksum(cpConfigSecret.Data)
 
-	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
-	if err != nil {
+	var userAgentHeaders []string
+	cpDiskConfigSecret := &corev1.Secret{}
+	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
 		return nil, err
 	}
-
-	var userAgentHeaders []string
-	if !k8sVersionLessThan119 {
-		cpDiskConfigSecret := &corev1.Secret{}
-		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
-			return nil, err
-		}
-		checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(cpDiskConfigSecret.Data)
-		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
-	}
+	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(cpDiskConfigSecret.Data)
+	userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 
 	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
 }
@@ -346,36 +338,12 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	return vp.getControlPlaneShootChartValues(ctx, cp, cluster, secretsReader, checksums)
 }
 
-// GetControlPlaneShootCRDsChartValues returns the values for the control plane shoot CRDs chart applied by the generic actuator.
-// Currently the provider extension does not specify a control plane shoot CRDs chart. That's why we simply return empty values.
-func (vp *valuesProvider) GetControlPlaneShootCRDsChartValues(
-	_ context.Context,
-	_ *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
-) (map[string]interface{}, error) {
-	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]interface{}{
-		"volumesnapshots": map[string]interface{}{
-			"enabled": !k8sVersionLessThan119,
-		},
-	}, nil
-}
-
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
 func (vp *valuesProvider) GetStorageClassesChartValues(
 	_ context.Context,
 	controlPlane *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) (map[string]interface{}, error) {
-	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
 	providerConfig := api.CloudProfileConfig{}
 	if cluster.CloudProfile.Spec.ProviderConfig != nil {
 		if _, _, err := vp.Decoder().Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, &providerConfig); err != nil {
@@ -420,7 +388,7 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 			allSc[i] = storageClassValues
 		}
 		values["storageclasses"] = allSc
-		return values, err
+		return values, nil
 	}
 
 	storageclasses := []map[string]interface{}{
@@ -436,10 +404,6 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 			"volumeBindingMode": storagev1.VolumeBindingWaitForFirstConsumer,
 		}}
 
-	if k8sVersionLessThan119 {
-		storageclasses[0]["provisioner"] = openstack.StorageProvisionerBeforeCSI
-		storageclasses[1]["provisioner"] = openstack.StorageProvisionerBeforeCSI
-	}
 	values["storageclasses"] = storageclasses
 
 	return values, nil
@@ -495,7 +459,6 @@ func getConfigChartValues(
 	}
 
 	values := map[string]interface{}{
-		"kubernetesVersion":           cluster.Shoot.Spec.Kubernetes.Version,
 		"domainName":                  c.DomainName,
 		"tenantName":                  c.TenantName,
 		"username":                    c.Username,
@@ -529,7 +492,7 @@ func getConfigChartValues(
 	}
 
 	// The LoadBalancerClasses from the CloudProfile will be configured by default.
-	// In case the user specifies own LoadBalancerClasses via via the ControlPlaneConfig
+	// In case the user specifies own LoadBalancerClasses via the ControlPlaneConfig
 	// then the ones from the CloudProfile will be overridden.
 	loadBalancerClasses := loadBalancerClassesFromCloudProfile
 	if cpConfig.LoadBalancerClasses != nil {
@@ -553,7 +516,7 @@ func getConfigChartValues(
 	}
 
 	// Check if there is a dedicated vpn LoadBalancerClass in the CloudProfile and
-	// add its to the list of available LoadBalancerClasses.
+	// add it to the list of available LoadBalancerClasses.
 	if vpnLoadBalancerClass := lookupLoadBalancerClass(loadBalancerClassesFromCloudProfile, api.VPNLoadBalancerClass); vpnLoadBalancerClass != nil {
 		loadBalancerClasses = append(loadBalancerClasses, *vpnLoadBalancerClass)
 	}
@@ -614,7 +577,7 @@ func lookupLoadBalancerClass(lbClasses []api.LoadBalancerClass, lbClassPurpose s
 	}
 
 	// If a default LoadBalancerClass was requested, but not found then the first
-	// configured one will be trated as default LoadBalancerClass.
+	// configured one will be treated as default LoadBalancerClass.
 	if lbClassPurpose == api.DefaultLoadBalancerClass && firstLoadBalancerClass != nil {
 		return firstLoadBalancerClass
 	}
@@ -712,15 +675,6 @@ func getCSIControllerChartValues(
 	checksums map[string]string,
 	scaledDown bool,
 ) (map[string]interface{}, error) {
-	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	if k8sVersionLessThan119 {
-		return map[string]interface{}{"enabled": false}, nil
-	}
-
 	serverSecret, found := secretsReader.Get(csiSnapshotValidationServerName)
 	if !found {
 		return nil, fmt.Errorf("secret %q not found", csiSnapshotValidationServerName)
@@ -759,11 +713,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	map[string]interface{},
 	error,
 ) {
-	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
 	var (
 		cloudProviderDiskConfig []byte
 		userAgentHeader         []string
@@ -771,27 +720,24 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		caBundle                string
 	)
 
-	if !k8sVersionLessThan119 {
-		secret := &corev1.Secret{}
-		if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
-			return nil, err
-		}
-
-		cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
-		checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
-		userAgentHeader = vp.getUserAgentHeaders(ctx, cp, cluster)
-
-		caSecret, found := secretsReader.Get(caNameControlPlane)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", caNameControlPlane)
-		}
-		caBundle = string(caSecret.Data[secretutils.DataKeyCertificateBundle])
+	secret := &corev1.Secret{}
+	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
+		return nil, err
 	}
 
+	cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
+	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
+	userAgentHeader = vp.getUserAgentHeaders(ctx, cp, cluster)
+
+	caSecret, found := secretsReader.Get(caNameControlPlane)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", caNameControlPlane)
+	}
+	caBundle = string(caSecret.Data[secretutils.DataKeyCertificateBundle])
+
 	csiNodeDriverValues = map[string]interface{}{
-		"enabled":           !k8sVersionLessThan119,
-		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"vpaEnabled":        gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
+		"enabled":    true,
+		"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},

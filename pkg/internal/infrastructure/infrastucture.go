@@ -52,8 +52,10 @@ func CleanupKubernetesRoutes(ctx context.Context, client openstackclient.Network
 		}
 	}
 
-	if _, err := client.UpdateRoutesForRouter(routes, routerID); err != nil {
-		return err
+	if len(routes) != len(router[0].Routes) {
+		if _, err := client.UpdateRoutesForRouter(routes, routerID); err != nil {
+			return err
+		}
 	}
 	return nil
 }

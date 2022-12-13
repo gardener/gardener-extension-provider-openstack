@@ -57,7 +57,7 @@ import (
 const (
 	caNameControlPlane               = "ca-" + openstack.Name + "-controlplane"
 	cloudControllerManagerServerName = openstack.CloudControllerManagerName + "-server"
-	csiSnapshotValidationServerName  = openstack.CSISnapshotValidation + "-server"
+	csiSnapshotValidationServerName  = openstack.CSISnapshotValidationName + "-server"
 )
 
 func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
@@ -83,8 +83,8 @@ func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfig
 		{
 			Config: &secretutils.CertificateSecretConfig{
 				Name:                        csiSnapshotValidationServerName,
-				CommonName:                  openstack.UsernamePrefix + openstack.CSISnapshotValidation,
-				DNSNames:                    kutil.DNSNamesForService(openstack.CSISnapshotValidation, namespace),
+				CommonName:                  openstack.UsernamePrefix + openstack.CSISnapshotValidationName,
+				DNSNames:                    kutil.DNSNamesForService(openstack.CSISnapshotValidationName, namespace),
 				CertType:                    secretutils.ServerCert,
 				SkipPublishingCACertificate: true,
 			},
@@ -103,6 +103,7 @@ func shootAccessSecretsFunc(namespace string) []*gutil.ShootAccessSecret {
 		gutil.NewShootAccessSecret(openstack.CSISnapshotterName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSIResizerName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSISnapshotControllerName, namespace),
+		gutil.NewShootAccessSecret(openstack.CSISnapshotValidationName, namespace),
 	}
 }
 
@@ -151,9 +152,11 @@ var (
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotControllerName},
 					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
 					// csi-snapshot-validation-webhook
-					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotValidation},
-					{Type: &corev1.Service{}, Name: openstack.CSISnapshotValidation},
+					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotValidationName},
+					{Type: &corev1.Service{}, Name: openstack.CSISnapshotValidationName},
 					{Type: &networkingv1.NetworkPolicy{}, Name: "allow-kube-apiserver-to-csi-snapshot-validation"},
+					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
+					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
 				},
 			},
 		},
@@ -214,7 +217,7 @@ var (
 					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					// csi-snapshot-validation-webhook
-					{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}, Name: openstack.CSISnapshotValidation},
+					{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}, Name: openstack.CSISnapshotValidationName},
 				},
 			},
 		},
@@ -794,7 +797,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		},
 		"cloudProviderConfig": cloudProviderDiskConfig,
 		"webhookConfig": map[string]interface{}{
-			"url":      "https://" + openstack.CSISnapshotValidation + "." + cp.Namespace + "/volumesnapshot",
+			"url":      "https://" + openstack.CSISnapshotValidationName + "." + cp.Namespace + "/volumesnapshot",
 			"caBundle": caBundle,
 		},
 		"pspDisabled": gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot),

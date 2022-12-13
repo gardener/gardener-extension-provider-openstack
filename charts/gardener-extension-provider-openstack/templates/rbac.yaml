@@ -101,6 +101,7 @@ rules:
   resources:
   - poddisruptionbudgets
   verbs:
+  - create
   - get
   - list
   - watch

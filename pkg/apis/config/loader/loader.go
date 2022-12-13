@@ -15,7 +15,7 @@
 package loader
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config/install"
@@ -46,7 +46,7 @@ func init() {
 
 // LoadFromFile takes a filename and de-serializes the contents into ControllerConfiguration object.
 func LoadFromFile(filename string) (*config.ControllerConfiguration, error) {
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

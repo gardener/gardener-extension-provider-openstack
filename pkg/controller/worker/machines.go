@@ -30,9 +30,9 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // MachineClassKind yields the name of the machine class kind used by OpenStack provider.
@@ -58,7 +58,7 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 		}
 	}
 
-	return w.seedChartApplier.Apply(ctx, filepath.Join(openstack.InternalChartsPath, "machineclass"), w.worker.Namespace, "machineclass", kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}))
+	return w.seedChartApplier.ApplyFromEmbeddedFS(ctx, charts.InternalChart, filepath.Join("internal", "machineclass"), w.worker.Namespace, "machineclass", kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}))
 }
 
 // GenerateMachineDeployments generates the configuration for the desired machine deployments.

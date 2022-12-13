@@ -22,11 +22,6 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -48,6 +43,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener-extension-provider-openstack/charts"
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 )
 
 var _ = Describe("Machines", func() {
@@ -513,9 +513,10 @@ var _ = Describe("Machines", func() {
 					// Test workerDelegate.DeployMachineClasses()
 					chartApplier.
 						EXPECT().
-						Apply(
+						ApplyFromEmbeddedFS(
 							context.TODO(),
-							filepath.Join(openstack.InternalChartsPath, "machineclass"),
+							charts.InternalChart,
+							filepath.Join("internal", "machineclass"),
 							namespace,
 							"machineclass",
 							kubernetes.Values(machineClasses),
@@ -569,9 +570,10 @@ var _ = Describe("Machines", func() {
 
 					chartApplier.
 						EXPECT().
-						Apply(
+						ApplyFromEmbeddedFS(
 							context.TODO(),
-							filepath.Join(openstack.InternalChartsPath, "machineclass"),
+							charts.InternalChart,
+							filepath.Join("internal", "machineclass"),
 							namespace,
 							"machineclass",
 							kubernetes.Values(machineClasses),
@@ -716,9 +718,10 @@ var _ = Describe("Machines", func() {
 
 						chartApplier.
 							EXPECT().
-							Apply(
+							ApplyFromEmbeddedFS(
 								context.TODO(),
-								filepath.Join(openstack.InternalChartsPath, "machineclass"),
+								charts.InternalChart,
+								filepath.Join("internal", "machineclass"),
 								namespace,
 								"machineclass",
 								kubernetes.Values(machineClasses),

@@ -107,6 +107,16 @@ var _ = Describe("Shoot mutator", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot).To(DeepEqual(shootExpected))
 			})
+
+			It("should return nil when shoot specs have not changed", func() {
+				shootWithAnnotations := shoot.DeepCopy()
+				shootWithAnnotations.Annotations = map[string]string{"foo": "bar"}
+				shootExpected := shootWithAnnotations.DeepCopy()
+
+				err := shootMutator.Mutate(ctx, shootWithAnnotations, shoot)
+				Expect(err).To(BeNil())
+				Expect(shootWithAnnotations).To(DeepEqual(shootExpected))
+			})
 		})
 	})
 })

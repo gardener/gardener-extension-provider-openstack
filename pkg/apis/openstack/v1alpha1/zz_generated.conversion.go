@@ -816,6 +816,7 @@ func Convert_openstack_Router_To_v1alpha1_Router(in *openstack.Router, out *Rout
 
 func autoConvert_v1alpha1_RouterStatus_To_openstack_RouterStatus(in *RouterStatus, out *openstack.RouterStatus, s conversion.Scope) error {
 	out.ID = in.ID
+	out.IP = in.IP
 	return nil
 }
 
@@ -826,6 +827,7 @@ func Convert_v1alpha1_RouterStatus_To_openstack_RouterStatus(in *RouterStatus, o
 
 func autoConvert_openstack_RouterStatus_To_v1alpha1_RouterStatus(in *openstack.RouterStatus, out *RouterStatus, s conversion.Scope) error {
 	out.ID = in.ID
+	out.IP = in.IP
 	return nil
 }
 

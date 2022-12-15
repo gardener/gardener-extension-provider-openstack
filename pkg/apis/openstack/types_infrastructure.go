@@ -88,6 +88,8 @@ type NetworkStatus struct {
 type RouterStatus struct {
 	// ID is the Router id.
 	ID string
+	// IP is the router ip.
+	IP string
 }
 
 // FloatingPoolStatus contains information about the floating pool.

@@ -300,7 +300,7 @@ func ensureAssociateFIPWithInstance(client openstackclient.Compute, instance *se
 	}
 
 	if floatingIP.Status != "ACTIVE" || instance.Status != "ACTIVE" {
-		return fmt.Errorf("instance or public ip address not ready yet")
+		return fmt.Errorf("instance or floating ip address not ready yet")
 	}
 
 	associateOpts := computefip.AssociateOpts{

@@ -19,10 +19,12 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 	"github.com/gardener/gardener/pkg/utils/version"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/gengo/examples/set-gen/sets"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -64,7 +66,7 @@ func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.E
 }
 
 // ValidateWorkers validates the workers of a Shoot.
-func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateWorkers(workers []core.Worker, region string, regions []gardencorev1beta1.Region, cloudProfileCfg *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	csiMigrationVersion, err := semver.NewVersion(openstack.CSIMigrationKubernetesVersion)
@@ -95,6 +97,7 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 			allErrs = append(allErrs, field.Required(workerFldPath.Child("zones"), "at least one zone must be configured"))
 			continue
 		}
+		allErrs = append(allErrs, validateWorkerZones(worker.Zones, region, regions, workerFldPath.Child("zones"))...)
 
 		if worker.Volume != nil && worker.Volume.Type != nil && worker.Volume.VolumeSize == "" {
 			allErrs = append(allErrs, field.Forbidden(workerFldPath.Child("volume", "type"), "specifying volume type without a custom volume size is not allowed"))
@@ -114,8 +117,39 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 	return allErrs
 }
 
+// validateWorkerZones validates worker zones for duplicates and existence in specified region
+func validateWorkerZones(zones []string, regionName string, regions []gardencorev1beta1.Region, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	var region *gardencorev1beta1.Region
+	for i := range regions {
+		if regionName == regions[i].Name {
+			region = &regions[i]
+			break
+		}
+	}
+	if region != nil {
+		usedZones := sets.NewString()
+	outer:
+		for i, zone := range zones {
+			if usedZones.Has(zone) {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), zone))
+			}
+			usedZones.Insert(zone)
+			for _, z := range region.Zones {
+				if z.Name == zone {
+					continue outer
+				}
+			}
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), zone, fmt.Sprintf("zone %s not existing in region %s", zone, region.Name)))
+		}
+	}
+
+	return allErrs
+}
+
 // ValidateWorkersUpdate validates updates on Workers.
-func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
+func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, region string, regions []gardencorev1beta1.Region, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	for i, newWorker := range newWorkers {
 		for _, oldWorker := range oldWorkers {
@@ -127,6 +161,7 @@ func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.
 				break
 			}
 		}
+		allErrs = append(allErrs, validateWorkerZones(newWorker.Zones, region, regions, fldPath.Index(i).Child("zones"))...)
 	}
 	return allErrs
 }

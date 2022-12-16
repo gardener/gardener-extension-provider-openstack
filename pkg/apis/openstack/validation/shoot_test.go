@@ -21,6 +21,7 @@ import (
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	credentials "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,6 +33,19 @@ import (
 )
 
 var _ = Describe("Shoot validation", func() {
+	var (
+		region  = "mars"
+		regions = []gardencorev1beta1.Region{
+			{
+				Name: "mars",
+				Zones: []gardencorev1beta1.AvailabilityZone{
+					{Name: "1"},
+					{Name: "2"},
+					{Name: "another-zone"},
+				},
+			},
+		}
+	)
 	Describe("#ValidateShootCredentialsForK8sVersion", func() {
 		versionPath := field.NewPath("spec", "kubernetes", "version")
 
@@ -125,7 +139,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should pass when the kubernetes version is equal to the CSI migration version", func() {
 				workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.19.0")}
 
-				errorList := ValidateWorkers(workers, nil, field.NewPath(""))
+				errorList := ValidateWorkers(workers, region, regions, nil, field.NewPath(""))
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -133,7 +147,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should pass when the kubernetes version is higher to the CSI migration version", func() {
 				workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.0")}
 
-				errorList := ValidateWorkers(workers, nil, field.NewPath(""))
+				errorList := ValidateWorkers(workers, region, regions, nil, field.NewPath(""))
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -141,7 +155,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should not allow when the kubernetes version is lower than the CSI migration version", func() {
 				workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18.0")}
 
-				errorList := ValidateWorkers(workers, nil, field.NewPath("workers"))
+				errorList := ValidateWorkers(workers, region, regions, nil, field.NewPath("workers"))
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -152,7 +166,7 @@ var _ = Describe("Shoot validation", func() {
 			})
 
 			It("should pass because workers are configured correctly", func() {
-				errorList := ValidateWorkers(workers, nil, nilPath)
+				errorList := ValidateWorkers(workers, region, regions, nil, nilPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -160,7 +174,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should forbid because worker does not specify a zone", func() {
 				workers[0].Zones = nil
 
-				errorList := ValidateWorkers(workers, nil, nilPath)
+				errorList := ValidateWorkers(workers, region, regions, nil, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -170,12 +184,39 @@ var _ = Describe("Shoot validation", func() {
 				))
 			})
 
+			It("should forbid because worker specifies a duplicate zone", func() {
+				workers[0].Zones = []string{"1", "1"}
+
+				errorList := ValidateWorkers(workers, region, regions, nil, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("[0].zones[1]"),
+					})),
+				))
+			})
+
+			It("should forbid because worker specifies an invalid zone", func() {
+				workers[0].Zones = []string{"1", "42"}
+
+				errorList := ValidateWorkers(workers, region, regions, nil, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[0].zones[1]"),
+						"Detail": Equal("zone 42 not existing in region mars"),
+					})),
+				))
+			})
+
 			It("should forbid specifying volume type without size", func() {
 				workers[0].Volume = &core.Volume{
 					Type: pointer.String("standard"),
 				}
 
-				errorList := ValidateWorkers(workers, nil, nilPath)
+				errorList := ValidateWorkers(workers, region, regions, nil, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -209,7 +250,7 @@ var _ = Describe("Shoot validation", func() {
 						Raw: arr,
 					}
 
-					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					errorList := ValidateWorkers(workers, region, regions, cloudProfileConfig, nilPath)
 					Expect(errorList).To(Not(BeEmpty()))
 					Expect(errorList).To(HaveLen(1))
 					Expect(errorList).To(ConsistOf(
@@ -235,7 +276,7 @@ var _ = Describe("Shoot validation", func() {
 						Raw: arr,
 					}
 
-					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					errorList := ValidateWorkers(workers, region, regions, cloudProfileConfig, nilPath)
 					Expect(errorList).To(Not(BeEmpty()))
 					Expect(errorList).To(HaveLen(1))
 					Expect(errorList).To(ConsistOf(
@@ -261,7 +302,7 @@ var _ = Describe("Shoot validation", func() {
 						Raw: arr,
 					}
 
-					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					errorList := ValidateWorkers(workers, region, regions, cloudProfileConfig, nilPath)
 					Expect(errorList).To(BeEmpty())
 				})
 
@@ -279,7 +320,7 @@ var _ = Describe("Shoot validation", func() {
 						Raw: arr,
 					}
 
-					errorList := ValidateWorkers(workers, cloudProfileConfig, nilPath)
+					errorList := ValidateWorkers(workers, region, regions, cloudProfileConfig, nilPath)
 					Expect(errorList).NotTo(BeEmpty())
 					Expect(errorList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -294,7 +335,7 @@ var _ = Describe("Shoot validation", func() {
 		Describe("#ValidateWorkersUpdate", func() {
 			It("should pass because workers are unchanged", func() {
 				newWorkers := copyWorkers(workers)
-				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -302,7 +343,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should allow adding workers", func() {
 				newWorkers := append(workers[:0:0], workers...)
 				workers = workers[:1]
-				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -310,7 +351,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should allow adding a zone to a worker", func() {
 				newWorkers := copyWorkers(workers)
 				newWorkers[0].Zones = append(newWorkers[0].Zones, "another-zone")
-				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -318,7 +359,7 @@ var _ = Describe("Shoot validation", func() {
 			It("should forbid removing a zone from a worker", func() {
 				newWorkers := copyWorkers(workers)
 				newWorkers[1].Zones = newWorkers[1].Zones[1:]
-				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -334,7 +375,7 @@ var _ = Describe("Shoot validation", func() {
 				newWorkers[0].Zones[1] = workers[0].Zones[0]
 				newWorkers[1].Zones[0] = workers[1].Zones[1]
 				newWorkers[1].Zones[1] = workers[1].Zones[0]
-				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -350,14 +391,41 @@ var _ = Describe("Shoot validation", func() {
 
 			It("should forbid adding a zone while changing an existing one", func() {
 				newWorkers := copyWorkers(workers)
-				newWorkers = append(newWorkers, core.Worker{Name: "worker3", Zones: []string{"zone1"}})
-				newWorkers[1].Zones[0] = workers[1].Zones[1]
-				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+				newWorkers = append(newWorkers, core.Worker{Name: "worker3", Zones: []string{"1"}})
+				newWorkers[1].Zones[0] = "another-zone"
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("[1].zones"),
+					})),
+				))
+			})
+
+			It("should forbid adding a worker with a duplicate zone", func() {
+				newWorkers := copyWorkers(workers)
+				newWorkers = append(newWorkers, core.Worker{Name: "worker3", Zones: []string{"1", "1", "2"}})
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("[2].zones[1]"),
+					})),
+				))
+			})
+
+			It("should forbid adding a worker with an invalid zone", func() {
+				newWorkers := copyWorkers(workers)
+				newWorkers = append(newWorkers, core.Worker{Name: "worker3", Zones: []string{"1", "2", "42"}})
+				errorList := ValidateWorkersUpdate(workers, newWorkers, region, regions, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[2].zones[2]"),
+						"Detail": Equal("zone 42 not existing in region mars"),
 					})),
 				))
 			})

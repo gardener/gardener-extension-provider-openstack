@@ -655,7 +655,7 @@ func verifyCreation(
 	infrastructureIdentifier.secGroupID = &secGroup.ID
 
 	// keypair is created
-	keyPair, err := keypairs.Get(openstackClient.ComputeClient, infraStatus.Node.KeyName).Extract()
+	keyPair, err := keypairs.Get(openstackClient.ComputeClient, infraStatus.Node.KeyName, nil).Extract()
 	Expect(err).NotTo(HaveOccurred())
 	infrastructureIdentifier.keyPair = &keyPair.Name
 
@@ -669,7 +669,7 @@ func verifyDeletion(
 	providerConfig *openstackv1alpha1.InfrastructureConfig,
 ) {
 	// keypair doesn't exist
-	_, err := keypairs.Get(openstackClient.ComputeClient, *infrastructureIdentifier.keyPair).Extract()
+	_, err := keypairs.Get(openstackClient.ComputeClient, *infrastructureIdentifier.keyPair, nil).Extract()
 	Expect(err).To(HaveOccurred())
 
 	_, err = networks.Get(openstackClient.NetworkingClient, *infrastructureIdentifier.networkID).Extract()

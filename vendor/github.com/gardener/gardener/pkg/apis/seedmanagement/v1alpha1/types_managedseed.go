@@ -67,11 +67,10 @@ type ManagedSeedSpec struct {
 	// This field is immutable.
 	// +optional
 	Shoot *Shoot `json:"shoot,omitempty" protobuf:"bytes,1,opt,name=shoot"`
-	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
-	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-	// and an existing gardenlet reconciling the new Seed is required.
-	// +optional
-	SeedTemplate *gardencorev1beta1.SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
+
+	// SeedTemplate is tombstoned to show why 2 is reserved protobuf tag.
+	// SeedTemplate *gardencorev1beta1.SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
+
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	// +optional
@@ -108,10 +107,10 @@ type Gardenlet struct {
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 // the image, etc.
 type GardenletDeployment struct {
-	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
+	// ReplicaCount is the number of gardenlet replicas. Defaults to 2.
 	// +optional
 	ReplicaCount *int32 `json:"replicaCount,omitempty" protobuf:"varint,1,opt,name=replicaCount"`
-	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
+	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.
 	// +optional
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty" protobuf:"varint,2,opt,name=revisionHistoryLimit"`
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
@@ -141,10 +140,6 @@ type GardenletDeployment struct {
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	// +optional
 	VPA *bool `json:"vpa,omitempty" protobuf:"bytes,11,rep,name=vpa"`
-	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`.
-	// Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
-	// +optional
-	FailureToleranceType *gardencorev1beta1.FailureToleranceType `json:"failureToleranceType,omitempty" protobuf:"bytes,12,opt,name=failureToleranceType"`
 }
 
 // Image specifies container image parameters.

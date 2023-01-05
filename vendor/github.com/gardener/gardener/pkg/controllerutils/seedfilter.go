@@ -19,25 +19,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// SeedFilterFunc returns a filtering func for seeds.
-func SeedFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		seed, ok := obj.(*gardencorev1beta1.Seed)
-		if !ok {
-			return false
-		}
-
-		return seed.Name == seedName
-	}
-}
 
 // ShootFilterFunc returns a filtering func for shoots.
 func ShootFilterFunc(seedName string) func(obj interface{}) bool {
@@ -55,105 +41,6 @@ func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 		}
 
 		return *shoot.Status.SeedName == seedName
-	}
-}
-
-// ShootMigrationFilterFunc returns a filtering func for shoots that are being migrated to a different seed.
-func ShootMigrationFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return false
-		}
-
-		return ShootIsBeingMigratedToSeed(ctx, c, shoot, seedName)
-	}
-}
-
-// ShootIsBeingMigratedToSeed checks if the given shoot is currently being migrated to the seed with the given name,
-// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
-func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, seedName string) bool {
-	if shoot.Spec.SeedName != nil && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName && *shoot.Spec.SeedName == seedName {
-		seed := &gardencorev1beta1.Seed{}
-		if err := c.Get(ctx, kutil.Key(*shoot.Status.SeedName), seed); err != nil {
-			return false
-		}
-		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
-	}
-	return false
-}
-
-// BackupBucketFilterFunc returns a filtering func for BackupBuckets.
-func BackupBucketFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
-		if !ok {
-			return false
-		}
-		if backupBucket.Spec.SeedName == nil {
-			return false
-		}
-
-		return *backupBucket.Spec.SeedName == seedName
-	}
-}
-
-// BackupEntryFilterFunc returns a filtering func for BackupEntries.
-func BackupEntryFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return false
-		}
-		if backupEntry.Spec.SeedName == nil {
-			return false
-		}
-
-		if backupEntry.Status.SeedName == nil || *backupEntry.Spec.SeedName == *backupEntry.Status.SeedName {
-			return *backupEntry.Spec.SeedName == seedName
-		}
-
-		return *backupEntry.Status.SeedName == seedName
-	}
-}
-
-// BackupEntryMigrationFilterFunc returns a filtering func for backup entries that are being migrated to a different seed.
-func BackupEntryMigrationFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return false
-		}
-
-		return BackupEntryIsBeingMigratedToSeed(ctx, c, backupEntry, seedName)
-	}
-}
-
-// BackupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name,
-// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
-func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
-	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == seedName {
-		seed := &gardencorev1beta1.Seed{}
-		if err := c.Get(ctx, kutil.Key(*backupEntry.Status.SeedName), seed); err != nil {
-			return false
-		}
-		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
-	}
-	return false
-}
-
-// BastionFilterFunc returns a filtering func for Bastions.
-func BastionFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		bastion, ok := obj.(*operationsv1alpha1.Bastion)
-		if !ok {
-			return false
-		}
-		if bastion.Spec.SeedName == nil {
-			return false
-		}
-
-		return *bastion.Spec.SeedName == seedName
 	}
 }
 

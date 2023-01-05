@@ -129,11 +129,6 @@ func (in *GardenletDeployment) DeepCopyInto(out *GardenletDeployment) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.FailureToleranceType != nil {
-		in, out := &in.FailureToleranceType, &out.FailureToleranceType
-		*out = new(core.FailureToleranceType)
-		**out = **in
-	}
 	return
 }
 
@@ -374,11 +369,6 @@ func (in *ManagedSeedSpec) DeepCopyInto(out *ManagedSeedSpec) {
 		in, out := &in.Shoot, &out.Shoot
 		*out = new(Shoot)
 		**out = **in
-	}
-	if in.SeedTemplate != nil {
-		in, out := &in.SeedTemplate, &out.SeedTemplate
-		*out = new(core.SeedTemplate)
-		(*in).DeepCopyInto(*out)
 	}
 	if in.Gardenlet != nil {
 		in, out := &in.Gardenlet, &out.Gardenlet

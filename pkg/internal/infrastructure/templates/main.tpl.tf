@@ -47,6 +47,10 @@ resource "openstack_networking_router_v2" "router" {
   external_subnet_ids = data.openstack_networking_subnet_ids_v2.fip_subnets.ids
   {{- end }}
 }
+{{ else -}}
+data "openstack_networking_router_v2" "router" {
+  router_id   = {{ .router.id }}
+}
 {{- end }}
 
 {{ if .create.network -}}
@@ -140,7 +144,7 @@ output "{{ .outputKeys.routerID }}" {
 }
 
 output "{{ .outputKeys.routerIP }}" {
-  value = openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
+  value = {{ template "router-ip" $ }}
 }
 
 output "{{ .outputKeys.networkID }}" {
@@ -187,5 +191,12 @@ data.openstack_networking_network_v2.cluster.id
 openstack_networking_network_v2.cluster.name
 {{ else -}}
 data.openstack_networking_network_v2.cluster.name
+{{ end -}}
+{{- end -}}
+{{- define "router-ip" -}}
+{{ if .create.router -}}
+openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
+{{ else -}}
+data.openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
 {{ end -}}
 {{- end -}}

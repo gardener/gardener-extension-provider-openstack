@@ -133,7 +133,6 @@ var _ = Describe("Terraform", func() {
 			}
 			expectedOutputKeysValues = map[string]interface{}{
 				"routerID":          TerraformOutputKeyRouterID,
-				"routerIP":          TerraformOutputKeyRouterIP,
 				"networkID":         TerraformOutputKeyNetworkID,
 				"networkName":       TerraformOutputKeyNetworkName,
 				"keyName":           TerraformOutputKeySSHKeyName,
@@ -234,7 +233,6 @@ var _ = Describe("Terraform", func() {
 		var (
 			SSHKeyName        string
 			RouterID          string
-			RouterIP          string
 			NetworkID         string
 			SubnetID          string
 			FloatingNetworkID string
@@ -248,7 +246,6 @@ var _ = Describe("Terraform", func() {
 		BeforeEach(func() {
 			SSHKeyName = "my-key"
 			RouterID = "111"
-			RouterIP = "1.1.1.1"
 			NetworkID = "222"
 			SubnetID = "333"
 			FloatingNetworkID = "444"
@@ -258,7 +255,6 @@ var _ = Describe("Terraform", func() {
 			state = TerraformState{
 				SSHKeyName:        SSHKeyName,
 				RouterID:          RouterID,
-				RouterIP:          RouterIP,
 				NetworkID:         NetworkID,
 				SubnetID:          SubnetID,
 				FloatingNetworkID: FloatingNetworkID,
@@ -275,7 +271,6 @@ var _ = Describe("Terraform", func() {
 					ID: state.NetworkID,
 					Router: apiv1alpha1.RouterStatus{
 						ID: state.RouterID,
-						IP: state.RouterIP,
 					},
 					FloatingPool: apiv1alpha1.FloatingPoolStatus{
 						ID: FloatingNetworkID,

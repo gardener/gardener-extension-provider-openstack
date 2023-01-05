@@ -139,10 +139,6 @@ output "{{ .outputKeys.routerID }}" {
   value = {{ .router.id }}
 }
 
-output "{{ .outputKeys.routerIP }}" {
-  value = openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
-}
-
 output "{{ .outputKeys.networkID }}" {
   value = {{ template "network-id" $ }}
 }

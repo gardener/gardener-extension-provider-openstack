@@ -614,6 +614,10 @@ func verifyCreation(
 	Expect(router.Status).To(Equal("ACTIVE"))
 	infrastructureIdentifier.routerID = &router.ID
 
+	// verify router ip in status
+	Expect(router.GatewayInfo.ExternalFixedIPs).NotTo(BeEmpty())
+	Expect(infraStatus.Networks.Router.IP).To(Equal(router.GatewayInfo.ExternalFixedIPs[0].IPAddress))
+
 	// network is created
 	net, err := networks.Get(openstackClient.NetworkingClient, infraStatus.Networks.ID).Extract()
 	Expect(err).NotTo(HaveOccurred())

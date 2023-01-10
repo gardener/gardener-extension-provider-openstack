@@ -22,7 +22,7 @@ import (
 
 var (
 	unauthenticatedRegexp               = regexp.MustCompile(`(?i)(Authentication failed|invalid character|invalid_client|cannot fetch token|InvalidSecretAccessKey)`)
-	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized||SignatureDoesNotMatch|invalid_grant|Authorization Profile was not found|no active subscriptions|not authorized|AccessDenied)`)
+	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|SignatureDoesNotMatch|invalid_grant|Authorization Profile was not found|no active subscriptions|not authorized|AccessDenied)`)
 	quotaExceededRegexp                 = regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED|Maximum number of ports exceeded|VolumeSizeExceedsAvailableQuota)`)
 	rateLimitsExceededRegexp            = regexp.MustCompile(`(?i)(RequestLimitExceeded|Throttling|Too many requests)`)
 	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|Conflict|inactive billing state|timeout while waiting for state to become|InvalidCidrBlock|already busy for|internal server error|A resource with the ID|There are not enough hosts available)`)

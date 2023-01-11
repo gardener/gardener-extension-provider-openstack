@@ -66,6 +66,8 @@ var (
 	region           = flag.String("region", "", "Openstack region")
 	tenantName       = flag.String("tenant-name", "", "Tenant name for openstack")
 	userName         = flag.String("user-name", "", "User name for openstack")
+
+	floatingPoolID string
 )
 
 func validateFlags() {
@@ -177,6 +179,16 @@ var _ = BeforeSuite(func() {
 
 	openstackClient, err = NewOpenstackClient(*authURL, *domainName, *floatingPoolName, *password, *region, *tenantName, *userName)
 	Expect(err).NotTo(HaveOccurred())
+
+	// Retrieve FloatingPoolNetworkID
+	page, err := networks.List(openstackClient.NetworkingClient, networks.ListOpts{
+		Name: *floatingPoolName,
+	}).AllPages()
+	Expect(err).NotTo(HaveOccurred())
+	networkList, err := networks.ExtractNetworks(page)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(networkList).To(HaveLen(1))
+	floatingPoolID = networkList[0].ID
 
 	priorityClass := &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -551,6 +563,9 @@ func prepareNewRouter(ctx context.Context, log logr.Logger, routerName string, o
 
 	createOpts := routers.CreateOpts{
 		Name: routerName,
+		GatewayInfo: &routers.GatewayInfo{
+			NetworkID: floatingPoolID,
+		},
 	}
 	router, err := routers.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
@@ -613,6 +628,10 @@ func verifyCreation(
 	Expect(err).NotTo(HaveOccurred())
 	Expect(router.Status).To(Equal("ACTIVE"))
 	infrastructureIdentifier.routerID = &router.ID
+
+	// verify router ip in status
+	Expect(router.GatewayInfo.ExternalFixedIPs).NotTo(BeEmpty())
+	Expect(infraStatus.Networks.Router.IP).To(Equal(router.GatewayInfo.ExternalFixedIPs[0].IPAddress))
 
 	// network is created
 	net, err := networks.Get(openstackClient.NetworkingClient, infraStatus.Networks.ID).Extract()

@@ -158,6 +158,7 @@ var _ = Describe("Shoot mutator", func() {
 						Overlay: &calicov1alpha1.Overlay{
 							Enabled: false,
 						},
+						SnatToUpstreamDNS: &calicov1alpha1.SnatToUpstreamDNS{Enabled: true},
 					},
 				}))
 			})
@@ -169,6 +170,7 @@ var _ = Describe("Shoot mutator", func() {
 						Overlay: &calicov1alpha1.Overlay{
 							Enabled: true,
 						},
+						SnatToUpstreamDNS: &calicov1alpha1.SnatToUpstreamDNS{Enabled: false},
 					},
 				}
 				err := shootMutator.Mutate(ctx, shoot, oldShoot)
@@ -178,6 +180,7 @@ var _ = Describe("Shoot mutator", func() {
 						Overlay: &calicov1alpha1.Overlay{
 							Enabled: true,
 						},
+						SnatToUpstreamDNS: &calicov1alpha1.SnatToUpstreamDNS{Enabled: false},
 					},
 				}))
 			})

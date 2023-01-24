@@ -88,6 +88,9 @@ type NetworkConfig struct {
 	// Overlay enables the network overlay
 	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
+	// SnatToUpstreamDNS enables the masquerading of packets to the upstream dns server
+	// +optional
+	SnatToUpstreamDNS *SnatToUpstreamDNS `json:"snatToUpstreamDNS,omitempty"`
 
 	// DEPRECATED.
 	// IPIP is the IPIP Mode for the IPv4 Pool (e.g. Always, Never, CrossSubnet)
@@ -135,5 +138,10 @@ type EbpfDataplane struct {
 
 type Overlay struct {
 	// Enabled enables the network overlay.
+	Enabled bool `json:"enabled"`
+}
+
+// SnatToUpstreamDNS  enables the masquerading of packets to the upstream dns server
+type SnatToUpstreamDNS struct {
 	Enabled bool `json:"enabled"`
 }

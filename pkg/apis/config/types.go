@@ -37,6 +37,8 @@ type ControllerConfiguration struct {
 	HealthCheckConfig *healthcheckconfig.HealthCheckConfig
 	// BastionConfig is the config for the Bastion
 	BastionConfig *BastionConfig
+	// CSI is the config for the csi components
+	CSI *CSI
 }
 
 // ETCD is an etcd configuration.
@@ -45,6 +47,26 @@ type ETCD struct {
 	Storage ETCDStorage
 	// ETCDBackup is the etcd backup configuration.
 	Backup ETCDBackup
+}
+
+// CSI configuration for all csi components
+type CSI struct {
+	// CSIAttacher is the configuration for the external-attacher
+	CSIAttacher *CSIAttacher
+}
+
+// CSIAttacher configuration for the external csi attacher
+type CSIAttacher struct {
+	// Timeout Timeout of all calls to the container storage interface driver.
+	Timeout *metav1.Duration
+	// Verbosity The verbosity level.
+	Verbosity *int32
+	// RetryIntervalStart The exponential backoff for failures.
+	RetryIntervalStart *metav1.Duration
+	// RetryIntervalMax The exponential backoff maximum value.
+	RetryIntervalMax *metav1.Duration
+	// ReconcileSync Resync frequency of the attached volumes with the driver.
+	ReconcileSync *metav1.Duration
 }
 
 // ETCDStorage is an etcd storage configuration.

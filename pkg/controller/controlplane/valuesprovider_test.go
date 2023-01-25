@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
+
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
 
@@ -305,7 +307,16 @@ var _ = Describe("ValuesProvider", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
-		vp = NewValuesProvider()
+		vp = NewValuesProvider(&config.CSI{
+			CSIAttacher: &config.CSIAttacher{
+				Timeout:            &metav1.Duration{Duration: time.Minute * 1},
+				Verbosity:          pointer.Int32(1),
+				RetryIntervalStart: &metav1.Duration{Duration: time.Minute * 10},
+				RetryIntervalMax:   &metav1.Duration{Duration: time.Minute * 15},
+				ReconcileSync:      &metav1.Duration{Duration: time.Minute * 3},
+			},
+		})
+
 		err := vp.(inject.Scheme).InjectScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		err = vp.(inject.Client).InjectClient(c)
@@ -592,6 +603,17 @@ var _ = Describe("ValuesProvider", func() {
 					"replicas": 1,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+					},
+					"csiDeployment": map[string]interface{}{
+						"attacher": map[string]interface{}{
+							"extraArgs": map[string]interface{}{
+								"retry-interval-max":   &metav1.Duration{Duration: time.Minute * 15},
+								"retry-interval-start": &metav1.Duration{Duration: time.Minute * 10},
+								"reconcile-sync":       &metav1.Duration{Duration: time.Minute * 3},
+								"timeout":              &metav1.Duration{Duration: time.Minute * 1},
+								"v":                    pointer.Int32(1),
+							},
+						},
 					},
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 					"csiSnapshotController": map[string]interface{}{

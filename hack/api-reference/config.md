@@ -98,6 +98,20 @@ BastionConfig
 <p>BastionConfig the config for the Bastion</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>csi</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">
+CSI
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CSI is the config for the csi components</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.BastionConfig">BastionConfig
@@ -137,6 +151,126 @@ string
 </td>
 <td>
 <p>FlavorRef is the openstack flavorRef reference</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ControllerConfiguration">ControllerConfiguration</a>)
+</p>
+<p>
+<p>CSI configuration for all csi components</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>csiAttacher</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIAttacher">
+CSIAttacher
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CSIAttacher is the configuration for the csi-attacher.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSIAttacher">CSIAttacher
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.CSI">CSI</a>)
+</p>
+<p>
+<p>CSIAttacher configuration for the external csi attacher</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>timeout</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Timeout specifies a timeout of all calls to the container storage interface driver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Verbosity The verbosity level.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>retryIntervalStart</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryIntervalStart The exponential backoff for failures.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>retryIntervalMax</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryIntervalMax The exponential backoff maximum value.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reconcileSync</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReconcileSync Resync frequency of the attached volumes with the driver.</p>
 </td>
 </tr>
 </tbody>

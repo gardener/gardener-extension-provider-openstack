@@ -8,7 +8,8 @@ metadata:
     role: controller
     high-availability-config.resources.gardener.cloud/type: controller
 spec:
-  replicas: {{ .Values.replicas }}
+{{- with .Values.csiDeployment }}
+  replicas: {{ .replicas }}
   revisionHistoryLimit: 1
   selector:
     matchLabels:
@@ -21,11 +22,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-{{- if .Values.podAnnotations }}
       annotations:
-{{ toYaml .Values.podAnnotations | indent 8 }}
-{{- end }}
-      creationTimestamp: null
+        {{- toYaml .podAnnotations| nindent 8 }}
       labels:
         app: csi
         role: controller
@@ -39,25 +37,23 @@ spec:
       priorityClassName: gardener-system-300
       containers:
       - name: openstack-csi-driver
-        image: {{ index .Values.images "csi-driver-cinder" }}
+        image: {{ index $.Values.images "csi-driver-cinder" }}
         imagePullPolicy: IfNotPresent
         args :
         - /bin/cinder-csi-plugin
         - --nodeid=dummy
         - --endpoint=$(CSI_ENDPOINT)
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
-        - --cluster={{ .Release.Namespace }}
-        {{- range $userAgentHeader := .Values.userAgentHeaders }}
+        - --cluster={{ $.Release.Namespace }}
+        {{- range $userAgentHeader := .driver.userAgentHeaders }}
         - --user-agent={{ $userAgentHeader }}
         {{- end }}
         - --v=3
         env:
         - name: CSI_ENDPOINT
-          value: unix://{{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.driver }}
+          value: unix://{{ .socketPath }}/csi.sock
         resources:
-{{ toYaml .Values.resources.driver | indent 10 }}
-{{- end }}
+          {{- toYaml .driver.resources | nindent 10 }}
         ports:
         - name: healthz
           containerPort: 9808
@@ -72,7 +68,7 @@ spec:
           failureThreshold: 5
         volumeMounts:
         - name: socket-dir
-          mountPath: {{ .Values.socketPath }}
+          mountPath: {{ .socketPath }}
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
         # Host certificates are mounted to accommodate OpenStack endpoints that might be served with a certificate
@@ -85,117 +81,108 @@ spec:
           readOnly: true
 
       - name: openstack-csi-provisioner
-        image: {{ index .Values.images "csi-provisioner" }}
+        image: {{ index $.Values.images "csi-provisioner" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(ADDRESS)
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --feature-gates=Topology=true
-        - --volume-name-prefix=pv-{{ .Release.Namespace }}
+        - --volume-name-prefix=pv-{{ $.Release.Namespace }}
         - --default-fstype=ext4
         - --leader-election
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
+        - --timeout={{ .timeout }}
         - --v=5
         env:
         - name: ADDRESS
-          value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.provisioner }}
+          value: {{ .socketPath }}/csi.sock
         resources:
-{{ toYaml .Values.resources.provisioner | indent 10 }}
-{{- end }}
+          {{- toYaml .provisioner.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
-          mountPath: {{ .Values.socketPath }}
+          mountPath: {{ .socketPath }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-provisioner
           readOnly: true
 
       - name: openstack-csi-attacher
-        image: {{ index .Values.images "csi-attacher" }}
+        image: {{ index $.Values.images "csi-attacher" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(ADDRESS)
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
-        - --v=5
+      {{- range $key, $value := .attacher.extraArgs }}
+        - "--{{ $key }}={{ $value | toString }}"
+      {{- end }}
         env:
         - name: ADDRESS
-          value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.attacher }}
+          value: {{ .socketPath }}/csi.sock
         resources:
-{{ toYaml .Values.resources.attacher | indent 10 }}
-{{- end }}
+          {{- toYaml .attacher.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
-          mountPath: {{ .Values.socketPath }}
+          mountPath: {{ .socketPath }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-attacher
           readOnly: true
 
       - name: openstack-csi-snapshotter
-        image: {{ index .Values.images "csi-snapshotter" }}
+        image: {{ index $.Values.images "csi-snapshotter" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(CSI_ENDPOINT)
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
-        - --snapshot-name-prefix={{ .Release.Namespace }}
+        - --timeout={{ .timeout }}
+        - --snapshot-name-prefix={{ $.Release.Namespace }}
         env:
         - name: CSI_ENDPOINT
-          value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.snapshotter }}
+          value: {{ .socketPath }}/csi.sock
         resources:
-{{ toYaml .Values.resources.snapshotter | indent 10 }}
-{{- end }}
+          {{- toYaml .snapshotter.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
-          mountPath: {{ .Values.socketPath }}
+          mountPath: {{ .socketPath }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-snapshotter
           readOnly: true
 
       - name: openstack-csi-resizer
-        image: {{ index .Values.images "csi-resizer" }}
+        image: {{ index $.Values.images "csi-resizer" }}
         imagePullPolicy: IfNotPresent
         args:
         - --csi-address=$(ADDRESS)
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
-        - --timeout={{ .Values.timeout }}
+        - --timeout={{ .timeout }}
         - --handle-volume-inuse-error=false
         - --v=5
         env:
         - name: ADDRESS
-          value: {{ .Values.socketPath }}/csi.sock
-{{- if .Values.resources.resizer }}
+          value: {{ .socketPath }}/csi.sock
         resources:
-{{ toYaml .Values.resources.resizer | indent 10 }}
-{{- end }}
+          {{- toYaml .resizer.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
-          mountPath: {{ .Values.socketPath }}
+          mountPath: {{ .socketPath }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig-csi-resizer
           readOnly: true
 
       - name: openstack-csi-liveness-probe
-        image: {{ index .Values.images "csi-liveness-probe" }}
+        image: {{ index $.Values.images "csi-liveness-probe" }}
         args:
         - --csi-address=/csi/csi.sock
-{{- if .Values.resources.livenessProbe }}
         resources:
-{{ toYaml .Values.resources.livenessProbe | indent 10 }}
-{{- end }}
+          {{- toYaml .livenessProbe.resources | nindent 10 }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
-
+{{- end }}
       volumes:
       - name: socket-dir
         emptyDir: {}

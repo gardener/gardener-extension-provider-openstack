@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	healthcheckconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -41,6 +40,9 @@ type ControllerConfiguration struct {
 	// BastionConfig the config for the Bastion
 	// +optional
 	BastionConfig *BastionConfig `json:"bastionConfig,omitempty"`
+	// CSI is the config for the csi components
+	// +optional
+	CSI *CSI `json:"csi,omitempty"`
 }
 
 // ETCD is an etcd configuration.
@@ -49,6 +51,32 @@ type ETCD struct {
 	Storage ETCDStorage `json:"storage"`
 	// ETCDBackup is the etcd backup configuration.
 	Backup ETCDBackup `json:"backup"`
+}
+
+// CSI configuration for all csi components
+type CSI struct {
+	// CSIAttacher is the configuration for the csi-attacher.
+	// +optional
+	CSIAttacher *CSIAttacher `json:"csiAttacher,omitempty"`
+}
+
+// CSIAttacher configuration for the external csi attacher
+type CSIAttacher struct {
+	// Timeout specifies a timeout of all calls to the container storage interface driver.
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Verbosity The verbosity level.
+	// +optional
+	Verbosity *int32 `json:"verbosity,omitempty"`
+	// RetryIntervalStart The exponential backoff for failures.
+	// +optional
+	RetryIntervalStart *metav1.Duration `json:"retryIntervalStart,omitempty"`
+	// RetryIntervalMax The exponential backoff maximum value.
+	// +optional
+	RetryIntervalMax *metav1.Duration `json:"retryIntervalMax,omitempty"`
+	// ReconcileSync Resync frequency of the attached volumes with the driver.
+	// +optional
+	ReconcileSync *metav1.Duration `json:"reconcileSync,omitempty"`
 }
 
 // ETCDStorage is an etcd storage configuration.

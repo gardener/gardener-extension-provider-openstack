@@ -28,3 +28,7 @@ data:
     bastionConfig:
       imageRef:  {{ .Values.config.bastionConfig.imageRef }}
       flavorRef: {{ .Values.config.bastionConfig.flavorRef }}
+{{- if .Values.config.csi }}
+    csi:
+      {{- toYaml .Values.config.csi | nindent 6 }}
+{{- end}}

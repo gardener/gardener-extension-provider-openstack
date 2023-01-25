@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver"
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
@@ -245,14 +246,17 @@ var (
 )
 
 // NewValuesProvider creates a new ValuesProvider for the generic actuator.
-func NewValuesProvider() genericactuator.ValuesProvider {
-	return &valuesProvider{}
+func NewValuesProvider(csi *config.CSI) genericactuator.ValuesProvider {
+	return &valuesProvider{
+		csi: csi,
+	}
 }
 
 // valuesProvider is a ValuesProvider that provides OpenStack-specific values for the 2 charts applied by the generic actuator.
 type valuesProvider struct {
 	genericactuator.NoopValuesProvider
 	common.ClientContext
+	csi *config.CSI
 }
 
 // GetConfigChartValues returns the values for the config chart applied by the generic actuator.
@@ -332,7 +336,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 		userAgentHeaders = vp.getUserAgentHeaders(ctx, cp, cluster)
 	}
 
-	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown, vp.csi)
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
@@ -631,6 +635,7 @@ func getControlPlaneChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
+	csi *config.CSI,
 ) (
 	map[string]interface{},
 	error,
@@ -640,7 +645,7 @@ func getControlPlaneChartValues(
 		return nil, err
 	}
 
-	csi, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	csiChart, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown, csi)
 	if err != nil {
 		return nil, err
 	}
@@ -650,7 +655,7 @@ func getControlPlaneChartValues(
 			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
 		},
 		openstack.CloudControllerManagerName: ccm,
-		openstack.CSIControllerName:          csi,
+		openstack.CSIControllerName:          csiChart,
 	}, nil
 }
 
@@ -711,6 +716,7 @@ func getCSIControllerChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
+	csi *config.CSI,
 ) (map[string]interface{}, error) {
 	k8sVersionLessThan119, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "<", openstack.CSIMigrationKubernetesVersion)
 	if err != nil {
@@ -742,10 +748,54 @@ func getCSIControllerChartValues(
 			},
 		},
 	}
+
+	if csi != nil {
+		csiValues := make(map[string]interface{})
+		if csi.CSIAttacher != nil {
+			csiValues["attacher"] = makeCSIExtraArgs(getCSIAttacherArgs(csi.CSIAttacher))
+		}
+		values["csiDeployment"] = csiValues
+	}
+
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders
 	}
 	return values, nil
+}
+
+func makeCSIExtraArgs(args ...map[string]interface{}) map[string]interface{} {
+	csiExtraArgs := make(map[string]interface{})
+
+	for _, argList := range args {
+		if val, ok := csiExtraArgs["extraArgs"]; ok {
+			csiExtraArgs["extraArgs"] = gardenerutils.MergeMaps(val.(map[string]interface{}), argList)
+		} else {
+			csiExtraArgs["extraArgs"] = argList
+		}
+	}
+
+	return csiExtraArgs
+}
+
+func getCSIAttacherArgs(attacher *config.CSIAttacher) map[string]interface{} {
+	csiAttacherArgs := make(map[string]interface{})
+	if attacher.RetryIntervalStart != nil {
+		csiAttacherArgs["retry-interval-start"] = attacher.RetryIntervalStart
+	}
+	if attacher.ReconcileSync != nil {
+		csiAttacherArgs["reconcile-sync"] = attacher.ReconcileSync
+	}
+	if attacher.RetryIntervalMax != nil {
+		csiAttacherArgs["retry-interval-max"] = attacher.RetryIntervalMax
+	}
+	if attacher.Verbosity != nil {
+		csiAttacherArgs["v"] = attacher.Verbosity
+	}
+	if attacher.Timeout != nil {
+		csiAttacherArgs["timeout"] = attacher.Timeout
+	}
+
+	return csiAttacherArgs
 }
 
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.

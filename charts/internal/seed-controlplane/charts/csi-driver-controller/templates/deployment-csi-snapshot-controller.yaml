@@ -17,10 +17,7 @@ spec:
   template:
     metadata:
       annotations:
-{{- if .Values.csiSnapshotController.podAnnotations }}
-{{ toYaml .Values.csiSnapshotController.podAnnotations | indent 8 }}
-{{- end }}
-      creationTimestamp: null
+        {{- toYaml .Values.csiSnapshotController.podAnnotations | nindent 8 }}
       labels:
         app: csi-snapshot-controller
         role: controller
@@ -38,10 +35,10 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
-{{- if .Values.csiSnapshotController.resources }}
+        {{- if .Values.csiSnapshotController.resources }}
         resources:
-{{ toYaml .Values.csiSnapshotController.resources | indent 10 }}
-{{- end }}
+          {{- toYaml .Values.csiSnapshotController.resources | nindent 10 }}
+        {{- end }}
         volumeMounts:
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig

@@ -1,6 +1,3 @@
-replicas: 1
-podAnnotations: {}
-
 images:
   csi-driver-cinder: image-repository:image-tag
   csi-provisioner: image-repository:image-tag
@@ -11,74 +8,92 @@ images:
   csi-snapshot-controller: image-repository:image-tag
   csi-snapshot-validation-webhook: image-repository:image-tag
 
-socketPath: /var/lib/csi/sockets/pluginproxy
-timeout: 3m
-userAgentHeaders: []
 
-resources:
+
+csiDeployment:
+  replicas: 1
+  podAnnotations: {}
+  timeout: 3m
+  socketPath: /var/lib/csi/sockets/pluginproxy
+
   driver:
-    requests:
-      cpu: 20m
-      memory: 50Mi
-    limits:
-      memory: 360Mi
-  provisioner:
-    requests:
-      cpu: 11m
-      memory: 38Mi
-    limits:
-      memory: 400Mi
-  attacher:
-    requests:
-      cpu: 11m
-      memory: 36Mi
-    limits:
-      memory: 320Mi
-  snapshotter:
-    requests:
-      cpu: 11m
-      memory: 36Mi
-    limits:
-      memory: 220Mi
-  resizer:
-    requests:
-      cpu: 11m
-      memory: 32Mi
-    limits:
-      memory: 220Mi
-  livenessProbe:
-    requests:
-      cpu: 11m
-      memory: 32Mi
-    limits:
-      memory: 220Mi
+    userAgentHeaders: []
+    vpa:
+      resourcePolicy:
+        maxAllowed:
+          cpu: 800m
+          memory: 4G
+    resources:
+      requests:
+        cpu: 20m
+        memory: 50Mi
+      limits:
+        memory: 360Mi
 
-vpa:
-  resourcePolicy:
-    driver:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    provisioner:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    attacher:
-      maxAllowed:
-        cpu: 500m
-        memory: 4G
-    snapshotter:
-      maxAllowed:
-        cpu: 700m
-        memory: 3G
-    resizer:
-      maxAllowed:
-        cpu: 700m
-        memory: 3G
-    livenessProbe:
-      maxAllowed:
-        cpu: 500m
-        memory: 2G
+  provisioner:
+    vpa:
+      resourcePolicy:
+        maxAllowed:
+          cpu: 800m
+          memory: 4G
+    resources:
+      requests:
+        cpu: 11m
+        memory: 38Mi
+      limits:
+        memory: 400Mi
+
+  attacher:
+    vpa:
+      resourcePolicy:
+        maxAllowed:
+          cpu: 500m
+          memory: 4G
+    resources:
+      requests:
+        cpu: 11m
+        memory: 36Mi
+      limits:
+        memory: 320Mi
+
+  snapshotter:
+    vpa:
+      resourcePolicy:
+        maxAllowed:
+          cpu: 700m
+          memory: 3G
+    resources:
+      requests:
+        cpu: 11m
+        memory: 36Mi
+      limits:
+        memory: 220Mi
+
+  resizer:
+    vpa:
+      resourcePolicy:
+        maxAllowed:
+          cpu: 700m
+          memory: 3G
+    resources:
+      requests:
+        cpu: 11m
+        memory: 32Mi
+      limits:
+        memory: 220Mi
+
+  livenessProbe:
+    vpa:
+      resourcePolicy:
+        maxAllowed:
+          cpu: 500m
+          memory: 2G
+    resources:
+      requests:
+        cpu: 11m
+        memory: 32Mi
+      limits:
+        memory: 220Mi
 
 csiSnapshotController:
   replicas: 1
@@ -91,7 +106,7 @@ csiSnapshotController:
       memory: 2.2Gi
 
 csiSnapshotValidationWebhook:
-  replica: 1
+  replicas: 1
   podAnnotations: {}
   secrets:
     server: csi-snapshot-validation-server

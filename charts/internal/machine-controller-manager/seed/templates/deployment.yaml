@@ -76,7 +76,7 @@ spec:
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig
           readOnly: true
-      - name: provider-openstack
+      - name: machine-controller-manager-provider-openstack
         image: {{ index .Values.images "machine-controller-manager-provider-openstack" }}
         imagePullPolicy: IfNotPresent
         command:

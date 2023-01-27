@@ -181,7 +181,7 @@ images:
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
-  tag: "v3.3.0"
+  tag: "v3.4.0"
   targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -195,7 +195,7 @@ images:
 - name: csi-attacher
   sourceRepository: github.com/kubernetes-csi/external-attacher
   repository: registry.k8s.io/sig-storage/csi-attacher
-  tag: "v4.0.0"
+  tag: "v4.1.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -208,7 +208,7 @@ images:
 - name: csi-snapshotter
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/csi-snapshotter
-  tag: "v6.1.0"
+  tag: "v6.2.1"
   targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -222,7 +222,7 @@ images:
 - name: csi-snapshot-controller
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/snapshot-controller
-  tag: "v6.1.0"
+  tag: "v6.2.1"
   targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -236,7 +236,7 @@ images:
 - name: csi-snapshot-validation-webhook
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/snapshot-validation-webhook
-  tag: "v6.1.0"
+  tag: "v6.2.1"
   targetVersion: ">= 1.20"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -250,7 +250,7 @@ images:
 - name: csi-resizer
   sourceRepository: github.com/kubernetes-csi/external-resizer
   repository: registry.k8s.io/sig-storage/csi-resizer
-  tag: "v1.6.0"
+  tag: "v1.7.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -263,7 +263,7 @@ images:
 - name: csi-node-driver-registrar
   sourceRepository: github.com/kubernetes-csi/node-driver-registrar
   repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
-  tag: "v2.6.2"
+  tag: "v2.7.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -276,7 +276,7 @@ images:
 - name: csi-liveness-probe
   sourceRepository: github.com/kubernetes-csi/livenessprobe
   repository: registry.k8s.io/sig-storage/livenessprobe
-  tag: "v2.8.0"
+  tag: "v2.9.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

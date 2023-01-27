@@ -90,6 +90,48 @@ var _ = Describe("Shoot validation", func() {
 			))
 		})
 	})
+
+	Describe("#ValidateNetworkingUpdate", func() {
+		var (
+			networkingPath = field.NewPath("spec", "networking")
+			oldNodes       *string
+			nodes          *string
+		)
+		BeforeEach(func() {
+			oldNodes = pointer.String("100.0.0.0/16")
+			nodes = pointer.String("100.0.0.0/16")
+		})
+
+		It("should return no error because nodes CIDR was not changed", func() {
+			networking := core.Networking{
+				Nodes: nodes,
+			}
+			oldNetworking := core.Networking{
+				Nodes: oldNodes,
+			}
+
+			errorList := ValidateNetworkingUpdate(oldNetworking, networking, networkingPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should return an error because nodes CIDR changed", func() {
+			nodes = pointer.String("100.0.0.0/8")
+			networking := core.Networking{
+				Nodes: nodes,
+			}
+			oldNetworking := core.Networking{
+				Nodes: oldNodes,
+			}
+
+			errorList := ValidateNetworkingUpdate(oldNetworking, networking, networkingPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.networking.nodes"),
+				"BadValue": Equal(nodes),
+			}))))
+		})
+	})
+
 	Describe("#ValidateWorkerConfig", func() {
 		var (
 			nilPath *field.Path

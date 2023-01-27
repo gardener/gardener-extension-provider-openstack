@@ -16,6 +16,7 @@ package validation
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -58,6 +59,18 @@ func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.E
 
 	if networking.Nodes == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("nodes"), "a nodes CIDR must be provided for Openstack shoots"))
+	}
+
+	return allErrs
+}
+
+// ValidateNetworkingUpdate validates updates to shoot's networking settings.
+func ValidateNetworkingUpdate(oldNetworking, networking core.Networking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if oldNetworking.Nodes != nil {
+		if _, _, err := net.ParseCIDR(*oldNetworking.Nodes); err == nil {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(networking.Nodes, oldNetworking.Nodes, fldPath.Child("nodes"))...)
+		}
 	}
 
 	return allErrs

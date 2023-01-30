@@ -40,6 +40,13 @@ type shoot struct {
 	decoder runtime.Decoder
 }
 
+var (
+	// EnableOverlayAsDefaultForCalico enables the overlay network for all new calico shoot clusters on openstack
+	EnableOverlayAsDefaultForCalico bool
+	// EnableOverlayAsDefaultForCilium enables the overlay network for all new cilium shoot clusters on openstack
+	EnableOverlayAsDefaultForCilium bool
+)
+
 // InjectScheme injects the given scheme into the validator.
 func (s *shoot) InjectScheme(scheme *runtime.Scheme) error {
 	s.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
@@ -111,6 +118,11 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 			networkConfig.SnatToUpstreamDNS = &calicov1alpha1.SnatToUpstreamDNS{Enabled: false}
 		}
 
+		if networkConfig.Overlay != nil && EnableOverlayAsDefaultForCalico {
+			networkConfig.Overlay = &calicov1alpha1.Overlay{Enabled: true}
+			networkConfig.SnatToUpstreamDNS = &calicov1alpha1.SnatToUpstreamDNS{Enabled: false}
+		}
+
 		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
 			Object: networkConfig,
 		}
@@ -141,6 +153,11 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 		if networkConfig.Overlay != nil && !networkConfig.Overlay.Enabled {
 			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: true}
 		} else {
+			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: false}
+		}
+
+		if networkConfig.Overlay != nil && EnableOverlayAsDefaultForCilium {
+			networkConfig.Overlay = &ciliumv1alpha1.Overlay{Enabled: true}
 			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: false}
 		}
 

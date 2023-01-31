@@ -1,2 +1,2 @@
 volumesnapshots:
-  enabled: false
+  enabled: true

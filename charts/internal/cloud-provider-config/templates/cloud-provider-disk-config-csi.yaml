@@ -5,14 +5,11 @@
 
 [BlockStorage]
 rescan-on-resize={{ .Values.rescanBlockStorageOnResize }}
-{{- if semverCompare ">= 1.20-0" .Values.kubernetesVersion }}
 ignore-volume-az={{ .Values.ignoreVolumeAZ }}
-{{- end -}}
 {{- if .Values.nodeVolumeAttachLimit }}
 node-volume-attach-limit={{ .Values.nodeVolumeAttachLimit }}
 {{- end -}}
 {{- end -}}
-{{- if semverCompare ">= 1.19-0" .Values.kubernetesVersion }}
 ---
 apiVersion: v1
 kind: Secret
@@ -22,4 +19,3 @@ metadata:
 type: Opaque
 data:
   cloudprovider.conf: {{ include "cloud-provider-disk-config-csi" . | b64enc }}
-{{- end }}

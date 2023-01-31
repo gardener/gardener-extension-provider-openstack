@@ -65,7 +65,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 				},
 			}
 
-			errorList := ValidateControlPlaneConfig(controlPlane, "1.18.14", nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, "1.24.8", nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -114,9 +114,9 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			loadBalancerClass = api.LoadBalancerClass{
 				Name:              "LBCLass",
-				FloatingSubnetID:  pointer.StringPtr("1"),
-				FloatingNetworkID: pointer.StringPtr("1"),
-				SubnetID:          pointer.StringPtr("1"),
+				FloatingSubnetID:  pointer.String("1"),
+				FloatingNetworkID: pointer.String("1"),
+				SubnetID:          pointer.String("1"),
 			}
 
 			cloudProfileConfig = &api.CloudProfileConfig{

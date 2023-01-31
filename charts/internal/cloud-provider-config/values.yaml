@@ -1,4 +1,3 @@
-kubernetesVersion: 1.17.0
 # [Global]
 authUrl: fooURL
 domainName: fooDomain

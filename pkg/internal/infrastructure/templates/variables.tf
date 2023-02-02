@@ -37,3 +37,9 @@ variable "APPLICATION_CREDENTIAL_SECRET" {
   type        = string
   default     = "" # not needed if username/password are used
 }
+
+variable "CA_CERT" {
+  description = "OpenStack Keystone CA bundle"
+  type        = string
+  default     = "" # not needed if username/password are used
+}

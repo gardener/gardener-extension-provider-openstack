@@ -69,6 +69,8 @@ const (
 	Region = "region"
 	// Insecure is a constant for the key in a cloud provider secret that configures whether the OpenStack client verifies the server's certificate.
 	Insecure = "insecure"
+	// CACert is a constant for the key in a cloud provider secret that configures the CA bundle used to verify the server's certificate.
+	CACert = "caCert"
 
 	// DNSAuthURL is a constant for the key in a DNS secret that holds the OpenStack auth url.
 	DNSAuthURL = "OS_AUTH_URL"
@@ -86,6 +88,8 @@ const (
 	DNSApplicationCredentialName = "OS_APPLICATION_CREDENTIAL_NAME"
 	// DNSApplicationCredentialSecret is a constant for the key in a DNS secret  that holds the OpenStack application credential secret.
 	DNSApplicationCredentialSecret = "OS_APPLICATION_CREDENTIAL_SECRET"
+	// DNS_CA_Bundle is a constant for the key in a DNS secret that holds the Openstack CA Bundle for the KeyStone server.
+	DNS_CA_Bundle = "OS_CACERT"
 
 	// CloudProviderConfigName is the name of the secret containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"

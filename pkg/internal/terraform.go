@@ -43,6 +43,8 @@ const (
 	TerraformVarNameApplicationCredentialName = "TF_VAR_APPLICATION_CREDENTIAL_NAME"
 	// TerraformVarNameApplicationCredentialSecret maps to terraform internal var representation.
 	TerraformVarNameApplicationCredentialSecret = "TF_VAR_APPLICATION_CREDENTIAL_SECRET"
+	// TerraformVarCACert  maps to terraform internal var representation.
+	TerraformVarCACert = "TF_VAR_CA_CERT"
 )
 
 // TerraformerEnvVars computes the Terraformer environment variables from the given secret reference.
@@ -71,6 +73,7 @@ func TerraformerEnvVars(secretRef corev1.SecretReference, credentials *openstack
 		createEnvVar(secretRef, TerraformVarNameProjectName, openstack.TenantName),
 		createEnvVar(secretRef, TerraformVarNameUserName, openstack.UserName),
 		createEnvVar(secretRef, TerraformVarNamePassword, openstack.Password),
+		createEnvVar(secretRef, TerraformVarCACert, openstack.CACert),
 	}
 }
 

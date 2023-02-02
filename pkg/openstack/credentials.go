@@ -17,6 +17,7 @@ package openstack
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	corev1 "k8s.io/api/core/v1"
@@ -39,6 +40,9 @@ type Credentials struct {
 	ApplicationCredentialSecret string
 
 	AuthURL string
+	CACert  string
+
+	Insecure bool
 }
 
 // GetCredentials computes for a given context and infrastructure the corresponding credentials object.
@@ -52,8 +56,7 @@ func GetCredentials(ctx context.Context, c client.Client, secretRef corev1.Secre
 
 // ExtractCredentials generates a credentials object for a given provider secret.
 func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials, error) {
-
-	var altDomainNameKey, altTenantNameKey, altUserNameKey, altPasswordKey, altAuthURLKey *string
+	var altDomainNameKey, altTenantNameKey, altUserNameKey, altPasswordKey, altAuthURLKey, altCABundleKey *string
 	var altApplicationCredentialID, altApplicationCredentialName, altApplicationCredentialSecret *string
 	if allowDNSKeys {
 		altDomainNameKey = pointer.String(DNSDomainName)
@@ -64,6 +67,7 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		altApplicationCredentialName = pointer.String(DNSApplicationCredentialName)
 		altApplicationCredentialSecret = pointer.String(DNSApplicationCredentialSecret)
 		altAuthURLKey = pointer.String(DNSAuthURL)
+		altCABundleKey = pointer.String(DNS_CA_Bundle)
 	}
 
 	if secret.Data == nil {
@@ -83,6 +87,7 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 	applicationCredentialName := getOptional(secret, ApplicationCredentialName, altApplicationCredentialName)
 	applicationCredentialSecret := getOptional(secret, ApplicationCredentialSecret, altApplicationCredentialSecret)
 	authURL := getOptional(secret, AuthURL, altAuthURLKey)
+	caCert := getOptional(secret, CACert, altCABundleKey)
 
 	if password != "" {
 		if applicationCredentialSecret != "" {
@@ -103,7 +108,9 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		}
 	}
 
-	return &Credentials{
+	insecure := strings.TrimSpace(string(secret.Data[Insecure])) == "true"
+
+	c := &Credentials{
 		DomainName:                  domainName,
 		TenantName:                  tenantName,
 		Username:                    userName,
@@ -111,8 +118,15 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		ApplicationCredentialID:     applicationCredentialID,
 		ApplicationCredentialName:   applicationCredentialName,
 		ApplicationCredentialSecret: applicationCredentialSecret,
-		AuthURL:                     string(authURL),
-	}, nil
+		AuthURL:                     authURL,
+		CACert:                      caCert,
+	}
+
+	if insecure {
+		c.Insecure = insecure
+	}
+
+	return c, nil
 }
 
 // getOptional returns optional value for a corresponding key or empty string

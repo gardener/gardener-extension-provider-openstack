@@ -75,11 +75,17 @@ func (e *ensurer) EnsureCloudProviderSecret(
 	if err != nil {
 		return fmt.Errorf("could not find KeyStoneUrl: %v", err)
 	}
+	keyStoneCABundle := helper.FindKeyStoneCACert(config.KeyStoneURLs, config.KeyStoneCACert, cluster.Shoot.Spec.Region)
 
 	if new.Data == nil {
 		new.Data = make(map[string][]byte)
 	}
 	new.Data[types.AuthURL] = []byte(keyStoneURL)
-	new.Data[types.Insecure] = []byte("true")
+	if keyStoneCABundle != nil {
+		new.Data[types.CACert] = []byte(*keyStoneCABundle)
+	}
+	if config.KeyStoneForceInsecure {
+		new.Data[types.Insecure] = []byte("true")
+	}
 	return nil
 }

@@ -72,6 +72,7 @@ func ComputeTerraformerTemplateValues(
 	var (
 		createRouter  = true
 		createNetwork = true
+		useCACert     = false
 		routerConfig  = map[string]interface{}{
 			"id": DefaultRouterID,
 		}
@@ -106,6 +107,10 @@ func ComputeTerraformerTemplateValues(
 	if err != nil {
 		return nil, err
 	}
+	keyStoneCA := helper.FindKeyStoneCACert(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneCACert, infra.Spec.Region)
+	if keyStoneCA != nil && len(*keyStoneCA) > 0 {
+		useCACert = true
+	}
 
 	if cloudProfileConfig.UseSNAT != nil {
 		routerConfig["enableSNAT"] = *cloudProfileConfig.UseSNAT
@@ -125,7 +130,9 @@ func ComputeTerraformerTemplateValues(
 			"maxApiCallRetries": MaxApiCallRetries,
 			"authURL":           keyStoneURL,
 			"region":            infra.Spec.Region,
+			"insecure":          cloudProfileConfig.KeyStoneForceInsecure,
 			"floatingPoolName":  config.FloatingPoolName,
+			"useCACert":         useCACert,
 		},
 		"create": map[string]interface{}{
 			"router":  createRouter,

@@ -84,6 +84,7 @@ func (e *ensurer) EnsureCloudProviderSecret(
 	if keyStoneCABundle != nil {
 		new.Data[types.CACert] = []byte(*keyStoneCABundle)
 	}
+
 	if config.KeyStoneForceInsecure {
 		new.Data[types.Insecure] = []byte("true")
 	}

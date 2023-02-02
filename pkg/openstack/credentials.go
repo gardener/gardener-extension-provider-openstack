@@ -108,9 +108,7 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		}
 	}
 
-	insecure := strings.TrimSpace(string(secret.Data[Insecure])) == "true"
-
-	c := &Credentials{
+	return &Credentials{
 		DomainName:                  domainName,
 		TenantName:                  tenantName,
 		Username:                    userName,
@@ -120,13 +118,8 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		ApplicationCredentialSecret: applicationCredentialSecret,
 		AuthURL:                     authURL,
 		CACert:                      caCert,
-	}
-
-	if insecure {
-		c.Insecure = insecure
-	}
-
-	return c, nil
+		Insecure:                    strings.TrimSpace(strings.ToLower(string(secret.Data[Insecure]))) == "true",
+	}, nil
 }
 
 // getOptional returns optional value for a corresponding key or empty string

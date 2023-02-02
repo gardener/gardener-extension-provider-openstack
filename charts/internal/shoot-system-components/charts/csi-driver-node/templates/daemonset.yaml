@@ -5,6 +5,7 @@ metadata:
   name: csi-driver-node
   namespace: {{ .Release.Namespace }}
   labels:
+    node.gardener.cloud/critical-component: "true"
     app: csi
     role: disk-driver
 spec:
@@ -17,6 +18,7 @@ spec:
       annotations:
         checksum/secret-cloud-provider-config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
       labels:
+        node.gardener.cloud/critical-component: "true"
         app: csi
         role: disk-driver
     spec:

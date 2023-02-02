@@ -85,6 +85,8 @@ func (e *ensurer) EnsureCloudProviderSecret(
 		new.Data[types.CACert] = []byte(*keyStoneCABundle)
 	}
 
+	// remove key from user
+	delete(new.Data, types.Insecure)
 	if config.KeyStoneForceInsecure {
 		new.Data[types.Insecure] = []byte("true")
 	}

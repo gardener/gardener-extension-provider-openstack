@@ -17,12 +17,12 @@ provider "openstack" {
   application_credential_name   = var.APPLICATION_CREDENTIAL_NAME
   application_credential_secret = var.APPLICATION_CREDENTIAL_SECRET
   max_retries = "{{ .openstack.maxApiCallRetries }}"
-{{ if .openstack.insecure -}}
+{{ if .openstack.insecure }}
   insecure    = true
-{{- end }}
-{{ if .openstack.useCACert -}}
+{{ end }}
+{{ if .openstack.useCACert }}
   cacert_file = var.CA_CERT
-{{- end }}
+{{ end }}
 }
 
 //=====================================================================

@@ -120,6 +120,8 @@ var _ = Describe("Terraform", func() {
 				"region":            infra.Spec.Region,
 				"floatingPoolName":  config.FloatingPoolName,
 				"maxApiCallRetries": MaxApiCallRetries,
+				"insecure":          false,
+				"useCACert":         false,
 			}
 			expectedCreateValues = map[string]interface{}{
 				"router":  false,

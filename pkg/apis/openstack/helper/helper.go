@@ -115,7 +115,7 @@ func FindKeyStoneURL(keyStoneURLs []api.KeyStoneURL, keystoneURL, region string)
 // tries to use the non-regional value.
 func FindKeyStoneCACert(keyStoneURLs []api.KeyStoneURL, keystoneCABundle *string, region string) *string {
 	for _, keyStoneURL := range keyStoneURLs {
-		if keyStoneURL.Region == region {
+		if keyStoneURL.Region == region && keyStoneURL.CACert != nil && len(*keyStoneURL.CACert) > 0 {
 			return keyStoneURL.CACert
 		}
 	}

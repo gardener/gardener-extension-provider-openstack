@@ -118,7 +118,7 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		ApplicationCredentialSecret: applicationCredentialSecret,
 		AuthURL:                     authURL,
 		CACert:                      caCert,
-		Insecure:                    strings.TrimSpace(strings.ToLower(string(secret.Data[Insecure]))) == "true",
+		Insecure:                    strings.ToLower(strings.TrimSpace(string(secret.Data[Insecure]))) == "true",
 	}, nil
 }
 

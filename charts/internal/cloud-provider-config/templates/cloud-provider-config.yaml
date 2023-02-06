@@ -15,3 +15,7 @@ metadata:
 type: Opaque
 data:
   cloudprovider.conf: {{ include "cloud-provider-config" . | b64enc }}
+  {{- if .Values.caCert }}
+  keystoneCA.crt: {{ .Values.caCert | b64enc }}
+  {{- end }}
+

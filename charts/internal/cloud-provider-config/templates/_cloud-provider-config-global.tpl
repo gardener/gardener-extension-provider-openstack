@@ -12,4 +12,10 @@ application-credential-name="{{ .Values.applicationCredentialName }}"
 application-credential-secret="{{ .Values.applicationCredentialSecret }}"
 {{- end }}
 region="{{ .Values.region }}"
+{{- if .Values.insecure }}
+tls-insecure={{ .Values.insecure }}
+{{- end }}
+{{- if .Values.caCert }}
+ca-file="/etc/kubernetes/cloudprovider/keystoneCA.crt"
+{{- end }}
 {{- end -}}

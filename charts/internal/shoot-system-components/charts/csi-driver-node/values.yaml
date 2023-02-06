@@ -6,6 +6,7 @@ images:
   csi-node-driver-registrar: image-repository:image-tag
   csi-liveness-probe: image-repository:image-tag
 
+keystoneCACert:
 socketPath: /csi/csi.sock
 vpaEnabled: false
 userAgentHeaders: []

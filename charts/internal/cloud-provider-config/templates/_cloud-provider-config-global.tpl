@@ -16,6 +16,6 @@ region="{{ .Values.region }}"
 tls-insecure={{ .Values.insecure }}
 {{- end }}
 {{- if .Values.caCert }}
-ca-file="/etc/kubernetes/cloudprovider/keystoneCA.crt"
+ca-file="/etc/kubernetes/cloudprovider/keystone-ca.crt"
 {{- end }}
 {{- end -}}

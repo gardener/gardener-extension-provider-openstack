@@ -715,7 +715,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 ) {
 	var (
 		cloudProviderDiskConfig []byte
-		keystoneCACert          []byte
 		userAgentHeader         []string
 		csiNodeDriverValues     map[string]interface{}
 		caBundle                string
@@ -751,8 +750,8 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	}
 
 	// add keystone CA bundle
-	if b, ok := secret.Data[openstack.CloudProviderConfigKeystoneCA]; ok && len(b) > 0 {
-		csiNodeDriverValues["keystoneCACert"] = keystoneCACert
+	if keystoneCA, ok := secret.Data[openstack.CloudProviderConfigKeyStoneCAKey]; ok && len(keystoneCA) > 0 {
+		csiNodeDriverValues["keystoneCACert"] = keystoneCA
 	}
 
 	if userAgentHeader != nil {

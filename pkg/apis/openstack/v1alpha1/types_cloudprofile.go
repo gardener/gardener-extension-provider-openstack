@@ -39,7 +39,7 @@ type CloudProfileConfig struct {
 	KeyStoneURL string `json:"keystoneURL,omitempty"`
 	// KeystoneCACert is the CA Bundle for the KeyStoneUR
 	// +optional
-	KeyStoneCACert *string `json:"keystoneCABundle,omitempty"`
+	KeyStoneCACert *string `json:"keystoneCACert,omitempty"`
 	// KeyStoneForceInsecure is a flag to control whether the OpenStack client should perform no certificate validation.
 	// +optional
 	KeyStoneForceInsecure bool `json:"keystoneForceInsecure,omitempty"`

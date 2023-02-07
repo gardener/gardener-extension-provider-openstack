@@ -101,14 +101,14 @@ string
 </tr>
 <tr>
 <td>
-<code>keystoneCABundle</code></br>
+<code>keystoneCACert</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>KeystoneCACert is the CA Bundle for the KeyStoneUR</p>
+<p>KeystoneCACert is the CA Bundle for the KeyStoneURL.</p>
 </td>
 </tr>
 <tr>
@@ -795,7 +795,7 @@ string
 </em>
 </td>
 <td>
-<p>CACert is the CA Bundle for the KeyStoneURL</p>
+<p>CACert is the CA Bundle for the KeyStoneURL.</p>
 </td>
 </tr>
 </tbody>

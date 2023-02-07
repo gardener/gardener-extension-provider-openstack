@@ -37,7 +37,7 @@ type CloudProfileConfig struct {
 	DHCPDomain *string
 	// KeyStoneURL is the URL for auth{n,z} in OpenStack (pointing to KeyStone).
 	KeyStoneURL string
-	// KeystoneCACert is the CA Bundle for the KeyStoneUR
+	// KeystoneCACert is the CA Bundle for the KeyStoneURL.
 	KeyStoneCACert *string
 	// KeyStoneForceInsecure is a flag to control whether the OpenStack client should perform no certificate validation.
 	KeyStoneForceInsecure bool
@@ -99,7 +99,7 @@ type KeyStoneURL struct {
 	Region string
 	// URL is the keystone URL.
 	URL string
-	// CACert is the CA Bundle for the KeyStoneURL
+	// CACert is the CA Bundle for the KeyStoneURL.
 	CACert *string
 }
 

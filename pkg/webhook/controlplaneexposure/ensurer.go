@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -34,6 +32,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 )
 
 // NewEnsurer creates a new controlplaneexposure ensurer.

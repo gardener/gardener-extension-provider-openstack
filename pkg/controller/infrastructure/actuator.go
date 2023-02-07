@@ -17,15 +17,15 @@ package infrastructure
 import (
 	"context"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
 
 type actuator struct {

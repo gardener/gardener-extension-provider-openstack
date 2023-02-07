@@ -19,11 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	mockopenstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client/mocks"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -41,6 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	mockopenstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client/mocks"
 )
 
 const (

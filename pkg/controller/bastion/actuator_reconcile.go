@@ -20,12 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -40,6 +34,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
+	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 // bastionEndpoints holds the endpoints the bastion host provides

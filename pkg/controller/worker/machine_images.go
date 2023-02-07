@@ -18,10 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
 func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {

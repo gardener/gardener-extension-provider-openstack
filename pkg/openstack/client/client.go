@@ -24,13 +24,13 @@ import (
 	"net/http"
 	"strings"
 
-	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // NewOpenstackClientFromCredentials returns a Factory implementation that can be used to create clients for OpenStack services.

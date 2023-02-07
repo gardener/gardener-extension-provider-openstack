@@ -15,8 +15,6 @@
 package controlplane
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
@@ -26,6 +24,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var logger = log.Log.WithName("openstack-controlplane-webhook")

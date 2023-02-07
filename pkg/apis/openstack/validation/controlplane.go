@@ -17,11 +17,11 @@ package validation
 import (
 	"fmt"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-
 	featurevalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 // ValidateControlPlaneConfig validates a ControlPlaneConfig object.

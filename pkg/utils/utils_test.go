@@ -15,11 +15,11 @@
 package utils_test
 
 import (
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
-	"k8s.io/utils/pointer"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 var _ = Describe("Utils", func() {

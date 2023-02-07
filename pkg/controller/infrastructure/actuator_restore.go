@@ -19,9 +19,8 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
-	"github.com/go-logr/logr"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/go-logr/logr"
 )
 
 // Restore implements infrastructure.Actuator.

@@ -18,12 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -32,6 +26,12 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/client-go/kubernetes"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 type delegateFactory struct {

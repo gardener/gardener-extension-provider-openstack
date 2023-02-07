@@ -18,10 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -29,6 +25,10 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 // configValidator implements ConfigValidator for openstack infrastructure resources.

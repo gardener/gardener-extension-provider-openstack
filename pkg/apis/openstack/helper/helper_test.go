@@ -15,13 +15,12 @@
 package helper_test
 
 import (
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"k8s.io/utils/pointer"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
 var _ = Describe("Helper", func() {

@@ -15,13 +15,13 @@
 package infrastructure
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 var (

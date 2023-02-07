@@ -19,8 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
@@ -29,6 +27,9 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 const (

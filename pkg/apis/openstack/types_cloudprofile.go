@@ -17,9 +17,9 @@ package openstack
 import (
 	"fmt"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

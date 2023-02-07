@@ -17,8 +17,6 @@ package healthcheck
 import (
 	"time"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	genericcontrolplaneactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
@@ -33,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var (

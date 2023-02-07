@@ -15,10 +15,10 @@
 package validator
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 func decodeControlPlaneConfig(decoder runtime.Decoder, cp *runtime.RawExtension) (*openstack.ControlPlaneConfig, error) {

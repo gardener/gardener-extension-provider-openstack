@@ -18,16 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	types "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	types "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // NewEnsurer creates cloudprovider ensurer.

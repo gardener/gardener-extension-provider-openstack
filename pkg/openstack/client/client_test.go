@@ -15,10 +15,11 @@
 package client_test
 
 import (
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gophercloud/gophercloud"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 var _ = Describe("Client", func() {

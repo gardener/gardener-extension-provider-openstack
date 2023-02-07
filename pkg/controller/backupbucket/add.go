@@ -15,11 +15,11 @@
 package backupbucket
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var (

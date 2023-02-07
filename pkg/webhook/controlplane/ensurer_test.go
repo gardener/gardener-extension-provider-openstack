@@ -20,9 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -32,6 +29,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/version"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -42,6 +40,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 const namespace = "test"

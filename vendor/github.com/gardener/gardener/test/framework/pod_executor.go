@@ -22,8 +22,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/client-go/tools/remotecommand"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // NewPodExecutor returns a podExecutor
@@ -63,7 +64,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		return nil, fmt.Errorf("failed to initialized the command exector: %v", err)
 	}
 
-	err = executor.Stream(remotecommand.StreamOptions{
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  strings.NewReader(command),
 		Stdout: &stdout,
 		Stderr: &stderr,

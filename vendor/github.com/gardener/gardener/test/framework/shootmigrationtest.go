@@ -23,14 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	"github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,6 +32,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // ShootMigrationTest represents a shoot migration test.
@@ -192,12 +192,12 @@ func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 		return err
 	}
 
-	ginkgo.By("Comparing all Machines, Nodes and persisted Secrets after the migration...")
+	ginkgo.By("Compare all Machines, Nodes and persisted Secrets after the migration")
 	if err := t.compareElementsAfterMigration(); err != nil {
 		return err
 	}
 
-	ginkgo.By("Checking for orphaned resources...")
+	ginkgo.By("Check for orphaned resources")
 	if err := t.checkForOrphanedNonNamespacedResources(ctx); err != nil {
 		return err
 	}

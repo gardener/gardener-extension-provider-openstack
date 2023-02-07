@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	"github.com/mholt/archiver"
 	"github.com/onsi/ginkgo/v2"
 	"k8s.io/helm/pkg/downloader"
@@ -30,6 +28,8 @@ import (
 	"k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/repo"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 const (
@@ -44,7 +44,7 @@ func (f *CommonFramework) RenderAndDeployChart(ctx context.Context, k8sClient ku
 		return err
 	}
 
-	ginkgo.By("Downloading chart artifacts")
+	ginkgo.By("Download chart artifacts")
 	err = f.DownloadChartArtifacts(ctx, helmRepo, f.ChartDir, c.Name, c.Version)
 	if err != nil {
 		return fmt.Errorf("unable to download chart artifacts for chart %s with version %s: %w", c.Name, c.Version, err)

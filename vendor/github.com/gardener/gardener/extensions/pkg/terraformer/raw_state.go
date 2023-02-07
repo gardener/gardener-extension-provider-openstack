@@ -20,9 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Marshal transform RawState to []byte representation. It encodes the raw state data
@@ -33,7 +34,7 @@ func (trs *RawState) Marshal() ([]byte, error) {
 // GetRawState returns the content of terraform state config map
 func (t *terraformer) GetRawState(ctx context.Context) (*RawState, error) {
 	configMap := &corev1.ConfigMap{}
-	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
+	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.stateName), configMap); err != nil {
 		return nil, err
 	}
 	return &RawState{

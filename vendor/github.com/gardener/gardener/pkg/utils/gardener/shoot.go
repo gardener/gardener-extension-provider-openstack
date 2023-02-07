@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilsets "k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
@@ -38,9 +39,12 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -163,6 +167,40 @@ func GetShootNameFromOwnerReferences(objectMeta metav1.Object) string {
 		}
 	}
 	return ""
+}
+
+// NodeLabelsForWorkerPool returns a combined map of all user-specified and gardener-managed node labels.
+func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEnabled bool) map[string]string {
+	// copy worker pool labels map
+	labels := utils.MergeStringMaps(workerPool.Labels)
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels["node.kubernetes.io/role"] = "node"
+	labels["kubernetes.io/arch"] = *workerPool.Machine.Architecture
+
+	labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(nodeLocalDNSEnabled)
+
+	if v1beta1helper.SystemComponentsAllowed(&workerPool) {
+		labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
+	}
+
+	// worker pool name labels
+	labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
+	labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
+
+	// add CRI labels selected by the RuntimeClass
+	if workerPool.CRI != nil {
+		labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)
+		if len(workerPool.CRI.ContainerRuntimes) > 0 {
+			for _, cr := range workerPool.CRI.ContainerRuntimes {
+				key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
+				labels[key] = "true"
+			}
+		}
+	}
+
+	return labels
 }
 
 const (
@@ -452,4 +490,27 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 		return nil, nil
 	}
 	return shoot.Spec.SeedName, shoot.Status.SeedName
+}
+
+// ExtractSystemComponentsTolerations returns tolerations that are required to schedule shoot system components
+// on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
+func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
+	var (
+		tolerations = utilsets.New[corev1.Toleration]()
+
+		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
+		// before they are added to the tolerations set.
+		comparableTolerations = &kubernetesutils.ComparableTolerations{}
+	)
+
+	for _, worker := range workers {
+		if v1beta1helper.SystemComponentsAllowed(&worker) {
+			for _, taint := range worker.Taints {
+				toleration := kubernetesutils.TolerationForTaint(taint)
+				tolerations.Insert(comparableTolerations.Transform(toleration))
+			}
+		}
+	}
+
+	return tolerations.UnsortedList()
 }

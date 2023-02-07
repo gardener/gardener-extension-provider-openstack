@@ -17,22 +17,23 @@ package healthcheck
 import (
 	"fmt"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-	"github.com/gardener/gardener/pkg/api/extensions"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	"github.com/gardener/gardener/pkg/utils"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	"github.com/gardener/gardener/pkg/api/extensions"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -94,7 +95,7 @@ type RegisteredExtension struct {
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
 func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck) error {
 	predicates := append(DefaultPredicates(), customPredicates...)
-	opts.Controller.RecoverPanic = true
+	opts.Controller.RecoverPanic = pointer.Bool(true)
 
 	args := AddArgs{
 		ControllerOptions:       opts.Controller,
@@ -156,7 +157,6 @@ func DefaultPredicates() []predicate.Predicate {
 // and Start it when the Manager is Started.
 func Register(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
 	args.ControllerOptions.Reconciler = NewReconciler(actuator, *args.registeredExtension, args.SyncPeriod)
-	args.ControllerOptions.RecoverPanic = true
 	return add(mgr, args)
 }
 
@@ -191,7 +191,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 }
 
 func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {
-	types := sets.NewString()
+	types := sets.New[string]()
 	for _, healthCheck := range healthChecks {
 		types.Insert(healthCheck.ConditionType)
 	}

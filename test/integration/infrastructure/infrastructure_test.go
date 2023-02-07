@@ -475,7 +475,7 @@ func runTest(
 	}
 
 	By("verify infrastructure creation")
-	infrastructureIdentifiers = verifyCreation(ctx, openstackClient, infra, providerStatus, providerConfig, pointer.StringPtr(vpcCIDR))
+	infrastructureIdentifiers = verifyCreation(ctx, openstackClient, infra, providerStatus, providerConfig, pointer.String(vpcCIDR))
 
 	return nil
 }

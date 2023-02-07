@@ -129,12 +129,12 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("no fip as list is empty", []api.FloatingPool{}, "fip-1", regionName, nil, nil),
-		Entry("return fip as there only one match in the list", []api.FloatingPool{{Name: "fip-*", Region: &regionName}}, "fip-1", regionName, nil, pointer.StringPtr("fip-*")),
-		Entry("return best matching fip", []api.FloatingPool{{Name: "fip-*", Region: &regionName}, {Name: "fip-1", Region: &regionName}}, "fip-1", regionName, nil, pointer.StringPtr("fip-1")),
-		Entry("no fip as there no entry for the same region", []api.FloatingPool{{Name: "fip-*", Region: pointer.StringPtr("somewhere-else")}}, "fip-1", regionName, nil, nil),
-		Entry("no fip as there is no entry with domain", []api.FloatingPool{{Name: "fip-*", Region: &regionName}}, "fip-1", regionName, pointer.StringPtr("net-1"), nil),
-		Entry("return fip even if there is a non-constraing fip with better score", []api.FloatingPool{{Name: "fip-*", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.BoolPtr(true)}}, "fip-1", regionName, nil, pointer.StringPtr("fip-*")),
-		Entry("return non-constraing fip as there is no other matching fip", []api.FloatingPool{{Name: "nofip-1", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.BoolPtr(true)}}, "fip-1", regionName, nil, pointer.StringPtr("fip-1")),
+		Entry("return fip as there only one match in the list", []api.FloatingPool{{Name: "fip-*", Region: &regionName}}, "fip-1", regionName, nil, pointer.String("fip-*")),
+		Entry("return best matching fip", []api.FloatingPool{{Name: "fip-*", Region: &regionName}, {Name: "fip-1", Region: &regionName}}, "fip-1", regionName, nil, pointer.String("fip-1")),
+		Entry("no fip as there no entry for the same region", []api.FloatingPool{{Name: "fip-*", Region: pointer.String("somewhere-else")}}, "fip-1", regionName, nil, nil),
+		Entry("no fip as there is no entry with domain", []api.FloatingPool{{Name: "fip-*", Region: &regionName}}, "fip-1", regionName, pointer.String("net-1"), nil),
+		Entry("return fip even if there is a non-constraing fip with better score", []api.FloatingPool{{Name: "fip-*", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.Bool(true)}}, "fip-1", regionName, nil, pointer.String("fip-*")),
+		Entry("return non-constraing fip as there is no other matching fip", []api.FloatingPool{{Name: "nofip-1", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.Bool(true)}}, "fip-1", regionName, nil, pointer.String("fip-1")),
 	)
 })
 

@@ -51,7 +51,7 @@ var _ = Describe("Utils", func() {
 		Expect(IsStringPtrValueEqual(a, b)).To(Equal(expected))
 	},
 		Entry("should be false as pointer points to nil", nil, "test", false),
-		Entry("should be false as pointer value is different", pointer.StringPtr("different"), "test", false),
-		Entry("should be true as pointer value is equal", pointer.StringPtr("test"), "test", true),
+		Entry("should be false as pointer value is different", pointer.String("different"), "test", false),
+		Entry("should be true as pointer value is equal", pointer.String("test"), "test", true),
 	)
 })

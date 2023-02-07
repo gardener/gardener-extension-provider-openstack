@@ -54,7 +54,7 @@ func TestController(t *testing.T) {
 var _ = Describe("Ensurer", func() {
 	var (
 		etcdStorage = &config.ETCDStorage{
-			ClassName: pointer.StringPtr("gardener.cloud-fast"),
+			ClassName: pointer.String("gardener.cloud-fast"),
 			Capacity:  utils.QuantityPtr(resource.MustParse("25Gi")),
 		}
 

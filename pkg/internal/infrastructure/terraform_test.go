@@ -163,7 +163,7 @@ var _ = Describe("Terraform", func() {
 		})
 
 		It("should correctly compute the terraformer chart values with vpc creation", func() {
-			cloudProfileConfig.UseSNAT = pointer.BoolPtr(true)
+			cloudProfileConfig.UseSNAT = pointer.Bool(true)
 			cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
 			cluster.CloudProfile.Spec.ProviderConfig.Raw = cloudProfileConfigJSON
 

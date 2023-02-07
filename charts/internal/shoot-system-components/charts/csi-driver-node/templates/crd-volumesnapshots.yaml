@@ -1,8 +1,17 @@
+# DO NOT TOUCH THIS FILE!
+# This CRD is the legacy manifest contained in the extension-controlplane-shoot ManagedResource.
+# It is marked to be ignored in order to migrate the CRD to the extension-controlplane-shoot-crds ManagedResource, see
+# https://github.com/gardener/gardener-extension-provider-openstack/pull/297.
+# The new CRD is maintained in charts/internal/shoot-crds/charts/volumesnapshots/templates.
+# Removing the resources.gardener.cloud/mode annotation leads flapping CRDs, see
+# https://github.com/gardener/gardener-extension-provider-openstack/issues/565.
+# TODO: remove this legacy CRD
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    resources.gardener.cloud/mode: Ignore
     controller-gen.kubebuilder.io/version: v0.8.0
     api-approved.kubernetes.io: "https://github.com/kubernetes-csi/external-snapshotter/pull/665"
   creationTimestamp: null

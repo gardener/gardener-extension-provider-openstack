@@ -16,4 +16,4 @@ spec:
     --loadbalancer-provider=$LOADBALANCER_PROVIDER
     --network-worker-cidr=$NETWORK_WORKER_CIDR
 
-  image: golang:1.19.2
+  image: golang:1.19.5

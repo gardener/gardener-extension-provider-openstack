@@ -36,9 +36,6 @@ global:
         -----END RSA PRIVATE KEY-----
     # Please make sure you are running `gardener@v1.42` or later before setting this to true.
     useObjectSelector: false
-    enableOverlayAsDefaultForCalico: true
-    enableOverlayAsDefaultForCilium: true
-
   # Kubeconfig to the target cluster. In-cluster configuration will be used if not specified.
   kubeconfig:
 

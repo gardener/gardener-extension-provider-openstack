@@ -9,8 +9,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gardener/etcd-druid v0.12.3
 	github.com/gardener/gardener v1.59.0
-	github.com/gardener/gardener-extension-networking-calico v1.28.0
-	github.com/gardener/gardener-extension-networking-cilium v1.20.0
+	github.com/gardener/gardener-extension-networking-calico v1.27.1
 	github.com/gardener/machine-controller-manager v0.45.0
 	github.com/go-logr/logr v1.2.3
 	github.com/golang/mock v1.6.0
@@ -46,6 +45,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
+	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
@@ -76,6 +76,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
@@ -100,7 +101,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.4.1 // indirect

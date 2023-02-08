@@ -19,4 +19,4 @@ spec:
     --region="$REGION"
     --tenant-name="$TENANT_NAME"
     --user-name="$USER_NAME"
-  image: golang:1.19.4
+  image: golang:1.19.5

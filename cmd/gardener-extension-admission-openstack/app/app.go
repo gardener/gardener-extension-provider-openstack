@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	admissioncmd "github.com/gardener/gardener-extension-provider-openstack/pkg/admission/cmd"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/mutator"
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	provideropenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 
@@ -56,9 +55,6 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 			mgrOpts,
 			webhookOptions,
 		)
-
-		enableOverlayAsDefaultForCalico bool
-		enableOverlayAsDefaultForCilium bool
 	)
 
 	cmd := &cobra.Command{
@@ -104,15 +100,9 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
 			}
 
-			mutator.EnableOverlayAsDefaultForCalico = enableOverlayAsDefaultForCalico
-			mutator.EnableOverlayAsDefaultForCilium = enableOverlayAsDefaultForCilium
-
 			return mgr.Start(ctx)
 		},
 	}
-
-	cmd.Flags().BoolVar(&enableOverlayAsDefaultForCalico, "enable-overlay-as-default-for-calico", true, "enables network overlay for all new calico shoot clusters")
-	cmd.Flags().BoolVar(&enableOverlayAsDefaultForCilium, "enable-overlay-as-default-for-cilium", true, "enables network overlay for all new cilium shoot clusters")
 
 	verflag.AddFlags(cmd.Flags())
 	aggOption.AddFlags(cmd.Flags())

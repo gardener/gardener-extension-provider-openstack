@@ -88,6 +88,8 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 		networkConfig.Overlay = overlay
 	}
 
+	networkConfig.SnatToUpstreamDNS = nil
+
 	if oldShoot != nil && networkConfig.Overlay == nil {
 		oldNetworkConfig, err := s.decodeNetworkingConfig(oldShoot.Spec.Networking.ProviderConfig)
 		if err != nil {

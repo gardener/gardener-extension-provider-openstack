@@ -88,6 +88,10 @@ type NetworkConfig struct {
 	// Overlay enables the network overlay
 	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
+	// SnatToUpstreamDNS enables the masquerading of packets to the upstream dns server
+	// only backported to avoid validation checks to fail
+	// +optional
+	SnatToUpstreamDNS *SnatToUpstreamDNS `json:"snatToUpstreamDNS,omitempty"`
 
 	// DEPRECATED.
 	// IPIP is the IPIP Mode for the IPv4 Pool (e.g. Always, Never, CrossSubnet)
@@ -101,6 +105,11 @@ type NetworkConfig struct {
 	// Will be removed in a future Gardener release.
 	// +optional
 	IPAutoDetectionMethod *string `json:"ipAutodetectionMethod,omitempty"`
+}
+
+// SnatToUpstreamDNS  enables the masquerading of packets to the upstream dns server
+type SnatToUpstreamDNS struct {
+	Enabled bool `json:"enabled"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -13,7 +13,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - shoots
+    - blackhole
   failurePolicy: Fail
   matchPolicy: Equivalent
   objectSelector:

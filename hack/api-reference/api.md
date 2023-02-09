@@ -350,6 +350,20 @@ string
 Deprecated: Don&rsquo;t use anymore. Will be removed in a future version.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>csiManila</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">
+CSIManila
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CSIManila contains configuration for CSI Manila driver (NFS)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureConfig">InfrastructureConfig
@@ -481,6 +495,36 @@ reconciliation is possible.</p>
 <td>
 <em>(Optional)</em>
 <p>ServerGroupDependencies is a list of external server group dependencies.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">CSIManila
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>)
+</p>
+<p>
+<p>CSIManila contains configuration for CSI Manila driver (NFS)</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled is the switch to enable the CSI Manila driver support</p>
 </td>
 </tr>
 </tbody>
@@ -1184,6 +1228,20 @@ RouterStatus
 <p>Subnets is a list of subnets that have been created.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>shareNetwork</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetworkStatus">
+ShareNetworkStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShareNetwork contains information about a created/provided ShareNetwork</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks
@@ -1250,6 +1308,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>ID is the ID of an existing private network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>createShareNetwork</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CreateShareNetwork is a flag to create a share network (used for shared file systems like NFS)</p>
 </td>
 </tr>
 </tbody>
@@ -1539,6 +1609,47 @@ string
 </td>
 <td>
 <p>Name is the name of the server group</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetworkStatus">ShareNetworkStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>)
+</p>
+<p>
+<p>ShareNetworkStatus contains information about a generated ShareNetwork</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>id</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ID is the Network id.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the Network name.</p>
 </td>
 </tr>
 </tbody>

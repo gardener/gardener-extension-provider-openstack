@@ -1,0 +1,36 @@
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: csi-driver-nfs-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: driver-nfs-controller
+      minAllowed:
+        memory: {{ .Values.resources.driverController.requests.memory }}
+      maxAllowed:
+        cpu: {{ .Values.vpa.resourcePolicy.driverController.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.driverController.maxAllowed.memory }}
+      controlledValues: RequestsOnly
+    - containerName: csi-provisioner
+      minAllowed:
+        memory: {{ .Values.resources.provisioner.requests.memory }}
+      maxAllowed:
+        cpu: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.memory }}
+      controlledValues: RequestsOnly
+    - containerName: csi-liveness-probe
+      minAllowed:
+        memory: {{ .Values.resources.livenessProbe.requests.memory }}
+      maxAllowed:
+        cpu: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
+      controlledValues: RequestsOnly
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: csi-driver-nfs-controller
+  updatePolicy:
+    updateMode: Auto

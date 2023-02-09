@@ -121,6 +121,18 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_udp_all" {
   security_group_id = openstack_networking_secgroup_v2.cluster.id
 }
 
+{{ if .create.shareNetwork -}}
+//=====================================================================
+//= share network
+//=====================================================================
+resource "openstack_sharedfilesystem_sharenetwork_v2" "cluster" {
+  name              = "{{ .clusterName }}"
+  description       = "created by gardener-extension-provider-openstack"
+  neutron_net_id    = {{ template "network-id" $ }}
+  neutron_subnet_id = openstack_networking_subnet_v2.cluster.id
+}
+{{- end }}
+
 //=====================================================================
 //= SSH Key for Nodes (Bastion and Worker)
 //=====================================================================
@@ -180,6 +192,15 @@ output "{{ .outputKeys.subnetID }}" {
   value = openstack_networking_subnet_v2.cluster.id
 }
 
+{{ if .create.shareNetwork -}}
+output "{{ .outputKeys.shareNetworkID }}" {
+  value = "${openstack_sharedfilesystem_sharenetwork_v2.cluster.id}"
+}
+
+output "{{ .outputKeys.shareNetworkName }}" {
+  value = "${openstack_sharedfilesystem_sharenetwork_v2.cluster.name}"
+}
+{{- end }}
 
 // Helpers
 

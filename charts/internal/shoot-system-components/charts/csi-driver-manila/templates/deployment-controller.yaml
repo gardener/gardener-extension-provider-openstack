@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csi-driver-manila-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: csi
+    role: driver-manila-controller
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: csi
+      role: driver-manila-controller
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      creationTimestamp: null
+      labels:
+        app: csi
+        role: driver-manila-controller
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: csi-driver-manila-controller
+      containers:
+        {{- range .Values.shareProtocols }}
+        - name: openstack-{{ .protocolSelector | lower }}-driver
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: {{ index $.Values.images "csi-driver-manila" }}
+          args:
+            - /bin/manila-csi-plugin
+            - --nodeid=$(NODE_ID)
+            - --endpoint=/csi/csi.sock
+            - --drivername=$(DRIVER_NAME)
+            - --v=3
+            - --share-protocol-selector=$(MANILA_SHARE_PROTO)
+            - --fwdendpoint=/csi-fwd/csi.sock
+            - --cluster-id={{ $.Values.csimanila.clusterID }}
+            {{- if $.Values.csimanila.topologyAwarenessEnabled }}
+            - --with-topology
+            - --nodeaz={{ $.Values.csimanila.nodeAZ }}
+            {{- end }}
+            {{- if $.Values.csimanila.runtimeConfig.enabled }}
+            - --runtime-config-file=/runtimeconfig/runtimeconfig.json
+            {{- end }}
+          env:
+            - name: DRIVER_NAME
+              value: {{ .protocolSelector | lower }}.manila.csi.openstack.org
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MANILA_SHARE_PROTO
+              value: "{{ .protocolSelector }}"
+{{- if $.Values.resources.driverController }}
+          resources:
+{{ toYaml $.Values.resources.driverController | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .protocolSelector | lower }}-plugin-dir
+              mountPath: /csi
+            - name: {{ .protocolSelector | lower }}-fwd-plugin-dir
+              mountPath: /csi-fwd
+            - name: pod-mounts
+              mountPath: /var/lib/kubelet/pods
+              mountPropagation: Bidirectional
+            {{- if $.Values.csimanila.runtimeConfig.enabled }}
+            - name: {{ .protocolSelector | lower }}-runtime-config-dir
+              mountPath: /runtimeconfig
+              readOnly: true
+            {{- end }}
+
+        - name: openstack-{{ .protocolSelector | lower }}-provisioner
+          image: {{ index $.Values.images "csi-provisioner" }}
+          args:
+            - --csi-address=/csi/csi.sock
+            {{- if $.Values.csimanila.topologyAwarenessEnabled }}
+            - --feature-gates=Topology=true
+            {{- end }}
+            - --volume-name-prefix=pv-{{ $.Release.Namespace }}
+            - --leader-election
+            - --leader-election-namespace={{ $.Release.Namespace }}
+            - --timeout={{ $.Values.timeout }}
+            - v=5
+{{- if $.Values.resources.provisioner }}
+          resources:
+{{ toYaml $.Values.resources.provisioner | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .protocolSelector | lower }}-plugin-dir
+              mountPath: /csi
+
+        - name: openstack-{{ .protocolSelector | lower }}-snapshotter
+          image: {{ index $.Values.images "csi-snapshotter" }}
+          args:
+            - --csi-address=/csi/csi.sock
+            - --leader-election
+            - --leader-election-namespace={{ $.Release.Namespace }}
+            - --timeout={{ $.Values.timeout }}
+            - --snapshot-name-prefix={{ $.Release.Namespace }}
+{{- if $.Values.resources.snapshotter }}
+          resources:
+{{ toYaml $.Values.resources.snapshotter | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .protocolSelector | lower }}-plugin-dir
+              mountPath: /csi
+
+        - name: openstack-{{ .protocolSelector | lower }}-resizer
+          image: {{ index $.Values.images "csi-resizer" }}
+          args:
+            - --csi-address=/csi/csi.sock
+            - --leader-election=true
+            - --leader-election-namespace={{ $.Release.Namespace }}
+            - --timeout={{ $.Values.timeout }}
+            - --handle-volume-inuse-error=false
+            - --v=3
+{{- if $.Values.resources.resizer }}
+          resources:
+{{ toYaml $.Values.resources.resizer | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .protocolSelector | lower }}-plugin-dir
+              mountPath: /csi
+
+{{- end }}
+
+      volumes:
+      {{- range .Values.shareProtocols }}
+        - name: {{ .protocolSelector | lower }}-plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/{{ .protocolSelector  | lower }}.manila.csi.openstack.org
+            type: DirectoryOrCreate
+        - name: {{ .protocolSelector | lower }}-fwd-plugin-dir
+          hostPath:
+            path: {{ .fwdNodePluginEndpoint.dir }}
+            type: Directory
+        {{- if $.Values.csimanila.runtimeConfig.enabled }}
+        - name: {{ .protocolSelector | lower }}-runtime-config-dir
+          configMap:
+            name: manila-csi-runtimeconf-cm
+        {{- end }}
+      {{- end }}
+        - name: pod-mounts
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory

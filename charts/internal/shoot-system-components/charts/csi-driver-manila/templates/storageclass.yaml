@@ -1,0 +1,24 @@
+{{- range .Values.openstack.availabilityZones }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  name: csi-manila-nfs-{{ . }}
+provisioner: nfs.manila.csi.openstack.org
+allowVolumeExpansion: true
+parameters:
+  type: default
+  availability: {{ required "openstack.availabilityZones needs to be set" . }}
+  shareNetworkID: {{ required "openstack.shareNetworkID needs to be set" $.Values.openstack.shareNetworkID }}
+  nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
+  csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
+  csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
+  csi.storage.k8s.io/node-stage-secret-name: manila-csi-plugin
+  csi.storage.k8s.io/node-stage-secret-namespace: {{ $.Release.Namespace }}
+  csi.storage.k8s.io/node-publish-secret-name: manila-csi-plugin
+  csi.storage.k8s.io/node-publish-secret-namespace: {{ $.Release.Namespace }}
+  csi.storage.k8s.io/controller-expand-secret-name: manila-csi-plugin
+  csi.storage.k8s.io/controller-expand-secret-namespace: {{ $.Release.Namespace }}
+{{ end }}

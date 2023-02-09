@@ -1,0 +1,11 @@
+{{- range .Values.shareProtocols }}
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: {{ .protocolSelector | lower }}.manila.csi.openstack.org
+spec:
+  attachRequired: false
+  podInfoOnMount: false
+  fsGroupPolicy: {{ .fsGroupPolicy }}
+---
+{{- end }}

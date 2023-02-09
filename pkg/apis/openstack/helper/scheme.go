@@ -52,9 +52,14 @@ func init() {
 // InfrastructureConfigFromInfrastructure extracts the InfrastructureConfig from the
 // ProviderConfig section of the given Infrastructure.
 func InfrastructureConfigFromInfrastructure(infra *extensionsv1alpha1.Infrastructure) (*api.InfrastructureConfig, error) {
+	return InfrastructureConfigFromRawExtension(infra.Spec.ProviderConfig)
+}
+
+// InfrastructureConfigFromRawExtension extracts the InfrastructureConfig from the ProviderConfig.
+func InfrastructureConfigFromRawExtension(providerConfig *runtime.RawExtension) (*api.InfrastructureConfig, error) {
 	config := &api.InfrastructureConfig{}
-	if infra.Spec.ProviderConfig != nil && infra.Spec.ProviderConfig.Raw != nil {
-		if _, _, err := decoder.Decode(infra.Spec.ProviderConfig.Raw, nil, config); err != nil {
+	if providerConfig != nil && providerConfig.Raw != nil {
+		if _, _, err := decoder.Decode(providerConfig.Raw, nil, config); err != nil {
 			return nil, err
 		}
 		return config, nil

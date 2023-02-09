@@ -31,24 +31,26 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		lbProvider1  = "foo"
 		nilPath      *field.Path
 		controlPlane *api.ControlPlaneConfig
+		infraConfig  *api.InfrastructureConfig
 	)
 
 	BeforeEach(func() {
 		controlPlane = &api.ControlPlaneConfig{
 			LoadBalancerProvider: lbProvider1,
 		}
+		infraConfig = &api.InfrastructureConfig{}
 	})
 
 	Describe("#ValidateControlPlaneConfig", func() {
 
 		It("should return no errors for a valid configuration", func() {
-			Expect(ValidateControlPlaneConfig(controlPlane, "", nilPath)).To(BeEmpty())
+			Expect(ValidateControlPlaneConfig(controlPlane, infraConfig, "", nilPath)).To(BeEmpty())
 		})
 
 		It("should require the name of a load balancer provider", func() {
 			controlPlane.LoadBalancerProvider = ""
 
-			errorList := ValidateControlPlaneConfig(controlPlane, "", nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "", nilPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
@@ -65,7 +67,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 				},
 			}
 
-			errorList := ValidateControlPlaneConfig(controlPlane, "1.24.8", nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.24.8", nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -77,6 +79,29 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 					"Field": Equal("cloudControllerManager.featureGates.Foo"),
 				})),
 			))
+		})
+
+		It("should fail if CSI Manila is enabled, but no share network is created", func() {
+			controlPlane.CSIManila = &api.CSIManila{Enabled: true}
+			infraConfig.Networks.CreateShareNetwork = false
+
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.24.8", nilPath)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("csiManila.enabled"),
+				})),
+			))
+		})
+
+		It("should return no error if CSI Manila is enabled and share network is created", func() {
+			controlPlane.CSIManila = &api.CSIManila{Enabled: true}
+			infraConfig.Networks.CreateShareNetwork = true
+
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.24.8", nilPath)
+
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 

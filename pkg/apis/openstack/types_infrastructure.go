@@ -43,6 +43,8 @@ type Networks struct {
 	Workers string
 	// ID is the ID of an existing private network.
 	ID *string
+	// CreateShareNetwork is a flag to create a share network (used for shared file systems like NFS)
+	CreateShareNetwork bool
 }
 
 // Router indicates whether to use an existing router or create a new one.
@@ -82,6 +84,8 @@ type NetworkStatus struct {
 	Router RouterStatus
 	// Subnets is a list of subnets that have been created.
 	Subnets []Subnet
+	// ShareNetwork contains information about a created/provided ShareNetwork
+	ShareNetwork *ShareNetworkStatus
 }
 
 // RouterStatus contains information about a generated Router or resources attached to an existing Router.
@@ -97,6 +101,14 @@ type FloatingPoolStatus struct {
 	// ID is the floating pool id.
 	ID string
 	// Name is the floating pool name.
+	Name string
+}
+
+// ShareNetworkStatus contains information about a generated ShareNetwork
+type ShareNetworkStatus struct {
+	// ID is the Network id.
+	ID string
+	// Name is the Network name.
 	Name string
 }
 

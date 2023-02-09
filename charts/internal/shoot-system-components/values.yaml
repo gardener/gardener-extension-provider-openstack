@@ -2,3 +2,7 @@ cloud-controller-manager:
   enabled: true
 csi-driver-node:
   enabled: true
+csi-driver-manila:
+  enabled: false
+csi-driver-nfs:
+  enabled: false

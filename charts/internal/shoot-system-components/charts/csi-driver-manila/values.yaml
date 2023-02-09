@@ -1,0 +1,150 @@
+images:
+  csi-driver-manila: image-repository:image-tag
+  csi-node-driver-registrar: image-repository:image-tag
+  csi-liveness-probe: image-repository:image-tag
+  csi-provisioner: image-repository:image-tag
+  csi-attacher: image-repository:image-tag
+  csi-snapshotter: image-repository:image-tag
+  csi-resizer: image-repository:image-tag
+
+vpaEnabled: false
+pspDisabled: false
+dnsPolicy: ClusterFirstWithHostNet # available values: Default, ClusterFirstWithHostNet, ClusterFirst
+timeout: 3m
+
+openstack:
+  availabilityZones:
+    - zone1
+    - zone2
+  shareNetworkID: shareNetworkIDValue
+  shareClient: 10.180.0.0/16
+  shareProtocol: NFS
+  authURL: authURLValue
+  region: regionValue
+  domainName: domainNameValue
+  projectName: projectNameValue
+  userName: userNameValue
+  password: userNameValue
+  #applicationCredentialID: applicationCredentialIDValue
+  #applicationCredentialSecret: applicationCredentialSecretValue
+
+
+resources:
+  driverController:
+    requests:
+      cpu: 20m
+      memory: 50Mi
+    limits:
+      memory: 360Mi
+  provisioner:
+    requests:
+      cpu: 11m
+      memory: 38Mi
+    limits:
+      memory: 400Mi
+  snapshotter:
+    requests:
+      cpu: 11m
+      memory: 36Mi
+    limits:
+      memory: 220Mi
+  resizer:
+    requests:
+      cpu: 11m
+      memory: 32Mi
+    limits:
+      memory: 220Mi
+  driverNode:
+    requests:
+      cpu: 15m
+      memory: 42Mi
+    limits:
+      memory: 2Gi
+  nodeDriverRegistrar:
+    requests:
+      cpu: 11m
+      memory: 32Mi
+    limits:
+      memory: 1Gi
+  livenessProbe:
+    requests:
+      cpu: 11m
+      memory: 32Mi
+    limits:
+      memory: 200Mi
+
+vpa:
+  resourcePolicy:
+    driverController:
+      maxAllowed:
+        cpu: 800m
+        memory: 4G
+    provisioner:
+      maxAllowed:
+        cpu: 800m
+        memory: 4G
+    snapshotter:
+      maxAllowed:
+        cpu: 700m
+        memory: 3G
+    resizer:
+      maxAllowed:
+        cpu: 700m
+        memory: 3G
+    livenessProbe:
+      maxAllowed:
+        cpu: 500m
+        memory: 2G
+    driverNode:
+      maxAllowed:
+        cpu: 2
+        memory: 4G
+    nodeDriverRegistrar:
+      maxAllowed:
+        cpu: 1
+        memory: 3G
+
+# Enabled Manila share protocols
+shareProtocols:
+  - protocolSelector: NFS
+    fsGroupPolicy: None
+    fwdNodePluginEndpoint:
+      dir: /var/lib/kubelet/plugins/csi-nfsplugin
+      sockFile: csi.sock
+    node:
+      livenessProbe:
+        healthPort: 24913
+    controller:
+      livenessProbe:
+        healthPort: 11950
+  # - protocolSelector: CEPHFS
+  #   fwdNodePluginEndpoint:
+  #     dir: /var/lib/kubelet/plugins/cephfs.csi.ceph.com
+  #     sockFile: csi.sock
+  #   node:
+  #     livenessProbe:
+  #       healthPort: 24914
+  #   controller:
+  #     livenessProbe:
+  #       healthPort: 11951
+
+# CSI Manila spec
+csimanila:
+  # Runtime configuration
+  runtimeConfig:
+    enabled: false
+    jsonData: |-
+      {
+        "nfs": {
+          "matchExportLocationAddress": "172.168.122.0/24"
+        }
+      }
+
+  topologyAwarenessEnabled: false
+  # Availability zone for each node. topologyAwarenessEnabled must be set to true for this option to have any effect.
+  # If your Kubernetes cluster runs atop of Nova and want to use Nova AZs as AZs for the nodes of the cluster, uncomment the line below:
+  #nodeAZ: "$(curl http://169.254.169.254/openstack/latest/meta_data.json | jq -r .availability_zone)"
+
+  # You may set ID of the cluster where manila-csi is deployed. This value will be appended
+  # to share metadata in newly provisioned shares as `manila.csi.openstack.org/cluster=<cluster ID>`.
+  clusterID: ""

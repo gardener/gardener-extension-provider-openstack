@@ -9,7 +9,3 @@ provider-openstack
 {{- define "csi-driver-node.provisioner" -}}
 cinder.csi.openstack.org
 {{- end -}}
-
-{{- define "csi-driver-node.storageversion" -}}
-storage.k8s.io/v1
-{{- end -}}

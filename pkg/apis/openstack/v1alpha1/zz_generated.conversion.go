@@ -337,6 +337,8 @@ func autoConvert_v1alpha1_CloudProfileConfig_To_openstack_CloudProfileConfig(in 
 	out.DNSServers = *(*[]string)(unsafe.Pointer(&in.DNSServers))
 	out.DHCPDomain = (*string)(unsafe.Pointer(in.DHCPDomain))
 	out.KeyStoneURL = in.KeyStoneURL
+	out.KeyStoneCACert = (*string)(unsafe.Pointer(in.KeyStoneCACert))
+	out.KeyStoneForceInsecure = in.KeyStoneForceInsecure
 	out.KeyStoneURLs = *(*[]openstack.KeyStoneURL)(unsafe.Pointer(&in.KeyStoneURLs))
 	out.MachineImages = *(*[]openstack.MachineImages)(unsafe.Pointer(&in.MachineImages))
 	out.RequestTimeout = (*v1.Duration)(unsafe.Pointer(in.RequestTimeout))
@@ -363,6 +365,8 @@ func autoConvert_openstack_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in 
 	out.DNSServers = *(*[]string)(unsafe.Pointer(&in.DNSServers))
 	out.DHCPDomain = (*string)(unsafe.Pointer(in.DHCPDomain))
 	out.KeyStoneURL = in.KeyStoneURL
+	out.KeyStoneCACert = (*string)(unsafe.Pointer(in.KeyStoneCACert))
+	out.KeyStoneForceInsecure = in.KeyStoneForceInsecure
 	out.KeyStoneURLs = *(*[]KeyStoneURL)(unsafe.Pointer(&in.KeyStoneURLs))
 	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
 	out.RequestTimeout = (*v1.Duration)(unsafe.Pointer(in.RequestTimeout))
@@ -545,6 +549,7 @@ func Convert_openstack_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in 
 func autoConvert_v1alpha1_KeyStoneURL_To_openstack_KeyStoneURL(in *KeyStoneURL, out *openstack.KeyStoneURL, s conversion.Scope) error {
 	out.Region = in.Region
 	out.URL = in.URL
+	out.CACert = (*string)(unsafe.Pointer(in.CACert))
 	return nil
 }
 
@@ -556,6 +561,7 @@ func Convert_v1alpha1_KeyStoneURL_To_openstack_KeyStoneURL(in *KeyStoneURL, out 
 func autoConvert_openstack_KeyStoneURL_To_v1alpha1_KeyStoneURL(in *openstack.KeyStoneURL, out *KeyStoneURL, s conversion.Scope) error {
 	out.Region = in.Region
 	out.URL = in.URL
+	out.CACert = (*string)(unsafe.Pointer(in.CACert))
 	return nil
 }
 

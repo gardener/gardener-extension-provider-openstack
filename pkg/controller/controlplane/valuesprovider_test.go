@@ -233,6 +233,7 @@ var _ = Describe("ValuesProvider", func() {
 				"tenantName": []byte(tenantName),
 				"username":   []byte(`username`),
 				"password":   []byte(`password`),
+				"authURL":    []byte(authURL),
 			},
 		}
 
@@ -298,6 +299,7 @@ var _ = Describe("ValuesProvider", func() {
 			"subnetID":                    "subnet-acbd1234",
 			"lbProvider":                  "load-balancer-provider",
 			"floatingNetworkID":           "floating-network-id",
+			"insecure":                    false,
 			"authUrl":                     authURL,
 			"dhcpDomain":                  dhcpDomain,
 			"requestTimeout":              requestTimeout,
@@ -466,6 +468,7 @@ var _ = Describe("ValuesProvider", func() {
 				"tenantName":                  []byte(tenantName),
 				"applicationCredentialID":     []byte(`app-id`),
 				"applicationCredentialSecret": []byte(`app-secret`),
+				"authURL":                     []byte(authURL),
 			}
 
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(&secret2))
@@ -475,6 +478,7 @@ var _ = Describe("ValuesProvider", func() {
 				"password":                    "",
 				"applicationCredentialID":     "app-id",
 				"applicationCredentialSecret": "app-secret",
+				"insecure":                    false,
 			})
 			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sAtLeast120)
 			Expect(err).NotTo(HaveOccurred())
@@ -487,6 +491,19 @@ var _ = Describe("ValuesProvider", func() {
 				"routerID": "routerID",
 			})
 			values, err := vp.GetConfigChartValues(ctx, cp, clusterNoOverlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(expectedValues))
+		})
+
+		It("should return correct config chart values with KeyStone CA Cert", func() {
+			secret2 := cpSecret.DeepCopy()
+			caCert := "custom-cert"
+			secret2.Data["caCert"] = []byte(caCert)
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(secret2))
+			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
+				"caCert": caCert,
+			})
+			values, err := vp.GetConfigChartValues(ctx, cp, clusterK8sAtLeast120)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(expectedValues))
 		})

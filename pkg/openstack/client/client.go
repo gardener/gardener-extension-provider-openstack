@@ -18,6 +18,10 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"net/http"
 	"strings"
 
 	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -46,8 +50,25 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 		},
 	}
 
+	config := &tls.Config{
+		InsecureSkipVerify: credentials.Insecure,
+	}
+	if len(credentials.CACert) > 0 {
+		pool := x509.NewCertPool()
+		ok := pool.AppendCertsFromPEM([]byte(credentials.CACert))
+		if !ok {
+			return nil, fmt.Errorf("failed to load CA Bundle for KeyStone")
+		}
+		config.RootCAs = pool
+	}
+
 	if opts.AuthInfo.ApplicationCredentialSecret != "" {
 		opts.AuthType = clientconfig.AuthV3ApplicationCredential
+	}
+
+	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: config}
+	opts.HTTPClient = &http.Client{
+		Transport: transport,
 	}
 
 	authOpts, err := clientconfig.AuthOptions(opts)

@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/gardener/gardener/pkg/utils"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -118,6 +120,12 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	if len(cloudProfile.KeyStoneURL) == 0 && len(cloudProfile.KeyStoneURLs) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("keyStoneURL"), "must provide the URL to KeyStone"))
 	}
+	if ca := cloudProfile.KeyStoneCACert; ca != nil && len(*ca) > 0 {
+		_, err := utils.DecodeCertificate([]byte(*ca))
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("caCert"), *ca, "caCert is not a valid PEM-encoded certificate"))
+		}
+	}
 
 	regionsFound = sets.NewString()
 	for i, val := range cloudProfile.KeyStoneURLs {
@@ -129,6 +137,13 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 
 		if len(val.URL) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("url"), "must provide an url"))
+		}
+
+		if ca := val.CACert; ca != nil && len(*ca) > 0 {
+			_, err := utils.DecodeCertificate([]byte(*ca))
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("caCert"), *ca, "caCert is not a valid PEM-encoded certificate"))
+			}
 		}
 
 		if regionsFound.Has(val.Region) {

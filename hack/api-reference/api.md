@@ -101,6 +101,30 @@ string
 </tr>
 <tr>
 <td>
+<code>keystoneCACert</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KeystoneCACert is the CA Bundle for the KeyStoneURL.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>keystoneForceInsecure</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KeyStoneForceInsecure is a flag to control whether the OpenStack client should perform no certificate validation.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>keystoneURLs</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.KeyStoneURL">
@@ -761,6 +785,17 @@ string
 </td>
 <td>
 <p>URL is the keystone URL.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>caCert</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>CACert is the CA Bundle for the KeyStoneURL.</p>
 </td>
 </tr>
 </tbody>

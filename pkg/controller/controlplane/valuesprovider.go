@@ -455,16 +455,13 @@ func getConfigChartValues(
 		return nil, fmt.Errorf("cloud profile config is nil - cannot determine keystone URL and other parameters")
 	}
 
-	keyStoneURL, err := helper.FindKeyStoneURL(cloudProfileConfig.KeyStoneURLs, cloudProfileConfig.KeyStoneURL, cp.Spec.Region)
-	if err != nil {
-		return nil, err
-	}
-
 	values := map[string]interface{}{
 		"domainName":                  c.DomainName,
 		"tenantName":                  c.TenantName,
 		"username":                    c.Username,
 		"password":                    c.Password,
+		"insecure":                    c.Insecure,
+		"authUrl":                     c.AuthURL,
 		"applicationCredentialID":     c.ApplicationCredentialID,
 		"applicationCredentialName":   c.ApplicationCredentialName,
 		"applicationCredentialSecret": c.ApplicationCredentialSecret,
@@ -472,7 +469,6 @@ func getConfigChartValues(
 		"lbProvider":                  cpConfig.LoadBalancerProvider,
 		"floatingNetworkID":           infraStatus.Networks.FloatingPool.ID,
 		"subnetID":                    subnet.ID,
-		"authUrl":                     keyStoneURL,
 		"dhcpDomain":                  cloudProfileConfig.DHCPDomain,
 		"requestTimeout":              cloudProfileConfig.RequestTimeout,
 		"useOctavia":                  cloudProfileConfig.UseOctavia != nil && *cloudProfileConfig.UseOctavia,
@@ -486,6 +482,10 @@ func getConfigChartValues(
 
 	if !isUsingOverlay {
 		values["routerID"] = infraStatus.Networks.Router.ID
+	}
+
+	if len(c.CACert) > 0 {
+		values["caCert"] = c.CACert
 	}
 
 	loadBalancerClassesFromCloudProfile := []api.LoadBalancerClass{}
@@ -750,6 +750,12 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		},
 		"pspDisabled": gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot),
 	}
+
+	// add keystone CA bundle
+	if keystoneCA, ok := secret.Data[openstack.CloudProviderConfigKeyStoneCAKey]; ok && len(keystoneCA) > 0 {
+		csiNodeDriverValues["keystoneCACert"] = keystoneCA
+	}
+
 	if userAgentHeader != nil {
 		csiNodeDriverValues["userAgentHeaders"] = userAgentHeader
 	}

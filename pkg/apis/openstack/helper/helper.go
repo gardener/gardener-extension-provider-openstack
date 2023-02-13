@@ -110,6 +110,19 @@ func FindKeyStoneURL(keyStoneURLs []api.KeyStoneURL, keystoneURL, region string)
 	return "", fmt.Errorf("cannot find keystone URL for region %q", region)
 }
 
+// FindKeyStoneCACert takes a list of keystone URLs and tries to find the first entry
+// whose region matches with the given region and returns the CA cert for this region. If no such entry is found then it
+// tries to use the non-regional value.
+func FindKeyStoneCACert(keyStoneURLs []api.KeyStoneURL, keystoneCABundle *string, region string) *string {
+	for _, keyStoneURL := range keyStoneURLs {
+		if keyStoneURL.Region == region && keyStoneURL.CACert != nil && len(*keyStoneURL.CACert) > 0 {
+			return keyStoneURL.CACert
+		}
+	}
+
+	return keystoneCABundle
+}
+
 // FindFloatingPool receives a list of floating pools and tries to find the best
 // match for a given `floatingPoolNamePattern` considering constraints like
 // `region` and `domain`. If no matching floating pool was found then an error will be returned.

@@ -250,6 +250,17 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 		})
 
+		It("should forbid invalid keystone CA Certs", func() {
+			cloudProfileConfig.KeyStoneCACert = pointer.String("foo")
+
+			errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("root.caCert"),
+				"Detail": Equal("caCert is not a valid PEM-encoded certificate"),
+			}))))
+		})
+
 		Context("dns server validation", func() {
 			It("should forbid not invalid dns server ips", func() {
 				cloudProfileConfig.DNSServers = []string{"not-a-valid-ip"}

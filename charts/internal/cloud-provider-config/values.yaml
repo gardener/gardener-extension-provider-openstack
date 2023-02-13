@@ -7,6 +7,8 @@ password: barPass
 # applicationCredentialID: barID
 # applicationCredentialName: barName
 # applicationCredentialSecret: barSecret
+# caCert: ""
+insecure: false
 region: eu
 # [LoadBalancer]
 lbProvider: foobar

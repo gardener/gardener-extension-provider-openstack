@@ -103,10 +103,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 		SystemReserved:                   params.SystemReserved,
 		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
-	}
-
-	if !version.ConstraintK8sLess119.Check(kubernetesVersion) {
-		config.VolumePluginDir = pathVolumePluginDirectory
+		VolumePluginDir:                  pathVolumePluginDirectory,
 	}
 
 	return config
@@ -146,6 +143,14 @@ var (
 		string(corev1.ResourceMemory): "1Gi",
 	}
 )
+
+// ShouldProtectKernelDefaultsBeEnabled returns true if ProtectKernelDefaults is set to true in the kubelet's config parameters or k8s version is >= 1.26.
+func ShouldProtectKernelDefaultsBeEnabled(kubeletConfigParameters *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) bool {
+	if kubeletConfigParameters.ProtectKernelDefaults != nil {
+		return *kubeletConfigParameters.ProtectKernelDefaults
+	}
+	return kubernetesVersion != nil && version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion)
+}
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
 	if c.CpuCFSQuota == nil {
@@ -233,9 +238,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 		c.ContainerLogMaxSize = pointer.String("100Mi")
 	}
 
-	if c.ProtectKernelDefaults == nil {
-		c.ProtectKernelDefaults = pointer.Bool(version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion))
-	}
+	c.ProtectKernelDefaults = pointer.Bool(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))
 
 	if c.StreamingConnectionIdleTimeout == nil {
 		if version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion) {

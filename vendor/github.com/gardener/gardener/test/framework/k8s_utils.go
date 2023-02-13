@@ -31,6 +31,7 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -397,23 +398,28 @@ func GetObjectFromSecret(ctx context.Context, k8sClient kubernetes.Interface, na
 
 // NewClientFromServiceAccount returns a kubernetes client for a service account.
 func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, account *corev1.ServiceAccount) (kubernetes.Interface, error) {
-	secret := &corev1.Secret{}
-	err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: account.Namespace, Name: account.Secrets[0].Name}, secret)
+	tokenRequest := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{
+			ExpirationSeconds: pointer.Int64(3600),
+		},
+	}
+
+	token, err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(account.Namespace).CreateToken(ctx, account.Name, tokenRequest, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAccountConfig := &rest.Config{
+	restConfig := &rest.Config{
 		Host: k8sClient.RESTConfig().Host,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: false,
 			CAData:   k8sClient.RESTConfig().CAData,
 		},
-		BearerToken: string(secret.Data["token"]),
+		BearerToken: token.Status.Token,
 	}
 
 	return kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(serviceAccountConfig),
+		kubernetes.WithRESTConfig(restConfig),
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
@@ -423,18 +429,18 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 func WaitUntilPodIsRunning(ctx context.Context, log logr.Logger, name, namespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
-		log = log.WithValues("pod", client.ObjectKeyFromObject(pod))
+		podLog := log.WithValues("pod", client.ObjectKeyFromObject(pod))
 
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, pod); err != nil {
 			return retry.SevereError(err)
 		}
 
 		if !health.IsPodReady(pod) {
-			log.Info("Waiting for Pod to be ready")
+			podLog.Info("Waiting for Pod to be ready")
 			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, namespace, name, err))
 		}
 
-		log.Info("Pod is ready now")
+		podLog.Info("Pod is ready now")
 		return retry.Ok()
 	})
 }

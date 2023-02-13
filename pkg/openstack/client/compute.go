@@ -19,9 +19,9 @@ package client
 import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	flavorutils "github.com/gophercloud/utils/openstack/compute/v2/flavors"
 )
 
 const (
@@ -71,7 +71,7 @@ func (c *ComputeClient) DeleteServerGroup(id string) error {
 
 // ListServerGroups retrieves the list of server groups.
 func (c *ComputeClient) ListServerGroups() ([]servergroups.ServerGroup, error) {
-	pages, err := servergroups.List(c.client).AllPages()
+	pages, err := servergroups.List(c.client, nil).AllPages()
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (c *ComputeClient) FindFloatingIDByInstanceID(id string) (string, error) {
 
 // FindFlavorID find flavor ID by flavor name
 func (c *ComputeClient) FindFlavorID(name string) (string, error) {
-	return flavors.IDFromName(c.client, name)
+	return flavorutils.IDFromName(c.client, name)
 }
 
 // FindImages find image ID by images name

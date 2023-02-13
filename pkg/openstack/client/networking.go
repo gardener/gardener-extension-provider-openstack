@@ -165,7 +165,7 @@ func (c *NetworkingClient) ListRouters(listOpts routers.ListOpts) ([]routers.Rou
 func (c *NetworkingClient) UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error) {
 
 	updateOpts := routers.UpdateOpts{
-		Routes: routes,
+		Routes: &routes,
 	}
 	return routers.Update(c.client, routerID, updateOpts).Extract()
 }

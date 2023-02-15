@@ -27,6 +27,7 @@ import (
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	ctrlerror "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/go-logr/logr"
@@ -73,17 +74,17 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 
 	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
 	if err != nil {
-		return fmt.Errorf("could not create Openstack client factory: %w", err)
+		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %w", err), helper.KnownCodes)
 	}
 
 	computeClient, err := openstackClientFactory.Compute()
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	networkingClient, err := openstackClientFactory.Networking()
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	infraStatus, err := getInfrastructureStatus(ctx, a.client, cluster)
@@ -93,17 +94,17 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 
 	securityGroup, err := ensureSecurityGroup(log, networkingClient, opt)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	err = ensureSecurityGroupRules(log, networkingClient, bastion, opt, infraStatus, securityGroup.ID)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	instance, err := ensureComputeInstance(log, computeClient, a.bastionConfig, infraStatus, opt)
 	if err != nil || instance == nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	infrastructureConfig := &openstackapi.InfrastructureConfig{}
@@ -118,18 +119,18 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 
 	fipid, err := ensurePublicIPAddress(opt, log, networkingClient, infraStatus)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	err = ensureAssociateFIPWithInstance(computeClient, instance, fipid)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	// refresh instance after public ip attached/created
 	instances, err := getBastionInstance(computeClient, opt.BastionInstanceName)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	if len(instances) == 0 {
@@ -139,7 +140,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	// check if the instance already exists and has an IP
 	endpoints, err := getInstanceEndpoints(&instances[0], opt)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	if !endpoints.ready() {

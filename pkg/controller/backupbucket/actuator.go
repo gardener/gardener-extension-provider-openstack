@@ -17,8 +17,10 @@ package backupbucket
 import (
 	"context"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/go-logr/logr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -42,17 +44,17 @@ func (a *actuator) InjectClient(client client.Client) error {
 func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
 	openstackClient, err := openstackclient.NewStorageClientFromSecretRef(ctx, a.client, bb.Spec.SecretRef, bb.Spec.Region)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	return openstackClient.CreateContainerIfNotExists(ctx, bb.Name)
+	return util.DetermineError(openstackClient.CreateContainerIfNotExists(ctx, bb.Name), helper.KnownCodes)
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
 	openstackClient, err := openstackclient.NewStorageClientFromSecretRef(ctx, a.client, bb.Spec.SecretRef, bb.Spec.Region)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	return openstackClient.DeleteContainerIfExists(ctx, bb.Name)
+	return util.DetermineError(openstackClient.DeleteContainerIfExists(ctx, bb.Name), helper.KnownCodes)
 }

@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/go-logr/logr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -48,8 +50,8 @@ func (a *actuator) GetETCDSecretData(ctx context.Context, _ logr.Logger, be *ext
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
 	openstackClient, err := openstackclient.NewStorageClientFromSecretRef(ctx, a.client, be.Spec.SecretRef, be.Spec.Region)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	return openstackClient.DeleteObjectsWithPrefix(ctx, be.Spec.BucketName, fmt.Sprintf("%s/", be.Name))
+	return util.DetermineError(openstackClient.DeleteObjectsWithPrefix(ctx, be.Spec.BucketName, fmt.Sprintf("%s/", be.Name)), helper.KnownCodes)
 }

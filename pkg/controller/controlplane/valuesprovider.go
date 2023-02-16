@@ -913,7 +913,7 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 	credentials *openstack.Credentials,
 ) (map[string]interface{}, map[string]interface{}, error) {
 
-	csiManilaEnabled := cpConfig.CSIManila != nil && cpConfig.CSIManila.Enabled
+	csiManilaEnabled := cpConfig.CSI != nil && cpConfig.CSI.Manila != nil && cpConfig.CSI.Manila.Enabled
 	csiDriverManilaValues := map[string]interface{}{
 		"enabled": csiManilaEnabled,
 	}
@@ -940,7 +940,8 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 			"clusterID": cp.Namespace,
 		}
 		var authURL, domainName, projectName, username, password,
-			applicationCredentialID, applicationCredentialName, applicationCredentialSecret, shareNetworkID string
+			applicationCredentialID, applicationCredentialName, applicationCredentialSecret,
+			caCert, insecure, shareNetworkID string
 		if credentials != nil {
 			authURL = credentials.AuthURL
 			domainName = credentials.DomainName
@@ -950,6 +951,10 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 			applicationCredentialID = credentials.ApplicationCredentialID
 			applicationCredentialName = credentials.ApplicationCredentialName
 			applicationCredentialSecret = credentials.ApplicationCredentialSecret
+			caCert = credentials.CACert
+			if credentials.Insecure {
+				insecure = "true"
+			}
 		}
 		if infraStatus.Networks.ShareNetwork != nil {
 			shareNetworkID = infraStatus.Networks.ShareNetwork.ID
@@ -967,6 +972,8 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 			"applicationCredentialID":     applicationCredentialID,
 			"applicationCredentialName":   applicationCredentialName,
 			"applicationCredentialSecret": applicationCredentialSecret,
+			"tlsInsecure":                 insecure,
+			"caCert":                      caCert,
 		}
 	}
 

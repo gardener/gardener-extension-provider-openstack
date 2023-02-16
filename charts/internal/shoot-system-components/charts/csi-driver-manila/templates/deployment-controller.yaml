@@ -82,6 +82,10 @@ spec:
               mountPath: /runtimeconfig
               readOnly: true
             {{- end }}
+            {{- if $.Values.openstack.caCert }}
+            - name: manila-csi-plugin
+              mountPath: /var/run/csi-manila
+            {{- end }}
 
         - name: openstack-{{ .protocolSelector | lower }}-provisioner
           image: {{ index $.Values.images "csi-provisioner" }}
@@ -158,3 +162,11 @@ spec:
           hostPath:
             path: /var/lib/kubelet/pods
             type: Directory
+        {{- if .Values.openstack.caCert }}
+        - name: manila-csi-plugin
+          secret:
+            secretName: manila-csi-plugin
+            items:
+              - key: ca.crt
+                path: ca.crt
+        {{- end }}

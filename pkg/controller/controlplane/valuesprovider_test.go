@@ -78,7 +78,7 @@ func defaultControlPlaneWithManila(csiManila bool) *extensionsv1alpha1.ControlPl
 	}
 	var status *api.ShareNetworkStatus
 	if csiManila {
-		cpConfig.CSIManila = &api.CSIManila{Enabled: true}
+		cpConfig.CSI = &api.CSI{Manila: &api.Manila{Enabled: true}}
 		status = &api.ShareNetworkStatus{
 			ID:   "1111-2222-3333-4444",
 			Name: "sharenetwork",
@@ -688,12 +688,14 @@ var _ = Describe("ValuesProvider", func() {
 							"applicationCredentialID":     "",
 							"applicationCredentialName":   "",
 							"availabilityZones":           []string{"zone1", "zone2"},
-							"authURL":                     "authURL",
+							"authURL":                     authURL,
 							"region":                      "europe",
 							"applicationCredentialSecret": "",
 							"shareClient":                 "10.200.0.0/19",
 							"shareNetworkID":              "1111-2222-3333-4444",
 							"domainName":                  "domain-name",
+							"tlsInsecure":                 "",
+							"caCert":                      "",
 						},
 						"pspDisabled": false,
 						"vpaEnabled":  true,

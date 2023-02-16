@@ -43,14 +43,20 @@ type Networks struct {
 	Workers string
 	// ID is the ID of an existing private network.
 	ID *string
-	// CreateShareNetwork is a flag to create a share network (used for shared file systems like NFS)
-	CreateShareNetwork bool
+	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
+	ShareNetwork *ShareNetwork
 }
 
 // Router indicates whether to use an existing router or create a new one.
 type Router struct {
 	// ID is the router id of an existing OpenStack router.
 	ID string
+}
+
+// ShareNetwork holds information about the share network (used for shared file systems like NFS)
+type ShareNetwork struct {
+	// Enabled is the switch to enable the creation of a share network
+	Enabled bool
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

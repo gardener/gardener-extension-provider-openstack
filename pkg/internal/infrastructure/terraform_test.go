@@ -124,8 +124,9 @@ var _ = Describe("Terraform", func() {
 				"useCACert":         false,
 			}
 			expectedCreateValues = map[string]interface{}{
-				"router":  false,
-				"network": true,
+				"router":       false,
+				"network":      true,
+				"shareNetwork": false,
 			}
 			expectedRouterValues = map[string]interface{}{
 				"id": strconv.Quote("1"),
@@ -230,6 +231,28 @@ var _ = Describe("Terraform", func() {
 				"outputKeys":   expectedOutputKeysValues,
 			}))
 		})
+
+		It("should correctly compute the terraformer chart values for share network creation", func() {
+			config.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
+			expectedCreateValues["shareNetwork"] = true
+			expectedOutputKeysValues["shareNetworkID"] = TerraformOutputKeyShareNetworkID
+			expectedOutputKeysValues["shareNetworkName"] = TerraformOutputKeyShareNetworkName
+
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
+			Expect(err).To(BeNil())
+
+			Expect(values).To(Equal(map[string]interface{}{
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
+				"dnsServers":   dnsServers,
+				"sshPublicKey": string(infra.Spec.SSHPublicKey),
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
+			}))
+		})
+
 	})
 
 	Describe("#StatusFromTerraformState", func() {

@@ -26,8 +26,10 @@ openstack:
   userName: userNameValue
   password: userNameValue
   #applicationCredentialID: applicationCredentialIDValue
+  #applicationCredentialName: applicationCredentialName
   #applicationCredentialSecret: applicationCredentialSecretValue
-
+  #caCert: xxx
+  #tlsInsecure: true
 
 resources:
   driverController:

@@ -90,6 +90,12 @@ spec:
               mountPath: /runtimeconfig
               readOnly: true
             {{- end }}
+            {{- if $.Values.openstack.caCert }}
+            - name: manila-csi-plugin
+              mountPath: /var/run/csi-manila
+              readOnly: true
+            {{- end }}
+
 {{- if $.Values.resources.driverNode }}
           resources:
 {{ toYaml $.Values.resources.driverNode | indent 12 }}
@@ -151,4 +157,12 @@ spec:
           configMap:
             name: manila-csi-runtimeconf-cm
         {{- end }}
+        {{- end }}
+        {{- if .Values.openstack.caCert }}
+        - name: manila-csi-plugin
+          secret:
+            secretName: manila-csi-plugin
+            items:
+              - key: ca.crt
+                path: ca.crt
         {{- end }}

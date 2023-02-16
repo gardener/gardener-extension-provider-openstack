@@ -82,22 +82,22 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 		})
 
 		It("should fail if CSI Manila is enabled, but no share network is created", func() {
-			controlPlane.CSIManila = &api.CSIManila{Enabled: true}
-			infraConfig.Networks.CreateShareNetwork = false
+			controlPlane.CSI = &api.CSI{Manila: &api.Manila{Enabled: true}}
+			infraConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: false}
 
 			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.24.8", nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("csiManila.enabled"),
+					"Field": Equal("csi.manila.enabled"),
 				})),
 			))
 		})
 
 		It("should return no error if CSI Manila is enabled and share network is created", func() {
-			controlPlane.CSIManila = &api.CSIManila{Enabled: true}
-			infraConfig.Networks.CreateShareNetwork = true
+			controlPlane.CSI = &api.CSI{Manila: &api.Manila{Enabled: true}}
+			infraConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
 
 			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.24.8", nilPath)
 

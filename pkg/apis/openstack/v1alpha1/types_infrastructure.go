@@ -47,15 +47,21 @@ type Networks struct {
 	// ID is the ID of an existing private network.
 	// +optional
 	ID *string `json:"id,omitempty"`
-	// CreateShareNetwork is a flag to create a share network (used for shared file systems like NFS)
+	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	// +optional
-	CreateShareNetwork bool `json:"createShareNetwork,omitempty"`
+	ShareNetwork *ShareNetwork `json:"shareNetwork,omitempty"`
 }
 
 // Router indicates whether to use an existing router or create a new one.
 type Router struct {
 	// ID is the router id of an existing OpenStack router.
 	ID string `json:"id"`
+}
+
+// ShareNetwork holds information about the share network (used for shared file systems like NFS)
+type ShareNetwork struct {
+	// Enabled is the switch to enable the creation of a share network
+	Enabled bool `json:"enabled"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

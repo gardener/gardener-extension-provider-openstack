@@ -46,7 +46,7 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, infr
 		allErrs = append(allErrs, featurevalidation.ValidateFeatureGates(controlPlaneConfig.CloudControllerManager.FeatureGates, version, fldPath.Child("cloudControllerManager", "featureGates"))...)
 	}
 
-	allErrs = append(allErrs, validateCSIManila(controlPlaneConfig.CSIManila, infraConfig.Networks.CreateShareNetwork, fldPath.Child("csiManila"))...)
+	allErrs = append(allErrs, validateCSI(controlPlaneConfig.CSI, infraConfig.Networks.ShareNetwork, fldPath.Child("csi"))...)
 
 	return allErrs
 }
@@ -149,13 +149,13 @@ func validateLoadBalancerClassesConstraints(floatingPools []api.FloatingPool, sh
 	return allErrs
 }
 
-func validateCSIManila(manila *api.CSIManila, createShareNetwork bool, fldPath *field.Path) field.ErrorList {
+func validateCSI(csi *api.CSI, shareNetwork *api.ShareNetwork, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if manila == nil || manila.Enabled == false {
+	if csi == nil || csi.Manila == nil || !csi.Manila.Enabled {
 		return allErrs
 	}
-	if !createShareNetwork {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("enabled"), manila.Enabled, "share network must be created if CSI manila driver is enabled"))
+	if shareNetwork == nil || !shareNetwork.Enabled {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("manila", "enabled"), csi.Manila.Enabled, "share network must be created if CSI manila driver is enabled"))
 	}
 	return allErrs
 }

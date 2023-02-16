@@ -130,7 +130,8 @@ func ComputeTerraformerTemplateValues(
 		networksConfig["id"] = *config.Networks.ID
 	}
 
-	if config.Networks.CreateShareNetwork {
+	createShareNetwork := config.Networks.ShareNetwork != nil && config.Networks.ShareNetwork.Enabled
+	if createShareNetwork {
 		outputKeysConfig["shareNetworkID"] = TerraformOutputKeyShareNetworkID
 		outputKeysConfig["shareNetworkName"] = TerraformOutputKeyShareNetworkName
 	}
@@ -147,7 +148,7 @@ func ComputeTerraformerTemplateValues(
 		"create": map[string]interface{}{
 			"router":       createRouter,
 			"network":      createNetwork,
-			"shareNetwork": config.Networks.CreateShareNetwork,
+			"shareNetwork": createShareNetwork,
 		},
 		"dnsServers":   cloudProfileConfig.DNSServers,
 		"sshPublicKey": string(infra.Spec.SSHPublicKey),
@@ -246,7 +247,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer, conf
 		TerraformOutputKeySecurityGroupName,
 	}
 
-	if config.Networks.CreateShareNetwork {
+	if config.Networks.ShareNetwork != nil && config.Networks.ShareNetwork.Enabled {
 		outputKeys = append(outputKeys, TerraformOutputKeyShareNetworkID, TerraformOutputKeyShareNetworkName)
 	}
 

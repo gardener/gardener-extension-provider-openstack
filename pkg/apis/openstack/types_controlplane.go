@@ -33,8 +33,8 @@ type ControlPlaneConfig struct {
 	// Zone is the OpenStack zone.
 	// Deprecated: Don't use anymore. Will be removed in a future version.
 	Zone *string
-	// CSIManila contains configuration for CSI Manila driver (NFS)
-	CSIManila *CSIManila
+	// CSI contains configuration for CSI drivers
+	CSI *CSI
 }
 
 const (
@@ -52,8 +52,14 @@ type CloudControllerManagerConfig struct {
 	FeatureGates map[string]bool
 }
 
-// CSIManila contains configuration for CSI Manila driver (NFS)
-type CSIManila struct {
+// CSI contains configuration for CSI drivers
+type CSI struct {
+	// Manila contains configuration for CSI Manila driver (NFS)
+	Manila *Manila
+}
+
+// Manila contains configuration for CSI Manila driver (NFS)
+type Manila struct {
 	// Enabled is the switch to enable the CSI Manila driver support
 	Enabled bool
 }

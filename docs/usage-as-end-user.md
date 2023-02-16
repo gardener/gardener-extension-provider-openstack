@@ -57,7 +57,8 @@ networks:
 #   id: 1234
   workers: 10.250.0.0/19
 
-# createShareNetwork: true
+# shareNetwork:
+#   enabled: true
 ```
 
 The `floatingPoolName` is the name of the floating pool you want to use for your shoot.
@@ -83,7 +84,7 @@ You can freely choose these CIDRs and it is your responsibility to properly desi
 
 Apart from the router and the worker subnet the OpenStack extension will also create a network, router interfaces, security groups, and a key pair.
 
-The optional `networks.createShareNetwork` field controls the creation of a share network. This is only needed if shared
+The optional `networks.shareNetwork.enabled` field controls the creation of a share network. This is only needed if shared
 file system storage (like NFS) should be used. Note, that in this case, the `ControlPlaneConfig` needs additional configuration, too.
 
 ## `ControlPlaneConfig`
@@ -111,8 +112,9 @@ loadBalancerClasses:
 cloudControllerManager:
   featureGates:
     CustomResourceValidation: true
-#csiManila:
-#  enabled: true
+#csi
+#  manila:
+#    enabled: true
 ```
 
 The `loadBalancerProvider` is the provider name you want to use for load balancers in your shoot.
@@ -134,8 +136,8 @@ The `cloudControllerManager.featureGates` contains a map of explicitly enabled o
 For production usage it's not recommended to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
 If you don't want to configure anything for the `cloudControllerManager` simply omit the key in the YAML specification.
 
-The optional `csiManila.enabled` field is used to enable the deployment of the CSI Manila driver to support NFS persistent volumes.
-In this case, please ensure to set `networks.createShareNetwork=true` in the `InfrastructureConfig`, too.
+The optional `csi.manila.enabled` field is used to enable the deployment of the CSI Manila driver to support NFS persistent volumes.
+In this case, please ensure to set `networks.shareNetwork.enabled=true` in the `InfrastructureConfig`, too.
 Additionally, if CSI Manila driver is enabled, for each availability zone a NFS `StorageClass` will be created on the shoot 
 named like `csi-manila-nfs-<zone>`.
 

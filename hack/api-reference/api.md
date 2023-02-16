@@ -352,16 +352,16 @@ Deprecated: Don&rsquo;t use anymore. Will be removed in a future version.</p>
 </tr>
 <tr>
 <td>
-<code>csiManila</code></br>
+<code>csi</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">
-CSIManila
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSI">
+CSI
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CSIManila contains configuration for CSI Manila driver (NFS)</p>
+<p>CSI contains configuration for CSI drivers</p>
 </td>
 </tr>
 </tbody>
@@ -499,14 +499,14 @@ reconciliation is possible.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">CSIManila
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CSI">CSI
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>)
 </p>
 <p>
-<p>CSIManila contains configuration for CSI Manila driver (NFS)</p>
+<p>CSI contains configuration for CSI drivers</p>
 </p>
 <table>
 <thead>
@@ -518,13 +518,16 @@ reconciliation is possible.</p>
 <tbody>
 <tr>
 <td>
-<code>enabled</code></br>
+<code>manila</code></br>
 <em>
-bool
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Manila">
+Manila
+</a>
 </em>
 </td>
 <td>
-<p>Enabled is the switch to enable the CSI Manila driver support</p>
+<em>(Optional)</em>
+<p>Manila contains configuration for CSI Manila driver (NFS)</p>
 </td>
 </tr>
 </tbody>
@@ -1150,6 +1153,36 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Manila">Manila
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSI">CSI</a>)
+</p>
+<p>
+<p>Manila contains configuration for CSI Manila driver (NFS)</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled is the switch to enable the CSI Manila driver support</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus
 </h3>
 <p>
@@ -1312,14 +1345,16 @@ string
 </tr>
 <tr>
 <td>
-<code>createShareNetwork</code></br>
+<code>shareNetwork</code></br>
 <em>
-bool
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetwork">
+ShareNetwork
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CreateShareNetwork is a flag to create a share network (used for shared file systems like NFS)</p>
+<p>ShareNetwork holds information about the share network (used for shared file systems like NFS)</p>
 </td>
 </tr>
 </tbody>
@@ -1609,6 +1644,36 @@ string
 </td>
 <td>
 <p>Name is the name of the server group</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetwork">ShareNetwork
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks</a>)
+</p>
+<p>
+<p>ShareNetwork holds information about the share network (used for shared file systems like NFS)</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled is the switch to enable the creation of a share network</p>
 </td>
 </tr>
 </tbody>

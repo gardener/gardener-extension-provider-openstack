@@ -91,6 +91,9 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 	switch shoot.Spec.Networking.Type {
 	case calico.ReleaseName:
 		overlay := &calicov1alpha1.Overlay{Enabled: false}
+		if EnableOverlayAsDefaultForCalico {
+			overlay = &calicov1alpha1.Overlay{Enabled: true}
+		}
 
 		networkConfig, err := s.decodeCalicoNetworkConfig(shoot.Spec.Networking.ProviderConfig)
 		if err != nil {
@@ -112,24 +115,15 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 			}
 		}
 
-		if networkConfig.Overlay != nil && !networkConfig.Overlay.Enabled {
-			networkConfig.SnatToUpstreamDNS = &calicov1alpha1.SnatToUpstreamDNS{Enabled: true}
-		} else {
-			networkConfig.SnatToUpstreamDNS = &calicov1alpha1.SnatToUpstreamDNS{Enabled: false}
-		}
-
-		if networkConfig.Overlay != nil && EnableOverlayAsDefaultForCalico {
-			networkConfig.Overlay = &calicov1alpha1.Overlay{Enabled: true}
-			networkConfig.SnatToUpstreamDNS = &calicov1alpha1.SnatToUpstreamDNS{Enabled: false}
-		}
-
 		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
 			Object: networkConfig,
 		}
 
 	case cilium.ReleaseName:
 		overlay := &ciliumv1alpha1.Overlay{Enabled: false}
-
+		if EnableOverlayAsDefaultForCilium {
+			overlay = &ciliumv1alpha1.Overlay{Enabled: true}
+		}
 		networkConfig, err := s.decodeCiliumNetworkConfig(shoot.Spec.Networking.ProviderConfig)
 		if err != nil {
 			return err
@@ -148,17 +142,6 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 			if oldNetworkConfig.Overlay != nil {
 				networkConfig.Overlay = oldNetworkConfig.Overlay
 			}
-		}
-
-		if networkConfig.Overlay != nil && !networkConfig.Overlay.Enabled {
-			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: true}
-		} else {
-			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: false}
-		}
-
-		if networkConfig.Overlay != nil && EnableOverlayAsDefaultForCilium {
-			networkConfig.Overlay = &ciliumv1alpha1.Overlay{Enabled: true}
-			networkConfig.SnatToUpstreamDNS = &ciliumv1alpha1.SnatToUpstreamDNS{Enabled: false}
 		}
 
 		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{

@@ -9,7 +9,6 @@ spec:
     containerPolicies:
     - containerName: csi-driver
       minAllowed:
-        cpu: {{ .Values.resources.driver.requests.cpu }}
         memory: {{ .Values.resources.driver.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.driver.maxAllowed.cpu }}
@@ -17,7 +16,6 @@ spec:
       controlledValues: RequestsOnly
     - containerName: csi-node-driver-registrar
       minAllowed:
-        cpu: {{ .Values.resources.nodeDriverRegistrar.requests.cpu }}
         memory: {{ .Values.resources.nodeDriverRegistrar.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.nodeDriverRegistrar.maxAllowed.cpu }}
@@ -25,7 +23,6 @@ spec:
       controlledValues: RequestsOnly
     - containerName: csi-liveness-probe
       minAllowed:
-        cpu: {{ .Values.resources.livenessProbe.requests.cpu }}
         memory: {{ .Values.resources.livenessProbe.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}

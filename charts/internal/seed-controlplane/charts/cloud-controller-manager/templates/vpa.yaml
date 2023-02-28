@@ -14,7 +14,6 @@ spec:
     containerPolicies:
     - containerName: openstack-cloud-controller-manager
       minAllowed:
-        cpu: 20m
         memory: 40M
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.maxAllowed.cpu }}

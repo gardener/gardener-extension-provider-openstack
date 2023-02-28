@@ -298,25 +298,6 @@ const (
 	// TODO(shreyas-s-rao): Deprecate HA annotation with the stable release of zonal clusters feature.
 	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
 
-	// ShootAlphaControlPlaneHighAvailability is a constant for an annotation on the Shoot resource stating that the
-	// high availability setup for the control plane should be enabled.
-	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
-	// what you do.
-	// Deprecated: This annotation is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability` instead.
-	ShootAlphaControlPlaneHighAvailability = "alpha.control-plane.shoot.gardener.cloud/high-availability"
-	// ShootAlphaControlPlaneHighAvailabilitySingleZone is a specific value that can be set for the shoot control
-	// plane high availability annotation, that allows gardener to spread the shoot control plane across
-	// multiple nodes within a single availability zone if it is possible.
-	// This enables shoot clusters having a control plane with a higher failure tolerance as well as zero downtime maintenance,
-	// especially for infrastructure providers that provide less than three zones in a region and thus a multi-zone setup
-	// is not possible there.
-	// Deprecated: This annotation value is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability.failureTolerance.type=node` instead.
-	ShootAlphaControlPlaneHighAvailabilitySingleZone = "single-zone"
-	// ShootAlphaControlPlaneHighAvailabilityMultiZone is a specific value that can be set for the shoot control
-	// plane high availability annotation, that allows gardener to spread the shoot control plane across
-	// multiple availability zones if it is possible.
-	// Deprecated: This annotation value is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability.failureTolerance.type=zone` instead.
-	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
 	// ShootAlphaControlPlaneHAVPN is a constant for an annotation on the Shoot resource to enforce
 	// enabling/disabling the high availability setup for the VPN connection.
 	// By default, the HA setup for VPN connections is activated automatically if the control plane high availability is enabled.
@@ -456,6 +437,7 @@ const (
 	LabelNetworkPolicyToRuntimeAPIServer = "networking.gardener.cloud/to-runtime-apiserver"
 	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's
 	// Kubernetes API Server.
+	// Deprecated. Use `networking.resources.gardener.cloud/to-kube-apiserver-tcp-443=allowed` instead.
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
 	// LabelNetworkPolicyToShootNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed' to IPv4 blocks belonging to the Shoot network.
 	LabelNetworkPolicyToShootNetworks = "networking.gardener.cloud/to-shoot-networks"
@@ -464,9 +446,14 @@ const (
 	LabelNetworkPolicyToAllShootAPIServers = "networking.gardener.cloud/to-all-shoot-apiservers"
 	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
 	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
+	// Deprecated. Label `kube-apiserver` pods with `networking.resources.gardener.cloud/to-<service-name>-tcp-<container-port>=allowed` instead.
 	LabelNetworkPolicyFromShootAPIServer = "networking.gardener.cloud/from-shoot-apiserver"
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
+	// Deprecated: This label is deprecated and will be removed in a future version. Components in shoot namespaces
+	//  which need to be scraped by Prometheus need to annotate their Services with
+	//  `networking.resources.gardener.cloud/from-policy-pod-label-selector=all-scrape-targets` and
+	//  `networking.resources.gardener.cloud/from-policy-allowed-ports=[{"protocol":<protocol>,"port":<port>}]`.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
 	// LabelNetworkPolicyToAggregatePrometheus allows Egress traffic to the aggregate Prometheus.
 	LabelNetworkPolicyToAggregatePrometheus = "networking.gardener.cloud/to-aggregate-prometheus"
@@ -481,6 +468,13 @@ const (
 	LabelNetworkPolicyShootToKubelet = "networking.gardener.cloud/to-kubelet"
 	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
 	LabelNetworkPolicyAllowed = "allowed"
+	// LabelNetworkPolicyScrapeTargets is a constant for pod selector label which can be used on Services for components
+	// which should be scraped by Prometheus.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
+	LabelNetworkPolicyScrapeTargets = "all-scrape-targets"
+	// LabelNetworkPolicyShootNamespaceAlias is a constant for the alias for shoot namespaces used in NetworkPolicy
+	// labels.
+	LabelNetworkPolicyShootNamespaceAlias = "all-shoots"
 
 	// LabelApp is a constant for a label key.
 	LabelApp = "app"
@@ -803,4 +797,9 @@ const (
 	// TechnicalIDPrefix is a prefix used for a shoot's technical id. For historic reasons, there is only one 'dash'
 	// while nowadays we always use two dashes after "shoot".
 	TechnicalIDPrefix = "shoot-"
+
+	// TaintNodeCriticalComponentsNotReady is the key for the gardener-managed node components taint.
+	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
+	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
+	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
 )

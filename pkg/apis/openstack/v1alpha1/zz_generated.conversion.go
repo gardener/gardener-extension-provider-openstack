@@ -24,11 +24,10 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	openstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-
-	openstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 func init() {

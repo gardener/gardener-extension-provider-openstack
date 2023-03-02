@@ -24,6 +24,7 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	config "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	apisconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	apisconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -31,8 +32,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-
-	config "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 )
 
 func init() {

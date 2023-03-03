@@ -19,9 +19,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 const (

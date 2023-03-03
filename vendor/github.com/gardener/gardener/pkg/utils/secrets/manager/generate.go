@@ -21,10 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,9 +31,13 @@ import (
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...GenerateOption) (*corev1.Secret, error) {
+func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterface, opts ...GenerateOption) (*corev1.Secret, error) {
 	options := &GenerateOptions{}
 	if err := options.ApplyOptions(m, config, opts); err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 	desiredLabels := utils.MergeStringMaps(objectMeta.Labels) // copy labels map
 
 	secret := &corev1.Secret{}
-	if err := m.client.Get(ctx, kutil.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
+	if err := m.client.Get(ctx, kubernetesutils.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -104,9 +104,9 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 	return secret, nil
 }
 
-func (m *manager) generateAndCreate(ctx context.Context, config secretutils.ConfigInterface, objectMeta metav1.ObjectMeta) (*corev1.Secret, error) {
+func (m *manager) generateAndCreate(ctx context.Context, config secretsutils.ConfigInterface, objectMeta metav1.ObjectMeta) (*corev1.Secret, error) {
 	// Use secret name as common name to make sure the x509 subject names in the CA certificates are always unique.
-	if certConfig := certificateSecretConfig(config); certConfig != nil && certConfig.CertType == secretutils.CACert {
+	if certConfig := certificateSecretConfig(config); certConfig != nil && certConfig.CertType == secretsutils.CACert {
 		certConfig.CommonName = objectMeta.Name
 	}
 
@@ -115,9 +115,6 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 		return nil, err
 	}
 
-	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
-	// password, etc.).
-	// TODO(rfranzke): Remove this code in the future
 	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData())
 	if err != nil {
 		return nil, err
@@ -141,9 +138,12 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte) (map[string][]byte, error) {
 	existingSecret := &corev1.Secret{}
 
+	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
+	// password, etc.).
+	// TODO(rfranzke): Remove this switch statement in the future.
 	switch configName {
 	case "kube-apiserver-etcd-encryption-key":
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "etcd-encryption-secret"), existingSecret); err != nil {
+		if err := m.client.Get(ctx, kubernetesutils.Key(m.namespace, "etcd-encryption-secret"), existingSecret); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
 			}
@@ -181,12 +181,12 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 		}
 
 		return map[string][]byte{
-			secretutils.DataKeyEncryptionKeyName: existingEncryptionKey,
-			secretutils.DataKeyEncryptionSecret:  existingEncryptionSecret,
+			secretsutils.DataKeyEncryptionKeyName: existingEncryptionKey,
+			secretsutils.DataKeyEncryptionSecret:  existingEncryptionSecret,
 		}, nil
 
 	case "service-account-key":
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "service-account-key"), existingSecret); err != nil {
+		if err := m.client.Get(ctx, kubernetesutils.Key(m.namespace, "service-account-key"), existingSecret); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
 			}
@@ -194,6 +194,19 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 		}
 
 		return existingSecret.Data, nil
+	}
+
+	existingSecrets := &corev1.SecretList{}
+	if err := m.client.List(ctx, existingSecrets, client.InNamespace(m.namespace), client.MatchingLabels{LabelKeyUseDataForName: configName}); err != nil {
+		return nil, err
+	}
+
+	if len(existingSecrets.Items) > 1 {
+		return nil, fmt.Errorf("found more than one existing secret with %q label for config %q", LabelKeyUseDataForName, configName)
+	}
+
+	if len(existingSecrets.Items) == 1 {
+		return existingSecrets.Items[0].Data, nil
 	}
 
 	return newData, nil
@@ -255,8 +268,8 @@ func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName s
 	return m.addToStore(oldSecret.Labels[LabelKeyName], oldSecret, old)
 }
 
-func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.ConfigInterface) error {
-	var bundleConfig secretutils.ConfigInterface
+func (m *manager) generateBundleSecret(ctx context.Context, config secretsutils.ConfigInterface) error {
+	var bundleConfig secretsutils.ConfigInterface
 
 	secrets, found := m.getFromStore(config.GetName())
 	if !found {
@@ -264,27 +277,27 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 	}
 
 	switch c := config.(type) {
-	case *secretutils.CertificateSecretConfig:
+	case *secretsutils.CertificateSecretConfig:
 		if c.SigningCA == nil {
-			certs := [][]byte{secrets.current.obj.Data[secretutils.DataKeyCertificateCA]}
+			certs := [][]byte{secrets.current.obj.Data[secretsutils.DataKeyCertificateCA]}
 			if secrets.old != nil {
-				certs = append(certs, secrets.old.obj.Data[secretutils.DataKeyCertificateCA])
+				certs = append(certs, secrets.old.obj.Data[secretsutils.DataKeyCertificateCA])
 			}
 
-			bundleConfig = &secretutils.CertificateBundleSecretConfig{
+			bundleConfig = &secretsutils.CertificateBundleSecretConfig{
 				Name:            config.GetName() + nameSuffixBundle,
 				CertificatePEMs: certs,
 			}
 		}
 
-	case *secretutils.RSASecretConfig:
+	case *secretsutils.RSASecretConfig:
 		if !c.UsedForSSH {
-			keys := [][]byte{secrets.current.obj.Data[secretutils.DataKeyRSAPrivateKey]}
+			keys := [][]byte{secrets.current.obj.Data[secretsutils.DataKeyRSAPrivateKey]}
 			if secrets.old != nil {
-				keys = append(keys, secrets.old.obj.Data[secretutils.DataKeyRSAPrivateKey])
+				keys = append(keys, secrets.old.obj.Data[secretsutils.DataKeyRSAPrivateKey])
 			}
 
-			bundleConfig = &secretutils.RSAPrivateKeyBundleSecretConfig{
+			bundleConfig = &secretsutils.RSAPrivateKeyBundleSecretConfig{
 				Name:           config.GetName() + nameSuffixBundle,
 				PrivateKeyPEMs: keys,
 			}
@@ -304,7 +317,7 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 }
 
 func (m *manager) maintainLifetimeLabels(
-	config secretutils.ConfigInterface,
+	config secretsutils.ConfigInterface,
 	secret *corev1.Secret,
 	desiredLabels map[string]string,
 	validity time.Duration,
@@ -341,16 +354,16 @@ func (m *manager) maintainLifetimeLabels(
 
 	var dataKeyCertificate string
 	switch cfg := config.(type) {
-	case *secretutils.CertificateSecretConfig:
-		dataKeyCertificate = secretutils.DataKeyCertificate
-		if cfg.CertType == secretutils.CACert {
-			dataKeyCertificate = secretutils.DataKeyCertificateCA
+	case *secretsutils.CertificateSecretConfig:
+		dataKeyCertificate = secretsutils.DataKeyCertificate
+		if cfg.CertType == secretsutils.CACert {
+			dataKeyCertificate = secretsutils.DataKeyCertificateCA
 		}
-	case *secretutils.ControlPlaneSecretConfig:
+	case *secretsutils.ControlPlaneSecretConfig:
 		if cfg.CertificateSecretConfig == nil {
 			return nil
 		}
-		dataKeyCertificate = secretutils.ControlPlaneSecretDataKeyCertificatePEM(config.GetName())
+		dataKeyCertificate = secretsutils.ControlPlaneSecretDataKeyCertificatePEM(config.GetName())
 	default:
 		return nil
 	}
@@ -399,7 +412,7 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 }
 
 // GenerateOption is some configuration that modifies options for a Generate request.
-type GenerateOption func(Interface, secretutils.ConfigInterface, *GenerateOptions) error
+type GenerateOption func(Interface, secretsutils.ConfigInterface, *GenerateOptions) error
 
 // GenerateOptions are options for Generate calls.
 type GenerateOptions struct {
@@ -431,7 +444,7 @@ const (
 )
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
-func (o *GenerateOptions) ApplyOptions(manager Interface, configInterface secretutils.ConfigInterface, opts []GenerateOption) error {
+func (o *GenerateOptions) ApplyOptions(manager Interface, configInterface secretsutils.ConfigInterface, opts []GenerateOption) error {
 	for _, opt := range opts {
 		if err := opt(manager, configInterface, o); err != nil {
 			return err
@@ -484,7 +497,7 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 	signedByCAOptions := &SignedByCAOptions{}
 	signedByCAOptions.ApplyOptions(opts)
 
-	return func(m Interface, config secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(m Interface, config secretsutils.ConfigInterface, options *GenerateOptions) error {
 		mgr, ok := m.(*manager)
 		if !ok {
 			return nil
@@ -502,13 +515,13 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 
 		secret := secrets.current
 		switch certificateConfig.CertType {
-		case secretutils.ClientCert:
+		case secretsutils.ClientCert:
 			// Client certificates are signed with the current CA by default unless the CAClass option was overwritten.
 			if signedByCAOptions.CAClass != nil && *signedByCAOptions.CAClass == old && secrets.old != nil {
 				secret = *secrets.old
 			}
 
-		case secretutils.ServerCert, secretutils.ServerClientCert:
+		case secretsutils.ServerCert, secretsutils.ServerClientCert:
 			// Server certificates are signed with the old CA by default (if it exists) unless the CAClass option was
 			// overwritten.
 			if secrets.old != nil && (signedByCAOptions.CAClass == nil || *signedByCAOptions.CAClass != current) {
@@ -516,20 +529,20 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 			}
 		}
 
-		ca, err := secretutils.LoadCertificate(name, secret.obj.Data[secretutils.DataKeyPrivateKeyCA], secret.obj.Data[secretutils.DataKeyCertificateCA])
+		ca, err := secretsutils.LoadCertificate(name, secret.obj.Data[secretsutils.DataKeyPrivateKeyCA], secret.obj.Data[secretsutils.DataKeyCertificateCA])
 		if err != nil {
 			return err
 		}
 
 		certificateConfig.SigningCA = ca
-		options.signingCAChecksum = pointer.String(kutil.TruncateLabelValue(secret.dataChecksum))
+		options.signingCAChecksum = pointer.String(kubernetesutils.TruncateLabelValue(secret.dataChecksum))
 		return nil
 	}
 }
 
 // Persist returns a function which sets the 'Persist' field to true.
 func Persist() GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.Persist = true
 		return nil
 	}
@@ -537,7 +550,7 @@ func Persist() GenerateOption {
 
 // Rotate returns a function which sets the 'RotationStrategy' field to the specified value.
 func Rotate(strategy rotationStrategy) GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.RotationStrategy = strategy
 		return nil
 	}
@@ -545,7 +558,7 @@ func Rotate(strategy rotationStrategy) GenerateOption {
 
 // IgnoreOldSecrets returns a function which sets the 'IgnoreOldSecrets' field to true.
 func IgnoreOldSecrets() GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecrets = true
 		return nil
 	}
@@ -553,7 +566,7 @@ func IgnoreOldSecrets() GenerateOption {
 
 // IgnoreOldSecretsAfter returns a function which sets the 'IgnoreOldSecretsAfter' field to the given duration.
 func IgnoreOldSecretsAfter(d time.Duration) GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecretsAfter = &d
 		return nil
 	}
@@ -562,7 +575,7 @@ func IgnoreOldSecretsAfter(d time.Duration) GenerateOption {
 // Validity returns a function which sets the 'Validity' field to the provided value. Note that the value is ignored in
 // case Generate is called with a certificate secret configuration.
 func Validity(v time.Duration) GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.Validity = v
 		return nil
 	}
@@ -571,14 +584,14 @@ func Validity(v time.Duration) GenerateOption {
 // IgnoreConfigChecksumForCASecretName returns a function which sets the 'IgnoreConfigChecksumForCASecretName' field to
 // true.
 func IgnoreConfigChecksumForCASecretName() GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreConfigChecksumForCASecretName = true
 		return nil
 	}
 }
 
 func isBundleSecret() GenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.isBundleSecret = true
 		return nil
 	}

@@ -19,15 +19,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -53,7 +53,7 @@ type terraformStateV4 struct {
 // GetState returns the Terraform state as byte slice.
 func (t *terraformer) GetState(ctx context.Context) ([]byte, error) {
 	configMap := &corev1.ConfigMap{}
-	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
+	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.stateName), configMap); err != nil {
 		return nil, err
 	}
 
@@ -66,8 +66,8 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	var (
 		output = make(map[string]string)
 
-		wantedVariables = sets.NewString(variables...)
-		foundVariables  = sets.NewString()
+		wantedVariables = sets.New[string](variables...)
+		foundVariables  = sets.New[string]()
 	)
 
 	stateConfigMap, err := t.GetState(ctx)
@@ -76,7 +76,7 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	}
 
 	if len(stateConfigMap) == 0 {
-		return nil, &variablesNotFoundError{wantedVariables.List()}
+		return nil, &variablesNotFoundError{sets.List(wantedVariables)}
 	}
 
 	outputVariables, err := getOutputVariables(stateConfigMap)
@@ -92,7 +92,7 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	}
 
 	if wantedVariables.Len() != foundVariables.Len() {
-		return nil, &variablesNotFoundError{wantedVariables.Difference(foundVariables).List()}
+		return nil, &variablesNotFoundError{sets.List(wantedVariables.Difference(foundVariables))}
 	}
 
 	return output, nil
@@ -107,7 +107,7 @@ func (t *terraformer) IsStateEmpty(ctx context.Context) bool {
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}},
 	} {
 		resourceName := obj.GetName()
-		if err := t.client.Get(ctx, kutil.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
+		if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
 			t.logger.Error(err, "Failed to get resource", "name", resourceName)
 			return false
 		}
@@ -203,7 +203,7 @@ func CreateState(ctx context.Context, c client.Client, namespace, name string, o
 	}
 
 	if ownerRef != nil {
-		configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
+		configMap.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 	}
 
 	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
@@ -223,7 +223,7 @@ func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, 
 		configMap.Data[StateKey] = *cus.State
 
 		if ownerRef != nil {
-			configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
+			configMap.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 		}
 		return nil
 	})

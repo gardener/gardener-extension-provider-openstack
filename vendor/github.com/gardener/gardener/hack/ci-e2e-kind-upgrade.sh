@@ -109,13 +109,15 @@ function upgrade_to_next_release() {
   # downloads and upgrades to GARDENER_NEXT_RELEASE release if GARDENER_NEXT_RELEASE is not same as version mentioned in VERSION file.
   # if GARDENER_NEXT_RELEASE is same as version mentioned in VERSION file then it is considered as local release and install gardener from local repo.
   if [[ -n $GARDENER_NEXT_RELEASE && $GARDENER_NEXT_RELEASE != $VERSION ]]; then
-    # download gardener previous release to perform gardener upgrade tests
+    # download gardener next release to perform gardener upgrade tests
     $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_NEXT_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
+    export GARDENER_NEXT_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE/VERSION)"
     pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE >/dev/null
     copy_kubeconfig_from_kubeconfig_env_var
     gardener_up
     popd >/dev/null
   else
+    export GARDENER_NEXT_VERSION=$VERSION
     gardener_up
   fi
 
@@ -123,7 +125,16 @@ function upgrade_to_next_release() {
 
 function set_gardener_upgrade_version_env_variables() {
   if [[ -z "$GARDENER_PREVIOUS_RELEASE" ]]; then
-    export GARDENER_PREVIOUS_RELEASE="$(curl -s https://api.github.com/repos/gardener/gardener/releases/latest | grep tag_name | cut -d '"' -f 4)"
+    previous_minor_version=$(echo "$VERSION" | awk -F. '{printf("%s.%d.*\n", $1, $2-1)}')
+    # List all the tags that match the previous minor version pattern
+    tag_list=$(git tag -l "$previous_minor_version")
+
+    if [ -z "$tag_list" ]; then
+      echo "No tags found for the previous minor version ($VERSION) to upgrade Gardener." >&2
+      exit 1
+    fi
+    # Find the most recent tag for the previous minor version
+    export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
   fi
 
   if [[ -z "$GARDENER_NEXT_RELEASE" ]]; then
@@ -159,12 +170,6 @@ function set_seed_name() {
   esac
 }
 
-function wait_until_seed_gets_upgraded() {
-  echo "Wait until seed gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
-  kubectl wait seed $1 --timeout=5m \
-    --for=jsonpath='{.status.gardener.version}'=$GARDENER_NEXT_RELEASE && condition=gardenletready && condition=extensionsready && condition=bootstrapped
-}
-
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
@@ -172,16 +177,17 @@ set_seed_name
 
 # download gardener previous release to perform gardener upgrade tests
 $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
+export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/VERSION)"
 
 # test setup
 kind_up
 
 # export all container logs and events after test execution
-trap "
-( rm -rf $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases);
-( export_logs '$CLUSTER_NAME'; export_events_for_kind '$CLUSTER_NAME'; export_events_for_shoots )
-( kind_down;)
-" EXIT
+trap '{
+  rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases"
+  export_artifacts "$CLUSTER_NAME"
+  kind_down
+}' EXIT
 
 echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
 install_previous_release
@@ -191,7 +197,13 @@ make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDE
 
 echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
 upgrade_to_next_release
-wait_until_seed_gets_upgraded "$SEED_NAME"
+
+echo "Wait until seed '$SEED_NAME' gets upgraded from version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
+kubectl wait seed $SEED_NAME --timeout=5m --for=jsonpath="{.status.gardener.version}=$GARDENER_NEXT_RELEASE"
+# TIMEOUT has been increased to 1200 (20 minutes) due to the upgrading of Gardener for seed.
+# In a single-zone setup, 2 istio-ingressgateway pods will be running, and it will take 9 minutes to complete the rollout.
+# In a multi-zone setup, 6 istio-ingressgateway pods will be running, and it will take 18 minutes to complete the rollout.
+TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 echo "Running gardener post-upgrade tests"
 make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE

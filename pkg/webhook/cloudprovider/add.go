@@ -18,12 +18,13 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var (

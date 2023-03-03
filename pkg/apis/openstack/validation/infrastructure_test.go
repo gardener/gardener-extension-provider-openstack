@@ -17,9 +17,6 @@ package validation_test
 import (
 	"strings"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
-
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -27,6 +24,9 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
 
 var _ = Describe("InfrastructureConfig validation", func() {
@@ -78,7 +78,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 
 		It("should forbid floating ip subnet when router is specified", func() {
 			infrastructureConfig.Networks.Router = &api.Router{ID: "sample-router-id"}
-			infrastructureConfig.FloatingPoolSubnetName = pointer.StringPtr("sample-floating-pool-subnet-id")
+			infrastructureConfig.FloatingPoolSubnetName = pointer.String("sample-floating-pool-subnet-id")
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
@@ -156,7 +156,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		It("should allow an valid OpenStack UUID as network ID", func() {
 			id, err := uuid.NewUUID()
 			Expect(err).NotTo(HaveOccurred())
-			infrastructureConfig.Networks.ID = pointer.StringPtr(id.String())
+			infrastructureConfig.Networks.ID = pointer.String(id.String())
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
@@ -195,7 +195,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 
 		It("should forbid changing the floating pool subnet", func() {
 			newInfrastructureConfig := infrastructureConfig.DeepCopy()
-			newInfrastructureConfig.FloatingPoolSubnetName = pointer.StringPtr("test")
+			newInfrastructureConfig.FloatingPoolSubnetName = pointer.String("test")
 
 			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
 

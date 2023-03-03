@@ -18,9 +18,6 @@ import (
 	"encoding/json"
 	"strconv"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -30,6 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
 var _ = Describe("Terraform", func() {
@@ -163,7 +163,7 @@ var _ = Describe("Terraform", func() {
 		})
 
 		It("should correctly compute the terraformer chart values with vpc creation", func() {
-			cloudProfileConfig.UseSNAT = pointer.BoolPtr(true)
+			cloudProfileConfig.UseSNAT = pointer.Bool(true)
 			cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
 			cluster.CloudProfile.Spec.ProviderConfig.Raw = cloudProfileConfigJSON
 

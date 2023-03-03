@@ -15,10 +15,10 @@
 package components
 
 import (
+	"github.com/Masterminds/semver"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-
-	"github.com/Masterminds/semver"
 )
 
 // Component is an interface which can be implemented by operating system config components.
@@ -36,12 +36,14 @@ type Context struct {
 	ClusterDomain           string
 	CRIName                 extensionsv1alpha1.CRIName
 	Images                  map[string]*imagevector.Image
+	NodeLabels              map[string]string
 	KubeletCABundle         []byte
 	KubeletCLIFlags         ConfigurableKubeletCLIFlags
 	KubeletConfigParameters ConfigurableKubeletConfigParameters
 	KubeletDataVolumeName   *string
 	KubernetesVersion       *semver.Version
 	SSHPublicKeys           []string
+	SSHAccessEnabled        bool
 	LokiIngress             string
 	PromtailEnabled         bool
 	APIServerURL            string

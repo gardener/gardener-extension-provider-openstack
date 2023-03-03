@@ -19,19 +19,6 @@ import (
 	"fmt"
 	"os"
 
-	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
-	openstackcmd "github.com/gardener/gardener-extension-provider-openstack/pkg/cmd"
-	openstackbackupbucket "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
-	openstackbackupentry "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupentry"
-	openstackbastion "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
-	openstackcontrolplane "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
-	openstackdnsrecord "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
-	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
-	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
@@ -50,6 +37,19 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
+	openstackcmd "github.com/gardener/gardener-extension-provider-openstack/pkg/cmd"
+	openstackbackupbucket "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupbucket"
+	openstackbackupentry "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/backupentry"
+	openstackbastion "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
+	openstackcontrolplane "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/controlplane"
+	openstackdnsrecord "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
+	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
 )
 
 // NewControllerManagerCommand creates a new command for running a OpenStack provider controller.

@@ -18,10 +18,10 @@ import (
 	"context"
 	"net"
 
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 )
 
 // CleanupKubernetesRoutes deletes all routes from the router which have a nextHop in the subnet.

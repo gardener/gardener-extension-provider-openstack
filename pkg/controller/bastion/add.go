@@ -15,13 +15,13 @@
 package bastion
 
 import (
-	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 var (

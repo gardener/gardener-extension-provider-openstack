@@ -15,11 +15,11 @@
 package heartbeat
 
 import (
-	"github.com/gardener/gardener/pkg/controllerutils"
-
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of the controller.
@@ -67,7 +67,6 @@ type AddArgs struct {
 // Add creates a new heartbeat controller and adds it to the given manager.
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(args.ExtensionName, args.Namespace, args.RenewIntervalSeconds, args.Clock)
-	args.ControllerOptions.RecoverPanic = true
 	args.ControllerOptions.MaxConcurrentReconciles = 1
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)

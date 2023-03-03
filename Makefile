@@ -47,7 +47,6 @@ USER_NAME          := .kube-secrets/openstack/user_name.secret
 #########################################
 
 TOOLS_DIR := hack/tools
-GOLANGCI_LINT_VERSION := v1.50.0
 include vendor/github.com/gardener/gardener/hack/tools.mk
 
 #########################################
@@ -131,9 +130,10 @@ check-docforge: $(DOCFORGE)
 .PHONY: generate
 generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(HELM) $(MOCKGEN)
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/generate.sh ./charts/... ./cmd/... ./example/... ./pkg/...
+	$(MAKE) format
 
 .PHONY: format
-format: $(GOIMPORTS)
+format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/format.sh ./cmd ./pkg ./test
 
 .PHONY: test

@@ -18,11 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	admissioncmd "github.com/gardener/gardener-extension-provider-openstack/pkg/admission/cmd"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/mutator"
-	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
-	provideropenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
@@ -34,6 +29,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	admissioncmd "github.com/gardener/gardener-extension-provider-openstack/pkg/admission/cmd"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/mutator"
+	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
+	provideropenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var log = logf.Log.WithName("gardener-extension-admission-openstack")

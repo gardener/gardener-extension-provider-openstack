@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -40,6 +38,8 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 )
 
 const (
@@ -54,7 +54,7 @@ func TestController(t *testing.T) {
 var _ = Describe("Ensurer", func() {
 	var (
 		etcdStorage = &config.ETCDStorage{
-			ClassName: pointer.StringPtr("gardener.cloud-fast"),
+			ClassName: pointer.String("gardener.cloud-fast"),
 			Capacity:  utils.QuantityPtr(resource.MustParse("25Gi")),
 		}
 

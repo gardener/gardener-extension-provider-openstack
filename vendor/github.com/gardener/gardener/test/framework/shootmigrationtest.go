@@ -23,14 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	"github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,6 +32,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 // ShootMigrationTest represents a shoot migration test.
@@ -112,16 +113,10 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 	}
 
 	if !shoot.Status.IsHibernated && !t.Config.SkipShootClientCreation {
-		kubecfgSecret := corev1.Secret{}
-		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
-			t.GardenerFramework.Logger.Error(err, "Unable to get kubeconfig from secret")
+		t.ShootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, t.GardenerFramework.GardenClient, shoot)
+		if err != nil {
 			return err
 		}
-		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
-
-		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.ShootScheme,
-		}), kubernetes.WithDisabledCachedClient())
 	}
 	t.Shoot = *shoot
 	return
@@ -192,12 +187,12 @@ func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 		return err
 	}
 
-	ginkgo.By("Comparing all Machines, Nodes and persisted Secrets after the migration...")
+	ginkgo.By("Compare all Machines, Nodes and persisted Secrets after the migration")
 	if err := t.compareElementsAfterMigration(); err != nil {
 		return err
 	}
 
-	ginkgo.By("Checking for orphaned resources...")
+	ginkgo.By("Check for orphaned resources")
 	if err := t.checkForOrphanedNonNamespacedResources(ctx); err != nil {
 		return err
 	}

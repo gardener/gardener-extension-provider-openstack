@@ -21,9 +21,10 @@ import (
 	"sort"
 	"strings"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 func isServerGroupRequired(config *api.WorkerConfig) bool {

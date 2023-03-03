@@ -18,14 +18,14 @@ import (
 	"reflect"
 	"sort"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
-
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/google/uuid"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 // ValidateInfrastructureConfig validates a InfrastructureConfig object.
@@ -112,8 +112,8 @@ func validateFloatingPoolNameConstraints(fps []api.FloatingPool, domain, region 
 func FindFloatingPool(floatingPools []api.FloatingPool, domain, shootRegion, floatingPoolName string, fldPath *field.Path) (*api.FloatingPool, field.ErrorList) {
 	var (
 		allErrs               = field.ErrorList{}
-		validValues           = sets.NewString()
-		additionalValidValues = sets.NewString()
+		validValues           = sets.New[string]()
+		additionalValidValues = sets.New[string]()
 	)
 
 	found := findFloatingPoolCandidate(floatingPools, &domain, &shootRegion, floatingPoolName, false, validValues, additionalValidValues)
@@ -123,8 +123,8 @@ func FindFloatingPool(floatingPools []api.FloatingPool, domain, shootRegion, flo
 
 	// region and domain constraint must be checked together, as constraints of both must be fulfilled
 	nonConstrainingOnly := len(validValues) > 0
-	validValuesRegion := sets.NewString()
-	validValuesDomain := sets.NewString()
+	validValuesRegion := sets.New[string]()
+	validValuesDomain := sets.New[string]()
 	foundRegion := findFloatingPoolCandidate(floatingPools, nil, &shootRegion, floatingPoolName, nonConstrainingOnly, validValuesRegion, additionalValidValues)
 	foundDomain := findFloatingPoolCandidate(floatingPools, &domain, nil, floatingPoolName, nonConstrainingOnly, validValuesDomain, additionalValidValues)
 	if foundRegion != nil && foundDomain != nil {
@@ -165,7 +165,7 @@ func FindFloatingPool(floatingPools []api.FloatingPool, domain, shootRegion, flo
 
 // findFloatingPoolCandidate finds floating pool candidate with optional domain and/or region constraints
 func findFloatingPoolCandidate(floatingPools []api.FloatingPool, domain, shootRegion *string, floatingPoolName string,
-	nonConstrainingOnly bool, validValues, additionalValidValues sets.String) *api.FloatingPool {
+	nonConstrainingOnly bool, validValues, additionalValidValues sets.Set[string]) *api.FloatingPool {
 	var (
 		candidate      *api.FloatingPool
 		candidateScore int

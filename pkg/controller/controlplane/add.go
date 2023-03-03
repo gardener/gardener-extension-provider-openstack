@@ -15,15 +15,15 @@
 package controlplane
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var (

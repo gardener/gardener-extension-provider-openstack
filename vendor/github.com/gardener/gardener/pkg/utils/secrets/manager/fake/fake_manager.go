@@ -17,15 +17,15 @@ package fake
 import (
 	"context"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // ManagerIdentity is the fake secret manager's identity.
@@ -74,7 +74,7 @@ func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev
 	return secret, true
 }
 
-func (m *fakeManager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
+func (m *fakeManager) Generate(ctx context.Context, config secretsutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
 	options := &secretsmanager.GenerateOptions{}
 	if err := options.ApplyOptions(m, config, opts); err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func (m *fakeManager) Generate(ctx context.Context, config secretutils.ConfigInt
 		}
 
 		secret = &corev1.Secret{}
-		if err := m.client.Get(ctx, kutil.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
+		if err := m.client.Get(ctx, kubernetesutils.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
 			return nil, err
 		}
 

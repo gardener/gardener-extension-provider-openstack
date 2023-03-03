@@ -22,12 +22,12 @@ import (
 	"strconv"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 var shootCreationCfg *ShootCreationConfig
@@ -320,7 +320,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 
 	newCfg := &ShootCreationConfig{}
 
-	flag.StringVar(&newCfg.shootKubeconfigPath, "shoot-kubecfg-path", "", "the path to where the Kubeconfig of the Shoot cluster will be downloaded to.")
+	flag.StringVar(&newCfg.shootKubeconfigPath, "shoot-kubecfg-path", "", "the path to where the Kubeconfig of the Shoot cluster will be downloaded to. The kubeconfig expires in 6 hours.")
 	flag.StringVar(&newCfg.seedKubeconfigPath, "seed-kubecfg-path", "", "the path to where the Kubeconfig of the Seed cluster will be downloaded to.")
 	flag.StringVar(&newCfg.testShootName, "shoot-name", "", "unique name to use for test shoots. Used by test-machinery.")
 	flag.StringVar(&newCfg.testShootPrefix, "prefix", "", "prefix for generated shoot name. Usually used locally to auto generate a unique name.")
@@ -420,14 +420,22 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	f.ShootFramework = shootFramework
 	f.Shoot = shootFramework.Shoot
 
-	if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, f.ProjectNamespace, shootFramework.ShootKubeconfigSecretName(), f.Config.shootKubeconfigPath); err != nil {
-		return fmt.Errorf("failed downloading shoot kubeconfig: %w", err)
+	if f.Config.shootKubeconfigPath == "" {
+		f.Logger.Info("Shoot kubeconfig path is not specified, skipping downloading the admin kubeconfig for the Shoot")
+	} else {
+		if err := DownloadAdminKubeconfigForShoot(ctx, shootFramework.GardenClient, shootFramework.Shoot, f.Config.shootKubeconfigPath); err != nil {
+			return fmt.Errorf("failed downloading shoot kubeconfig: %w", err)
+		}
 	}
 
-	if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
-		f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
-	} else if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
-		return fmt.Errorf("failed downloading seed kubeconfig: %w", err)
+	if f.Config.seedKubeconfigPath == "" {
+		f.Logger.Info("Seed kubeconfig path is not specified, skipping downloading the static token kubeconfig for the Seed")
+	} else if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
+		f.Logger.Info("Seed does not have secretRef set, skipping constructing seed client")
+	} else {
+		if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
+			return fmt.Errorf("failed downloading seed kubeconfig: %w", err)
+		}
 	}
 
 	log.Info("Finished creating shoot")
@@ -442,7 +450,7 @@ func (f *ShootCreationFramework) Verify() {
 	)
 
 	// Shoot with failure tolerance 'zone' should only be scheduled on seed with at least 3 zones.
-	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
+	if v1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
 		gomega.Expect(len(f.ShootFramework.Seed.Spec.Provider.Zones)).Should(gomega.BeNumerically(">=", 3))
 	}
 

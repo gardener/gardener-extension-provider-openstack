@@ -23,13 +23,6 @@ import (
 	"path/filepath"
 	"time"
 
-	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
-	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/go-logr/logr"
-
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -38,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -57,6 +51,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 var (
@@ -134,7 +134,7 @@ var _ = Describe("Bastion tests", func() {
 
 		By("starting test environment")
 		testEnv = &envtest.Environment{
-			UseExistingCluster: pointer.BoolPtr(true),
+			UseExistingCluster: pointer.Bool(true),
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
 					filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_clusters.yaml"),
@@ -327,7 +327,7 @@ func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackCli
 
 	createOpts := routers.CreateOpts{
 		Name:         routerName,
-		AdminStateUp: pointer.BoolPtr(true),
+		AdminStateUp: pointer.Bool(true),
 		GatewayInfo: &routers.GatewayInfo{
 			NetworkID: externalNetworks[0].ID,
 		},

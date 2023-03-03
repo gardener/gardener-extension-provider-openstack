@@ -23,11 +23,6 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client/mocks"
-
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
@@ -42,6 +37,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client/mocks"
 )
 
 var _ = Describe("#MachineDependencies", func() {

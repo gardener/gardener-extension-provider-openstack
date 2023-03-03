@@ -19,11 +19,10 @@ import (
 	"net"
 
 	"github.com/gardener/gardener/pkg/utils"
-
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.

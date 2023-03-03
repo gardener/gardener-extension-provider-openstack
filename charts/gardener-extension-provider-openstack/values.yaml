@@ -64,6 +64,11 @@ webhookConfig:
 leaderElection:
   resourceLock: leases
 
+## settings for metrics, e.g. scraping by seed-prometheus
+metrics:
+  ## enable metrics scraping
+  enableScraping: true
+
 config:
   clientConnection:
     acceptContentTypes: application/json

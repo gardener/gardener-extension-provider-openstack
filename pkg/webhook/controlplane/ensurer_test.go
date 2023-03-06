@@ -624,6 +624,8 @@ func checkKubeAPIServerDeployment(dep *appsv1.Deployment, k8sVersion string) {
 	k8sVersionAtLeast121, _ := version.CompareVersions(k8sVersion, ">=", "1.21")
 	k8sVersionAtLeast126, _ := version.CompareVersions(k8sVersion, ">=", "1.26")
 
+	Expect(dep.Spec.Template.Labels).To(HaveKeyWithValue("networking.resources.gardener.cloud/to-csi-snapshot-validation-tcp-443", "allowed"))
+
 	// Check that the kube-apiserver container still exists and contains all needed command line args,
 	// env vars, and volume mounts
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-apiserver")

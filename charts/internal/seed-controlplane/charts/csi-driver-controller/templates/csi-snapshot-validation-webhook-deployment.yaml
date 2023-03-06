@@ -20,8 +20,8 @@ spec:
       labels:
         app: snapshot-validation
         networking.gardener.cloud/from-shoot-apiserver: allowed
-        networking.gardener.cloud/to-shoot-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
+        networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
     spec:
       automountServiceAccountToken: false
       priorityClassName: gardener-system-200

@@ -1106,6 +1106,58 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineLabel">MachineLabel
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerConfig">WorkerConfig</a>)
+</p>
+<p>
+<p>MachineLabel define key value pair to label machines.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the machine label key</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Value is the machine label value</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>roll</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Roll controls if the machines should be rolled if the value changes</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus
 </h3>
 <p>
@@ -1725,6 +1777,19 @@ ServerGroup
 <td>
 <p>ServerGroup contains configuration data for the worker pool&rsquo;s server group. If this object is present,
 OpenStack provider extension will try to create a new server group for instances of this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineLabels</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineLabel">
+[]MachineLabel
+</a>
+</em>
+</td>
+<td>
+<p>MachineLabels define key value pairs to add to machines.</p>
 </td>
 </tr>
 </tbody>

@@ -66,6 +66,19 @@ type WorkerConfig struct {
 	// ServerGroup contains configuration data for the worker pool's server group. If this object is present,
 	// OpenStack provider extension will try to create a new server group for instances of this worker pool.
 	ServerGroup *ServerGroup
+
+	// MachineLabels define key value pairs to add to machines.
+	MachineLabels []MachineLabel
+}
+
+// MachineLabel define key value pair to label machines.
+type MachineLabel struct {
+	// Name is the machine label key
+	Name string
+	// Value is the machine label value
+	Value string
+	// Roll controls if the machines should be rolled if the value changes
+	Roll bool
 }
 
 const (

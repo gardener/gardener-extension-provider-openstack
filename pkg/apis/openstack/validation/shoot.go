@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -88,6 +89,15 @@ func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.
 func validateWorkerConfig(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	allErrs = append(allErrs, validateServerGroups(parent, worker, workerConfig, cloudProfileConfig)...)
+	allErrs = append(allErrs, validateMachineLabels(parent, worker, workerConfig, cloudProfileConfig)...)
+
+	return allErrs
+}
+
+func validateServerGroups(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
+	allErrs := field.ErrorList{}
+
 	if workerConfig.ServerGroup == nil {
 		return allErrs
 	}
@@ -117,6 +127,25 @@ func validateWorkerConfig(parent *field.Path, worker *core.Worker, workerConfig 
 
 	if len(worker.Zones) > 1 && workerConfig.ServerGroup.Policy == openstackclient.ServerGroupPolicyAffinity {
 		allErrs = append(allErrs, field.Forbidden(parent.Child("serverGroup", "policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", openstackclient.ServerGroupPolicyAffinity)))
+	}
+
+	return allErrs
+}
+
+func validateMachineLabels(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	machineLabelNames := sets.New[string]()
+	for i, ml := range workerConfig.MachineLabels {
+		idxPath := parent.Child("machineLabels").Index(i)
+
+		if machineLabelNames.Has(ml.Name) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), ml.Name))
+		} else if _, found := worker.Labels[ml.Name]; found {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), ml.Name, "label name already defined as pool label"))
+		} else {
+			machineLabelNames.Insert(ml.Name)
+		}
 	}
 
 	return allErrs

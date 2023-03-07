@@ -754,6 +754,60 @@ var _ = Describe("Machines", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal(`server group is required for pool "pool-1", but no server group dependency found`))
 				})
+
+				It("should consider rolling machine labels for the worker pool hash", func() {
+					setup(region, machineImage, "")
+
+					applyLabels := func(labels []apiv1alpha1.MachineLabel) string {
+						w.Spec.Pools[0].Labels = map[string]string{"k1": "v1"}
+						w.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
+							Object: &apiv1alpha1.WorkerConfig{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       "WorkerConfig",
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								},
+								MachineLabels: labels,
+							},
+						}
+						workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
+						result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result[0].Labels).To(Equal(map[string]string{"k1": "v1"}))
+						return result[0].ClassName
+					}
+
+					className0 := applyLabels(nil)
+					className1 := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+					})
+					className2 := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+						{Name: "vmspec/a", Value: "blabla", Roll: true},
+						{Name: "vmspec/c", Value: "rabarber1", Roll: true},
+					})
+					className2b := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "vmspec/c", Value: "rabarber1", Roll: true},
+						{Name: "vmspec/b", Value: "abc"},
+						{Name: "vmspec/a", Value: "blabla", Roll: true},
+					})
+					className3 := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+						{Name: "vmspec/a", Value: "blabla", Roll: true},
+						{Name: "vmspec/c", Value: "rabarber2", Roll: true},
+					})
+					className4 := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+						{Name: "vmspec/a", Value: "blabla", Roll: true},
+						{Name: "vmspec/c", Value: "rabarber2", Roll: false},
+					})
+
+					Expect(className0).To(Equal(className1))
+					Expect(className0).NotTo(Equal(className2))
+					Expect(className2).To(Equal(className2b))
+					Expect(className0).NotTo(Equal(className3))
+					Expect(className2).NotTo(Equal(className3))
+					Expect(className3).NotTo(Equal(className4))
+				})
 			})
 
 			It("should fail because the version is invalid", func() {

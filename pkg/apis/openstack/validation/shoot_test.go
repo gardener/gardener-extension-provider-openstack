@@ -21,11 +21,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -223,6 +225,58 @@ var _ = Describe("Shoot validation", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
 							"Field": Equal("[0].providerConfig.serverGroup.policy"),
+						})),
+					))
+				})
+			})
+
+			Context("#ValidateMachineLabels", func() {
+				It("should pass if some machine labels are defined", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							MachineLabels: []apiv1alpha1.MachineLabel{
+								{Name: "m1", Value: "v1"},
+								{Name: "m2", Value: "v2"},
+							},
+						},
+					}
+
+					errorList := ValidateWorkers(workers, nil, nilPath)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should fail on duplicate labels", func() {
+					workers[0].Labels = map[string]string{"l1": "x", "l2": "x"}
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							MachineLabels: []apiv1alpha1.MachineLabel{
+								{Name: "m1", Value: "v1"},
+								{Name: "m1", Value: "v2"},
+								{Name: "l1", Value: "v2"},
+							},
+						},
+					}
+					errorList := ValidateWorkers(workers, nil, nilPath)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeDuplicate),
+							"BadValue": Equal("m1"),
+							"Field":    Equal("[0].providerConfig.machineLabels[1].name"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.machineLabels[2].name"),
+							"BadValue": Equal("l1"),
+							"Detail":   Equal("label name already defined as pool label"),
 						})),
 					))
 				})

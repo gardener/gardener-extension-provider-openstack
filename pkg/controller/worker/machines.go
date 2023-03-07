@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -117,22 +118,27 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			}
 		}
 
-		poolProviderConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
+		workerConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
 		if err != nil {
 			return err
 		}
 
 		var serverGroupDep *api.ServerGroupDependency
-		if isServerGroupRequired(poolProviderConfig) {
+		if isServerGroupRequired(workerConfig) {
 			serverGroupDep = serverGroupDepSet.getByPoolName(pool.Name)
 			if serverGroupDep == nil {
 				return fmt.Errorf("server group is required for pool %q, but no server group dependency found", pool.Name)
 			}
 		}
 
-		workerPoolHash, err := w.generateWorkerPoolHash(pool, serverGroupDep)
+		workerPoolHash, err := w.generateWorkerPoolHash(pool, serverGroupDep, workerConfig)
 		if err != nil {
 			return err
+		}
+
+		machineLabels := map[string]string{}
+		for _, pair := range workerConfig.MachineLabels {
+			machineLabels[pair.Name] = pair.Value
 		}
 
 		for zoneIndex, zone := range pool.Zones {
@@ -145,10 +151,14 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				"networkID":        infrastructureStatus.Networks.ID,
 				"podNetworkCidr":   extensionscontroller.GetPodNetwork(w.cluster),
 				"securityGroups":   []string{nodesSecurityGroup.Name},
-				"tags": utils.MergeStringMaps(NormalizeLabelsForMachineClass(pool.Labels), map[string]string{
-					fmt.Sprintf("kubernetes.io-cluster-%s", w.worker.Namespace): "1",
-					"kubernetes.io-role-node":                                   "1",
-				}),
+				"tags": utils.MergeStringMaps(
+					NormalizeLabelsForMachineClass(pool.Labels),
+					NormalizeLabelsForMachineClass(machineLabels),
+					map[string]string{
+						fmt.Sprintf("kubernetes.io-cluster-%s", w.worker.Namespace): "1",
+						"kubernetes.io-role-node":                                   "1",
+					},
+				),
 				"credentialsSecretRef": map[string]interface{}{
 					"name":      w.worker.Spec.SecretRef.Name,
 					"namespace": w.worker.Spec.SecretRef.Namespace,
@@ -223,7 +233,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency) (string, error) {
+func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency, workerConfig *api.WorkerConfig) (string, error) {
 	var additionalHashData []string
 
 	// Include the given worker pool dependencies into the hash.
@@ -231,8 +241,23 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		additionalHashData = append(additionalHashData, serverGroupDependency.ID)
 	}
 
+	// include machine labels marked for roll
+	var pairs []string
+	for _, pair := range workerConfig.MachineLabels {
+		if pair.Roll {
+			pairs = append(pairs, pair.Name+"="+pair.Value)
+		}
+	}
+	if len(pairs) > 0 {
+		sort.Strings(pairs)
+		additionalHashData = append(additionalHashData, pairs...)
+	}
+
+	// don't include complete provider config in Hash calculation
+	copy := pool
+	copy.ProviderConfig = nil
 	// Generate the worker pool hash.
-	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData...)
+	return worker.WorkerPoolHash(copy, w.cluster, additionalHashData...)
 }
 
 // NormalizeLabelsForMachineClass because metadata in OpenStack resources do not allow for certain characters that present in k8s labels e.g. "/",

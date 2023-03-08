@@ -18,7 +18,10 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -62,7 +65,7 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 				continue
 			}
 
-			allErrs = append(allErrs, validateWorkerConfig(workerFldPath.Child("providerConfig"), &worker, workerConfig, cloudProfileCfg)...)
+			allErrs = append(allErrs, ValidateWorkerConfig(&worker, workerConfig, cloudProfileCfg, workerFldPath.Child("providerConfig"))...)
 		}
 	}
 
@@ -86,24 +89,26 @@ func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.
 	return allErrs
 }
 
-func validateWorkerConfig(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
+// ValidateWorkerConfig validates the providerConfig section of a Worker resource.
+func ValidateWorkerConfig(worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateServerGroups(parent, worker, workerConfig, cloudProfileConfig)...)
-	allErrs = append(allErrs, validateMachineLabels(parent, worker, workerConfig, cloudProfileConfig)...)
+	allErrs = append(allErrs, validateServerGroup(worker, workerConfig.ServerGroup, cloudProfileConfig, fldPath.Child("serverGroup"))...)
+	allErrs = append(allErrs, validateNodeTemplate(workerConfig.NodeTemplate, fldPath.Child("nodeTemplate"))...)
+	allErrs = append(allErrs, validateMachineLabels(worker, workerConfig, fldPath.Child("machineLabels"))...)
 
 	return allErrs
 }
 
-func validateServerGroups(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
+func validateServerGroup(worker *core.Worker, sg *api.ServerGroup, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if workerConfig.ServerGroup == nil {
+	if sg == nil {
 		return allErrs
 	}
 
-	if workerConfig.ServerGroup.Policy == "" {
-		allErrs = append(allErrs, field.Invalid(parent.Child("serverGroup", "policy"), workerConfig.ServerGroup.Policy, "policy field cannot be empty"))
+	if sg.Policy == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("policy"), sg.Policy, "policy field cannot be empty"))
 		return allErrs
 	}
 
@@ -113,7 +118,7 @@ func validateServerGroups(parent *field.Path, worker *core.Worker, workerConfig 
 		}
 
 		for _, policy := range cloudProfileConfig.ServerGroupPolicies {
-			if policy == workerConfig.ServerGroup.Policy {
+			if policy == sg.Policy {
 				return true
 			}
 		}
@@ -121,23 +126,51 @@ func validateServerGroups(parent *field.Path, worker *core.Worker, workerConfig 
 	}()
 
 	if !isPolicyMatching {
-		allErrs = append(allErrs, field.Invalid(parent.Child("serverGroup", "policy"), workerConfig.ServerGroup.Policy, "no matching server group policy found in cloudprofile"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("policy"), sg.Policy, "no matching server group policy found in cloudprofile"))
 		return allErrs
 	}
 
-	if len(worker.Zones) > 1 && workerConfig.ServerGroup.Policy == openstackclient.ServerGroupPolicyAffinity {
-		allErrs = append(allErrs, field.Forbidden(parent.Child("serverGroup", "policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", openstackclient.ServerGroupPolicyAffinity)))
+	if len(worker.Zones) > 1 && sg.Policy == openstackclient.ServerGroupPolicyAffinity {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", openstackclient.ServerGroupPolicyAffinity)))
 	}
 
 	return allErrs
 }
 
-func validateMachineLabels(parent *field.Path, worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig) field.ErrorList {
+func validateNodeTemplate(nodeTemplate *extensionsv1alpha1.NodeTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if nodeTemplate == nil {
+		return nil
+	}
+	for _, capacityAttribute := range []corev1.ResourceName{corev1.ResourceCPU, "gpu", corev1.ResourceMemory} {
+		value, ok := nodeTemplate.Capacity[capacityAttribute]
+		if !ok {
+			allErrs = append(allErrs, field.Required(fldPath.Child("capacity"), fmt.Sprintf("%s is a mandatory field", capacityAttribute)))
+			continue
+		}
+		allErrs = append(allErrs, validateResourceQuantityValue(capacityAttribute, value, fldPath.Child("capacity").Child(string(capacityAttribute)))...)
+	}
+
+	return allErrs
+}
+
+func validateResourceQuantityValue(key corev1.ResourceName, value resource.Quantity, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if value.Cmp(resource.Quantity{}) < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, value.String(), fmt.Sprintf("%s value must not be negative", key)))
+	}
+
+	return allErrs
+}
+
+func validateMachineLabels(worker *core.Worker, workerConfig *api.WorkerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	machineLabelNames := sets.New[string]()
 	for i, ml := range workerConfig.MachineLabels {
-		idxPath := parent.Child("machineLabels").Index(i)
+		idxPath := fldPath.Index(i)
 
 		if machineLabelNames.Has(ml.Name) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), ml.Name))

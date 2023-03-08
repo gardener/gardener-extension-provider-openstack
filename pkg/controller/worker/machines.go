@@ -102,6 +102,11 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	}
 
 	for _, pool := range w.worker.Spec.Pools {
+		workerConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
+		if err != nil {
+			return err
+		}
+
 		zoneLen := int32(len(pool.Zones))
 
 		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version)
@@ -189,7 +194,14 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				machineClassSpec["serverGroupID"] = serverGroupDep.ID
 			}
 
-			if pool.NodeTemplate != nil {
+			if workerConfig.NodeTemplate != nil {
+				machineClassSpec["nodeTemplate"] = machinev1alpha1.NodeTemplate{
+					Capacity:     workerConfig.NodeTemplate.Capacity,
+					InstanceType: pool.MachineType,
+					Region:       w.worker.Spec.Region,
+					Zone:         zone,
+				}
+			} else if pool.NodeTemplate != nil {
 				machineClassSpec["nodeTemplate"] = machinev1alpha1.NodeTemplate{
 					Capacity:     pool.NodeTemplate.Capacity,
 					InstanceType: pool.MachineType,

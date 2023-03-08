@@ -18,9 +18,12 @@ import (
 	"encoding/json"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -281,6 +284,80 @@ var _ = Describe("Shoot validation", func() {
 					))
 				})
 			})
+
+			Describe("#ValidateWorkerConfig", func() {
+				It("should return no errors for a valid nodetemplate configuration", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							NodeTemplate: &extensionsv1alpha1.NodeTemplate{
+								Capacity: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("50Gi"),
+									"gpu":                 resource.MustParse("0"),
+								},
+							},
+						}}
+					Expect(ValidateWorkers(workers, nil, nilPath)).To(BeEmpty())
+				})
+
+				It("should return error when all resources not specified", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							NodeTemplate: &extensionsv1alpha1.NodeTemplate{
+								Capacity: corev1.ResourceList{
+									"gpu": resource.MustParse("0"),
+								},
+							},
+						},
+					}
+
+					Expect(ValidateWorkers(workers, nil, nilPath)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeRequired),
+							"Field":  Equal("[0].providerConfig.nodeTemplate.capacity"),
+							"Detail": Equal("cpu is a mandatory field"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeRequired),
+							"Field":  Equal("[0].providerConfig.nodeTemplate.capacity"),
+							"Detail": Equal("memory is a mandatory field"),
+						})),
+					))
+				})
+
+				It("should return error when resource value is negative", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							NodeTemplate: &extensionsv1alpha1.NodeTemplate{
+								Capacity: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("-50Gi"),
+									"gpu":                 resource.MustParse("0"),
+								},
+							},
+						}}
+
+					Expect(ValidateWorkers(workers, nil, nilPath)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.nodeTemplate.capacity.memory"),
+							"BadValue": Equal("-50Gi"),
+						})),
+					))
+				})
+			})
 		})
 
 		Describe("#ValidateWorkersUpdate", func() {
@@ -354,6 +431,7 @@ var _ = Describe("Shoot validation", func() {
 				))
 			})
 		})
+
 	})
 })
 

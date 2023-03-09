@@ -81,7 +81,19 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 	// re-authenticate automatically if/when your token expires.
 	authOpts.AllowReauth = true
 
-	provider, err := openstack.AuthenticatedClient(*authOpts)
+	provider, err := openstack.NewClient(authOpts.IdentityEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	provider.HTTPClient = *opts.HTTPClient
+
+	err = openstack.Authenticate(provider, *authOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{})
 	if err != nil {
 		return nil, err
 	}

@@ -137,6 +137,11 @@ apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 kind: WorkerConfig
 serverGroup:
   policy: soft-anti-affinity
+# nodeTemplate: # (to be specified only if the node capacity would be different from cloudprofile info during runtime)
+#   capacity:
+#     cpu: 2
+#     gpu: 0
+#     memory: 50Gi
 # machineLabels:
 #  - name: my-label
 #    value: foo
@@ -145,6 +150,7 @@ serverGroup:
 #    triggerRollingOnUpdate: true # means any change of the machine label value will trigger rolling of all machines of the worker pool
 ```
 
+### ServerGroups
 When you specify the `serverGroup` section in your worker group configuration, a new server group will be created with the configured policy for each worker group that enabled this setting and all machines managed by this worker group will be assigned as members of the created server group.
 
 For users to have access to the server group feature, it must be enabled on the `CloudProfile` by your operator. 
@@ -157,9 +163,13 @@ Please note the following restrictions when deploying workers with server groups
 + The available `policy` values that can be used, are defined in the provider specific section of `CloudProfile` by your operator.
 + Certain policy values may induce further constraints. Using the `affinity` policy is only allowed when the worker group utilizes a single zone.
 
+### MachineLabels
 The `machineLabels` section in the worker group configuration allows to specify additional machine labels. These labels are added to the machine
 instances only, but not to the node object. Additionally, they have an optional `triggerRollingOnUpdate` field. If it is set to `true`, changing the label value
 will trigger a rolling of all machines of this worker pool.
+
+### Node Templates
+Node templates allow users to override the capacity of the nodes as defined by the server flavor specified in the `CloudProfile`'s `machineTypes`. This is useful for certain dynamic scenarios as it allows users to customize cluster-autoscaler's behavior for these workergroup with their provided values.
 
 ## Example `Shoot` manifest (one availability zone)
 

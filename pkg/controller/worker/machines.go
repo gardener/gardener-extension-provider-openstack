@@ -102,11 +102,6 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	}
 
 	for _, pool := range w.worker.Spec.Pools {
-		workerConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
-		if err != nil {
-			return err
-		}
-
 		zoneLen := int32(len(pool.Zones))
 
 		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version)

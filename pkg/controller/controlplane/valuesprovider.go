@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
 	ciliumv1alpha1 "github.com/gardener/gardener-extension-networking-cilium/pkg/apis/cilium/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-cilium/pkg/cilium"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
@@ -41,7 +40,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,11 +49,14 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
@@ -111,6 +112,12 @@ func shootAccessSecretsFunc(namespace string) []*gutil.ShootAccessSecret {
 		gutil.NewShootAccessSecret(openstack.CSISnapshotControllerName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSISnapshotValidationName, namespace),
 	}
+}
+
+func makeUnstructured(gvk schema.GroupVersionKind) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(gvk)
+	return obj
 }
 
 var (
@@ -239,7 +246,10 @@ var (
 					{Type: &storagev1.CSIDriver{}, Name: openstack.CSIManilaStorageProvisionerNFS},
 					{Type: &corev1.Secret{}, Name: openstack.CSIManilaNFS},
 					{Type: &storagev1.StorageClass{}, Name: openstack.CSIManilaNFS},
-					{Type: &volumesnapshotv1.VolumeSnapshotClass{}, Name: openstack.CSIManilaNFS},
+					{Type: makeUnstructured(schema.GroupVersionKind{
+						Group:   "snapshot.storage.k8s.io",
+						Version: "v1",
+						Kind:    "VolumeSnapshotClass"}), Name: openstack.CSIManilaNFS},
 					// csi-driver-manila-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSIManilaControllerName},
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIManilaNodeName},

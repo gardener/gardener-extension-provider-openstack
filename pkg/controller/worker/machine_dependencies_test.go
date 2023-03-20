@@ -95,299 +95,472 @@ var _ = Describe("#MachineDependencies", func() {
 			osFactory.EXPECT().Compute().AnyTimes().Return(computeClient, nil)
 		})
 
-		It("should not create server groups by default", func() {
-			workerDelegate, _ = worker.NewWorkerDelegate(
-				common.NewClientContext(cl, scheme, decoder),
-				nil,
-				"",
-				w,
-				newClusterWithDefaultCloudProfileConfig(clusterName),
-				osFactory,
-			)
+		Context("#PreReconcileHook", func() {
+			It("should not create server groups by default", func() {
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
 
-			ctx := context.Background()
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
+				ctx := context.Background()
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
-			err := workerDelegate.DeployMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
 
-			workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+			})
+
+			It("should create server groups if specified in worker pool", func() {
+				var (
+					ctx            = context.Background()
+					policy         = "foo"
+					pool1          = "pool-1"
+					serverGroupID1 = "id-1"
+
+					pool2          = "pool-2"
+					serverGroupID2 = "id-2"
+					pools          []extensionsv1alpha1.WorkerPool
+				)
+
+				pools = append(pools, *(newWorkerPoolWithPolicy(pool1, &policy)), *(newWorkerPoolWithPolicy(pool2, &policy)))
+				w.Spec.Pools = append(w.Spec.Pools, pools...)
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
+
+				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool1)), policy).Return(&servergroups.ServerGroup{
+					ID: serverGroupID1,
+				}, nil)
+				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool2)), policy).Return(&servergroups.ServerGroup{
+					ID: serverGroupID2,
+				}, nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(2))
+				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal(serverGroupID1),
+						"PoolName": Equal(pool1),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal(serverGroupID2),
+						"PoolName": Equal(pool2),
+					}),
+				))
+			})
+
+			It("should recreate server group if specs do not match", func() {
+				var (
+					ctx       = context.Background()
+					poolName  = "pool"
+					policy    = "foo"
+					newPolicy = "bar"
+				)
+
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
+
+				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), policy).Return(&servergroups.ServerGroup{
+					ID: "id",
+				}, nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal("id"),
+						"PoolName": Equal("pool"),
+					}),
+				))
+
+				w.Spec.Pools[0] = *(newWorkerPoolWithPolicy("pool", &newPolicy))
+				computeClient.EXPECT().GetServerGroup("id").Return(&servergroups.ServerGroup{
+					ID:       "id",
+					Policies: []string{"foo"},
+				}, nil)
+				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), newPolicy).Return(&servergroups.ServerGroup{
+					ID: "new-id",
+				}, nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err = workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				workerStatus = w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal("new-id"),
+						"PoolName": Equal("pool"),
+					}),
+				))
+			})
 		})
 
-		It("should create server groups if specified in worker pool", func() {
-			var (
-				ctx            = context.Background()
-				policy         = "foo"
-				pool1          = "pool-1"
-				serverGroupID1 = "id-1"
+		Context("#PostReconcileHook", func() {
+			It("should clean server group if worker pool is deleted", func() {
+				var (
+					ctx             = context.Background()
+					poolName        = "pool"
+					serverGroupID   = "id"
+					serverGroupName = clusterName + "-" + poolName + "-" + "rand"
+				)
 
-				pool2          = "pool-2"
-				serverGroupID2 = "id-2"
-				pools          []extensionsv1alpha1.WorkerPool
-			)
-
-			pools = append(pools, *(newWorkerPoolWithPolicy(pool1, &policy)), *(newWorkerPoolWithPolicy(pool2, &policy)))
-			w.Spec.Pools = append(w.Spec.Pools, pools...)
-
-			workerDelegate, _ = worker.NewWorkerDelegate(
-				common.NewClientContext(cl, scheme, decoder),
-				nil,
-				"",
-				w,
-				newClusterWithDefaultCloudProfileConfig(clusterName),
-				osFactory,
-			)
-
-			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool1)), policy).Return(&servergroups.ServerGroup{
-				ID: serverGroupID1,
-			}, nil)
-			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool2)), policy).Return(&servergroups.ServerGroup{
-				ID: serverGroupID2,
-			}, nil)
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
-
-			err := workerDelegate.DeployMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
-			Expect(workerStatus.ServerGroupDependencies).To(HaveLen(2))
-			Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
-				MatchFields(IgnoreExtras, Fields{
-					"ID":       Equal(serverGroupID1),
-					"PoolName": Equal(pool1),
-				}),
-				MatchFields(IgnoreExtras, Fields{
-					"ID":       Equal(serverGroupID2),
-					"PoolName": Equal(pool2),
-				}),
-			))
-
-		})
-
-		It("should recreate server group if specs do not match", func() {
-			var (
-				ctx       = context.Background()
-				poolName  = "pool"
-				policy    = "foo"
-				newPolicy = "bar"
-			)
-
-			w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
-			workerDelegate, _ = worker.NewWorkerDelegate(
-				common.NewClientContext(cl, scheme, decoder),
-				nil,
-				"",
-				w,
-				newClusterWithDefaultCloudProfileConfig(clusterName),
-				osFactory,
-			)
-
-			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), policy).Return(&servergroups.ServerGroup{
-				ID: "id",
-			}, nil)
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
-
-			err := workerDelegate.DeployMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
-			Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
-				MatchFields(IgnoreExtras, Fields{
-					"ID":       Equal("id"),
-					"PoolName": Equal("pool"),
-				}),
-			))
-
-			w.Spec.Pools[0] = *(newWorkerPoolWithPolicy("pool", &newPolicy))
-			computeClient.EXPECT().GetServerGroup("id").Return(&servergroups.ServerGroup{
-				ID:       "id",
-				Policies: []string{"foo"},
-			}, nil)
-			computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), newPolicy).Return(&servergroups.ServerGroup{
-				ID: "new-id",
-			}, nil)
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
-
-			err = workerDelegate.DeployMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			workerStatus = w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
-			Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
-				MatchFields(IgnoreExtras, Fields{
-					"ID":       Equal("new-id"),
-					"PoolName": Equal("pool"),
-				}),
-			))
-		})
-
-		It("should clean server group if worker pool is deleted", func() {
-			var (
-				ctx             = context.Background()
-				poolName        = "pool"
-				serverGroupID   = "id"
-				serverGroupName = clusterName + "-" + poolName + "-" + "rand"
-			)
-
-			w.Status.ProviderStatus = &runtime.RawExtension{
-				Object: &apiv1alpha1.WorkerStatus{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "WorkerStatus",
-						APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-					},
-					ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-						{
-							PoolName: poolName,
-							ID:       serverGroupID,
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+							{
+								PoolName: poolName,
+								ID:       serverGroupID,
+							},
 						},
 					},
-				},
-			}
-			workerDelegate, _ = worker.NewWorkerDelegate(
-				common.NewClientContext(cl, scheme, decoder),
-				nil,
-				"",
-				w,
-				newClusterWithDefaultCloudProfileConfig(clusterName),
-				osFactory,
-			)
+				}
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
 
-			computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
-				{
-					ID:   serverGroupID,
-					Name: serverGroupName,
-				},
-			}, nil)
-			computeClient.EXPECT().DeleteServerGroup(serverGroupID).Return(nil)
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
+				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID,
+						Name: serverGroupName,
+					},
+				}, nil)
+				computeClient.EXPECT().DeleteServerGroup(serverGroupID).Return(nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
-			err := workerDelegate.CleanupMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
+				err := workerDelegate.PostReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
 
-			workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+			})
+
+			It("should clean old server group if worker pool specs changed", func() {
+				var (
+					ctx = context.Background()
+
+					poolName = "pool"
+					policy   = "foo"
+
+					serverGroupID   = "id"
+					serverGroupName = clusterName + "-" + poolName + "-" + "rand"
+
+					oldServerGroupID   = "old-id"
+					oldServerGroupName = clusterName + "-" + poolName + "-" + "old-rand"
+				)
+
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+							{
+								PoolName: poolName,
+								ID:       serverGroupID,
+							},
+						},
+					},
+				}
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
+
+				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID,
+						Name: serverGroupName,
+					},
+					{
+						ID:   oldServerGroupID,
+						Name: oldServerGroupName,
+					},
+				}, nil)
+				computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err := workerDelegate.PostReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+			})
+
+			It("should clean all server groups if worker is terminating", func() {
+
+				var (
+					ctx = context.Background()
+
+					policy         = "foo"
+					poolName1      = "pool1"
+					serverGroupID1 = "id1"
+					poolName2      = "pool2"
+					serverGroupID2 = "id2"
+				)
+
+				deletionTime := metav1.NewTime(time.Now())
+				w.DeletionTimestamp = &deletionTime
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(poolName1, &policy)), *(newWorkerPoolWithPolicy(poolName2, &policy)))
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+							{
+								PoolName: poolName1,
+								ID:       serverGroupID1,
+							},
+							{
+								PoolName: poolName2,
+								ID:       serverGroupID2,
+							},
+						},
+					},
+				}
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
+
+				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID1,
+						Name: poolName1,
+					},
+					{
+						ID:   serverGroupID2,
+						Name: poolName2,
+					},
+				}, nil)
+				computeClient.EXPECT().DeleteServerGroup(serverGroupID1).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(serverGroupID2).Return(nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err := workerDelegate.PostReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+			})
 		})
 
-		It("should clean old server group if worker pool specs changed", func() {
-			var (
-				ctx = context.Background()
+		Context("#PostDeleteHook", func() {
+			It("should clean server group if worker pool is deleted", func() {
+				var (
+					ctx             = context.Background()
+					poolName        = "pool"
+					serverGroupID   = "id"
+					serverGroupName = clusterName + "-" + poolName + "-" + "rand"
+				)
 
-				poolName = "pool"
-				policy   = "foo"
-
-				serverGroupID   = "id"
-				serverGroupName = clusterName + "-" + poolName + "-" + "rand"
-
-				oldServerGroupID   = "old-id"
-				oldServerGroupName = clusterName + "-" + poolName + "-" + "old-rand"
-			)
-
-			w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
-			w.Status.ProviderStatus = &runtime.RawExtension{
-				Object: &apiv1alpha1.WorkerStatus{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "WorkerStatus",
-						APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-					},
-					ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-						{
-							PoolName: poolName,
-							ID:       serverGroupID,
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+							{
+								PoolName: poolName,
+								ID:       serverGroupID,
+							},
 						},
 					},
-				},
-			}
-			workerDelegate, _ = worker.NewWorkerDelegate(
-				common.NewClientContext(cl, scheme, decoder),
-				nil,
-				"",
-				w,
-				newClusterWithDefaultCloudProfileConfig(clusterName),
-				osFactory,
-			)
+				}
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
 
-			computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
-				{
-					ID:   serverGroupID,
-					Name: serverGroupName,
-				},
-				{
-					ID:   oldServerGroupID,
-					Name: oldServerGroupName,
-				},
-			}, nil)
-			computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
-
-			err := workerDelegate.CleanupMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
-		})
-
-		It("should clean all server groups if worker is terminating", func() {
-
-			var (
-				ctx = context.Background()
-
-				policy         = "foo"
-				poolName1      = "pool1"
-				serverGroupID1 = "id1"
-				poolName2      = "pool2"
-				serverGroupID2 = "id2"
-			)
-
-			deletionTime := metav1.NewTime(time.Now())
-			w.DeletionTimestamp = &deletionTime
-			w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(poolName1, &policy)), *(newWorkerPoolWithPolicy(poolName2, &policy)))
-			w.Status.ProviderStatus = &runtime.RawExtension{
-				Object: &apiv1alpha1.WorkerStatus{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "WorkerStatus",
-						APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID,
+						Name: serverGroupName,
 					},
-					ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-						{
-							PoolName: poolName1,
-							ID:       serverGroupID1,
+				}, nil)
+				computeClient.EXPECT().DeleteServerGroup(serverGroupID).Return(nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err := workerDelegate.PostDeleteHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+			})
+
+			It("should clean old server group if worker pool specs changed", func() {
+				var (
+					ctx = context.Background()
+
+					poolName = "pool"
+					policy   = "foo"
+
+					serverGroupID   = "id"
+					serverGroupName = clusterName + "-" + poolName + "-" + "rand"
+
+					oldServerGroupID   = "old-id"
+					oldServerGroupName = clusterName + "-" + poolName + "-" + "old-rand"
+				)
+
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 						},
-						{
-							PoolName: poolName2,
-							ID:       serverGroupID2,
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+							{
+								PoolName: poolName,
+								ID:       serverGroupID,
+							},
 						},
 					},
-				},
-			}
-			workerDelegate, _ = worker.NewWorkerDelegate(
-				common.NewClientContext(cl, scheme, decoder),
-				nil,
-				"",
-				w,
-				newClusterWithDefaultCloudProfileConfig(clusterName),
-				osFactory,
-			)
+				}
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
 
-			computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
-				{
-					ID:   serverGroupID1,
-					Name: poolName1,
-				},
-				{
-					ID:   serverGroupID2,
-					Name: poolName2,
-				},
-			}, nil)
-			computeClient.EXPECT().DeleteServerGroup(serverGroupID1).Return(nil)
-			computeClient.EXPECT().DeleteServerGroup(serverGroupID2).Return(nil)
-			expectStatusUpdateToSucceed(ctx, cl, statusCl)
+				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID,
+						Name: serverGroupName,
+					},
+					{
+						ID:   oldServerGroupID,
+						Name: oldServerGroupName,
+					},
+				}, nil)
+				computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
 
-			err := workerDelegate.CleanupMachineDependencies(ctx)
-			Expect(err).NotTo(HaveOccurred())
+				err := workerDelegate.PostDeleteHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
 
-			workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
-			Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+			})
+
+			It("should clean all server groups if worker is terminating", func() {
+
+				var (
+					ctx = context.Background()
+
+					policy         = "foo"
+					poolName1      = "pool1"
+					serverGroupID1 = "id1"
+					poolName2      = "pool2"
+					serverGroupID2 = "id2"
+				)
+
+				deletionTime := metav1.NewTime(time.Now())
+				w.DeletionTimestamp = &deletionTime
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(poolName1, &policy)), *(newWorkerPoolWithPolicy(poolName2, &policy)))
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+							{
+								PoolName: poolName1,
+								ID:       serverGroupID1,
+							},
+							{
+								PoolName: poolName2,
+								ID:       serverGroupID2,
+							},
+						},
+					},
+				}
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					common.NewClientContext(cl, scheme, decoder),
+					nil,
+					"",
+					w,
+					newClusterWithDefaultCloudProfileConfig(clusterName),
+					osFactory,
+				)
+
+				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID1,
+						Name: poolName1,
+					},
+					{
+						ID:   serverGroupID2,
+						Name: poolName2,
+					},
+				}, nil)
+				computeClient.EXPECT().DeleteServerGroup(serverGroupID1).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(serverGroupID2).Return(nil)
+				expectStatusUpdateToSucceed(ctx, cl, statusCl)
+
+				err := workerDelegate.PostDeleteHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
+			})
 		})
 	})
 })

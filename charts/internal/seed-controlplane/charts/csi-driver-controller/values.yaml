@@ -101,3 +101,4 @@ csiSnapshotValidationWebhook:
       memory: 32Mi
     limits:
       memory: 200Mi
+  topologyAwareRoutingEnabled: false

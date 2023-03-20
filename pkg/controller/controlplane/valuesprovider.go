@@ -701,6 +701,7 @@ func getCSIControllerChartValues(
 			"secrets": map[string]interface{}{
 				"server": serverSecret.Name,
 			},
+			"topologyAwareRoutingEnabled": gardencorev1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(cluster.Seed, cluster.Shoot),
 		},
 	}
 	if userAgentHeaders != nil {

@@ -3,6 +3,14 @@ kind: Service
 metadata:
   name: csi-snapshot-validation
   namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- if .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled }}
+    service.kubernetes.io/topology-aware-hints: "auto"
+    {{- end }}
+  labels:
+    {{- if .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled }}
+    endpoint-slice-hints.resources.gardener.cloud/consider: "true"
+    {{- end }}
 spec:
   selector:
     app: snapshot-validation

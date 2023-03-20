@@ -17,6 +17,7 @@ spec:
     metadata:
       annotations:
         checksum/secret-cloud-provider-config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        node.gardener.cloud/wait-for-csi-node-openstack: {{ include "csi-driver-node.provisioner" . }}
       labels:
         node.gardener.cloud/critical-component: "true"
         app: csi

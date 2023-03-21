@@ -709,7 +709,7 @@ func Convert_openstack_MachineImages_To_v1alpha1_MachineImages(in *openstack.Mac
 func autoConvert_v1alpha1_MachineLabel_To_openstack_MachineLabel(in *MachineLabel, out *openstack.MachineLabel, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Value = in.Value
-	out.Roll = in.Roll
+	out.TriggerRollingOnUpdate = in.TriggerRollingOnUpdate
 	return nil
 }
 
@@ -721,7 +721,7 @@ func Convert_v1alpha1_MachineLabel_To_openstack_MachineLabel(in *MachineLabel, o
 func autoConvert_openstack_MachineLabel_To_v1alpha1_MachineLabel(in *openstack.MachineLabel, out *MachineLabel, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Value = in.Value
-	out.Roll = in.Roll
+	out.TriggerRollingOnUpdate = in.TriggerRollingOnUpdate
 	return nil
 }
 

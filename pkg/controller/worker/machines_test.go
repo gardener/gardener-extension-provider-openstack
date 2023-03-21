@@ -758,16 +758,35 @@ var _ = Describe("Machines", func() {
 				It("should consider rolling machine labels for the worker pool hash", func() {
 					setup(region, machineImage, "")
 
-					applyLabels := func(labels []apiv1alpha1.MachineLabel) string {
+					applyLabelsAndPolicy := func(labels []apiv1alpha1.MachineLabel, policy *string) string {
 						w.Spec.Pools[0].Labels = map[string]string{"k1": "v1"}
-						w.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
-							Object: &apiv1alpha1.WorkerConfig{
-								TypeMeta: metav1.TypeMeta{
-									Kind:       "WorkerConfig",
-									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-								},
-								MachineLabels: labels,
+						workerConfig := &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 							},
+							MachineLabels: labels,
+						}
+						if policy != nil {
+							workerConfig.ServerGroup = &apiv1alpha1.ServerGroup{Policy: *policy}
+							w.Status.ProviderStatus = &runtime.RawExtension{
+								Object: &apiv1alpha1.WorkerStatus{
+									TypeMeta: metav1.TypeMeta{
+										Kind:       "WorkerStatus",
+										APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+									},
+									ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
+										{
+											PoolName: namePool1,
+											Name:     "servergroup1",
+											ID:       "id1",
+										},
+									},
+								},
+							}
+						}
+						w.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
+							Raw: encode(workerConfig),
 						}
 						workerDelegate, _ := NewWorkerDelegate(common.NewClientContext(c, scheme, decoder), chartApplier, "", w, cluster, nil)
 						result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
@@ -776,37 +795,72 @@ var _ = Describe("Machines", func() {
 						return result[0].ClassName
 					}
 
-					className0 := applyLabels(nil)
-					className1 := applyLabels([]apiv1alpha1.MachineLabel{
+					className0 := applyLabelsAndPolicy(nil, nil)
+					className1 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
 						{Name: "foo", Value: "bar"},
-					})
-					className2 := applyLabels([]apiv1alpha1.MachineLabel{
+					}, nil)
+					className1b := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar2"},
+					}, nil)
+					className2 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
 						{Name: "foo", Value: "bar"},
-						{Name: "vmspec/a", Value: "blabla", Roll: true},
-						{Name: "vmspec/c", Value: "rabarber1", Roll: true},
-					})
-					className2b := applyLabels([]apiv1alpha1.MachineLabel{
-						{Name: "vmspec/c", Value: "rabarber1", Roll: true},
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+						{Name: "vmspec/c", Value: "rabarber1", TriggerRollingOnUpdate: true},
+					}, nil)
+					className2b := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
+						{Name: "vmspec/c", Value: "rabarber1", TriggerRollingOnUpdate: true},
 						{Name: "vmspec/b", Value: "abc"},
-						{Name: "vmspec/a", Value: "blabla", Roll: true},
-					})
-					className3 := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+					}, nil)
+					className3 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
 						{Name: "foo", Value: "bar"},
-						{Name: "vmspec/a", Value: "blabla", Roll: true},
-						{Name: "vmspec/c", Value: "rabarber2", Roll: true},
-					})
-					className4 := applyLabels([]apiv1alpha1.MachineLabel{
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+						{Name: "vmspec/c", Value: "rabarber2", TriggerRollingOnUpdate: true},
+					}, nil)
+					className4 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
 						{Name: "foo", Value: "bar"},
-						{Name: "vmspec/a", Value: "blabla", Roll: true},
-						{Name: "vmspec/c", Value: "rabarber2", Roll: false},
-					})
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+						{Name: "vmspec/c", Value: "rabarber2", TriggerRollingOnUpdate: false},
+					}, nil)
 
-					Expect(className0).To(Equal(className1))
+					Expect(className0).NotTo(Equal(className1)) // should be equal, but cannot be avoided as old and new hash mechanism are colliding
+					Expect(className1).To(Equal(className1b))
 					Expect(className0).NotTo(Equal(className2))
 					Expect(className2).To(Equal(className2b))
 					Expect(className0).NotTo(Equal(className3))
 					Expect(className2).NotTo(Equal(className3))
 					Expect(className3).NotTo(Equal(className4))
+
+					By("with server group policy")
+					policy1 := pointer.String("soft-anti-affinity")
+					policy2 := pointer.String("foo")
+					classNamePolicy01 := applyLabelsAndPolicy(nil, policy1)
+					classNamePolicy02 := applyLabelsAndPolicy(nil, policy2)
+					classNamePolicy11 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+					}, policy1)
+					classNamePolicy21 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+						{Name: "vmspec/c", Value: "rabarber1", TriggerRollingOnUpdate: true},
+					}, policy1)
+					classNamePolicy22 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
+						{Name: "foo", Value: "bar"},
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+						{Name: "vmspec/c", Value: "rabarber1", TriggerRollingOnUpdate: true},
+					}, policy2)
+					classNamePolicy22b := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{
+						{Name: "vmspec/a", Value: "blabla", TriggerRollingOnUpdate: true},
+						{Name: "vmspec/c", Value: "rabarber1", TriggerRollingOnUpdate: true},
+					}, policy2)
+
+					Expect(className0).NotTo(Equal(classNamePolicy01))
+					Expect(className0).NotTo(Equal(classNamePolicy02))
+					Expect(classNamePolicy01).NotTo(Equal(classNamePolicy02))
+					Expect(classNamePolicy01).NotTo(Equal(classNamePolicy11)) // should be equal, but cannot be avoided as old and new hash mechanism are colliding
+					Expect(classNamePolicy11).NotTo(Equal(classNamePolicy21))
+					Expect(classNamePolicy21).NotTo(Equal(classNamePolicy22))
+					Expect(classNamePolicy22).To(Equal(classNamePolicy22b))
 				})
 			})
 

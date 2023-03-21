@@ -142,7 +142,7 @@ serverGroup:
 #    value: foo
 #  - name: my-rolling-label
 #    value: bar
-#    roll: true # means any change of the machine label value will trigger rolling of all machines
+#    triggerRollingOnUpdate: true # means any change of the machine label value will trigger rolling of all machines of the worker pool
 ```
 
 When you specify the `serverGroup` section in your worker group configuration, a new server group will be created with the configured policy for each worker group that enabled this setting and all machines managed by this worker group will be assigned as members of the created server group.
@@ -158,7 +158,7 @@ Please note the following restrictions when deploying workers with server groups
 + Certain policy values may induce further constraints. Using the `affinity` policy is only allowed when the worker group utilizes a single zone.
 
 The `machineLabels` section in the worker group configuration allows to specify additional machine labels. These labels are added to the machine
-instances only, but not to the node object. Additionally, they have an optional `roll` field. If it is set to `true`, changing the label value
+instances only, but not to the node object. Additionally, they have an optional `triggerRollingOnUpdate` field. If it is set to `true`, changing the label value
 will trigger a rolling of all machines of this worker pool.
 
 ## Example `Shoot` manifest (one availability zone)

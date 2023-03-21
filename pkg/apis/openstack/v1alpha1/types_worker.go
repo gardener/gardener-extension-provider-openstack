@@ -80,8 +80,8 @@ type MachineLabel struct {
 	Name string `json:"name"`
 	// Value is the machine label value
 	Value string `json:"value"`
-	// Roll controls if the machines should be rolled if the value changes
-	Roll bool `json:"roll,omitempty"`
+	// TriggerRollingOnUpdate controls if the machines should be rolled if the value changes
+	TriggerRollingOnUpdate bool `json:"triggerRollingOnUpdate,omitempty"`
 }
 
 // ServerGroup contains configuration data for setting up a server group.

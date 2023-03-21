@@ -1147,13 +1147,13 @@ string
 </tr>
 <tr>
 <td>
-<code>roll</code></br>
+<code>triggerRollingOnUpdate</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
-<p>Roll controls if the machines should be rolled if the value changes</p>
+<p>TriggerRollingOnUpdate controls if the machines should be rolled if the value changes</p>
 </td>
 </tr>
 </tbody>

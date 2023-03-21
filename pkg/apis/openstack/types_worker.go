@@ -77,8 +77,8 @@ type MachineLabel struct {
 	Name string
 	// Value is the machine label value
 	Value string
-	// Roll controls if the machines should be rolled if the value changes
-	Roll bool
+	// TriggerRollingOnUpdate controls if the machines should be rolled if the value changes
+	TriggerRollingOnUpdate bool
 }
 
 const (

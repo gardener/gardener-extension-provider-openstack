@@ -241,21 +241,28 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		additionalHashData = append(additionalHashData, serverGroupDependency.ID)
 	}
 
-	// include machine labels marked for roll
 	var pairs []string
 	for _, pair := range workerConfig.MachineLabels {
-		if pair.Roll {
+		if pair.TriggerRollingOnUpdate {
 			pairs = append(pairs, pair.Name+"="+pair.Value)
 		}
 	}
-	if len(pairs) > 0 {
-		sort.Strings(pairs)
-		additionalHashData = append(additionalHashData, pairs...)
+	copy := pool
+	if len(workerConfig.MachineLabels) > 0 {
+		// don't include complete provider config in Hash calculation
+		copy.ProviderConfig = nil
+		if len(pairs) > 0 {
+			// include machine labels marked for rolling
+			sort.Strings(pairs)
+			additionalHashData = append(additionalHashData, pairs...)
+		}
+
+		// include server group policy
+		if workerConfig.ServerGroup != nil {
+			additionalHashData = append(additionalHashData, workerConfig.ServerGroup.Policy)
+		}
 	}
 
-	// don't include complete provider config in Hash calculation
-	copy := pool
-	copy.ProviderConfig = nil
 	// Generate the worker pool hash.
 	return worker.WorkerPoolHash(copy, w.cluster, additionalHashData...)
 }

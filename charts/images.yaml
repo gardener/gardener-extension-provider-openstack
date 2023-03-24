@@ -226,7 +226,7 @@ images:
 
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/manila-csi-plugin
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
   tag: "v1.25.5"
   targetVersion: "<= 1.25"
   labels:
@@ -240,7 +240,7 @@ images:
         availability_requirement: 'low'
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/manila-csi-plugin
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
   tag: "v1.26.2"
   targetVersion: ">= 1.26"
   labels:

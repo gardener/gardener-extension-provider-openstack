@@ -57,7 +57,7 @@ images:
       availability_requirement: 'low'
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/openstack-cloud-controller-manager
+  repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
   tag: "v1.24.6"
   targetVersion: "1.24.x"
   labels:
@@ -71,7 +71,7 @@ images:
       availability_requirement: 'low'
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/openstack-cloud-controller-manager
+  repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
   tag: "v1.25.5"
   targetVersion: "1.25.x"
   labels:
@@ -85,7 +85,7 @@ images:
       availability_requirement: 'low'
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/openstack-cloud-controller-manager
+  repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
   tag: "v1.26.2"
   targetVersion: ">= 1.26"
   labels:
@@ -183,8 +183,8 @@ images:
       availability_requirement: 'low'
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/cinder-csi-plugin
-  tag: "v1.24.5"
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: "v1.24.6"
   targetVersion: "1.24.x"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -197,8 +197,8 @@ images:
       availability_requirement: 'low'
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/cinder-csi-plugin
-  tag: "v1.25.3"
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: "v1.25.5"
   targetVersion: "1.25.x"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
@@ -211,8 +211,8 @@ images:
         availability_requirement: 'low'
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: eu.gcr.io/gardener-project/3rd/k8scloudprovider/cinder-csi-plugin
-  tag: "v1.26.0"
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: "v1.26.2"
   targetVersion: ">= 1.26"
   labels:
     - name: 'gardener.cloud/cve-categorisation'

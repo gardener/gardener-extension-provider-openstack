@@ -923,7 +923,7 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 	credentials *openstack.Credentials,
 ) (map[string]interface{}, map[string]interface{}, error) {
 
-	csiManilaEnabled := cpConfig.CSI != nil && cpConfig.CSI.Manila != nil && cpConfig.CSI.Manila.Enabled
+	csiManilaEnabled := cpConfig.Storage != nil && cpConfig.Storage.CSIManila != nil && cpConfig.Storage.CSIManila.Enabled
 	csiDriverManilaValues := map[string]interface{}{
 		"enabled": csiManilaEnabled,
 	}

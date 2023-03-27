@@ -352,16 +352,16 @@ Deprecated: Don&rsquo;t use anymore. Will be removed in a future version.</p>
 </tr>
 <tr>
 <td>
-<code>csi</code></br>
+<code>storage</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSI">
-CSI
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Storage">
+Storage
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CSI contains configuration for CSI drivers</p>
+<p>Storage contains configuration for storage in the cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -499,14 +499,14 @@ reconciliation is possible.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CSI">CSI
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">CSIManila
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>)
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Storage">Storage</a>)
 </p>
 <p>
-<p>CSI contains configuration for CSI drivers</p>
+<p>CSIManila contains configuration for CSI Manila driver (support for NFS volumes)</p>
 </p>
 <table>
 <thead>
@@ -518,16 +518,13 @@ reconciliation is possible.</p>
 <tbody>
 <tr>
 <td>
-<code>manila</code></br>
+<code>enabled</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Manila">
-Manila
-</a>
+bool
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Manila contains configuration for CSI Manila driver (NFS)</p>
+<p>Enabled is the switch to enable the CSI Manila driver support</p>
 </td>
 </tr>
 </tbody>
@@ -1153,36 +1150,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Manila">Manila
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSI">CSI</a>)
-</p>
-<p>
-<p>Manila contains configuration for CSI Manila driver (NFS)</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled is the switch to enable the CSI Manila driver support</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus
 </h3>
 <p>
@@ -1715,6 +1682,39 @@ string
 </td>
 <td>
 <p>Name is the Network name.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Storage">Storage
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>)
+</p>
+<p>
+<p>Storage contains configuration for storage in the cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>csiManila</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">
+CSIManila
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CSIManila contains configuration for CSI Manila driver (support for NFS volumes)</p>
 </td>
 </tr>
 </tbody>

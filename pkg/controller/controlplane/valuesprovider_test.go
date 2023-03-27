@@ -77,7 +77,7 @@ func defaultControlPlaneWithManila(csiManila bool) *extensionsv1alpha1.ControlPl
 	}
 	var status *api.ShareNetworkStatus
 	if csiManila {
-		cpConfig.CSI = &api.CSI{Manila: &api.Manila{Enabled: true}}
+		cpConfig.Storage = &api.Storage{CSIManila: &api.CSIManila{Enabled: true}}
 		status = &api.ShareNetworkStatus{
 			ID:   "1111-2222-3333-4444",
 			Name: "sharenetwork",

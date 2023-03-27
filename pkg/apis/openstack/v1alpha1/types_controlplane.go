@@ -37,9 +37,9 @@ type ControlPlaneConfig struct {
 	// +optional
 	// Deprecated: Don't use anymore. Will be removed in a future version.
 	Zone *string `json:"zone,omitempty"`
-	// CSI contains configuration for CSI drivers
+	// Storage contains configuration for storage in the cluster.
 	// +optional
-	CSI *CSI `json:"csi,omitempty"`
+	Storage *Storage `json:"storage,omitempty"`
 }
 
 // CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
@@ -49,15 +49,15 @@ type CloudControllerManagerConfig struct {
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
-// CSI contains configuration for CSI drivers
-type CSI struct {
-	// Manila contains configuration for CSI Manila driver (NFS)
+// Storage contains configuration for storage in the cluster.
+type Storage struct {
+	// CSIManila contains configuration for CSI Manila driver (support for NFS volumes)
 	// +optional
-	Manila *Manila `json:"manila,omitempty"`
+	CSIManila *CSIManila `json:"csiManila,omitempty"`
 }
 
-// Manila contains configuration for CSI Manila driver (NFS)
-type Manila struct {
+// CSIManila contains configuration for CSI Manila driver (support for NFS volumes)
+type CSIManila struct {
 	// Enabled is the switch to enable the CSI Manila driver support
 	Enabled bool `json:"enabled"`
 }

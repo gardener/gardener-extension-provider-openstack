@@ -41,3 +41,7 @@ ignoreVolumeAZ: false
 # nodeVolumeAttachLimit: 25
 # [Metadata]
 # requestTimeout: 1m
+
+monitorDelay: 20s
+monitorMaxRetries: 2
+monitorTimeout: 30s

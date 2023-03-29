@@ -28,6 +28,8 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
@@ -57,6 +59,11 @@ type NetworkingClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// SharedFileSystemClient is a client for the SharedFileSystem service.
+type SharedFileSystemClient struct {
+	client *gophercloud.ServiceClient
+}
+
 // Option can be passed to Factory implementations to modify the produced clients.
 type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
 
@@ -66,6 +73,7 @@ type Factory interface {
 	Storage(options ...Option) (Storage, error)
 	DNS(options ...Option) (DNS, error)
 	Networking(options ...Option) (Networking, error)
+	SharedFileSystem(options ...Option) (SharedFileSystem, error)
 }
 
 // Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
@@ -125,6 +133,21 @@ type Networking interface {
 	GetRouterByID(id string) ([]routers.Router, error)
 	ListRouters(listOpts routers.ListOpts) ([]routers.Router, error)
 	UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error)
+}
+
+// SharedFileSystem describes the operations of a client interacting with OpenStack's SharedFileSystem service.
+type SharedFileSystem interface {
+	// ShareNetwork
+	CreateShareNetwork(opts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error)
+	ListShareNetworks(listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error)
+	UpdateShareNetwork(networkID string, opts sharenetworks.UpdateOpts) (*sharenetworks.ShareNetwork, error)
+	GetShareNetwork(networkID string) (*sharenetworks.ShareNetwork, error)
+	GetShareNetworksByName(name string) ([]sharenetworks.ShareNetwork, error)
+	DeleteShareNetwork(networkID string) error
+
+	// Shares
+	ListShares(listOpts shares.ListOpts) ([]shares.Share, error)
+	DeleteShare(shareID string) error
 }
 
 // FactoryFactory creates instances of Factory.

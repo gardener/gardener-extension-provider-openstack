@@ -25,6 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -35,6 +36,28 @@ import (
 )
 
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	config, err := helper.InfrastructureConfigFromInfrastructure(infra)
+	if err != nil {
+		return err
+	}
+	// need to known if application credentials are used
+	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
+
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
+
+	if config.Networks.ShareNetwork != nil && config.Networks.ShareNetwork.Enabled {
+		// as the controller runs on the shoot cluster, shares may not have been cleaned up (e.g. on deletion of hibernated cluster)
+		if err := a.cleanupOrphanedShares(ctx, log, infra, openstackClient); err != nil {
+			return err
+		}
+	}
+
 	tf, err := internal.NewTerraformer(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)
@@ -53,25 +76,9 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 		return tf.CleanupConfiguration(ctx)
 	}
 
-	config, err := helper.InfrastructureConfigFromInfrastructure(infra)
-	if err != nil {
-		return err
-	}
-
 	terraformFiles, err := infrastructure.RenderTerraformerTemplate(infra, config, cluster)
 	if err != nil {
 		return err
-	}
-
-	// need to known if application credentials are used
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
-	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
-	}
-
-	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
-	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	networkingClient, err := openstackClient.Networking()
@@ -133,4 +140,34 @@ func (a *actuator) cleanupKubernetesRoutes(
 		return nil
 	}
 	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, workesCIDR)
+}
+
+func (a *actuator) cleanupOrphanedShares(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, openstackClient openstackclient.Factory) error {
+	status, err := helper.InfrastructureStatusFromRaw(infra.Status.ProviderStatus)
+	if err != nil {
+		return err
+	}
+	if status.Networks.ShareNetwork == nil {
+		return nil
+	}
+
+	sharedFSClient, err := openstackClient.SharedFileSystem()
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
+
+	shares, err := sharedFSClient.ListShares(shares.ListOpts{
+		ShareNetworkID: status.Networks.ShareNetwork.ID,
+	})
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
+
+	for _, share := range shares {
+		log.Info("deleting orphaned share", "shareID", share.ID)
+		if err = sharedFSClient.DeleteShare(share.ID); err != nil {
+			return util.DetermineError(err, helper.KnownCodes)
+		}
+	}
+	return nil
 }

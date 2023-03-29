@@ -180,6 +180,23 @@ func (oc *OpenstackClientFactory) Networking(options ...Option) (Networking, err
 	}, nil
 }
 
+// SharedFileSystem returns a SharedFileSystem client. The client uses SharedFileSystem v2 API for issuing calls.
+func (oc *OpenstackClientFactory) SharedFileSystem(options ...Option) (SharedFileSystem, error) {
+	eo := gophercloud.EndpointOpts{}
+	for _, opt := range options {
+		eo = opt(eo)
+	}
+
+	client, err := openstack.NewSharedFileSystemV2(oc.providerClient, eo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SharedFileSystemClient{
+		client: client,
+	}, nil
+}
+
 // IsNotFoundError checks if an error returned by OpenStack is caused by HTTP 404 status code.
 func IsNotFoundError(err error) bool {
 	if err == nil {

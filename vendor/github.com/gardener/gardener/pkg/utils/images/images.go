@@ -1,5 +1,5 @@
 /*
-Copyright (c) SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -107,6 +107,8 @@ const (
 	ImageNamePromtail = "promtail"
 	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
 	ImageNameTelegraf = "telegraf"
+	// ImageNameTune2fs is a constant for an image in the image vector with name 'tune2fs'.
+	ImageNameTune2fs = "tune2fs"
 	// ImageNameVpaAdmissionController is a constant for an image in the image vector with name 'vpa-admission-controller'.
 	ImageNameVpaAdmissionController = "vpa-admission-controller"
 	// ImageNameVpaRecommender is a constant for an image in the image vector with name 'vpa-recommender'.

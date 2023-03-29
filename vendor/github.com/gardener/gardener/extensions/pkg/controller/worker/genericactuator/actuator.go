@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -207,27 +207,6 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, logger
 		}
 	}
 
-	return nil
-}
-
-// updateCloudCredentialsInAllMachineClassSecrets updates the cloud credentials
-// for all existing machine class secrets.
-func (a *genericActuator) updateCloudCredentialsInAllMachineClassSecrets(ctx context.Context, logger logr.Logger, cloudCredentials map[string][]byte, namespace string) error {
-	logger.Info("Updating cloud credentials for existing machine class secrets")
-	secretList, err := a.listMachineClassSecrets(ctx, namespace)
-	if err != nil {
-		return fmt.Errorf("failed to list machine class secrets in namespace %s: %w", namespace, err)
-	}
-
-	for _, secret := range secretList.Items {
-		secretCopy := secret.DeepCopy()
-		for key, value := range cloudCredentials {
-			secretCopy.Data[key] = value
-		}
-		if err := a.client.Patch(ctx, secretCopy, client.MergeFrom(&secret)); err != nil {
-			return fmt.Errorf("failed to patch secret %s/%s with cloud credentials: %w", namespace, secret.Name, err)
-		}
-	}
 	return nil
 }
 

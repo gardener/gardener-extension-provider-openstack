@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// MachineStatusHasChanged is a predicate deciding whether the status of a Machine has been changed.
-func MachineStatusHasChanged() predicate.Predicate {
+// MachineNodeInfoHasChanged is a predicate deciding whether the information about the backing node of a Machine has
+// been changed.
+func MachineNodeInfoHasChanged() predicate.Predicate {
 	statusHasChanged := func(oldObj client.Object, newObj client.Object) bool {
 		oldMachine, ok := oldObj.(*machinev1alpha1.Machine)
 		if !ok {
@@ -35,7 +36,7 @@ func MachineStatusHasChanged() predicate.Predicate {
 		}
 
 		return oldMachine.Spec.ProviderID != newMachine.Spec.ProviderID ||
-			oldMachine.Status.Node != newMachine.Status.Node
+			oldMachine.Labels[machinev1alpha1.NodeLabelKey] != newMachine.Labels[machinev1alpha1.NodeLabelKey]
 	}
 
 	return predicate.Funcs{

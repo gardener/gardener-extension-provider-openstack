@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,12 +82,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		}
 	}
 
-	// Deploy machine dependencies.
-	// TODO(dkistner): Remove in a future release.
-	if err := workerDelegate.DeployMachineDependencies(ctx); err != nil {
-		return fmt.Errorf("failed to deploy machine dependencies: %w", err)
-	}
-
 	// Deploy the machine-controller-manager into the cluster.
 	if err := a.deployMachineControllerManager(ctx, log, worker, cluster, workerDelegate, mcmReplicaFunc); err != nil {
 		return err
@@ -121,17 +115,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	log.Info("Deploying machine classes")
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
-	}
-
-	if workerCredentialsDelegate, ok := workerDelegate.(WorkerCredentialsDelegate); ok {
-		// Update cloud credentials for all existing machine class secrets
-		cloudCredentials, err := workerCredentialsDelegate.GetMachineControllerManagerCloudCredentials(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get the cloud credentials in namespace %s: %w", worker.Namespace, err)
-		}
-		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, log, cloudCredentials, worker.Namespace); err != nil {
-			return fmt.Errorf("failed to update cloud credentials in machine class secrets for namespace %s: %w", worker.Namespace, err)
-		}
 	}
 
 	// Update the machine images in the worker provider status.
@@ -218,12 +201,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to update the machine deployments in worker status: %w", err)
-	}
-
-	// Cleanup machine dependencies.
-	// TODO(dkistner): Remove in a future release.
-	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
-		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}
 
 	// Call post reconcilation hook after Worker reconciliation has happened.

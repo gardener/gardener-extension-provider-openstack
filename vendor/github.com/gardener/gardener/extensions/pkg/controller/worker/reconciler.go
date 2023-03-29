@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -256,10 +256,4 @@ func (r *reconciler) restore(
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func isWorkerMigrated(worker *extensionsv1alpha1.Worker) bool {
-	return worker.Status.LastOperation != nil &&
-		worker.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&
-		worker.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -104,6 +104,12 @@ const (
 	// DeploymentNameKubeControllerManager is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-controller-manager pod.
 	DeploymentNameKubeControllerManager = "kube-controller-manager"
+	// DeploymentNameDependencyWatchdogProber is a constant for the name of a Kubernetes deployment object that contains
+	// the dependency-watchdog-prober pod.
+	DeploymentNameDependencyWatchdogProber = "dependency-watchdog-prober"
+	// DeploymentNameDependencyWatchdogWeeder is a constant for the name of a Kubernetes deployment object that contains
+	// the dependency-watchdog-weeder pod.
+	DeploymentNameDependencyWatchdogWeeder = "dependency-watchdog-weeder"
 	// DeploymentNameGardenlet is a constant for the name of a Kubernetes deployment object that contains
 	// the Gardenlet pod.
 	DeploymentNameGardenlet = "gardenlet"
@@ -118,12 +124,6 @@ const (
 	// DeploymentNameGardenerResourceManager is a constant for the name of a Kubernetes deployment object that contains
 	// the gardener-resource-manager pod.
 	DeploymentNameGardenerResourceManager = "gardener-resource-manager"
-	// DeploymentNameGrafanaOperators is a constant for the name of a Kubernetes deployment object that contains
-	// the grafana-operators pod.
-	DeploymentNameGrafanaOperators = "grafana-operators"
-	// DeploymentNameGrafanaUsers is a constant for the name of a Kubernetes deployment object that contains
-	// the grafana-users pod.
-	DeploymentNameGrafanaUsers = "grafana-users"
 	// DeploymentNameGrafana is a constant for the name of a Kubernetes deployment object that contains the grafana pod.
 	DeploymentNameGrafana = "grafana"
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
@@ -441,9 +441,6 @@ const (
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
 	// LabelNetworkPolicyToShootNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed' to IPv4 blocks belonging to the Shoot network.
 	LabelNetworkPolicyToShootNetworks = "networking.gardener.cloud/to-shoot-networks"
-	// LabelNetworkPolicyToAllShootAPIServers allows Egress from pods labeled with 'networking.gardener.cloud/to-all-shoot-apiservers=allowed' to talk to all
-	// Shoots' Kubernetes API Servers.
-	LabelNetworkPolicyToAllShootAPIServers = "networking.gardener.cloud/to-all-shoot-apiservers"
 	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
 	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
 	// Deprecated. Label `kube-apiserver` pods with `networking.resources.gardener.cloud/to-<service-name>-tcp-<container-port>=allowed` instead.
@@ -455,10 +452,6 @@ const (
 	//  `networking.resources.gardener.cloud/from-policy-pod-label-selector=all-scrape-targets` and
 	//  `networking.resources.gardener.cloud/from-policy-allowed-ports=[{"protocol":<protocol>,"port":<port>}]`.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
-	// LabelNetworkPolicyToAggregatePrometheus allows Egress traffic to the aggregate Prometheus.
-	LabelNetworkPolicyToAggregatePrometheus = "networking.gardener.cloud/to-aggregate-prometheus"
-	// LabelNetworkPolicyToSeedPrometheus allows Egress traffic to the seed Prometheus.
-	LabelNetworkPolicyToSeedPrometheus = "networking.gardener.cloud/to-seed-prometheus"
 	// LabelNetworkPolicyShootFromSeed allows Ingress traffic from the seed cluster (where the shoot's kube-apiserver
 	// runs).
 	LabelNetworkPolicyShootFromSeed = "networking.gardener.cloud/from-seed"
@@ -807,4 +800,7 @@ const (
 	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
 	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
 	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
+	// AnnotationWaitForCSINode is the annotation key for csi-driver-node pods,
+	// indicating they use the driver specified in the value.
+	AnnotationPrefixWaitForCSINode = "node.gardener.cloud/wait-for-csi-node-"
 )

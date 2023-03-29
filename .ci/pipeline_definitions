@@ -35,7 +35,8 @@ gardener-extension-provider-openstack:
   jobs:
     head-update:
       traits:
-        component_descriptor: ~
+        component_descriptor:
+          retention_policy: 'clean-snapshots'
         draft_release: ~
         options:
           public_build_logs: true

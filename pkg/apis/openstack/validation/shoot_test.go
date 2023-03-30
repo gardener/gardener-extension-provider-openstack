@@ -62,7 +62,7 @@ var _ = Describe("Shoot validation", func() {
 			))
 		})
 	})
-	Describe("#ValidateWorkerConfig", func() {
+	Describe("#validateWorkerConfig", func() {
 		var (
 			nilPath *field.Path
 			workers []core.Worker
@@ -285,7 +285,7 @@ var _ = Describe("Shoot validation", func() {
 				})
 			})
 
-			Describe("#ValidateWorkerConfig", func() {
+			Describe("#validateWorkerConfig", func() {
 				It("should return no errors for a valid nodetemplate configuration", func() {
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Object: &apiv1alpha1.WorkerConfig{

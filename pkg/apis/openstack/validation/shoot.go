@@ -65,7 +65,7 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 				continue
 			}
 
-			allErrs = append(allErrs, ValidateWorkerConfig(&worker, workerConfig, cloudProfileCfg, workerFldPath.Child("providerConfig"))...)
+			allErrs = append(allErrs, validateWorkerConfig(&worker, workerConfig, cloudProfileCfg, workerFldPath.Child("providerConfig"))...)
 		}
 	}
 
@@ -89,8 +89,8 @@ func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.
 	return allErrs
 }
 
-// ValidateWorkerConfig validates the providerConfig section of a Worker resource.
-func ValidateWorkerConfig(worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+// validateWorkerConfig validates the providerConfig section of a Worker resource.
+func validateWorkerConfig(worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateServerGroup(worker, workerConfig.ServerGroup, cloudProfileConfig, fldPath.Child("serverGroup"))...)

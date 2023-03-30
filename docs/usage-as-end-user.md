@@ -112,8 +112,8 @@ loadBalancerClasses:
 cloudControllerManager:
   featureGates:
     CustomResourceValidation: true
-#csi
-#  manila:
+#storage:
+#  csiManila:
 #    enabled: true
 ```
 
@@ -136,7 +136,7 @@ The `cloudControllerManager.featureGates` contains a map of explicitly enabled o
 For production usage it's not recommended to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
 If you don't want to configure anything for the `cloudControllerManager` simply omit the key in the YAML specification.
 
-The optional `csi.manila.enabled` field is used to enable the deployment of the CSI Manila driver to support NFS persistent volumes.
+The optional `storage.csiManila.enabled` field is used to enable the deployment of the CSI Manila driver to support NFS persistent volumes.
 In this case, please ensure to set `networks.shareNetwork.enabled=true` in the `InfrastructureConfig`, too.
 Additionally, if CSI Manila driver is enabled, for each availability zone a NFS `StorageClass` will be created on the shoot 
 named like `csi-manila-nfs-<zone>`.

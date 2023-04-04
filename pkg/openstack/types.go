@@ -121,24 +121,18 @@ const (
 	CSINFSNodeName = "csi-driver-nfs-node"
 	// CSIDriverManila is a constant for the chart name for the CSI driver Manila deployment in the shoot.
 	CSIDriverManila = "csi-driver-manila"
-	// CSIDriverNFS is a constant for the chart name for the generic CSI driver NFS deployment in the shoot.
-	CSIDriverNFS = "csi-driver-nfs"
+	// CSIDriverManilaController is a constant for the chart name for the CSI driver Manila / NFS controller deployment in the seed.
+	CSIDriverManilaController = "csi-driver-manila-controller"
 	// CSIDriverName is a constant for the name of the csi-driver component.
 	CSIDriverName = "csi-driver"
 	// CSIProvisionerName is a constant for the name of the csi-provisioner component.
 	CSIProvisionerName = "csi-provisioner"
-	// CSINFSProvisionerName is a constant for the name of the csi-driver-nfs provisioner component.
-	CSINFSProvisionerName = "csi-driver-nfs-provisioner"
 	// CSIAttacherName is a constant for the name of the csi-attacher component.
 	CSIAttacherName = "csi-attacher"
 	// CSISnapshotterName is a constant for the name of the csi-snapshotter component.
 	CSISnapshotterName = "csi-snapshotter"
 	// CSIResizerName is a constant for the name of the csi-resizer component.
 	CSIResizerName = "csi-resizer"
-	// CSINodeDriverRegistrarName is a constant for the name of the csi-node-driver-registrar component.
-	CSINodeDriverRegistrarName = "csi-node-driver-registrar"
-	// CSILivenessProbeName is a constant for the name of the csi-liveness-probe component.
-	CSILivenessProbeName = "csi-liveness-probe"
 	// CSISnapshotControllerName is a constant for the name of the csi-snapshot-controller component.
 	CSISnapshotControllerName = "csi-snapshot-controller"
 	// CSISnapshotValidationName is the constant for the name of the csi-snapshot-validation-webhook component.
@@ -151,6 +145,9 @@ const (
 	CSIStorageProvisionerNFS = "nfs.csi.k8s.io"
 	// CSIManilaNFS is a constant for CSI Manila NFS resource objects
 	CSIManilaNFS = "csi-manila-nfs"
+	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret
+	CSIManilaSecret = "csi-manila-secret"
+
 	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
 	MachineControllerManagerName = "machine-controller-manager"
 	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager deployment.

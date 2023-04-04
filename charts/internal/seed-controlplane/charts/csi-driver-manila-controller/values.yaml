@@ -1,13 +1,17 @@
 images:
   csi-driver-manila: image-repository:image-tag
-  csi-driver-nfs: image-repository:image-tag
-  csi-node-driver-registrar: image-repository:image-tag
   csi-liveness-probe: image-repository:image-tag
+  csi-provisioner: image-repository:image-tag
+  csi-snapshotter: image-repository:image-tag
+  csi-resizer: image-repository:image-tag
+  csi-driver-nfs: image-repository:image-tag
 
-vpaEnabled: false
-pspDisabled: false
 dnsPolicy: ClusterFirstWithHostNet # available values: Default, ClusterFirstWithHostNet, ClusterFirst
 timeout: 3m
+userAgentHeaders: []
+
+global:
+  genericTokenKubeconfigSecretName: secret
 
 openstack:
   availabilityZones:
@@ -29,18 +33,36 @@ openstack:
   #tlsInsecure: true
 
 resources:
-  driverNode:
+  driverController:
     requests:
-      cpu: 15m
-      memory: 42Mi
+      cpu: 20m
+      memory: 50Mi
     limits:
-      memory: 2Gi
-  nodeDriverRegistrar:
+      memory: 360Mi
+  driverNFSController:
+    requests:
+      cpu: 20m
+      memory: 50Mi
+    limits:
+      memory: 360Mi
+  provisioner:
+    requests:
+      cpu: 11m
+      memory: 38Mi
+    limits:
+      memory: 400Mi
+  snapshotter:
+    requests:
+      cpu: 11m
+      memory: 36Mi
+    limits:
+      memory: 220Mi
+  resizer:
     requests:
       cpu: 11m
       memory: 32Mi
     limits:
-      memory: 1Gi
+      memory: 220Mi
   livenessProbe:
     requests:
       cpu: 11m
@@ -50,18 +72,30 @@ resources:
 
 vpa:
   resourcePolicy:
+    driverController:
+      maxAllowed:
+        cpu: 800m
+        memory: 4G
+    driverNFSController:
+      maxAllowed:
+        cpu: 800m
+        memory: 4G
+    provisioner:
+      maxAllowed:
+        cpu: 800m
+        memory: 4G
+    snapshotter:
+      maxAllowed:
+        cpu: 700m
+        memory: 3G
+    resizer:
+      maxAllowed:
+        cpu: 700m
+        memory: 3G
     livenessProbe:
       maxAllowed:
         cpu: 500m
         memory: 2G
-    driverNode:
-      maxAllowed:
-        cpu: 2
-        memory: 4G
-    nodeDriverRegistrar:
-      maxAllowed:
-        cpu: 1
-        memory: 3G
 
 # Enabled Manila share protocols
 shareProtocols:
@@ -73,8 +107,6 @@ shareProtocols:
     node:
       livenessProbe:
         healthPort: 24913
-        healthPort2: 24914
-      mountPermissions: 0777
     controller:
       livenessProbe:
         healthPort: 11950

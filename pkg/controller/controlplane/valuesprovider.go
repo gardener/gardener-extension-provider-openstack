@@ -171,6 +171,22 @@ var (
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
 				},
 			},
+			{
+				Name: openstack.CSIDriverManilaController,
+				Images: []string{
+					openstack.CSIDriverManilaImageName,
+					openstack.CSIDriverNFSImageName,
+					openstack.CSIProvisionerImageName,
+					openstack.CSISnapshotterImageName,
+					openstack.CSIResizerImageName,
+					openstack.CSILivenessProbeImageName,
+				},
+				Objects: []*chart.Object{
+					// csi-driver-manila-controller
+					{Type: &appsv1.Deployment{}, Name: openstack.CSIDriverManilaController},
+					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIDriverManilaController},
+				},
+			},
 		},
 	}
 
@@ -236,11 +252,9 @@ var (
 				Name: openstack.CSIDriverManila,
 				Images: []string{
 					openstack.CSIDriverManilaImageName,
+					openstack.CSIDriverNFSImageName,
 					openstack.CSINodeDriverRegistrarImageName,
 					openstack.CSILivenessProbeImageName,
-					openstack.CSIProvisionerImageName,
-					openstack.CSISnapshotterImageName,
-					openstack.CSIResizerImageName,
 				},
 				Objects: []*chart.Object{
 					{Type: &storagev1.CSIDriver{}, Name: openstack.CSIManilaStorageProvisionerNFS},
@@ -250,17 +264,9 @@ var (
 						Group:   "snapshot.storage.k8s.io",
 						Version: "v1",
 						Kind:    "VolumeSnapshotClass"}), Name: openstack.CSIManilaNFS},
-					// csi-driver-manila-controller
-					{Type: &appsv1.Deployment{}, Name: openstack.CSIManilaControllerName},
-					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIManilaNodeName},
-					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIManilaControllerName + "-psp"},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaControllerName + "-psp"},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaControllerName + "-provisioner"},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaControllerName + "-resizer"},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaControllerName + "-snapshotter"},
-					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaControllerName + "-provisioner"},
-					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSIManilaControllerName, ":", ".", -1)},
-					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSIManilaControllerName},
+					// csi-provisioner/csi-snapshotter/csi-resizer share service account with CSI cinder driver
+					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSIManilaSecret},
+					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaSecret},
 					// csi-driver-manila-node
 					{Type: &appsv1.DaemonSet{}, Name: openstack.CSIManilaNodeName},
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIManilaNodeName},
@@ -268,33 +274,6 @@ var (
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
 					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSIManilaNodeName, ":", ".", -1)},
 					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSIManilaNodeName},
-				},
-			},
-			{
-				Name: openstack.CSIDriverNFS,
-				Images: []string{
-					openstack.CSIDriverNFSImageName,
-					openstack.CSINodeDriverRegistrarImageName,
-					openstack.CSILivenessProbeImageName,
-					openstack.CSIProvisionerImageName,
-				},
-				Objects: []*chart.Object{
-					{Type: &storagev1.CSIDriver{}, Name: openstack.CSIStorageProvisionerNFS},
-					// csi-driver-nfs-controller
-					{Type: &appsv1.Deployment{}, Name: openstack.CSINFSControllerName},
-					{Type: &corev1.ServiceAccount{}, Name: openstack.CSINFSControllerName},
-					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSINFSControllerName + "-psp"},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSINFSControllerName + "-psp"},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSINFSControllerName + "-provisioner"},
-					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSINFSControllerName + "-provisioner"},
-					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSINFSControllerName, ":", ".", -1)},
-					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSINFSControllerName},
-					// csi-driver-nfs-node
-					{Type: &appsv1.DaemonSet{}, Name: openstack.CSINFSNodeName},
-					{Type: &corev1.ServiceAccount{}, Name: openstack.CSINFSNodeName},
-					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSINFSNodeName},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSINFSNodeName},
-					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSINFSNodeName, ":", ".", -1)},
 				},
 			},
 		},
@@ -416,7 +395,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	credentials, _ := vp.getCredentials(ctx, cp) // ignore missing credentials
 	userAgentHeaders = vp.getUserAgentHeaders(credentials, cluster)
 
-	return getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	return vp.getControlPlaneChartValues(cpConfig, cp, cluster, secretsReader, userAgentHeaders, checksums, scaledDown, credentials)
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
@@ -689,7 +668,7 @@ func lookupLoadBalancerClass(lbClasses []api.LoadBalancerClass, lbClassPurpose s
 }
 
 // getControlPlaneChartValues collects and returns the control plane chart values.
-func getControlPlaneChartValues(
+func (vp *valuesProvider) getControlPlaneChartValues(
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
@@ -697,6 +676,7 @@ func getControlPlaneChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
+	credentials *openstack.Credentials,
 ) (
 	map[string]interface{},
 	error,
@@ -711,12 +691,18 @@ func getControlPlaneChartValues(
 		return nil, err
 	}
 
+	csiManila, err := vp.getCSIManilaControllerChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, credentials)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]interface{}{
 		"global": map[string]interface{}{
 			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
 		},
 		openstack.CloudControllerManagerName: ccm,
 		openstack.CSIControllerName:          csiCinder,
+		openstack.CSIManilaControllerName:    csiManila,
 	}, nil
 }
 
@@ -805,6 +791,37 @@ func getCSIControllerChartValues(
 	return values, nil
 }
 
+// getCSIManilaControllerChartValues collects and returns the CSIController chart values.
+func (vp *valuesProvider) getCSIManilaControllerChartValues(
+	cpConfig *api.ControlPlaneConfig,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+	userAgentHeaders []string,
+	checksums map[string]string,
+	scaledDown bool,
+	credentials *openstack.Credentials,
+) (map[string]interface{}, error) {
+	csiManilaEnabled := vp.isCSIManilaEnabled(cpConfig)
+	values := map[string]interface{}{
+		"enabled": csiManilaEnabled,
+	}
+
+	if csiManilaEnabled {
+		values["replicas"] = extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1)
+		values["podAnnotations"] = map[string]interface{}{
+			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+		}
+		if userAgentHeaders != nil {
+			values["userAgentHeaders"] = userAgentHeaders
+		}
+		if err := vp.addCSIManilaValues(values, cp, cluster, credentials); err != nil {
+			return nil, err
+		}
+	}
+
+	return values, nil
+}
+
 // getControlPlaneShootChartValues collects and returns the control plane shoot chart values.
 func (vp *valuesProvider) getControlPlaneShootChartValues(
 	ctx context.Context,
@@ -863,7 +880,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		csiNodeDriverValues["userAgentHeaders"] = userAgentHeader
 	}
 
-	csiDriverManilaValues, csiDriverNFSValues, err := vp.getControlPlaneShootChartCSIManilaValues(cpConfig, cp, cluster, credentials)
+	csiDriverManilaValues, err := vp.getControlPlaneShootChartCSIManilaValues(cpConfig, cp, cluster, credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -872,7 +889,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName:                csiNodeDriverValues,
 		openstack.CSIDriverManila:            csiDriverManilaValues,
-		openstack.CSIDriverNFS:               csiDriverNFSValues,
 	}, nil
 }
 
@@ -916,78 +932,91 @@ func (vp *valuesProvider) isOverlayEnabled(network v1beta1.Networking) (bool, er
 	return true, nil
 }
 
+func (vp *valuesProvider) isCSIManilaEnabled(cpConfig *api.ControlPlaneConfig) bool {
+	return cpConfig.Storage != nil && cpConfig.Storage.CSIManila != nil && cpConfig.Storage.CSIManila.Enabled
+}
+
 func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 	credentials *openstack.Credentials,
-) (map[string]interface{}, map[string]interface{}, error) {
+) (map[string]interface{}, error) {
 
-	csiManilaEnabled := cpConfig.Storage != nil && cpConfig.Storage.CSIManila != nil && cpConfig.Storage.CSIManila.Enabled
-	csiDriverManilaValues := map[string]interface{}{
-		"enabled": csiManilaEnabled,
-	}
-	csiDriverNFSValues := map[string]interface{}{
+	csiManilaEnabled := vp.isCSIManilaEnabled(cpConfig)
+	values := map[string]interface{}{
 		"enabled": csiManilaEnabled,
 	}
 
 	if csiManilaEnabled {
-		csiDriverManilaValues["vpaEnabled"] = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot)
-		csiDriverManilaValues["pspDisabled"] = gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot)
-		csiDriverNFSValues["vpaEnabled"] = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot)
-		csiDriverNFSValues["pspDisabled"] = gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot)
+		values["vpaEnabled"] = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot)
+		values["pspDisabled"] = gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot)
 
-		infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", kutil.ObjectName(cp), err)
-		}
-		infraStatus, err := vp.getInfrastructureStatus(cp)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		csiDriverManilaValues["csimanila"] = map[string]interface{}{
-			"clusterID": cp.Namespace,
-		}
-		var authURL, domainName, projectName, username, password,
-			applicationCredentialID, applicationCredentialName, applicationCredentialSecret,
-			caCert, insecure, shareNetworkID string
-		if credentials != nil {
-			authURL = credentials.AuthURL
-			domainName = credentials.DomainName
-			projectName = credentials.TenantName
-			username = credentials.Username
-			password = credentials.Password
-			applicationCredentialID = credentials.ApplicationCredentialID
-			applicationCredentialName = credentials.ApplicationCredentialName
-			applicationCredentialSecret = credentials.ApplicationCredentialSecret
-			caCert = credentials.CACert
-			if credentials.Insecure {
-				insecure = "true"
-			}
-		}
-		if infraStatus.Networks.ShareNetwork != nil {
-			shareNetworkID = infraStatus.Networks.ShareNetwork.ID
-		}
-		csiDriverManilaValues["openstack"] = map[string]interface{}{
-			"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
-			"shareNetworkID":              shareNetworkID,
-			"shareClient":                 infrastructure.WorkersCIDR(infraConfig),
-			"authURL":                     authURL,
-			"region":                      cp.Spec.Region,
-			"domainName":                  domainName,
-			"projectName":                 projectName,
-			"userName":                    username,
-			"password":                    password,
-			"applicationCredentialID":     applicationCredentialID,
-			"applicationCredentialName":   applicationCredentialName,
-			"applicationCredentialSecret": applicationCredentialSecret,
-			"tlsInsecure":                 insecure,
-			"caCert":                      caCert,
+		if err := vp.addCSIManilaValues(values, cp, cluster, credentials); err != nil {
+			return nil, err
 		}
 	}
 
-	return csiDriverManilaValues, csiDriverNFSValues, nil
+	return values, nil
+}
+
+func (vp *valuesProvider) addCSIManilaValues(
+	values map[string]interface{},
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+	credentials *openstack.Credentials,
+) error {
+	values["csimanila"] = map[string]interface{}{
+		"clusterID": cp.Namespace,
+	}
+
+	infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
+	if err != nil {
+		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", kutil.ObjectName(cp), err)
+	}
+	infraStatus, err := vp.getInfrastructureStatus(cp)
+	if err != nil {
+		return err
+	}
+
+	var authURL, domainName, projectName, username, password,
+		applicationCredentialID, applicationCredentialName, applicationCredentialSecret,
+		caCert, insecure, shareNetworkID string
+	if credentials != nil {
+		authURL = credentials.AuthURL
+		domainName = credentials.DomainName
+		projectName = credentials.TenantName
+		username = credentials.Username
+		password = credentials.Password
+		applicationCredentialID = credentials.ApplicationCredentialID
+		applicationCredentialName = credentials.ApplicationCredentialName
+		applicationCredentialSecret = credentials.ApplicationCredentialSecret
+		caCert = credentials.CACert
+		if credentials.Insecure {
+			insecure = "true"
+		}
+	}
+	if infraStatus.Networks.ShareNetwork != nil {
+		shareNetworkID = infraStatus.Networks.ShareNetwork.ID
+	}
+	values["openstack"] = map[string]interface{}{
+		"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
+		"shareNetworkID":              shareNetworkID,
+		"shareClient":                 infrastructure.WorkersCIDR(infraConfig),
+		"authURL":                     authURL,
+		"region":                      cp.Spec.Region,
+		"domainName":                  domainName,
+		"projectName":                 projectName,
+		"userName":                    username,
+		"password":                    password,
+		"applicationCredentialID":     applicationCredentialID,
+		"applicationCredentialName":   applicationCredentialName,
+		"applicationCredentialSecret": applicationCredentialSecret,
+		"tlsInsecure":                 insecure,
+		"caCert":                      caCert,
+	}
+
+	return nil
 }
 
 func (vp *valuesProvider) getAllWorkerPoolsZones(cluster *extensionscontroller.Cluster) []string {

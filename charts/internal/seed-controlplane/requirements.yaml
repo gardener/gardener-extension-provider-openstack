@@ -7,3 +7,7 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: csi-driver-controller.enabled
+- name: csi-driver-manila-controller
+  repository: http://localhost:10191
+  version: 0.1.0
+  condition: csi-driver-manila-controller.enabled

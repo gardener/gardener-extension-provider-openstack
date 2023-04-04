@@ -1,4 +1,3 @@
-{{- if .Values.vpaEnabled }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -15,6 +14,13 @@ spec:
       maxAllowed:
         cpu: {{ $.Values.vpa.resourcePolicy.driverController.maxAllowed.cpu }}
         memory: {{ $.Values.vpa.resourcePolicy.driverController.maxAllowed.memory }}
+      controlledValues: RequestsOnly
+    - containerName: openstack-{{ .protocolSelector | lower }}-nfs-controller
+      minAllowed:
+        memory: {{ $.Values.resources.driverNFSController.requests.memory }}
+      maxAllowed:
+        cpu: {{ $.Values.vpa.resourcePolicy.driverNFSController.maxAllowed.cpu }}
+        memory: {{ $.Values.vpa.resourcePolicy.driverNFSController.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-{{ .protocolSelector | lower }}-provisioner
       minAllowed:
@@ -37,18 +43,17 @@ spec:
         cpu: {{ $.Values.vpa.resourcePolicy.resizer.maxAllowed.cpu }}
         memory: {{ $.Values.vpa.resourcePolicy.resizer.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    {{- end }}
-    - containerName: openstack-csi-liveness-probe
+    - containerName: openstack-{{ .protocolSelector | lower }}-liveness-probe
       minAllowed:
-        memory: {{ .Values.resources.livenessProbe.requests.memory }}
+        memory: {{ $.Values.resources.livenessProbe.requests.memory }}
       maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
+        cpu: {{ $.Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
+        memory: {{ $.Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
       controlledValues: RequestsOnly
+    {{- end }}
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: csi-driver-manila-controller
   updatePolicy:
     updateMode: Auto
-{{- end }}

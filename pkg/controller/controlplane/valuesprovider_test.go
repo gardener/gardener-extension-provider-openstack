@@ -615,6 +615,67 @@ var _ = Describe("ValuesProvider", func() {
 						},
 					},
 				}),
+				openstack.CSIManilaControllerName: enabledFalse,
+			}))
+		})
+
+		It("should return correct control plane chart values if CSI Manila is enabled", func() {
+			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+
+			cpManila := defaultControlPlaneWithManila(true)
+			values, err := vp.GetControlPlaneChartValues(ctx, cpManila, clusterK8sAtLeast120, fakeSecretsManager, checksums, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(map[string]interface{}{
+				"global": map[string]interface{}{
+					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
+				},
+				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
+					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
+					"kubernetesVersion": clusterK8sAtLeast120.Shoot.Spec.Kubernetes.Version,
+				}),
+				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
+					"replicas": 1,
+					"podAnnotations": map[string]interface{}{
+						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+					},
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
+					"csiSnapshotController": map[string]interface{}{
+						"replicas": 1,
+					},
+					"csiSnapshotValidationWebhook": map[string]interface{}{
+						"replicas": 1,
+						"secrets": map[string]interface{}{
+							"server": "csi-snapshot-validation-server",
+						},
+					},
+				}),
+				openstack.CSIManilaControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
+					"replicas": 1,
+					"podAnnotations": map[string]interface{}{
+						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
+					},
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
+					"csimanila": map[string]interface{}{
+						"clusterID": "test",
+					},
+					"openstack": map[string]interface{}{
+						"projectName":                 "tenant-name",
+						"userName":                    "username",
+						"password":                    "password",
+						"applicationCredentialID":     "",
+						"applicationCredentialName":   "",
+						"availabilityZones":           []string{"zone1", "zone2"},
+						"authURL":                     authURL,
+						"region":                      "europe",
+						"applicationCredentialSecret": "",
+						"shareClient":                 "10.200.0.0/19",
+						"shareNetworkID":              "1111-2222-3333-4444",
+						"domainName":                  "domain-name",
+						"tlsInsecure":                 "",
+						"caCert":                      "",
+					},
+				}),
 			}))
 		})
 	})
@@ -650,7 +711,6 @@ var _ = Describe("ValuesProvider", func() {
 						"pspDisabled": false,
 					}),
 					openstack.CSIDriverManila: enabledFalse,
-					openstack.CSIDriverNFS:    enabledFalse,
 				}))
 			})
 
@@ -699,10 +759,6 @@ var _ = Describe("ValuesProvider", func() {
 						"pspDisabled": false,
 						"vpaEnabled":  true,
 					}),
-					openstack.CSIDriverNFS: utils.MergeMaps(enabledTrue, map[string]interface{}{
-						"pspDisabled": false,
-						"vpaEnabled":  true,
-					}),
 				}))
 			})
 		})
@@ -737,7 +793,6 @@ var _ = Describe("ValuesProvider", func() {
 						"pspDisabled": false,
 					}),
 					openstack.CSIDriverManila: enabledFalse,
-					openstack.CSIDriverNFS:    enabledFalse,
 				}))
 			})
 			It("should return correct shoot control plane chart when PodSecurityPolicy admission plugin is disabled in the shoot", func() {
@@ -770,7 +825,6 @@ var _ = Describe("ValuesProvider", func() {
 						"pspDisabled": true,
 					}),
 					openstack.CSIDriverManila: enabledFalse,
-					openstack.CSIDriverNFS:    enabledFalse,
 				}))
 			})
 		})

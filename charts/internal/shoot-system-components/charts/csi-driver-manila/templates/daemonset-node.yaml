@@ -36,7 +36,7 @@ spec:
           type: RuntimeDefault
       containers:
         {{- range .Values.shareProtocols }}
-        - name: {{ .protocolSelector | lower }}-nodeplugin
+        - name: driver-manila-{{ .protocolSelector | lower }}-node
           securityContext:
             privileged: true
             capabilities:
@@ -101,6 +101,49 @@ spec:
 {{ toYaml $.Values.resources.driverNode | indent 12 }}
 {{- end }}
 
+        - name: driver-nfs-{{ .protocolSelector | lower }}-node
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: {{ index $.Values.images "csi-driver-nfs" }}
+          args :
+            - "--v=2"
+            - "--nodeid=$(NODE_ID)"
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--drivername=gardener-{{ .protocolSelector | lower }}.nfs.csi.k8s.io"
+            - "--mount-permissions={{ .node.mountPermissions }}"
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+          ports:
+            - containerPort: {{ .node.livenessProbe.healthPort2 }}
+              name: healthz
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+{{- if $.Values.resources.driverNode }}
+          resources:
+{{ toYaml $.Values.resources.driverNode | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .protocolSelector | lower }}-fwd-plugin-dir
+              mountPath: /csi
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet/pods
+              mountPropagation: "Bidirectional"
+
         - name: {{ .protocolSelector | lower }}-registrar
           image: {{ index $.Values.images "csi-node-driver-registrar" }}
           args:
@@ -124,7 +167,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
 
-        - name: {{ .protocolSelector | lower }}-liveness-probe
+        - name: {{ .protocolSelector | lower }}-manila-liveness-probe
           image: {{ index $.Values.images "csi-liveness-probe" }}
           args:
             - --csi-address=/csi/csi.sock
@@ -136,6 +179,20 @@ spec:
           volumeMounts:
             - name: {{ .protocolSelector | lower }}-plugin-dir
               mountPath: /csi
+
+        - name: {{ .protocolSelector | lower }}-nfs-liveness-probe
+          image: {{ index $.Values.images "csi-liveness-probe" }}
+          args:
+            - --csi-address=/csi/csi.sock
+            - --health-port={{ .node.livenessProbe.healthPort2 }}
+{{- if $.Values.resources.livenessProbe }}
+          resources:
+{{ toYaml $.Values.resources.livenessProbe | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .protocolSelector | lower }}-plugin-dir
+              mountPath: /csi
+
         {{- end }}
 
       volumes:
@@ -166,3 +223,7 @@ spec:
               - key: ca.crt
                 path: ca.crt
         {{- end }}
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory

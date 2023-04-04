@@ -7,50 +7,48 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    {{- range .Values.shareProtocols }}
-    - containerName: openstack-{{ .protocolSelector | lower }}-controller
+    - containerName: openstack-nfs-controller
       minAllowed:
-        memory: {{ $.Values.resources.driverController.requests.memory }}
+        memory: {{ .Values.resources.driverController.requests.memory }}
       maxAllowed:
-        cpu: {{ $.Values.vpa.resourcePolicy.driverController.maxAllowed.cpu }}
-        memory: {{ $.Values.vpa.resourcePolicy.driverController.maxAllowed.memory }}
+        cpu: {{ .Values.vpa.resourcePolicy.driverController.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.driverController.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-{{ .protocolSelector | lower }}-nfs-controller
+    - containerName: openstack-nfs-nfs-controller
       minAllowed:
-        memory: {{ $.Values.resources.driverNFSController.requests.memory }}
+        memory: {{ .Values.resources.driverNFSController.requests.memory }}
       maxAllowed:
-        cpu: {{ $.Values.vpa.resourcePolicy.driverNFSController.maxAllowed.cpu }}
-        memory: {{ $.Values.vpa.resourcePolicy.driverNFSController.maxAllowed.memory }}
+        cpu: {{ .Values.vpa.resourcePolicy.driverNFSController.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.driverNFSController.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-{{ .protocolSelector | lower }}-provisioner
+    - containerName: openstack-nfs-provisioner
       minAllowed:
-        memory: {{ $.Values.resources.provisioner.requests.memory }}
+        memory: {{ .Values.resources.provisioner.requests.memory }}
       maxAllowed:
-        cpu: {{ $.Values.vpa.resourcePolicy.provisioner.maxAllowed.cpu }}
-        memory: {{ $.Values.vpa.resourcePolicy.provisioner.maxAllowed.memory }}
+        cpu: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-{{ .protocolSelector | lower }}-snapshotter
+    - containerName: openstack-nfs-snapshotter
       minAllowed:
-        memory: {{ $.Values.resources.snapshotter.requests.memory }}
+        memory: {{ .Values.resources.snapshotter.requests.memory }}
       maxAllowed:
-        cpu: {{ $.Values.vpa.resourcePolicy.snapshotter.maxAllowed.cpu }}
-        memory: {{ $.Values.vpa.resourcePolicy.snapshotter.maxAllowed.memory }}
+        cpu: {{ .Values.vpa.resourcePolicy.snapshotter.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.snapshotter.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-{{ .protocolSelector | lower }}-resizer
+    - containerName: openstack-nfs-resizer
       minAllowed:
-        memory: {{ $.Values.resources.resizer.requests.memory }}
+        memory: {{ .Values.resources.resizer.requests.memory }}
       maxAllowed:
-        cpu: {{ $.Values.vpa.resourcePolicy.resizer.maxAllowed.cpu }}
-        memory: {{ $.Values.vpa.resourcePolicy.resizer.maxAllowed.memory }}
+        cpu: {{ .Values.vpa.resourcePolicy.resizer.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.resizer.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-{{ .protocolSelector | lower }}-liveness-probe
+    - containerName: openstack-nfs-liveness-probe
       minAllowed:
-        memory: {{ $.Values.resources.livenessProbe.requests.memory }}
+        memory: {{ .Values.resources.livenessProbe.requests.memory }}
       maxAllowed:
-        cpu: {{ $.Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
-        memory: {{ $.Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
+        cpu: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
+        memory: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    {{- end }}
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

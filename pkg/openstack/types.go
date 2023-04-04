@@ -141,8 +141,6 @@ const (
 	CSIStorageProvisioner = "cinder.csi.openstack.org"
 	// CSIManilaStorageProvisionerNFS is a constant with the storage provisioner name which is used in storageclasses for Manila NFS.
 	CSIManilaStorageProvisionerNFS = "nfs.manila.csi.openstack.org"
-	// CSIStorageProvisionerNFS is a constant with the storage provisioner name which is used in storageclasses for generic NFS.
-	CSIStorageProvisionerNFS = "nfs.csi.k8s.io"
 	// CSIManilaNFS is a constant for CSI Manila NFS resource objects
 	CSIManilaNFS = "csi-manila-nfs"
 	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret

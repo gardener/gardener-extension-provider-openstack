@@ -64,30 +64,13 @@ vpa:
         memory: 3G
 
 # Enabled Manila share protocols
-shareProtocols:
-  - protocolSelector: NFS
-    fsGroupPolicy: None
-    fwdNodePluginEndpoint:
-      dir: /var/lib/kubelet/plugins/csi-nfsplugin
-      sockFile: csi.sock
-    node:
-      livenessProbe:
-        healthPort: 24913
-        healthPort2: 24914
-      mountPermissions: 0777
-    controller:
-      livenessProbe:
-        healthPort: 11950
-  # - protocolSelector: CEPHFS
-  #   fwdNodePluginEndpoint:
-  #     dir: /var/lib/kubelet/plugins/cephfs.csi.ceph.com
-  #     sockFile: csi.sock
-  #   node:
-  #     livenessProbe:
-  #       healthPort: 24914
-  #   controller:
-  #     livenessProbe:
-  #       healthPort: 11951
+nfs:
+  fsGroupPolicy: None
+  node:
+    livenessProbe:
+      healthPort: 24913
+      healthPort2: 24914
+    mountPermissions: 0777
 
 # CSI Manila spec
 csimanila:

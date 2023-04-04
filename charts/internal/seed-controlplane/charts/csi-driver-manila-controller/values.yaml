@@ -1,12 +1,11 @@
 images:
   csi-driver-manila: image-repository:image-tag
+  csi-driver-nfs: image-repository:image-tag
   csi-liveness-probe: image-repository:image-tag
   csi-provisioner: image-repository:image-tag
   csi-snapshotter: image-repository:image-tag
   csi-resizer: image-repository:image-tag
-  csi-driver-nfs: image-repository:image-tag
 
-dnsPolicy: ClusterFirstWithHostNet # available values: Default, ClusterFirstWithHostNet, ClusterFirst
 timeout: 3m
 userAgentHeaders: []
 
@@ -14,24 +13,7 @@ global:
   genericTokenKubeconfigSecretName: secret
 
 openstack:
-  availabilityZones:
-    - zone1
-    - zone2
-  shareNetworkID: shareNetworkIDValue
-  shareClient: 10.180.0.0/16
-  shareProtocol: NFS
-  authURL: authURLValue
-  region: regionValue
-  domainName: domainNameValue
-  projectName: projectNameValue
-  userName: userNameValue
-  password: userNameValue
-  #applicationCredentialID: applicationCredentialIDValue
-  #applicationCredentialName: applicationCredentialName
-  #applicationCredentialSecret: applicationCredentialSecretValue
-  #caCert: xxx
-  #tlsInsecure: true
-
+  caCert: ""
 resources:
   driverController:
     requests:
@@ -96,30 +78,6 @@ vpa:
       maxAllowed:
         cpu: 500m
         memory: 2G
-
-# Enabled Manila share protocols
-shareProtocols:
-  - protocolSelector: NFS
-    fsGroupPolicy: None
-    fwdNodePluginEndpoint:
-      dir: /var/lib/kubelet/plugins/csi-nfsplugin
-      sockFile: csi.sock
-    node:
-      livenessProbe:
-        healthPort: 24913
-    controller:
-      livenessProbe:
-        healthPort: 11950
-  # - protocolSelector: CEPHFS
-  #   fwdNodePluginEndpoint:
-  #     dir: /var/lib/kubelet/plugins/cephfs.csi.ceph.com
-  #     sockFile: csi.sock
-  #   node:
-  #     livenessProbe:
-  #       healthPort: 24914
-  #   controller:
-  #     livenessProbe:
-  #       healthPort: 11951
 
 # CSI Manila spec
 csimanila:

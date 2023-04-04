@@ -56,6 +56,9 @@ networks:
 # router:
 #   id: 1234
   workers: 10.250.0.0/19
+
+# shareNetwork:
+#   enabled: true
 ```
 
 The `floatingPoolName` is the name of the floating pool you want to use for your shoot.
@@ -80,6 +83,9 @@ The `networks.workers` section describes the CIDR for a subnet that is used for 
 You can freely choose these CIDRs and it is your responsibility to properly design the network layout to suit your needs.
 
 Apart from the router and the worker subnet the OpenStack extension will also create a network, router interfaces, security groups, and a key pair.
+
+The optional `networks.shareNetwork.enabled` field controls the creation of a share network. This is only needed if shared
+file system storage (like NFS) should be used. Note, that in this case, the `ControlPlaneConfig` needs additional configuration, too.
 
 ## `ControlPlaneConfig`
 
@@ -106,6 +112,9 @@ loadBalancerClasses:
 cloudControllerManager:
   featureGates:
     CustomResourceValidation: true
+#storage:
+#  csiManila:
+#    enabled: true
 ```
 
 The `loadBalancerProvider` is the provider name you want to use for load balancers in your shoot.
@@ -126,6 +135,11 @@ The `loadBalancerClasses` field contains an optional list of load balancer class
 The `cloudControllerManager.featureGates` contains a map of explicitly enabled or disabled feature gates.
 For production usage it's not recommended to use this field at all as you can enable alpha features or disable beta/stable features, potentially impacting the cluster stability.
 If you don't want to configure anything for the `cloudControllerManager` simply omit the key in the YAML specification.
+
+The optional `storage.csiManila.enabled` field is used to enable the deployment of the CSI Manila driver to support NFS persistent volumes.
+In this case, please ensure to set `networks.shareNetwork.enabled=true` in the `InfrastructureConfig`, too.
+Additionally, if CSI Manila driver is enabled, for each availability zone a NFS `StorageClass` will be created on the shoot 
+named like `csi-manila-nfs-<zone>`.
 
 ## `WorkerConfig`
 

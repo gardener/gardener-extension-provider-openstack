@@ -1,0 +1,94 @@
+images:
+  csi-driver-manila: image-repository:image-tag
+  csi-driver-nfs: image-repository:image-tag
+  csi-node-driver-registrar: image-repository:image-tag
+  csi-liveness-probe: image-repository:image-tag
+
+vpaEnabled: false
+pspDisabled: false
+dnsPolicy: ClusterFirstWithHostNet # available values: Default, ClusterFirstWithHostNet, ClusterFirst
+timeout: 3m
+
+openstack:
+  availabilityZones:
+    - zone1
+    - zone2
+  shareNetworkID: shareNetworkIDValue
+  shareClient: 10.180.0.0/16
+  shareProtocol: NFS
+  authURL: authURLValue
+  region: regionValue
+  domainName: domainNameValue
+  projectName: projectNameValue
+  userName: userNameValue
+  password: userNameValue
+  #applicationCredentialID: applicationCredentialIDValue
+  #applicationCredentialName: applicationCredentialName
+  #applicationCredentialSecret: applicationCredentialSecretValue
+  #caCert: xxx
+  #tlsInsecure: true
+
+resources:
+  driverNode:
+    requests:
+      cpu: 15m
+      memory: 42Mi
+    limits:
+      memory: 2Gi
+  nodeDriverRegistrar:
+    requests:
+      cpu: 11m
+      memory: 32Mi
+    limits:
+      memory: 1Gi
+  livenessProbe:
+    requests:
+      cpu: 11m
+      memory: 32Mi
+    limits:
+      memory: 200Mi
+
+vpa:
+  resourcePolicy:
+    livenessProbe:
+      maxAllowed:
+        cpu: 500m
+        memory: 2G
+    driverNode:
+      maxAllowed:
+        cpu: 2
+        memory: 4G
+    nodeDriverRegistrar:
+      maxAllowed:
+        cpu: 1
+        memory: 3G
+
+# Enabled Manila share protocols
+nfs:
+  fsGroupPolicy: None
+  node:
+    livenessProbe:
+      healthPort: 24913
+      healthPort2: 24914
+    mountPermissions: 0777
+
+# CSI Manila spec
+csimanila:
+  # Runtime configuration
+  runtimeConfig:
+    enabled: false
+    jsonData: |-
+      {
+        "nfs": {
+          "matchExportLocationAddress": "172.168.122.0/24"
+        }
+      }
+
+  topologyAwarenessEnabled: false
+  # Availability zone for each node. topologyAwarenessEnabled must be set to true for this option to have any effect.
+  # If your Kubernetes cluster runs atop of Nova and want to use Nova AZs as AZs for the nodes of the cluster, uncomment the line below:
+  #nodeAZ: "$(curl http://169.254.169.254/openstack/latest/meta_data.json | jq -r .availability_zone)"
+
+  # You may set ID of the cluster where manila-csi is deployed. This value will be appended
+  # to share metadata in newly provisioned shares as `manila.csi.openstack.org/cluster=<cluster ID>`.
+  clusterID: ""

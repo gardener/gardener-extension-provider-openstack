@@ -28,6 +28,10 @@ const (
 	CloudControllerManagerImageName = "cloud-controller-manager"
 	// CSIDriverCinderImageName is the name of the csi-driver-cinder image.
 	CSIDriverCinderImageName = "csi-driver-cinder"
+	// CSIDriverManilaImageName is the name of the csi-driver-manila image.
+	CSIDriverManilaImageName = "csi-driver-manila"
+	// CSIDriverNFSImageName is the name of the csi-driver-nfs image.
+	CSIDriverNFSImageName = "csi-driver-nfs"
 	// CSIProvisionerImageName is the name of the csi-provisioner image.
 	CSIProvisionerImageName = "csi-provisioner"
 	// CSIAttacherImageName is the name of the csi-attacher image.
@@ -103,14 +107,22 @@ const (
 	CloudProviderConfigKeyStoneCAKey = "keystone-ca.crt"
 	// CloudControllerManagerName is a constant for the name of the CloudController deployed by the worker controller.
 	CloudControllerManagerName = "cloud-controller-manager"
-	// CSIControllerName is a constant for the chart name for a CSI controller deployment in the seed.
+	// CSIControllerName is a constant for the chart name for a CSI Cinder controller deployment in the seed.
 	CSIControllerName = "csi-driver-controller"
-	// CSIControllerCinderName is a constant for the name of the Cinder CSI controller deployment in the seed.
-	CSIControllerCinderName = "csi-driver-controller-cinder"
-	// CSINodeName is a constant for the chart name for a CSI node deployment in the shoot.
+	// CSIManilaControllerName is a constant for the chart name for a CSI Manila controller deployment in the seed.
+	CSIManilaControllerName = "csi-driver-manila-controller"
+	// CSINFSControllerName is a constant for the chart name for a CSI NFS controller deployment in the shoot.
+	CSINFSControllerName = "csi-driver-nfs-controller"
+	// CSINodeName is a constant for the chart name for a CSI Cinder node deployment in the shoot.
 	CSINodeName = "csi-driver-node"
-	// CSINodeCinderName is a constant for the name of the Cinder CSI node deployment in the shoot.
-	CSINodeCinderName = "csi-driver-node-cinder"
+	// CSIManilaNodeName is a constant for the chart name for a CSI Manila node deployment in the shoot.
+	CSIManilaNodeName = "csi-driver-manila-node"
+	// CSINFSNodeName is a constant for the chart name for a CSI NFS node deployment in the shoot.
+	CSINFSNodeName = "csi-driver-nfs-node"
+	// CSIDriverManila is a constant for the chart name for the CSI driver Manila deployment in the shoot.
+	CSIDriverManila = "csi-driver-manila"
+	// CSIDriverManilaController is a constant for the chart name for the CSI driver Manila / NFS controller deployment in the seed.
+	CSIDriverManilaController = "csi-driver-manila-controller"
 	// CSIDriverName is a constant for the name of the csi-driver component.
 	CSIDriverName = "csi-driver"
 	// CSIProvisionerName is a constant for the name of the csi-provisioner component.
@@ -121,16 +133,19 @@ const (
 	CSISnapshotterName = "csi-snapshotter"
 	// CSIResizerName is a constant for the name of the csi-resizer component.
 	CSIResizerName = "csi-resizer"
-	// CSINodeDriverRegistrarName is a constant for the name of the csi-node-driver-registrar component.
-	CSINodeDriverRegistrarName = "csi-node-driver-registrar"
-	// CSILivenessProbeName is a constant for the name of the csi-liveness-probe component.
-	CSILivenessProbeName = "csi-liveness-probe"
 	// CSISnapshotControllerName is a constant for the name of the csi-snapshot-controller component.
 	CSISnapshotControllerName = "csi-snapshot-controller"
 	// CSISnapshotValidationName is the constant for the name of the csi-snapshot-validation-webhook component.
 	CSISnapshotValidationName = "csi-snapshot-validation"
 	// CSIStorageProvisioner is a constant with the storage provisioner name which is used in storageclasses.
 	CSIStorageProvisioner = "cinder.csi.openstack.org"
+	// CSIManilaStorageProvisionerNFS is a constant with the storage provisioner name which is used in storageclasses for Manila NFS.
+	CSIManilaStorageProvisionerNFS = "nfs.manila.csi.openstack.org"
+	// CSIManilaNFS is a constant for CSI Manila NFS resource objects
+	CSIManilaNFS = "csi-manila-nfs"
+	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret
+	CSIManilaSecret = "csi-manila-secret"
+
 	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
 	MachineControllerManagerName = "machine-controller-manager"
 	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager deployment.

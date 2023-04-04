@@ -15,6 +15,9 @@ socketPath: /var/lib/csi/sockets/pluginproxy
 timeout: 3m
 userAgentHeaders: []
 
+global:
+  genericTokenKubeconfigSecretName: secret
+
 resources:
   driver:
     requests:

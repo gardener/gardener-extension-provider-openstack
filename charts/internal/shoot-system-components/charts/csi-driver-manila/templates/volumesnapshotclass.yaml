@@ -1,0 +1,11 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  name: csi-manila-nfs
+driver: nfs.manila.csi.openstack.org
+deletionPolicy: Delete
+parameters:
+  csi.storage.k8s.io/snapshotter-secret-name: manila-csi-plugin
+  csi.storage.k8s.io/snapshotter-secret-namespace: {{ .Release.Namespace }}

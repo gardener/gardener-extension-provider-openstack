@@ -224,6 +224,49 @@ images:
         integrity_requirement: 'high'
         availability_requirement: 'low'
 
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: "v1.25.5"
+  targetVersion: "<= 1.25"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'end-user'
+        confidentiality_requirement: 'high'
+        integrity_requirement: 'high'
+        availability_requirement: 'low'
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: "v1.26.2"
+  targetVersion: ">= 1.26"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'end-user'
+        confidentiality_requirement: 'high'
+        integrity_requirement: 'high'
+        availability_requirement: 'low'
+
+- name: csi-driver-nfs
+  sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
+  repository: registry.k8s.io/sig-storage/nfsplugin
+  tag: "v4.1.0"
+  labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'protected'
+        authentication_enforced: false
+        user_interaction: 'end-user'
+        confidentiality_requirement: 'high'
+        integrity_requirement: 'high'
+        availability_requirement: 'low'
+
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner

@@ -169,7 +169,7 @@ func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.shoot.Spec.Kubernetes.Version, cpConfigPath)...)
+	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.infraConfig, context.shoot.Spec.Kubernetes.Version, cpConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateWorkers(context.shoot.Spec.Provider.Workers, context.cloudProfileConfig, workersPath)...)
 	return allErrs
 }

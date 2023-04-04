@@ -102,25 +102,6 @@ func (mr *MockFactoryMockRecorder) Networking(arg0 ...interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Networking", reflect.TypeOf((*MockFactory)(nil).Networking), arg0...)
 }
 
-// SharedFileSystem mocks base method.
-func (m *MockFactory) SharedFileSystem(arg0 ...client.Option) (client.SharedFileSystem, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SharedFileSystem", varargs...)
-	ret0, _ := ret[0].(client.SharedFileSystem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SharedFileSystem indicates an expected call of SharedFileSystem.
-func (mr *MockFactoryMockRecorder) SharedFileSystem(arg0 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SharedFileSystem", reflect.TypeOf((*MockFactory)(nil).SharedFileSystem), arg0...)
-}
-
 // Storage mocks base method.
 func (m *MockFactory) Storage(arg0 ...client.Option) (client.Storage, error) {
 	m.ctrl.T.Helper()

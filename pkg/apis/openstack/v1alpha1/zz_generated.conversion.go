@@ -25,6 +25,7 @@ import (
 	unsafe "unsafe"
 
 	openstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -1129,6 +1130,7 @@ func Convert_openstack_Subnet_To_v1alpha1_Subnet(in *openstack.Subnet, out *Subn
 }
 
 func autoConvert_v1alpha1_WorkerConfig_To_openstack_WorkerConfig(in *WorkerConfig, out *openstack.WorkerConfig, s conversion.Scope) error {
+	out.NodeTemplate = (*extensionsv1alpha1.NodeTemplate)(unsafe.Pointer(in.NodeTemplate))
 	out.ServerGroup = (*openstack.ServerGroup)(unsafe.Pointer(in.ServerGroup))
 	out.MachineLabels = *(*[]openstack.MachineLabel)(unsafe.Pointer(&in.MachineLabels))
 	return nil
@@ -1140,6 +1142,7 @@ func Convert_v1alpha1_WorkerConfig_To_openstack_WorkerConfig(in *WorkerConfig, o
 }
 
 func autoConvert_openstack_WorkerConfig_To_v1alpha1_WorkerConfig(in *openstack.WorkerConfig, out *WorkerConfig, s conversion.Scope) error {
+	out.NodeTemplate = (*extensionsv1alpha1.NodeTemplate)(unsafe.Pointer(in.NodeTemplate))
 	out.ServerGroup = (*ServerGroup)(unsafe.Pointer(in.ServerGroup))
 	out.MachineLabels = *(*[]MachineLabel)(unsafe.Pointer(&in.MachineLabels))
 	return nil

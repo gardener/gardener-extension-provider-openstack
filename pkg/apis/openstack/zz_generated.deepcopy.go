@@ -22,6 +22,7 @@ limitations under the License.
 package openstack
 
 import (
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -831,6 +832,11 @@ func (in *Subnet) DeepCopy() *Subnet {
 func (in *WorkerConfig) DeepCopyInto(out *WorkerConfig) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
+	if in.NodeTemplate != nil {
+		in, out := &in.NodeTemplate, &out.NodeTemplate
+		*out = new(v1alpha1.NodeTemplate)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ServerGroup != nil {
 		in, out := &in.ServerGroup, &out.ServerGroup
 		*out = new(ServerGroup)

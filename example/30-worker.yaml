@@ -103,3 +103,13 @@ spec:
     userData: IyEvYmluL2Jhc2gKCmVjaG8gImhlbGxvIHdvcmxkIgo=
     zones:
     - eu-de-1a
+#    providerConfig:
+#      apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+#      kind: WorkerConfig
+#      serverGroup:
+#        policy: soft-anti-affinity
+#      nodeTemplate:
+#        capacity:
+#          cpu: 2
+#          gpu: 0
+#          memory: 50Gi

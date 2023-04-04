@@ -650,6 +650,7 @@ var _ = Describe("ValuesProvider", func() {
 						"secrets": map[string]interface{}{
 							"server": "csi-snapshot-validation-server",
 						},
+						"topologyAwareRoutingEnabled": false,
 					},
 				}),
 				openstack.CSIManilaControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{

@@ -228,7 +228,7 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/manila-csi-plugin
   tag: "v1.25.5"
-  targetVersion: "<= 1.25"
+  targetVersion: "< 1.26"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:

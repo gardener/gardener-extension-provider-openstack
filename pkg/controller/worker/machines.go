@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -34,6 +35,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 // MachineClassKind yields the name of the machine class kind used by OpenStack provider.
@@ -254,24 +256,21 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 			pairs = append(pairs, pair.Name+"="+pair.Value)
 		}
 	}
-	copy := pool
-	if len(workerConfig.MachineLabels) > 0 {
-		// don't include complete provider config in Hash calculation
-		copy.ProviderConfig = nil
-		if len(pairs) > 0 {
-			// include machine labels marked for rolling
-			sort.Strings(pairs)
-			additionalHashData = append(additionalHashData, pairs...)
-		}
 
-		// include server group policy
-		if workerConfig.ServerGroup != nil {
-			additionalHashData = append(additionalHashData, workerConfig.ServerGroup.Policy)
-		}
+	if len(pairs) > 0 {
+		// include machine labels marked for rolling
+		sort.Strings(pairs)
+		additionalHashData = append(additionalHashData, pairs...)
+	}
+
+	// Currently the raw providerConfig is used to generate the hash which has unintended consequences like causing machine
+	// rollouts. Instead the provider-extension should be capable of providing information
+	if !w.hasPreserveAnnotation() {
+		pool.ProviderConfig = nil
 	}
 
 	// Generate the worker pool hash.
-	return worker.WorkerPoolHash(copy, w.cluster, additionalHashData...)
+	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData...)
 }
 
 // NormalizeLabelsForMachineClass because metadata in OpenStack resources do not allow for certain characters that present in k8s labels e.g. "/",
@@ -284,4 +283,11 @@ func NormalizeLabelsForMachineClass(in map[string]string) map[string]string {
 		res[newKey] = v
 	}
 	return res
+}
+
+func (w *workerDelegate) hasPreserveAnnotation() bool {
+	if v, ok := w.cluster.Shoot.Annotations[openstack.PreserveWorkerHashAnnotation]; ok && strings.EqualFold(v, "true") {
+		return true
+	}
+	return false
 }

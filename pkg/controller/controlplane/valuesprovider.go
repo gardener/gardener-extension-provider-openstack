@@ -167,8 +167,6 @@ var (
 					// csi-snapshot-validation-webhook
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotValidationName},
 					{Type: &corev1.Service{}, Name: openstack.CSISnapshotValidationName},
-					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
 				},
 			},
 			{
@@ -246,6 +244,8 @@ var (
 					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					// csi-snapshot-validation-webhook
 					{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}, Name: openstack.CSISnapshotValidationName},
+					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
+					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
 				},
 			},
 			{

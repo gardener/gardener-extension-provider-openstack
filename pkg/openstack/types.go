@@ -152,6 +152,10 @@ const (
 	MachineControllerManagerVpaName = "machine-controller-manager-vpa"
 	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack configurations for machine-controller-manager.
 	MachineControllerManagerMonitoringConfigName = "machine-controller-manager-monitoring-config"
+	// PreserveWorkerHashAnnotation controls whether the providerConfig will be included in the hash calculation for the respective worker pool.
+	// Deprecated: It is only introduced to ease the transition to the new hash calculation.
+	// TODO(KA): Remove in release v1.36
+	PreserveWorkerHashAnnotation = "openstack.provider.extensions.gardener.cloud/worker-preserve-hash"
 )
 
 var (

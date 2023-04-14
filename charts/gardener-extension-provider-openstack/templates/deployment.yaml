@@ -10,11 +10,6 @@ metadata:
   labels:
 {{ include "labels" . | indent 4 }}
     high-availability-config.resources.gardener.cloud/type: server
-    networking.gardener.cloud/to-runtime-apiserver: allowed
-    networking.gardener.cloud/to-dns: allowed
-    networking.gardener.cloud/to-public-networks: allowed
-    networking.gardener.cloud/to-private-networks: allowed
-    networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
 spec:
   revisionHistoryLimit: 1
   replicas: {{ .Values.replicaCount }}
@@ -40,6 +35,11 @@ spec:
         {{- end }}
       labels:
 {{ include "labels" . | indent 8 }}
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
+        networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
     spec:
       priorityClassName: gardener-system-900
       serviceAccountName: {{ include "name" . }}

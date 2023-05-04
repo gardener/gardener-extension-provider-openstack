@@ -2,7 +2,7 @@ images:
 - name: terraformer
   sourceRepository: github.com/gardener/terraformer
   repository: eu.gcr.io/gardener-project/gardener/terraformer-openstack
-  tag: "v2.20.0"
+  tag: "v2.21.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

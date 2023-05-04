@@ -110,8 +110,6 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
   ethertype         = "IPv4"
   protocol          = "tcp"
   remote_ip_prefix  = "0.0.0.0/0"
-  port_range_min    = 30000
-  port_range_max    = 32767
   security_group_id = openstack_networking_secgroup_v2.cluster.id
 }
 
@@ -120,8 +118,6 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_udp_all" {
   ethertype         = "IPv4"
   protocol          = "udp"
   remote_ip_prefix  = "0.0.0.0/0"
-  port_range_min    = 30000
-  port_range_max    = 32767
   security_group_id = openstack_networking_secgroup_v2.cluster.id
 }
 

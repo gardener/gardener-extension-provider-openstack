@@ -42,22 +42,24 @@ spec:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
           image: {{ index .Values.images "csi-driver-manila" }}
-          args:
-            - /bin/manila-csi-plugin
-            - --nodeid=$(NODE_ID)
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "/bin/manila-csi-plugin \
+              --nodeid=$(NODE_ID) \
             {{- if .Values.csimanila.runtimeConfig.enabled }}
-            - --runtime-config-file=/runtimeconfig/runtimeconfig.json
+              --runtime-config-file=/runtimeconfig/runtimeconfig.json \
             {{- end }}
             {{- if .Values.csimanila.topologyAwarenessEnabled }}
-            - --with-topology
-            - --nodeaz={{ .Values.csimanila.nodeAZ }}
+              --with-topology \
+              --nodeaz={{ .Values.csimanila.nodeAZ }}
             {{- end }}
-            - --endpoint=/csi/csi.sock
-            - --drivername=$(DRIVER_NAME)
-            - --share-protocol-selector=$(MANILA_SHARE_PROTO)
-            - --fwdendpoint=/csi-fwd/csi.sock
-            - --cluster-id={{ .Values.csimanila.clusterID }}
-            - --v=2
+              --endpoint=/csi/csi.sock \
+              --drivername=$(DRIVER_NAME) \
+              --share-protocol-selector=$(MANILA_SHARE_PROTO) \
+              --fwdendpoint=/csi-fwd/csi.sock \
+              --cluster-id={{ .Values.csimanila.clusterID }} \
+              --v=2"
           env:
             - name: DRIVER_NAME
               value: nfs.manila.csi.openstack.org

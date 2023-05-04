@@ -51,7 +51,6 @@ spec:
             - --cluster-id={{ .Values.csimanila.clusterID }}
             {{- if .Values.csimanila.topologyAwarenessEnabled }}
             - --with-topology
-            - --nodeaz={{ .Values.csimanila.nodeAZ }}
             {{- end }}
             {{- if .Values.csimanila.runtimeConfig.enabled }}
             - --runtime-config-file=/runtimeconfig/runtimeconfig.json

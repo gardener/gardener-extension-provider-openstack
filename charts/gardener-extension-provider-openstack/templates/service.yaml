@@ -5,13 +5,15 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
-    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: extensions
 {{-  if .Values.ignoreResources }}
     resources.gardener.cloud/ignore: "true"
 {{- end }}
+    # TODO: This label approach is deprecated and no longer needed in the future. Remove them as soon as gardener/gardener@v1.75 has been released.
+    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
   labels:
 {{ include "labels" . | indent 4 }}
 spec:

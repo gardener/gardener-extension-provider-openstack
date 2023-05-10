@@ -20,6 +20,8 @@ spec:
         checksum/gardener-extension-admission-openstack-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
         {{- end }}
       labels:
+        networking.gardener.cloud/to-dns: allowed
+        networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
 {{ include "labels" . | indent 8 }}
     spec:
       {{- if not .Values.global.virtualGarden.enabled }}

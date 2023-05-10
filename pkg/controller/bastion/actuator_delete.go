@@ -79,6 +79,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensi
 		}
 	}
 
+	// The bastion ingress rule in worker node security groups was also removed after the bastion security group was removed.
 	return util.DetermineError(removeSecurityGroup(networkingClient, opt), helper.KnownCodes)
 }
 

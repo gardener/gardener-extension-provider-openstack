@@ -325,10 +325,11 @@ func ensureSecurityGroupRules(log logr.Logger, client openstackclient.Networking
 		return errors.New("shoot security groups not found")
 	}
 
+	// apply security rules in bastion security group
 	var wantedRules []rules.CreateOpts
 	for _, ingressPermission := range ingressPermissions {
 		wantedRules = append(wantedRules,
-			IngressAllowSSH(opt, ingressPermission.EtherType, secGroupID, ingressPermission.CIDR),
+			IngressAllowSSH(opt, ingressPermission.EtherType, secGroupID, ingressPermission.CIDR, ""),
 			EgressAllowSSHToWorker(opt, secGroupID, infraStatus.SecurityGroups[0].ID),
 		)
 	}
@@ -354,6 +355,26 @@ func ensureSecurityGroupRules(log logr.Logger, client openstackclient.Networking
 			return fmt.Errorf("failed to delete security group rule %s (%s): %w", rule.Description, rule.ID, err)
 		}
 		log.Info("Unwanted security group rule deleted", "rule", rule.Description, "ruleID", rule.ID)
+	}
+
+	// apply bastion ingress rule in worker node security group
+	for _, ingressPermission := range ingressPermissions {
+		wantedRules = append(wantedRules,
+			//bastion ingress rule in worker node security group
+			IngressAllowSSH(opt, ingressPermission.EtherType, infraStatus.SecurityGroups[0].ID, "", secGroupID),
+		)
+	}
+
+	currentRules, err = listRules(client, infraStatus.SecurityGroups[0].ID)
+	if err != nil {
+		return fmt.Errorf("failed to list rules: %w", err)
+	}
+
+	rulesToAdd, _ = rulesSymmetricDifference(wantedRules, currentRules)
+	for _, rule := range rulesToAdd {
+		if err := createSecurityGroupRuleIfNotExist(log, client, rule); err != nil {
+			return fmt.Errorf("failed to add security group rule %s: %w", rule.Description, err)
+		}
 	}
 
 	return nil

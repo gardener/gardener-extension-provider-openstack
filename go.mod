@@ -8,7 +8,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gardener/etcd-druid v0.15.3
-	github.com/gardener/gardener v1.67.1
+	github.com/gardener/gardener v1.70.2
 	github.com/gardener/gardener-extension-networking-calico v1.28.0
 	github.com/gardener/gardener-extension-networking-cilium v1.20.0
 	github.com/gardener/machine-controller-manager v0.48.1
@@ -76,7 +76,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
-	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4 // indirect
+	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect

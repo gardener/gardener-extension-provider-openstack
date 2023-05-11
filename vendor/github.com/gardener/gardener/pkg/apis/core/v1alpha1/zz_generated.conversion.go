@@ -1742,6 +1742,7 @@ func autoConvert_v1alpha1_AdmissionPlugin_To_core_AdmissionPlugin(in *AdmissionP
 	out.Name = in.Name
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
 	out.Disabled = (*bool)(unsafe.Pointer(in.Disabled))
+	out.KubeconfigSecretName = (*string)(unsafe.Pointer(in.KubeconfigSecretName))
 	return nil
 }
 
@@ -1754,6 +1755,7 @@ func autoConvert_core_AdmissionPlugin_To_v1alpha1_AdmissionPlugin(in *core.Admis
 	out.Name = in.Name
 	out.Disabled = (*bool)(unsafe.Pointer(in.Disabled))
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
+	out.KubeconfigSecretName = (*string)(unsafe.Pointer(in.KubeconfigSecretName))
 	return nil
 }
 
@@ -4026,7 +4028,7 @@ func Convert_core_Maintenance_To_v1alpha1_Maintenance(in *core.Maintenance, out 
 
 func autoConvert_v1alpha1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *core.MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
-	out.MachineImageVersion = in.MachineImageVersion
+	out.MachineImageVersion = (*bool)(unsafe.Pointer(in.MachineImageVersion))
 	return nil
 }
 
@@ -4037,7 +4039,7 @@ func Convert_v1alpha1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in *Ma
 
 func autoConvert_core_MaintenanceAutoUpdate_To_v1alpha1_MaintenanceAutoUpdate(in *core.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
-	out.MachineImageVersion = in.MachineImageVersion
+	out.MachineImageVersion = (*bool)(unsafe.Pointer(in.MachineImageVersion))
 	return nil
 }
 
@@ -4111,7 +4113,7 @@ func Convert_core_NamedResourceReference_To_v1alpha1_NamedResourceReference(in *
 }
 
 func autoConvert_v1alpha1_Networking_To_core_Networking(in *Networking, out *core.Networking, s conversion.Scope) error {
-	out.Type = in.Type
+	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
@@ -4126,7 +4128,7 @@ func Convert_v1alpha1_Networking_To_core_Networking(in *Networking, out *core.Ne
 }
 
 func autoConvert_core_Networking_To_v1alpha1_Networking(in *core.Networking, out *Networking, s conversion.Scope) error {
-	out.Type = in.Type
+	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
@@ -5655,9 +5657,7 @@ func autoConvert_v1alpha1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.S
 	if err := Convert_v1alpha1_Kubernetes_To_core_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha1_Networking_To_core_Networking(&in.Networking, &out.Networking, s); err != nil {
-		return err
-	}
+	out.Networking = (*core.Networking)(unsafe.Pointer(in.Networking))
 	out.Maintenance = (*core.Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*core.Monitoring)(unsafe.Pointer(in.Monitoring))
 	if err := Convert_v1alpha1_Provider_To_core_Provider(&in.Provider, &out.Provider, s); err != nil {
@@ -5665,7 +5665,7 @@ func autoConvert_v1alpha1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.S
 	}
 	out.Purpose = (*core.ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
-	out.SecretBindingName = in.SecretBindingName
+	out.SecretBindingName = (*string)(unsafe.Pointer(in.SecretBindingName))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.SeedSelector = (*core.SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Resources = *(*[]core.NamedResourceReference)(unsafe.Pointer(&in.Resources))
@@ -5690,9 +5690,7 @@ func autoConvert_core_ShootSpec_To_v1alpha1_ShootSpec(in *core.ShootSpec, out *S
 	if err := Convert_core_Kubernetes_To_v1alpha1_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	if err := Convert_core_Networking_To_v1alpha1_Networking(&in.Networking, &out.Networking, s); err != nil {
-		return err
-	}
+	out.Networking = (*Networking)(unsafe.Pointer(in.Networking))
 	out.Maintenance = (*Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*Monitoring)(unsafe.Pointer(in.Monitoring))
 	if err := Convert_core_Provider_To_v1alpha1_Provider(&in.Provider, &out.Provider, s); err != nil {
@@ -5700,7 +5698,7 @@ func autoConvert_core_ShootSpec_To_v1alpha1_ShootSpec(in *core.ShootSpec, out *S
 	}
 	out.Purpose = (*ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
-	out.SecretBindingName = in.SecretBindingName
+	out.SecretBindingName = (*string)(unsafe.Pointer(in.SecretBindingName))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.SeedSelector = (*SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Resources = *(*[]NamedResourceReference)(unsafe.Pointer(&in.Resources))
@@ -6017,6 +6015,7 @@ func autoConvert_v1alpha1_Worker_To_core_Worker(in *Worker, out *core.Worker, s 
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	out.SystemComponents = (*core.WorkerSystemComponents)(unsafe.Pointer(in.SystemComponents))
 	out.MachineControllerManagerSettings = (*core.MachineControllerManagerSettings)(unsafe.Pointer(in.MachineControllerManagerSettings))
+	out.Sysctls = *(*map[string]string)(unsafe.Pointer(&in.Sysctls))
 	return nil
 }
 
@@ -6055,6 +6054,7 @@ func autoConvert_core_Worker_To_v1alpha1_Worker(in *core.Worker, out *Worker, s 
 	out.KubeletDataVolumeName = (*string)(unsafe.Pointer(in.KubeletDataVolumeName))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	out.MachineControllerManagerSettings = (*MachineControllerManagerSettings)(unsafe.Pointer(in.MachineControllerManagerSettings))
+	out.Sysctls = *(*map[string]string)(unsafe.Pointer(&in.Sysctls))
 	return nil
 }
 

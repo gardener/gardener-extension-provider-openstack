@@ -23,14 +23,19 @@ source $(dirname "${0}")/ci-common.sh
 clamp_mss_to_pmtu
 
 # test setup
-make kind-operator-up
+make kind-ha-single-zone-up
+make kind2-ha-single-zone-up
 
 # export all container logs and events after test execution
-trap "
-  ( export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig; export_artifacts 'gardener-operator-local' )
-  ( make kind-operator-down )
-" EXIT
+trap '{
+  KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG export_artifacts "gardener-local-ha-single-zone"
+  KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2-ha-single-zone"
+  make kind-ha-single-zone-down
+  make kind2-ha-single-zone-down
+}' EXIT
 
-make operator-up
-make test-e2e-local-operator PARALLEL_E2E_TESTS=10
-make operator-down
+make gardener-ha-single-zone-up
+make gardenlet-kind2-ha-single-zone-up
+make test-e2e-local-migration-ha-single-zone
+make gardener-ha-single-zone-down
+make gardenlet-kind2-ha-single-zone-down

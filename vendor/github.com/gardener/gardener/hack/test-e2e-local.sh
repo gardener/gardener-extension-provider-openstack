@@ -53,11 +53,13 @@ if [[ "$1" != "operator" ]]; then
     e2e-update-node.local
     e2e-update-zone.local
     e2e-upgrade.local
+    e2e-upgrade-ha.local
+    e2e-upgrade-hib.local
   )
 
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
-      if [ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" = "zone" -a "$shoot" = "e2e-update-zone.local" ]; then
+      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upgrade-ha.local" || "$shoot" == "e2e-update-zone.local") ]]; then
         # Do not add the entry for the e2e-update-zone test as the target ip is dynamic.
         # The shoot cluster in e2e-update-zone is created as single-zone control plane and afterwards updated to a multi-zone control plane.
         # This means that the external loadbalancer IP will change from a zone-specific istio ingress gateway to the default istio ingress gateway.
@@ -78,6 +80,16 @@ if [[ "$1" != "operator" ]]; then
         fi
       done
     done
+  fi
+# If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
+else
+  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    printf "\n127.0.0.1 api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
+  else
+    if ! grep -q -x "127.0.0.1 api.virtual-garden.local.gardener.cloud" /etc/hosts; then
+      printf "Hostname for virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      exit 1
+    fi
   fi
 fi
 

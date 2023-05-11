@@ -1,4 +1,4 @@
-# Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ GO_ADD_LICENSE_VERSION ?= v1.1.1
 GOIMPORTSREVISER_VERSION ?= v3.3.1
 GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.11.2
-KIND_VERSION ?= v0.14.0
+KIND_VERSION ?= v0.18.0
 KUBECTL_VERSION ?= v1.24.11
 SKAFFOLD_VERSION ?= v2.2.0
 YQ_VERSION ?= v4.31.2

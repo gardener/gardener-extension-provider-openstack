@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener-extension-networking-cilium/pkg/cilium"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -79,6 +80,11 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 
 	// Skip if specs are matching
 	if oldShoot != nil && reflect.DeepEqual(shoot.Spec, oldShoot.Spec) {
+		return nil
+	}
+
+	// Skip if it's a workerless Shoot
+	if gardencorev1beta1helper.IsWorkerless(shoot) {
 		return nil
 	}
 

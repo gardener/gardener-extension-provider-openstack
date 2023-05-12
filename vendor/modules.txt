@@ -109,6 +109,7 @@ github.com/gardener/gardener/pkg/api/extensions
 github.com/gardener/gardener/pkg/apis/authentication
 github.com/gardener/gardener/pkg/apis/authentication/v1alpha1
 github.com/gardener/gardener/pkg/apis/core
+github.com/gardener/gardener/pkg/apis/core/helper
 github.com/gardener/gardener/pkg/apis/core/install
 github.com/gardener/gardener/pkg/apis/core/v1alpha1
 github.com/gardener/gardener/pkg/apis/core/v1beta1

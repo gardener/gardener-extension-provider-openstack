@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: csi-driver-manila-controller
+  name: csi-driver-controller-manila
   namespace: {{ .Release.Namespace }}
   labels:
     app: csi
-    role: driver-manila-controller
+    role: controller-manila
     high-availability-config.resources.gardener.cloud/type: controller
 spec:
   replicas: {{ .Values.replicas }}
@@ -13,7 +13,7 @@ spec:
   selector:
     matchLabels:
       app: csi
-      role: driver-manila-controller
+      role: controller-manila
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -28,7 +28,7 @@ spec:
       creationTimestamp: null
       labels:
         app: csi
-        role: driver-manila-controller
+        role: controller-manila
         gardener.cloud/role: controlplane
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-public-networks: allowed
@@ -38,7 +38,7 @@ spec:
       automountServiceAccountToken: false
       priorityClassName: gardener-system-300
       containers:
-        - name: openstack-nfs-driver
+        - name: openstack-csi-manila-driver
           image: {{ index .Values.images "csi-driver-manila" }}
           args:
             - /bin/manila-csi-plugin
@@ -86,9 +86,7 @@ spec:
               mountPath: /var/run/csi-manila
             {{- end }}
 
-
-
-        - name: openstack-nfs-nfs-controller
+        - name: openstack-csi-manila-nfs-driver
           image: {{ index .Values.images "csi-driver-nfs" }}
           args:
             - "--v=5"
@@ -137,7 +135,7 @@ spec:
             - name: nfs-fwd-plugin-dir
               mountPath: /csi
 
-        - name: openstack-nfs-provisioner
+        - name: openstack-csi-manila-provisioner
           image: {{ index .Values.images "csi-provisioner" }}
           args:
             - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
@@ -161,7 +159,7 @@ spec:
               name: kubeconfig-csi-provisioner
               readOnly: true
 
-        - name: openstack-nfs-snapshotter
+        - name: openstack-csi-manila-snapshotter
           image: {{ index .Values.images "csi-snapshotter" }}
           args:
             - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
@@ -181,7 +179,7 @@ spec:
               name: kubeconfig-csi-snapshotter
               readOnly: true
 
-        - name: openstack-nfs-resizer
+        - name: openstack-csi-manila-resizer
           image: {{ index .Values.images "csi-resizer" }}
           args:
             - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig

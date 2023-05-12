@@ -179,20 +179,25 @@ func ensurePublicIPAddress(opt *Options, log logr.Logger, client openstackclient
 		return nil, errors.New("router must not be empty")
 	}
 
-	routers, err := client.GetRouterByID(infraStatus.Networks.Router.ID)
+	routerList, err := client.GetRouterByID(infraStatus.Networks.Router.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(routers) == 0 {
+	if len(routerList) == 0 {
 		return nil, fmt.Errorf("router with ID %s was not found", infraStatus.Networks.Router.ID)
 	}
 
-	var subnetID string
-	if router := routers[0]; len(router.GatewayInfo.ExternalFixedIPs) != 0 {
-		subnetID = router.GatewayInfo.ExternalFixedIPs[0].SubnetID
+	var (
+		subnetID string
+	)
+
+	router := routerList[0]
+	if len(router.GatewayInfo.ExternalFixedIPs) == 0 {
+		return nil, errors.New("no external fixed IPs detected on the router")
 	}
 
+	subnetID = router.GatewayInfo.ExternalFixedIPs[0].SubnetID
 	createOpts := floatingips.CreateOpts{
 		Description:       opt.BastionInstanceName,
 		FloatingNetworkID: infraStatus.Networks.FloatingPool.ID,

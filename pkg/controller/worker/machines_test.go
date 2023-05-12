@@ -242,7 +242,7 @@ var _ = Describe("Machines", func() {
 					},
 					Shoot: &gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
-							Networking: gardencorev1beta1.Networking{
+							Networking: &gardencorev1beta1.Networking{
 								Pods: &podCIDR,
 							},
 							Kubernetes: gardencorev1beta1.Kubernetes{

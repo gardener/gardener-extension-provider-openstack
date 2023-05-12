@@ -87,64 +87,66 @@ func (s *shoot) Mutate(ctx context.Context, new, old client.Object) error {
 		return nil
 	}
 
-	switch shoot.Spec.Networking.Type {
-	case calico.ReleaseName:
-		overlay := &calicov1alpha1.Overlay{Enabled: false}
-		if EnableOverlayAsDefaultForCalico {
-			overlay = &calicov1alpha1.Overlay{Enabled: true}
-		}
+	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
+		switch *shoot.Spec.Networking.Type {
+		case calico.ReleaseName:
+			overlay := &calicov1alpha1.Overlay{Enabled: false}
+			if EnableOverlayAsDefaultForCalico {
+				overlay = &calicov1alpha1.Overlay{Enabled: true}
+			}
 
-		networkConfig, err := s.decodeCalicoNetworkConfig(shoot.Spec.Networking.ProviderConfig)
-		if err != nil {
-			return err
-		}
-
-		if oldShoot == nil && networkConfig.Overlay == nil {
-			networkConfig.Overlay = overlay
-		}
-
-		if oldShoot != nil && networkConfig.Overlay == nil {
-			oldNetworkConfig, err := s.decodeCalicoNetworkConfig(oldShoot.Spec.Networking.ProviderConfig)
+			networkConfig, err := s.decodeCalicoNetworkConfig(shoot.Spec.Networking.ProviderConfig)
 			if err != nil {
 				return err
 			}
 
-			if oldNetworkConfig.Overlay != nil {
-				networkConfig.Overlay = oldNetworkConfig.Overlay
+			if oldShoot == nil && networkConfig.Overlay == nil {
+				networkConfig.Overlay = overlay
 			}
-		}
 
-		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
-			Object: networkConfig,
-		}
+			if oldShoot != nil && networkConfig.Overlay == nil {
+				oldNetworkConfig, err := s.decodeCalicoNetworkConfig(oldShoot.Spec.Networking.ProviderConfig)
+				if err != nil {
+					return err
+				}
 
-	case cilium.ReleaseName:
-		overlay := &ciliumv1alpha1.Overlay{Enabled: false}
-		if EnableOverlayAsDefaultForCilium {
-			overlay = &ciliumv1alpha1.Overlay{Enabled: true}
-		}
-		networkConfig, err := s.decodeCiliumNetworkConfig(shoot.Spec.Networking.ProviderConfig)
-		if err != nil {
-			return err
-		}
+				if oldNetworkConfig.Overlay != nil {
+					networkConfig.Overlay = oldNetworkConfig.Overlay
+				}
+			}
 
-		if oldShoot == nil && networkConfig.Overlay == nil {
-			networkConfig.Overlay = overlay
-		}
+			shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+				Object: networkConfig,
+			}
 
-		if oldShoot != nil && networkConfig.Overlay == nil {
-			oldNetworkConfig, err := s.decodeCiliumNetworkConfig(oldShoot.Spec.Networking.ProviderConfig)
+		case cilium.ReleaseName:
+			overlay := &ciliumv1alpha1.Overlay{Enabled: false}
+			if EnableOverlayAsDefaultForCilium {
+				overlay = &ciliumv1alpha1.Overlay{Enabled: true}
+			}
+			networkConfig, err := s.decodeCiliumNetworkConfig(shoot.Spec.Networking.ProviderConfig)
 			if err != nil {
 				return err
 			}
 
-			if oldNetworkConfig.Overlay != nil {
-				networkConfig.Overlay = oldNetworkConfig.Overlay
+			if oldShoot == nil && networkConfig.Overlay == nil {
+				networkConfig.Overlay = overlay
 			}
-		}
 
-		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
-			Object: networkConfig,
+			if oldShoot != nil && networkConfig.Overlay == nil {
+				oldNetworkConfig, err := s.decodeCiliumNetworkConfig(oldShoot.Spec.Networking.ProviderConfig)
+				if err != nil {
+					return err
+				}
+
+				if oldNetworkConfig.Overlay != nil {
+					networkConfig.Overlay = oldNetworkConfig.Overlay
+				}
+			}
+
+			shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+				Object: networkConfig,
+			}
 		}
 	}
 

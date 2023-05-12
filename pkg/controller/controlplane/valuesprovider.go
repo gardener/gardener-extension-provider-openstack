@@ -893,8 +893,8 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	}, nil
 }
 
-func (vp *valuesProvider) isOverlayEnabled(network v1beta1.Networking) (bool, error) {
-	if network.ProviderConfig == nil {
+func (vp *valuesProvider) isOverlayEnabled(network *v1beta1.Networking) (bool, error) {
+	if network == nil || network.ProviderConfig == nil {
 		return true, nil
 	}
 
@@ -907,7 +907,7 @@ func (vp *valuesProvider) isOverlayEnabled(network v1beta1.Networking) (bool, er
 		return true, nil
 	}
 
-	switch network.Type {
+	switch *network.Type {
 	case calico.ReleaseName:
 		networkConfig := &calicov1alpha1.NetworkConfig{}
 		if _, _, err := vp.Decoder().Decode(networkProviderConfig, nil, networkConfig); err != nil {

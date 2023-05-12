@@ -32,7 +32,7 @@ import (
 )
 
 // ValidateNetworking validates the network settings of a Shoot.
-func ValidateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {
+func ValidateNetworking(networking *core.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if networking.Nodes == nil {

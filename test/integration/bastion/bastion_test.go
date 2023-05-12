@@ -489,7 +489,7 @@ func createShoot(infrastructureConfig []byte) *gardencorev1beta1.Shoot {
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			Region:            *region,
-			SecretBindingName: v1beta1constants.SecretNameCloudProvider,
+			SecretBindingName: pointer.String(v1beta1constants.SecretNameCloudProvider),
 			Provider: gardencorev1beta1.Provider{
 				InfrastructureConfig: &runtime.RawExtension{
 					Raw: infrastructureConfig,

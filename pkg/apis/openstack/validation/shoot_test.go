@@ -40,7 +40,7 @@ var _ = Describe("Shoot validation", func() {
 		networkingPath := field.NewPath("spec", "networking")
 
 		It("should return no error because nodes CIDR was provided", func() {
-			networking := core.Networking{
+			networking := &core.Networking{
 				Nodes: pointer.String("1.2.3.4/5"),
 			}
 
@@ -50,7 +50,7 @@ var _ = Describe("Shoot validation", func() {
 		})
 
 		It("should return an error because no nodes CIDR was provided", func() {
-			networking := core.Networking{}
+			networking := &core.Networking{}
 
 			errorList := ValidateNetworking(networking, networkingPath)
 

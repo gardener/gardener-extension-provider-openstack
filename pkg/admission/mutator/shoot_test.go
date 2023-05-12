@@ -64,9 +64,9 @@ var _ = Describe("Shoot mutator", func() {
 						Type: openstack.Type,
 					},
 					Region: "eu-fr-1",
-					Networking: gardencorev1beta1.Networking{
+					Networking: &gardencorev1beta1.Networking{
 						Nodes: pointer.String("10.250.0.0/16"),
-						Type:  "calico",
+						Type:  pointer.String("calico"),
 					},
 				},
 			}
@@ -82,9 +82,9 @@ var _ = Describe("Shoot mutator", func() {
 						Type: openstack.Type,
 					},
 					Region: "eu-fr-1",
-					Networking: gardencorev1beta1.Networking{
+					Networking: &gardencorev1beta1.Networking{
 						Nodes: pointer.String("10.250.0.0/16"),
-						Type:  "calico",
+						Type:  pointer.String("calico"),
 					},
 				},
 			}
@@ -184,10 +184,9 @@ var _ = Describe("Shoot mutator", func() {
 		})
 
 		Context("Mutate shoot networking providerconfig for type cilium", func() {
-
 			BeforeEach(func() {
-				shoot.Spec.Networking.Type = "cilium"
-				oldShoot.Spec.Networking.Type = "cilium"
+				shoot.Spec.Networking.Type = pointer.String("cilium")
+				oldShoot.Spec.Networking.Type = pointer.String("cilium")
 			})
 
 			It("should return without mutation when shoot is in scheduled to new seed phase", func() {

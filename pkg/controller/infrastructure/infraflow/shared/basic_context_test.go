@@ -22,13 +22,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 type testFlowContext struct {

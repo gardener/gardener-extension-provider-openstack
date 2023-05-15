@@ -19,13 +19,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 )
 
 const (
@@ -73,8 +74,6 @@ func (c *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	return g
 }
-
-func unused(_ any) {}
 
 func (c *FlowContext) ensureRouter(ctx context.Context) error {
 	externalNetwork, err := c.networking.GetExternalNetworkByName(c.config.FloatingPoolName)

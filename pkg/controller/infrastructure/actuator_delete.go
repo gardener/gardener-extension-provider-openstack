@@ -41,9 +41,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 		return err
 	}
 	if state != nil {
-		return a.deleteWithFlow(ctx, log, infra, cluster, state)
+		err = a.deleteWithFlow(ctx, log, infra, cluster, state)
+	} else {
+		err = a.deleteWithTerraformer(ctx, log, infra, cluster)
 	}
-	return a.deleteWithTerraformer(ctx, log, infra, cluster)
+	return util.DetermineError(err, helper.KnownCodes)
 }
 
 func (a *actuator) deleteWithFlow(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure,
@@ -56,7 +58,7 @@ func (a *actuator) deleteWithFlow(ctx context.Context, log logr.Logger, infra *e
 	}
 	if err = flowContext.Delete(ctx); err != nil {
 		_ = flowContext.PersistState(ctx, true)
-		return a.addErrorCodes(err)
+		return err
 	}
 	return flowContext.PersistState(ctx, true)
 }

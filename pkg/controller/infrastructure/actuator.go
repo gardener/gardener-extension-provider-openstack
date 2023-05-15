@@ -18,18 +18,18 @@ import (
 	"context"
 	"strings"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
 
 const (

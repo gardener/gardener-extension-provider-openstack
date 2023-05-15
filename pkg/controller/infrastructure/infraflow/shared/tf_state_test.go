@@ -15,11 +15,12 @@
 package shared_test
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 )
 
 var _ = Describe("TerraformState", func() {

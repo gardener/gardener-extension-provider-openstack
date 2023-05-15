@@ -93,7 +93,7 @@ func (a *actuator) reconcileWithFlow(ctx context.Context, log logr.Logger, infra
 	}
 	if err = flowContext.Reconcile(ctx); err != nil {
 		_ = flowContext.PersistState(ctx, true)
-		return a.addErrorCodes(err)
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 	return flowContext.PersistState(ctx, true)
 }
@@ -145,11 +145,11 @@ func (a *actuator) createFlowContext(ctx context.Context, log logr.Logger,
 		return a.updateStatusState(ctx, infra, state)
 	}
 
-	if oldState != nil && !oldState.HasValidVersion() {
-		return nil, fmt.Errorf("unknown flow state version %s", oldState.FlowVersion)
-	}
 	var oldFlatState shared.FlatMap
 	if oldState != nil {
+		if valid, err := oldState.HasValidVersion(); !valid {
+			return nil, err
+		}
 		oldFlatState = oldState.ToFlatMap()
 	}
 

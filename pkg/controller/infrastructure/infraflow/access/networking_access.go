@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -29,6 +28,8 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 // NetworkingAccess provides methods for managing routers and networks

@@ -21,12 +21,11 @@ require (
 	github.com/onsi/gomega v1.27.6
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
+	go.uber.org/atomic v1.9.0
 	golang.org/x/tools v0.7.0
 	k8s.io/api v0.26.3
 	k8s.io/apiextensions-apiserver v0.26.3
 	k8s.io/apimachinery v0.26.3
-	go.uber.org/atomic v1.9.0
-	golang.org/x/tools v0.6.0
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.13.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/code-generator v0.26.3

@@ -19,8 +19,11 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
 // Restore implements infrastructure.Actuator.
@@ -35,7 +38,7 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, infra *extensio
 	if a.shouldUseFlow(infra, cluster) {
 		flowState, err = a.migrateFromTerraformerState(ctx, log, infra)
 		if err != nil {
-			return a.addErrorCodes(err)
+			return util.DetermineError(err, helper.KnownCodes)
 		}
 		return a.reconcileWithFlow(ctx, log, infra, cluster, flowState)
 	}

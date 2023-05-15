@@ -165,11 +165,11 @@ func (c *ComputeClient) CreateKeyPair(name, publicKey string) (*keypairs.KeyPair
 
 // GetKeyPair gets an SSH key pair by name
 func (c *ComputeClient) GetKeyPair(name string) (*keypairs.KeyPair, error) {
-	keypair, err := keypairs.Get(c.client, name).Extract()
+	keypair, err := keypairs.Get(c.client, name, nil).Extract()
 	return keypair, IgnoreNotFoundError(err)
 }
 
 // DeleteKeyPair deletes an SSH key pair by name
 func (c *ComputeClient) DeleteKeyPair(name string) error {
-	return keypairs.Delete(c.client, name).ExtractErr()
+	return keypairs.Delete(c.client, name, nil).ExtractErr()
 }

@@ -6,7 +6,11 @@ metadata:
   annotations:
     networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":443}]'
     {{- if .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled }}
+    {{- if semverCompare ">= 1.27-0" .Capabilities.KubeVersion.GitVersion }}
+    service.kubernetes.io/topology-mode: "auto"
+    {{- else }}
     service.kubernetes.io/topology-aware-hints: "auto"
+    {{- end }}
     {{- end }}
   labels:
     {{- if .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled }}

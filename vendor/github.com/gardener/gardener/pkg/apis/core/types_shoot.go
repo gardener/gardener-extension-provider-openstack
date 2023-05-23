@@ -75,7 +75,7 @@ type ShootSpec struct {
 	// Kubernetes contains the version and configuration settings of the control plane components.
 	Kubernetes Kubernetes
 	// Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
-	Networking Networking
+	Networking *Networking
 	// Maintenance contains information about the time window for maintenance operations and which
 	// operations should be performed.
 	Maintenance *Maintenance
@@ -90,7 +90,7 @@ type ShootSpec struct {
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
 	// This field is immutable.
-	SecretBindingName string
+	SecretBindingName *string
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
 	// This field is immutable when the SeedChange feature gate is disabled.
 	SeedName *string
@@ -410,7 +410,7 @@ type HibernationSchedule struct {
 	Start *string
 	// End is a Cron spec at which time a Shoot will be woken up.
 	End *string
-	// Location is the time location in which both start and and shall be evaluated.
+	// Location is the time location in which both start and shall be evaluated.
 	Location *string
 }
 
@@ -529,10 +529,6 @@ type KubeAPIServerConfig struct {
 	APIAudiences []string
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	AuditConfig *AuditConfig
-	// EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
-	//
-	// Deprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.
-	EnableBasicAuthentication *bool
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	OIDCConfig *OIDCConfig
 	// RuntimeConfig contains information about enabled or disabled APIs.
@@ -664,6 +660,8 @@ type AdmissionPlugin struct {
 	Disabled *bool
 	// Config is the configuration of the plugin.
 	Config *runtime.RawExtension
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.
+	KubeconfigSecretName *string
 }
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.
@@ -865,6 +863,8 @@ type KubeletConfig struct {
 	//  "4h" for Kubernetes < v1.26.
 	//  "5m" for Kubernetes >= v1.26.
 	StreamingConnectionIdleTimeout *metav1.Duration
+	// MemorySwap configures swap memory available to container workloads.
+	MemorySwap *MemorySwapConfiguration
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -921,10 +921,30 @@ type KubeletConfigReserved struct {
 	PID *resource.Quantity
 }
 
+// SwapBehavior configures swap memory available to container workloads
+type SwapBehavior string
+
+const (
+	// LimitedSwap is a constant for the kubelet's swap behavior limitting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
+	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
+	// - cgroupsv2 host: swap is managed independently from memory. Kubernetes workloads cannot use swap memory.
+	LimitedSwap SwapBehavior = "LimitedSwap"
+	// UnlimitedSwap is a constant for the kubelet's swap behavior enabling Kubernetes workloads to use as much swap memory as required, up to the system limit (not limited by pod or container memory limits).
+	UnlimitedSwap SwapBehavior = "UnlimitedSwap"
+)
+
+// MemorySwapConfiguration contains kubelet swap configuration
+// For more information, please see KEP: 2400-node-swap
+type MemorySwapConfiguration struct {
+	// SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+	// defaults to: LimitedSwap
+	SwapBehavior *SwapBehavior
+}
+
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
 	// Type identifies the type of the networking plugin. This field is immutable.
-	Type string
+	Type *string
 	// ProviderConfig is the configuration passed to network resource.
 	ProviderConfig *runtime.RawExtension
 	// Pods is the CIDR of the pod network. This field is immutable.
@@ -972,7 +992,7 @@ type MaintenanceAutoUpdate struct {
 	// KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated (default: true).
 	KubernetesVersion bool
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
-	MachineImageVersion bool
+	MachineImageVersion *bool
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
@@ -1056,6 +1076,8 @@ type Worker struct {
 	Zones []string
 	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	MachineControllerManagerSettings *MachineControllerManagerSettings
+	// Sysctls is a map of kernel settings to apply on all VMs in this worker pool.
+	Sysctls map[string]string
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.

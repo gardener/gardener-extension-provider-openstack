@@ -20,6 +20,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -89,14 +90,22 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 		return fmt.Errorf("wrong object type %T", new)
 	}
 
-	secret, err := s.getCloudProviderSecretForShoot(ctx, shoot)
-	if err != nil {
-		return fmt.Errorf("failed to get cloud provider credentials: %v", err)
+	// Skip if it's a workerless Shoot
+	if gardencorehelper.IsWorkerless(shoot) {
+		return nil
 	}
 
-	credentials, err := openstack.ExtractCredentials(secret, false)
-	if err != nil {
-		return fmt.Errorf("invalid cloud credentials: %v", err)
+	var credentials *openstack.Credentials
+	if shoot.Spec.SecretBindingName != nil {
+		secret, err := s.getCloudProviderSecretForShoot(ctx, shoot)
+		if err != nil {
+			return fmt.Errorf("failed to get cloud provider credentials: %v", err)
+		}
+
+		credentials, err = openstack.ExtractCredentials(secret, false)
+		if err != nil {
+			return fmt.Errorf("invalid cloud credentials: %v", err)
+		}
 	}
 
 	if old != nil {
@@ -104,13 +113,13 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 		if !ok {
 			return fmt.Errorf("wrong object type %T for old object", old)
 		}
-		return s.validateShootUpdate(ctx, oldShoot, shoot, *credentials)
+		return s.validateShootUpdate(ctx, oldShoot, shoot, credentials)
 	}
 
-	return s.validateShootCreation(ctx, shoot, *credentials)
+	return s.validateShootCreation(ctx, shoot, credentials)
 }
 
-func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, credentials openstack.Credentials) error {
+func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, credentials *openstack.Credentials) error {
 	valContext, err := newValidationContext(ctx, s.decoder, s.client, shoot)
 	if err != nil {
 		return err
@@ -118,13 +127,15 @@ func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, cr
 
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
+	if credentials != nil {
+		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
+		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
+	}
 	allErrs = append(allErrs, s.validateShoot(valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.Shoot, credentials openstack.Credentials) error {
+func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.Shoot, credentials *openstack.Credentials) error {
 	oldValContext, err := newValidationContext(ctx, s.lenientDecoder, s.client, oldShoot)
 	if err != nil {
 		return err
@@ -138,7 +149,9 @@ func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigUpdate(oldValContext.infraConfig, valContext.infraConfig, infraConfigPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(oldValContext.infraConfig, valContext.infraConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
+	if credentials != nil {
+		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(oldValContext.infraConfig, valContext.infraConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
+	}
 
 	var (
 		oldCpConfig = oldValContext.cpConfig
@@ -150,7 +163,8 @@ func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 
 	// Only validate against cloud profile when related configuration is updated.
 	// This ensures that already running shoots won't break after constraints were removed from the cloud profile.
-	if oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider ||
+	if credentials != nil &&
+		oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider ||
 		oldCpConfig.Zone != cpConfig.Zone ||
 		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) ||
 		oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
@@ -167,8 +181,10 @@ func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 
 func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
-	allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
+	if context.shoot.Spec.Networking != nil {
+		allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
+		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
+	}
 	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.infraConfig, context.shoot.Spec.Kubernetes.Version, cpConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateWorkers(context.shoot.Spec.Provider.Workers, context.cloudProfileConfig, workersPath)...)
 	return allErrs
@@ -216,7 +232,7 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.Shoot) (*corev1.Secret, error) {
 	var (
 		secretBinding    = &gardencorev1beta1.SecretBinding{}
-		secretBindingKey = kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName)
+		secretBindingKey = kutil.Key(shoot.Namespace, *shoot.Spec.SecretBindingName)
 	)
 	if err := kutil.LookupObject(ctx, s.client, s.apiReader, secretBindingKey, secretBinding); err != nil {
 		return nil, err

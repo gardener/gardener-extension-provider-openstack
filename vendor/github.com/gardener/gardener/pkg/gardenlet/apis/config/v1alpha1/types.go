@@ -87,6 +87,9 @@ type GardenletConfiguration struct {
 	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
 	// +optional
 	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
+	// NodeToleration contains optional settings for default tolerations.
+	// +optional
+	NodeToleration *NodeToleration `json:"nodeToleration,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -393,6 +396,10 @@ type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
+	// the controller.
+	// +optional
+	AdditionalNamespaceSelectors []metav1.LabelSelector `json:"additionalNamespaceSelectors,omitempty"`
 }
 
 // ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.
@@ -434,47 +441,21 @@ type SeedConfig struct {
 	gardencorev1beta1.SeedTemplate `json:",inline"`
 }
 
-// FluentBit contains configuration for Fluent Bit.
-type FluentBit struct {
-	// ServiceSection defines [SERVICE] configuration for the fluent-bit.
-	// If it is nil, fluent-bit uses default service configuration.
-	// +optional
-	ServiceSection *string `json:"service,omitempty" yaml:"service,omitempty"`
-	// InputSection defines [INPUT] configuration for the fluent-bit.
-	// If it is nil, fluent-bit uses default input configuration.
-	// +optional
-	InputSection *string `json:"input,omitempty" yaml:"input,omitempty"`
-	// OutputSection defines [OUTPUT] configuration for the fluent-bit.
-	// If it is nil, fluent-bit uses default output configuration.
-	// +optional
-	OutputSection *string `json:"output,omitempty" yaml:"output,omitempty"`
-	// NetworkPolicy defines settings for the fluent-bit NetworkPolicy.
-	// +optional
-	NetworkPolicy *FluentBitNetworkPolicy `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
-}
-
-// FluentBitNetworkPolicy defines settings for the fluent-bit NetworkPolicy.
-type FluentBitNetworkPolicy struct {
-	// AdditionalEgressIPBlocks contains IP CIDRs for the egress network policy.
-	// +optional
-	AdditionalEgressIPBlocks []string `json:"additionalEgressIPBlocks,omitempty" yaml:"additionalEgressIPBlocks,omitempty"`
-}
-
-// Loki contains configuration for the Loki.
-type Loki struct {
-	// Enabled is used to enable or disable the shoot and seed Loki.
-	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
-	// If not set, by default Loki is enabled
+// Vali contains configuration for the Vali.
+type Vali struct {
+	// Enabled is used to enable or disable the shoot and seed Vali.
+	// If FluentBit is used with a custom output the Vali can, Vali is maybe unused and can be disabled.
+	// If not set, by default Vali is enabled
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	// Garden contains configuration for the Loki in garden namespace.
+	// Garden contains configuration for the Vali in garden namespace.
 	// +optional
-	Garden *GardenLoki `json:"garden,omitempty" yaml:"garden,omitempty"`
+	Garden *GardenVali `json:"garden,omitempty" yaml:"garden,omitempty"`
 }
 
-// GardenLoki contains configuration for the Loki in garden namespace.
-type GardenLoki struct {
-	// Storage is the disk storage capacity of the central Loki.
+// GardenVali contains configuration for the Vali in garden namespace.
+type GardenVali struct {
+	// Storage is the disk storage capacity of the central Vali.
 	// Defaults to 100Gi.
 	// +optional
 	Storage *resource.Quantity `json:"storage,omitempty" yaml:"storage,omitempty"`
@@ -499,12 +480,9 @@ type Logging struct {
 	// Enabled is used to enable or disable logging stack for clusters.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	// FluentBit contains configurations for the fluent-bit
+	// Vali contains configuration for the Vali
 	// +optional
-	FluentBit *FluentBit `json:"fluentBit,omitempty" yaml:"fluentBit,omitempty"`
-	// Loki contains configuration for the Loki
-	// +optional
-	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
+	Vali *Vali `json:"vali,omitempty" yaml:"vali,omitempty"`
 	// ShootNodeLogging contains configurations for the shoot node logging
 	// +optional
 	ShootNodeLogging *ShootNodeLogging `json:"shootNodeLogging,omitempty" yaml:"shootNodeLogging,omitempty"`
@@ -717,5 +695,17 @@ const (
 // DefaultControllerSyncPeriod is a default value for sync period for controllers.
 var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
 
-// DefaultCentralLokiStorage is a default value for garden/loki's storage.
-var DefaultCentralLokiStorage = resource.MustParse("100Gi")
+// DefaultCentralValiStorage is a default value for garden/vali's storage.
+var DefaultCentralValiStorage = resource.MustParse("100Gi")
+
+// NodeToleration contains information about node toleration options.
+type NodeToleration struct {
+	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
+	// should be added to pods not already tolerating this taint.
+	// +optional
+	DefaultNotReadyTolerationSeconds *int64 `json:"defaultNotReadyTolerationSeconds,omitempty"`
+	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
+	// should be added to pods not already tolerating this taint.
+	// +optional
+	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty"`
+}

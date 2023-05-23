@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,30 +28,28 @@ retval=0
 temp=0
 
 # PULL_BASE_SHA env variable is set by default in prow presubmit jobs
-if [ -n "${PULL_BASE_SHA:-}" ]; then
-  echo "invoking: go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=."
-  go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=. >${tmpDir}/output.txt
-else
-  echo "invoking: go-apidiff master --print-compatible --repo-path=."
-  go-apidiff master --print-compatible --repo-path=. >${tmpDir}/output.txt
-fi
+echo "invoking: go-apidiff ${PULL_BASE_SHA:-master} --repo-path=."
+go-apidiff ${PULL_BASE_SHA:-master} --repo-path=. >${tmpDir}/output.txt || true
 
 exported_pkg=(
-  "gardener/gardener/extensions/"
-  "gardener/gardener/pkg/api/"
-  "gardener/gardener/pkg/apis/"
-  "gardener/gardener/pkg/chartrenderer/"
-  "gardener/gardener/pkg/client/"
-  "gardener/gardener/pkg/controllerutils/"
-  "gardener/gardener/pkg/extensions/"
-  "gardener/gardener/pkg/gardenlet/apis/config/"
-  "gardener/gardener/pkg/logger/"
-  "gardener/gardener/pkg/mock/controller-runtime/client/"
-  "gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/"
-  "gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/"
-  "gardener/gardener/pkg/scheduler/"
-  "gardener/gardener/pkg/utils/"
-  "gardener/gardener/test/framework/"
+  gardener/gardener/extensions/
+  gardener/gardener/pkg/api/
+  gardener/gardener/pkg/apis/.*/v1alpha1
+  gardener/gardener/pkg/apis/.*/v1beta1
+  gardener/gardener/pkg/apis/extensions/validation
+  gardener/gardener/pkg/chartrenderer/
+  gardener/gardener/pkg/client/
+  gardener/gardener/pkg/controllerutils/
+  gardener/gardener/pkg/extensions/
+  gardener/gardener/pkg/gardenlet/apis/config/v1alpha1
+  gardener/gardener/pkg/logger/
+  gardener/gardener/pkg/mock/controller-runtime/client/
+  gardener/gardener/pkg/component/extensions/operatingsystemconfig/
+  gardener/gardener/pkg/operator/apis/config/v1alpha1
+  gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/
+  gardener/gardener/pkg/scheduler/
+  gardener/gardener/pkg/utils/
+  gardener/gardener/test/framework/
 )
 
 # check the changes only for the package that is in the exported_pkg list

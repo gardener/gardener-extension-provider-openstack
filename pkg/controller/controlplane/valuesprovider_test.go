@@ -179,7 +179,7 @@ var _ = Describe("ValuesProvider", func() {
 			Seed: &gardencorev1beta1.Seed{},
 			Shoot: &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					Networking: gardencorev1beta1.Networking{
+					Networking: &gardencorev1beta1.Networking{
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
@@ -228,8 +228,8 @@ var _ = Describe("ValuesProvider", func() {
 			},
 			Shoot: &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					Networking: gardencorev1beta1.Networking{
-						Type: calico.ReleaseName,
+					Networking: &gardencorev1beta1.Networking{
+						Type: pointer.String(calico.ReleaseName),
 						ProviderConfig: &runtime.RawExtension{
 							Object: &calicov1alpha1.NetworkConfig{
 								TypeMeta: metav1.TypeMeta{},

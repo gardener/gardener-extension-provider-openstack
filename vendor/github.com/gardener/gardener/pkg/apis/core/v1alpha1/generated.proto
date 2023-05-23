@@ -580,6 +580,11 @@ message ControllerResource {
   //  Migrate: "BeforeKubeAPIServer"
   // +optional
   optional ControllerResourceLifecycle lifecycle = 6;
+
+  // WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+  // This field is only relevant when kind is "Extension".
+  // +optional
+  optional bool workerlessSupported = 7;
 }
 
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.
@@ -947,12 +952,6 @@ message KubeAPIServerConfig {
   // +optional
   optional AuditConfig auditConfig = 4;
 
-  // EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
-  //
-  // Deprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.
-  // +optional
-  optional bool enableBasicAuthentication = 5;
-
   // OIDCConfig contains configuration settings for the OIDC provider.
   // +optional
   optional OIDCConfig oidcConfig = 6;
@@ -1237,6 +1236,10 @@ message KubeletConfig {
   //  "5m" for Kubernetes >= v1.26.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 25;
+
+  // MemorySwap configures swap memory available to container workloads.
+  // +optional
+  optional MemorySwapConfiguration memorySwap = 26;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1602,6 +1605,15 @@ message MaintenanceTimeWindow {
   // End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
   // If not present, the value will be computed based on the "Begin" value.
   optional string end = 2;
+}
+
+// MemorySwapConfiguration contains kubelet swap configuration
+// For more information, please see KEP: 2400-node-swap
+message MemorySwapConfiguration {
+  // SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+  // defaults to: LimitedSwap
+  // +optional
+  optional string swapBehavior = 1;
 }
 
 // Monitoring contains information about the monitoring configuration for the shoot.

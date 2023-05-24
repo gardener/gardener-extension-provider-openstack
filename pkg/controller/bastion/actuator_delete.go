@@ -79,6 +79,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensi
 		}
 	}
 
+	// The ssh ingress rule for the bastion in the worker node security group was also deleted once the bastion security group was removed. Therefore, there's no need to manage its deletion.
 	return util.DetermineError(removeSecurityGroup(networkingClient, opt), helper.KnownCodes)
 }
 

@@ -548,7 +548,7 @@ func verifyDeletion(openstackClient *OpenstackClient, name string) {
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
 }
 
-func checkSecurityRuleslExists(openstackClient *OpenstackClient, securityRuleName string) {
+func checkSecurityRulesExists(openstackClient *OpenstackClient, securityRuleName string) {
 	allPages, err := rules.List(openstackClient.NetworkingClient, rules.ListOpts{Description: securityRuleName}).AllPages()
 	Expect(err).NotTo(HaveOccurred())
 	rule, err := rules.ExtractRules(allPages)
@@ -566,7 +566,7 @@ func verifyCreation(openstackClient *OpenstackClient, options *bastionctrl.Optio
 	Expect(securityGroup[0].Description).To(Equal(options.SecurityGroup))
 
 	By("checkNSGExists")
-	checkSecurityRuleslExists(openstackClient, bastionctrl.IngressAllowSSH(options, "", "", "").Description)
+	checkSecurityRulesExists(openstackClient, bastionctrl.IngressAllowSSH(options, "", "", "", "").Description)
 
 	By("checking bastion instance")
 	allPages, err = servers.List(openstackClient.ComputeClient, servers.ListOpts{Name: options.BastionInstanceName}).AllPages()

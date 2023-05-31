@@ -181,6 +181,15 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}))))
 		})
 
+		It("should allow changing the share network section", func() {
+			newInfrastructureConfig := infrastructureConfig.DeepCopy()
+			newInfrastructureConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
+
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should forbid changing the floating pool", func() {
 			newInfrastructureConfig := infrastructureConfig.DeepCopy()
 			newInfrastructureConfig.FloatingPoolName = "test"

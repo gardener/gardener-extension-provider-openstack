@@ -181,7 +181,7 @@ var (
 				},
 				Objects: []*chart.Object{
 					// csi-driver-manila-controller
-					{Type: &appsv1.Deployment{}, Name: openstack.CSIDriverManilaController},
+					{Type: &appsv1.Deployment{}, Name: "csi-driver-controller-manila"},
 					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIDriverManilaController},
 				},
 			},

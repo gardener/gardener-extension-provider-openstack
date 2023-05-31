@@ -83,7 +83,12 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.InfrastructureConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks, oldConfig.Networks, fldPath.Child("networks"))...)
+	newNetworks := newConfig.Networks
+	oldNetworks := oldConfig.Networks
+	// share network changes are allowed, therefore ignore them on comparing
+	newNetworks.ShareNetwork = nil
+	oldNetworks.ShareNetwork = nil
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks, oldNetworks, fldPath.Child("networks"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolName, oldConfig.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolSubnetName, oldConfig.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)
 

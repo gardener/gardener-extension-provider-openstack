@@ -7,42 +7,42 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: openstack-nfs-controller
+    - containerName: openstack-csi-manila-driver
       minAllowed:
         memory: {{ .Values.resources.driverController.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.driverController.maxAllowed.cpu }}
         memory: {{ .Values.vpa.resourcePolicy.driverController.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-nfs-nfs-controller
+    - containerName: openstack-csi-manila-nfs-driver
       minAllowed:
         memory: {{ .Values.resources.driverNFSController.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.driverNFSController.maxAllowed.cpu }}
         memory: {{ .Values.vpa.resourcePolicy.driverNFSController.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-nfs-provisioner
+    - containerName: openstack-csi-manila-provisioner
       minAllowed:
         memory: {{ .Values.resources.provisioner.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.cpu }}
         memory: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-nfs-snapshotter
+    - containerName: openstack-csi-manila-snapshotter
       minAllowed:
         memory: {{ .Values.resources.snapshotter.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.snapshotter.maxAllowed.cpu }}
         memory: {{ .Values.vpa.resourcePolicy.snapshotter.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-nfs-resizer
+    - containerName: openstack-csi-manila-resizer
       minAllowed:
         memory: {{ .Values.resources.resizer.requests.memory }}
       maxAllowed:
         cpu: {{ .Values.vpa.resourcePolicy.resizer.maxAllowed.cpu }}
         memory: {{ .Values.vpa.resourcePolicy.resizer.maxAllowed.memory }}
       controlledValues: RequestsOnly
-    - containerName: openstack-nfs-liveness-probe
+    - containerName: openstack-csi-manila-liveness-probe
       minAllowed:
         memory: {{ .Values.resources.livenessProbe.requests.memory }}
       maxAllowed:

@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: csi-driver-controller-manila
+  name: csi-driver-manila-controller
   namespace: {{ .Release.Namespace }}
   labels:
     app: csi
-    role: controller-manila
+    role: driver-manila-controller
     high-availability-config.resources.gardener.cloud/type: controller
 spec:
   replicas: {{ .Values.replicas }}
@@ -13,7 +13,7 @@ spec:
   selector:
     matchLabels:
       app: csi
-      role: controller-manila
+      role: driver-manila-controller
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -28,7 +28,7 @@ spec:
       creationTimestamp: null
       labels:
         app: csi
-        role: controller-manila
+        role: driver-manila-controller
         gardener.cloud/role: controlplane
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-public-networks: allowed
@@ -120,7 +120,7 @@ spec:
             - name: nfs-fwd-plugin-dir
               mountPath: /csi
 
-        - name: openstack-nfs-liveness-probe
+        - name: openstack-csi-manila-liveness-probe
           image: {{ index .Values.images "csi-liveness-probe" }}
           args:
             - --csi-address=/csi/csi.sock

@@ -45,6 +45,20 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
+  name: csi-driver-manila-controller-openstack-csi
+spec:
+  filters:
+    - parser:
+        keyName: log
+        parser: kube-apiserver-parser
+        reserveData: true
+  match: kubernetes.*csi-driver-manila-controller*openstack-csi*
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  labels:
+    fluentbit.gardener/type: "seed"
   name: csi-snapshot-openstack-csi
 spec:
   filters:

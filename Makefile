@@ -20,6 +20,7 @@ IMAGE_PREFIX                := $(REGISTRY)/extensions
 REPO_ROOT                   := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HACK_DIR                    := $(REPO_ROOT)/hack
 VERSION                     := $(shell cat "$(REPO_ROOT)/VERSION")
+EFFECTIVE_VERSION           := $(VERSION)-$(shell git rev-parse HEAD)
 LD_FLAGS                    := "-w $(shell $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION $(EXTENSION_PREFIX))"
 LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
@@ -41,6 +42,10 @@ FLOATING_POOL_NAME := .kube-secrets/openstack/floating_pool_name.secret
 PASSWORD           := .kube-secrets/openstack/password.secret
 TENANT_NAME        := .kube-secrets/openstack/tenant_name.secret
 USER_NAME          := .kube-secrets/openstack/user_name.secret
+
+ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
+	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
+endif
 
 #########################################
 # Tools                                 #
@@ -84,7 +89,7 @@ start-admission:
 
 .PHONY: install
 install:
-	@LD_FLAGS=$(LD_FLAGS) \
+	@LD_FLAGS=$(LD_FLAGS) EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) \
 	$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/install.sh ./...
 
 .PHONY: docker-login
@@ -93,8 +98,8 @@ docker-login:
 
 .PHONY: docker-images
 docker-images:
-	@docker build -t $(IMAGE_PREFIX)/$(NAME):$(VERSION)           -t $(IMAGE_PREFIX)/$(NAME):latest           -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(NAME)           .
-	@docker build -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):$(VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):latest -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(ADMISSION_NAME) .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(IMAGE_PREFIX)/$(NAME):$(VERSION)           -t $(IMAGE_PREFIX)/$(NAME):latest           -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(NAME)           .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):$(VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):latest -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(ADMISSION_NAME) .
 
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #

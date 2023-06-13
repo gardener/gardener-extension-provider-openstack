@@ -36,9 +36,10 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		allErrs = append(allErrs, field.Required(fldPath.Child("floatingPoolName"), "must provide the name of a floating pool"))
 	}
 
+	networkingPath := field.NewPath("networking")
 	var nodes cidrvalidation.CIDR
 	if nodesCIDR != nil {
-		nodes = cidrvalidation.NewCIDR(*nodesCIDR, nil)
+		nodes = cidrvalidation.NewCIDR(*nodesCIDR, networkingPath.Child("nodes"))
 	}
 
 	networksPath := fldPath.Child("networks")

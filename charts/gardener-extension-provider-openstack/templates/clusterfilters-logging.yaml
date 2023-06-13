@@ -3,6 +3,7 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
+    fluentbit.gardener.cloud/type: "seed"
   name: cloud-controller-manager-openstack-cloud-controller-manager
 spec:
   filters:
@@ -17,6 +18,7 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
+    fluentbit.gardener.cloud/type: "seed"
   name: machine-controller-manager-openstack
 spec:
   filters:
@@ -31,6 +33,7 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
+    fluentbit.gardener.cloud/type: "seed"
   name: csi-driver-controller-openstack-csi
 spec:
   filters:
@@ -45,6 +48,7 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
+    fluentbit.gardener.cloud/type: "seed"
   name: csi-driver-manila-controller-openstack-csi
 spec:
   filters:
@@ -59,6 +63,7 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
+    fluentbit.gardener.cloud/type: "seed"
   name: csi-snapshot-openstack-csi
 spec:
   filters:
@@ -67,27 +72,3 @@ spec:
       parser: kube-apiserver-parser
       reserveData: true
   match: kubernetes.*csi-snapshot*openstack-csi*
----
-apiVersion: fluentbit.fluent.io/v1alpha2
-kind: ClusterFilter
-metadata:
-  labels:
-    fluentbit.gardener/type: "seed"
-  name: modify-provider-openstack
-spec:
-  filters:
-  - modify:
-      conditions:
-        - keyValueMatches:
-            tag: ^kubernetes\.var\.log\.containers\.(cloud-controller-manager-.+?_.+?_openstack-cloud-controller-manager|csi-driver-controller-.+?_.+?_openstack-csi)
-      rules:
-        - add:
-            __gardener_multitenant_id__: operator;user
-  - modify:
-      conditions:
-        - keyValueMatches:
-            tag: ^kubernetes\.var\.log\.containers\.machine-controller-manager-.+?_.+?_(openstack-machine-controller-manager|provider-openstack)
-      rules:
-        - add:
-            __gardener_multitenant_id__: operator;user
-  match:  kubernetes.*

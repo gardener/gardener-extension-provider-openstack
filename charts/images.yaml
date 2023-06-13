@@ -270,7 +270,7 @@ images:
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
-  tag: "v3.4.0"
+  tag: "v3.4.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

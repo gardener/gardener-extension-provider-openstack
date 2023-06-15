@@ -72,7 +72,7 @@ images:
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.25.5"
+  tag: "v1.25.6"
   targetVersion: "1.25.x"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -86,7 +86,7 @@ images:
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.26.2"
+  tag: "v1.26.3"
   targetVersion: ">= 1.26"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -198,7 +198,7 @@ images:
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.25.5"
+  tag: "v1.25.6"
   targetVersion: "1.25.x"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
@@ -212,7 +212,7 @@ images:
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.26.2"
+  tag: "v1.26.3"
   targetVersion: ">= 1.26"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
@@ -227,7 +227,7 @@ images:
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.25.5"
+  tag: "v1.25.6"
   targetVersion: "< 1.26"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
@@ -241,7 +241,7 @@ images:
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.26.2"
+  tag: "v1.26.3"
   targetVersion: ">= 1.26"
   labels:
     - name: 'gardener.cloud/cve-categorisation'

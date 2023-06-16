@@ -71,10 +71,10 @@ github.com/fluent/fluent-operator/v2/pkg/utils
 # github.com/fsnotify/fsnotify v1.6.0
 ## explicit; go 1.16
 github.com/fsnotify/fsnotify
-# github.com/gardener/etcd-druid v0.15.3
-## explicit; go 1.19
+# github.com/gardener/etcd-druid v0.18.1
+## explicit; go 1.20
 github.com/gardener/etcd-druid/api/v1alpha1
-# github.com/gardener/gardener v1.71.0
+# github.com/gardener/gardener v1.73.0
 ## explicit; go 1.20
 github.com/gardener/gardener/.github
 github.com/gardener/gardener/.github/ISSUE_TEMPLATE
@@ -122,7 +122,6 @@ github.com/gardener/gardener/pkg/apis/authentication/v1alpha1
 github.com/gardener/gardener/pkg/apis/core
 github.com/gardener/gardener/pkg/apis/core/helper
 github.com/gardener/gardener/pkg/apis/core/install
-github.com/gardener/gardener/pkg/apis/core/v1alpha1
 github.com/gardener/gardener/pkg/apis/core/v1beta1
 github.com/gardener/gardener/pkg/apis/core/v1beta1/constants
 github.com/gardener/gardener/pkg/apis/core/v1beta1/helper
@@ -155,6 +154,8 @@ github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/orig
 github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
 github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet
 github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils
+github.com/gardener/gardener/pkg/component/kubeapiserver/constants
+github.com/gardener/gardener/pkg/component/machinecontrollermanager
 github.com/gardener/gardener/pkg/controllerutils
 github.com/gardener/gardener/pkg/controllerutils/mapper
 github.com/gardener/gardener/pkg/controllerutils/predicate

@@ -92,9 +92,10 @@ func (h *DefaultHealthChecker) SetLoggerSuffix(provider, extension string) {
 }
 
 // DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy.
+// Actually, it does not perform a *deep* copy.
 func (h *DefaultHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	copy := *h
-	return &copy
+	shallowCopy := *h
+	return &shallowCopy
 }
 
 // Check executes the health check.
@@ -173,6 +174,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 	}
 
 	if checkScaleUp {
+		// TODO(rfranzke): Remove this check after v1.76 was released.
 		if status, err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 			h.logger.Error(err, "Health check failed")
 			return &healthcheck.SingleCheckResult{
@@ -191,6 +193,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		}, nil
 	}
 
+	// TODO(rfranzke): Remove this check after v1.76 was released.
 	if status, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{

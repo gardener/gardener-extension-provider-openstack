@@ -127,10 +127,10 @@ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
 github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
-github.com/gardener/etcd-druid v0.15.3 h1:IMsJTaUaSOXusfgOOF5GX5eJ0o1CI/9XtKzgxwWJ0Eo=
-github.com/gardener/etcd-druid v0.15.3/go.mod h1:VTxoQXmaE2RSP+LQS5qWUDoXzmdK6xlKLUdFhaGu6KM=
-github.com/gardener/gardener v1.71.0 h1:W0Yuc+QpLD/eyFLr9Xweuh92Jt5kFRIGRMF+wKmhvdw=
-github.com/gardener/gardener v1.71.0/go.mod h1:l6FaKO0wqF2qaUe4Zh05/CYGMNDAOuoqRGfHUnbjQ74=
+github.com/gardener/etcd-druid v0.18.1 h1:dcId4WayxlZiKvDMxLZHmmvWFXjTBFVqQWmqB5/8mdM=
+github.com/gardener/etcd-druid v0.18.1/go.mod h1:Bn4doVhryu6GWdXaYlVNy7TZMjUSMr5EjChei06KX0w=
+github.com/gardener/gardener v1.73.0 h1:ZjYmv8GeLwh/kZ3Ou5+WrzGsyf9C/pgpSCDH8HKh0zo=
+github.com/gardener/gardener v1.73.0/go.mod h1:uSkzPPoAEvdU1fvciTAsZFxPQ9vQpMbMFRJLMQgdfEQ=
 github.com/gardener/gardener-extension-networking-calico v1.28.0 h1:eeUYuYjRB3xSww+fmCnyF+RPPqsO4Zro7Gg0MfMDfFk=
 github.com/gardener/gardener-extension-networking-calico v1.28.0/go.mod h1:DhaXVgUF4LAsS+6UlBK8kUKM8mhI+YHl/9/+WK3zfMk=
 github.com/gardener/gardener-extension-networking-cilium v1.20.0 h1:4s+eXjX34M2S4WfKqWnj3T48B/CeKwOjwoNFiTO3N/g=

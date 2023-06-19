@@ -230,12 +230,12 @@ var _ = Describe("Infrastructure tests", func() {
 
 			cloudRouterName := namespace + "-cloud-router"
 
-			routerID, err := prepareNewRouter(ctx, log, cloudRouterName, openstackClient)
+			routerID, err := prepareNewRouter(log, cloudRouterName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownRouter(ctx, log, *routerID, openstackClient)
+				err := teardownRouter(log, *routerID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -260,12 +260,12 @@ var _ = Describe("Infrastructure tests", func() {
 
 			networkName := namespace + "-network"
 
-			networkID, err := prepareNewNetwork(ctx, log, networkName, openstackClient)
+			networkID, err := prepareNewNetwork(log, networkName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownNetwork(ctx, log, *networkID, openstackClient)
+				err := teardownNetwork(log, *networkID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -292,19 +292,19 @@ var _ = Describe("Infrastructure tests", func() {
 			networkName := namespace + "-network"
 			cloudRouterName := namespace + "-cloud-router"
 
-			networkID, err := prepareNewNetwork(ctx, log, networkName, openstackClient)
+			networkID, err := prepareNewNetwork(log, networkName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
-			routerID, err := prepareNewRouter(ctx, log, cloudRouterName, openstackClient)
+			routerID, err := prepareNewRouter(log, cloudRouterName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
 				By("Tearing down network")
-				err := teardownNetwork(ctx, log, *networkID, openstackClient)
+				err := teardownNetwork(log, *networkID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Tearing down router")
-				err = teardownRouter(ctx, log, *routerID, openstackClient)
+				err = teardownRouter(log, *routerID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -356,7 +356,7 @@ func runTest(
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verify infrastructure deletion")
-		verifyDeletion(ctx, openstackClient, infrastructureIdentifiers, providerConfig)
+		verifyDeletion(openstackClient, infrastructureIdentifiers, providerConfig)
 
 		Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, cluster))).To(Succeed())
@@ -475,7 +475,7 @@ func runTest(
 	}
 
 	By("verify infrastructure creation")
-	infrastructureIdentifiers = verifyCreation(ctx, openstackClient, infra, providerStatus, providerConfig, pointer.String(vpcCIDR))
+	infrastructureIdentifiers = verifyCreation(openstackClient, providerStatus, providerConfig)
 
 	return nil
 }
@@ -558,7 +558,7 @@ func generateNamespaceName() (string, error) {
 	return "openstack--infra-it--" + suffix, nil
 }
 
-func prepareNewRouter(ctx context.Context, log logr.Logger, routerName string, openstackClient *OpenstackClient) (*string, error) {
+func prepareNewRouter(log logr.Logger, routerName string, openstackClient *OpenstackClient) (*string, error) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
 	createOpts := routers.CreateOpts{
@@ -574,7 +574,7 @@ func prepareNewRouter(ctx context.Context, log logr.Logger, routerName string, o
 	return &router.ID, nil
 }
 
-func teardownRouter(ctx context.Context, log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
+func teardownRouter(log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
@@ -584,7 +584,7 @@ func teardownRouter(ctx context.Context, log logr.Logger, routerID string, opens
 	return nil
 }
 
-func prepareNewNetwork(ctx context.Context, log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
+func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
 	createOpts := networks.CreateOpts{
@@ -597,7 +597,7 @@ func prepareNewNetwork(ctx context.Context, log logr.Logger, networkName string,
 	return &network.ID, nil
 }
 
-func teardownNetwork(ctx context.Context, log logr.Logger, networkID string, openstackClient *OpenstackClient) error {
+func teardownNetwork(log logr.Logger, networkID string, openstackClient *OpenstackClient) error {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	err := networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
@@ -615,14 +615,7 @@ type infrastructureIdentifiers struct {
 	routerID   *string
 }
 
-func verifyCreation(
-	ctx context.Context,
-	openstackClient *OpenstackClient,
-	infra *extensionsv1alpha1.Infrastructure,
-	infraStatus *openstackv1alpha1.InfrastructureStatus,
-	providerConfig *openstackv1alpha1.InfrastructureConfig,
-	cidr *string,
-) (infrastructureIdentifier infrastructureIdentifiers) {
+func verifyCreation(openstackClient *OpenstackClient, infraStatus *openstackv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers) {
 	// router exists
 	router, err := routers.Get(openstackClient.NetworkingClient, infraStatus.Networks.Router.ID).Extract()
 	Expect(err).NotTo(HaveOccurred())
@@ -662,12 +655,7 @@ func verifyCreation(
 	return infrastructureIdentifier
 }
 
-func verifyDeletion(
-	ctx context.Context,
-	openstackClient *OpenstackClient,
-	infrastructureIdentifier infrastructureIdentifiers,
-	providerConfig *openstackv1alpha1.InfrastructureConfig,
-) {
+func verifyDeletion(openstackClient *OpenstackClient, infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {
 	// keypair doesn't exist
 	_, err := keypairs.Get(openstackClient.ComputeClient, *infrastructureIdentifier.keyPair, nil).Extract()
 	Expect(err).To(HaveOccurred())

@@ -436,9 +436,9 @@ var _ = Describe("Shoot validation", func() {
 })
 
 func copyWorkers(workers []core.Worker) []core.Worker {
-	copy := append(workers[:0:0], workers...)
-	for i := range copy {
-		copy[i].Zones = append(workers[i].Zones[:0:0], workers[i].Zones...)
+	cp := append(workers[:0:0], workers...)
+	for i := range cp {
+		cp[i].Zones = append(workers[i].Zones[:0:0], workers[i].Zones...)
 	}
-	return copy
+	return cp
 }

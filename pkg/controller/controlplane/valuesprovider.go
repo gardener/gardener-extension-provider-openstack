@@ -344,7 +344,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	if err != nil {
 		return nil, fmt.Errorf("could not determine overlay status: %v", err)
 	}
-	return getConfigChartValues(cpConfig, infraStatus, cloudProfileConfig, overlayEnabled, cp, credentials, cluster)
+	return getConfigChartValues(cpConfig, infraStatus, cloudProfileConfig, overlayEnabled, cp, credentials)
 }
 
 func (vp *valuesProvider) getInfrastructureStatus(cp *extensionsv1alpha1.ControlPlane) (*api.InfrastructureStatus, error) {
@@ -524,7 +524,6 @@ func getConfigChartValues(
 	isUsingOverlay bool,
 	cp *extensionsv1alpha1.ControlPlane,
 	c *openstack.Credentials,
-	cluster *extensionscontroller.Cluster,
 ) (map[string]interface{}, error) {
 	subnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes)
 	if err != nil {

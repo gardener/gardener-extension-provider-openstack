@@ -930,6 +930,54 @@ message IngressController {
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
+// InternalSecret holds secret data of a certain type. The total bytes of the values in
+// the Data field must be less than MaxSecretSize bytes.
+message InternalSecret {
+  // Standard object's metadata.
+  // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Immutable, if set to true, ensures that data stored in the Secret cannot
+  // be updated (only object metadata can be modified).
+  // If not set to true, the field can be modified at any time.
+  // Defaulted to nil.
+  // +optional
+  optional bool immutable = 5;
+
+  // Data contains the secret data. Each key must consist of alphanumeric
+  // characters, '-', '_' or '.'. The serialized form of the secret data is a
+  // base64 encoded string, representing the arbitrary (possibly non-string)
+  // data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
+  // +optional
+  map<string, bytes> data = 2;
+
+  // stringData allows specifying non-binary secret data in string form.
+  // It is provided as a write-only input field for convenience.
+  // All keys and values are merged into the data field on write, overwriting any existing values.
+  // The stringData field is never output when reading from the API.
+  // +k8s:conversion-gen=false
+  // +optional
+  map<string, string> stringData = 4;
+
+  // Used to facilitate programmatic handling of secret data.
+  // More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
+  // +optional
+  optional string type = 3;
+}
+
+// InternalSecretList is a list of InternalSecret.
+message InternalSecretList {
+  // Standard list metadata.
+  // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is a list of secret objects.
+  // More info: https://kubernetes.io/docs/concepts/configuration/secret
+  repeated InternalSecret items = 2;
+}
+
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 message KubeAPIServerConfig {
   optional KubernetesConfig kubernetesConfig = 1;
@@ -2244,11 +2292,10 @@ message SeedSettingLoadBalancerServicesZones {
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 //
 // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-// Set this field to false to be prepared for the above-mentioned locking.
+// The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+// Finally, the field will be removed from the API in a future version of Gardener.
 message SeedSettingOwnerChecks {
-  // Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
-  // is enabled by default because it is a prerequisite for control plane migration.
+  // Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
   optional bool enabled = 1;
 }
 
@@ -2297,8 +2344,8 @@ message SeedSettings {
   // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
   //
   // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-  // The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-  // Set this field to false to be prepared for the above-mentioned locking.
+  // The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+  // Finally, the field will be removed from the API in a future version of Gardener.
   // +optional
   optional SeedSettingOwnerChecks ownerChecks = 6;
 
@@ -2332,6 +2379,9 @@ message SeedSpec {
 
   // SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
   // cluster to be registered as Seed.
+  //
+  // Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+  // hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.
   // +optional
   optional k8s.io.api.core.v1.SecretReference secretRef = 5;
 
@@ -2672,7 +2722,6 @@ message ShootSpec {
   optional string secretBindingName = 13;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
-  // This field is immutable when the SeedChange feature gate is disabled.
   // +optional
   optional string seedName = 14;
 

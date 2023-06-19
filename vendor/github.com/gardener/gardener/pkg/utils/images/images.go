@@ -25,8 +25,6 @@ const (
 	ImageNameAlpine = "alpine"
 	// ImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
 	ImageNameApiserverProxy = "apiserver-proxy"
-	// ImageNameApiserverProxyPodWebhook is a constant for an image in the image vector with name 'apiserver-proxy-pod-webhook'.
-	ImageNameApiserverProxyPodWebhook = "apiserver-proxy-pod-webhook"
 	// ImageNameApiserverProxySidecar is a constant for an image in the image vector with name 'apiserver-proxy-sidecar'.
 	ImageNameApiserverProxySidecar = "apiserver-proxy-sidecar"
 	// ImageNameBlackboxExporter is a constant for an image in the image vector with name 'blackbox-exporter'.
@@ -83,6 +81,8 @@ const (
 	ImageNameKubernetesDashboard = "kubernetes-dashboard"
 	// ImageNameKubernetesDashboardMetricsScraper is a constant for an image in the image vector with name 'kubernetes-dashboard-metrics-scraper'.
 	ImageNameKubernetesDashboardMetricsScraper = "kubernetes-dashboard-metrics-scraper"
+	// ImageNameMachineControllerManager is a constant for an image in the image vector with name 'machine-controller-manager'.
+	ImageNameMachineControllerManager = "machine-controller-manager"
 	// ImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.

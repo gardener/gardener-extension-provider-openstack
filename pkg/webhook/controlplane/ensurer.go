@@ -67,12 +67,12 @@ func computeCSIMigrationCompleteFeatureGate(version string) (string, error) {
 }
 
 // EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, _ *appsv1.Deployment) error {
-	template := &new.Spec.Template
+func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
+	template := &newObj.Spec.Template
 	ps := &template.Spec
 
 	// TODO: This label approach is deprecated and no longer needed in the future. Remove it as soon as gardener/gardener@v1.75 has been released.
-	metav1.SetMetaDataLabel(&new.Spec.Template.ObjectMeta, gutil.NetworkPolicyLabel(openstack.CSISnapshotValidationName, 443), v1beta1constants.LabelNetworkPolicyAllowed)
+	metav1.SetMetaDataLabel(&newObj.Spec.Template.ObjectMeta, gutil.NetworkPolicyLabel(openstack.CSISnapshotValidationName, 443), v1beta1constants.LabelNetworkPolicyAllowed)
 
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {
@@ -96,8 +96,8 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 }
 
 // EnsureKubeControllerManagerDeployment ensures that the kube-controller-manager deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, _ *appsv1.Deployment) error {
-	template := &new.Spec.Template
+func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
+	template := &newObj.Spec.Template
 	ps := &template.Spec
 
 	cluster, err := gctx.GetCluster(ctx)
@@ -125,8 +125,8 @@ func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gct
 }
 
 // EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, _ *appsv1.Deployment) error {
-	template := &new.Spec.Template
+func (e *ensurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
+	template := &newObj.Spec.Template
 	ps := &template.Spec
 
 	cluster, err := gctx.GetCluster(ctx)
@@ -150,8 +150,8 @@ func (e *ensurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gconte
 }
 
 // EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
-func (e *ensurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, _ *appsv1.Deployment) error {
-	template := &new.Spec.Template
+func (e *ensurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
+	template := &newObj.Spec.Template
 	ps := &template.Spec
 
 	cluster, err := gctx.GetCluster(ctx)
@@ -292,19 +292,19 @@ func ensureKubeControllerManagerVolumes(ps *corev1.PodSpec) {
 }
 
 // EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-func (e *ensurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ gcontext.GardenContext, kubeletVersion *semver.Version, new, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
-	if opt := extensionswebhook.UnitOptionWithSectionAndName(new, "Service", "ExecStart"); opt != nil {
+func (e *ensurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ gcontext.GardenContext, kubeletVersion *semver.Version, newObj, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
+	if opt := extensionswebhook.UnitOptionWithSectionAndName(newObj, "Service", "ExecStart"); opt != nil {
 		command := extensionswebhook.DeserializeCommandLine(opt.Value)
 		command = ensureKubeletCommandLineArgs(command, kubeletVersion)
 		opt.Value = extensionswebhook.SerializeCommandLine(command, 1, " \\\n    ")
 	}
 
-	new = extensionswebhook.EnsureUnitOption(new, &unit.UnitOption{
+	newObj = extensionswebhook.EnsureUnitOption(newObj, &unit.UnitOption{
 		Section: "Service",
 		Name:    "ExecStartPre",
 		Value:   `/bin/sh -c 'hostnamectl set-hostname $(cat /etc/hostname | cut -d '.' -f 1)'`,
 	})
-	return new, nil
+	return newObj, nil
 }
 
 func ensureKubeletCommandLineArgs(command []string, kubeletVersion *semver.Version) []string {
@@ -316,38 +316,38 @@ func ensureKubeletCommandLineArgs(command []string, kubeletVersion *semver.Versi
 }
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
-func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, kubeletVersion *semver.Version, new, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
+func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, kubeletVersion *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	csiMigrationCompleteFeatureGate, err := computeCSIMigrationCompleteFeatureGate(kubeletVersion.String())
 	if err != nil {
 		return err
 	}
 
-	if new.FeatureGates == nil {
-		new.FeatureGates = make(map[string]bool)
+	if newObj.FeatureGates == nil {
+		newObj.FeatureGates = make(map[string]bool)
 	}
 
 	if versionutils.ConstraintK8sLess127.Check(kubeletVersion) {
-		new.FeatureGates["CSIMigration"] = true
+		newObj.FeatureGates["CSIMigration"] = true
 	}
 	if versionutils.ConstraintK8sLess126.Check(kubeletVersion) {
-		new.FeatureGates["CSIMigrationOpenStack"] = true
+		newObj.FeatureGates["CSIMigrationOpenStack"] = true
 		// kubelets of new worker nodes can directly be started with the <csiMigrationCompleteFeatureGate> feature gate
-		new.FeatureGates[csiMigrationCompleteFeatureGate] = true
+		newObj.FeatureGates[csiMigrationCompleteFeatureGate] = true
 	}
 
 	if versionutils.ConstraintK8sGreaterEqual123.Check(kubeletVersion) {
-		new.EnableControllerAttachDetach = pointer.Bool(true)
+		newObj.EnableControllerAttachDetach = pointer.Bool(true)
 	}
 
 	// resolv-for-kubelet.conf is created by update-resolv-conf.service
-	new.ResolverConfig = pointer.String("/etc/resolv-for-kubelet.conf")
+	newObj.ResolverConfig = pointer.String("/etc/resolv-for-kubelet.conf")
 
 	return nil
 }
 
 // EnsureAdditionalUnits ensures that additional required system units are added.
-func (e *ensurer) EnsureAdditionalUnits(_ context.Context, _ gcontext.GardenContext, new, _ *[]extensionsv1alpha1.Unit) error {
-	e.addAdditionalUnitsForResolvConfOptions(new)
+func (e *ensurer) EnsureAdditionalUnits(_ context.Context, _ gcontext.GardenContext, newObj, _ *[]extensionsv1alpha1.Unit) error {
+	e.addAdditionalUnitsForResolvConfOptions(newObj)
 	return nil
 }
 
@@ -386,18 +386,18 @@ ExecStart=/opt/bin/update-resolv-conf.sh
 }
 
 // EnsureAdditionalFiles ensures that additional required system files are added.
-func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
+func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *[]extensionsv1alpha1.File) error {
 	cloudProfileConfig, err := getCloudProfileConfig(ctx, gctx)
 	if err != nil {
 		return err
 	}
-	e.addAdditionalFilesForResolvConfOptions(getResolveConfOptions(cloudProfileConfig), new)
+	e.addAdditionalFilesForResolvConfOptions(getResolveConfOptions(cloudProfileConfig), newObj)
 	return nil
 }
 
 // addAdditionalFilesForResolvConfOptions writes the script to update `/etc/resolv.conf` from
 // `/run/systemd/resolve/resolv.conf` and adds an options line to it.
-func (e *ensurer) addAdditionalFilesForResolvConfOptions(options []string, new *[]extensionsv1alpha1.File) {
+func (e *ensurer) addAdditionalFilesForResolvConfOptions(options []string, newObj *[]extensionsv1alpha1.File) {
 	var (
 		permissions int32 = 0o755
 		template          = `#!/bin/sh
@@ -447,7 +447,7 @@ mv "$tmp" "$dest" && echo updated "$dest"
 			},
 		},
 	}
-	appendUniqueFile(new, file)
+	appendUniqueFile(newObj, file)
 }
 
 func getCloudProfileConfig(ctx context.Context, gctx gcontext.GardenContext) (*apisopenstack.CloudProfileConfig, error) {

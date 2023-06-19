@@ -52,7 +52,7 @@ func ValidateControlPlaneConfig(controlPlaneConfig *api.ControlPlaneConfig, infr
 }
 
 // ValidateControlPlaneConfigUpdate validates a ControlPlaneConfig object.
-func ValidateControlPlaneConfigUpdate(oldConfig, newConfig *api.ControlPlaneConfig, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneConfigUpdate(_, _ *api.ControlPlaneConfig, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

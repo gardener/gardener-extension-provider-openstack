@@ -72,7 +72,7 @@ func (w *workerDelegate) GetMachineControllerManagerChartValues(ctx context.Cont
 	}, nil
 }
 
-func (w *workerDelegate) GetMachineControllerManagerShootChartValues(ctx context.Context) (map[string]interface{}, error) {
+func (w *workerDelegate) GetMachineControllerManagerShootChartValues(_ context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"providerName": openstack.Name,
 	}, nil

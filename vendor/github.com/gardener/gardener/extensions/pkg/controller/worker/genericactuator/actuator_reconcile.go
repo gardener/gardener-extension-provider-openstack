@@ -30,7 +30,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -39,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -96,6 +96,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	var clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
 
+	// TODO(rfranzke): Remove this code after v1.77 was released.
 	// When the Shoot is hibernated we want to remove the cluster autoscaler so that it does not interfer
 	// with Gardeners modifications on the machine deployment's replicas fields.
 	isHibernationEnabled := controller.IsHibernationEnabled(cluster)
@@ -128,7 +129,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := a.deployMachineDeployments(ctx, log, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), clusterAutoscalerUsed); err != nil {
+	if err := deployMachineDeployments(ctx, log, a.client, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), clusterAutoscalerUsed); err != nil {
 		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
@@ -193,11 +194,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if isHibernationEnabled {
-		if err := a.scaleMachineControllerManager(ctx, log, worker, 0); err != nil {
+		if err := scaleMachineControllerManager(ctx, log, a.client, worker, 0); err != nil {
 			return err
 		}
 	}
 
+	// TODO(rfranzke): Remove this code after v1.77 was released.
 	if clusterAutoscalerUsed && !isHibernationEnabled {
 		if err = a.scaleClusterAutoscaler(ctx, log, worker, 1); err != nil {
 			return err
@@ -217,7 +219,17 @@ func (a *genericActuator) scaleClusterAutoscaler(ctx context.Context, log logr.L
 	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kubernetesutils.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), replicas))
 }
 
-func (a *genericActuator) deployMachineDeployments(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments extensionsworkercontroller.MachineDeployments, classKind string, clusterAutoscalerUsed bool) error {
+func deployMachineDeployments(
+	ctx context.Context,
+	log logr.Logger,
+	cl client.Client,
+	cluster *extensionscontroller.Cluster,
+	worker *extensionsv1alpha1.Worker,
+	existingMachineDeployments *machinev1alpha1.MachineDeploymentList,
+	wantedMachineDeployments extensionsworkercontroller.MachineDeployments,
+	classKind string,
+	clusterAutoscalerUsed bool,
+) error {
 	log.Info("Deploying machine deployments")
 	for _, deployment := range wantedMachineDeployments {
 		var (
@@ -231,7 +243,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, log logr
 		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
 		case controller.IsHibernationEnabled(cluster):
 			replicas = 0
-			if err := a.markAllMachinesForcefulDeletion(ctx, log, worker.Namespace); err != nil {
+			if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
 				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
 			}
 		// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
@@ -277,7 +289,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, log logr
 			},
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, machineDeployment, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,
@@ -394,7 +406,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
 			// available replicas as desired (specified in the .spec.replicas).
-			if workerhealthcheck.CheckMachineDeployment(&deployment) == nil {
+			if health.CheckMachineDeployment(&deployment) == nil {
 				numHealthyDeployments++
 			}
 			numDesired += deployment.Spec.Replicas

@@ -379,7 +379,7 @@ func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) erro
 		// The token-requestor might concurrently update the kubeconfig secret key to populate the token.
 		// Hence, we need to use optimistic locking here to ensure we don't accidentally overwrite the concurrent update.
 		// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1156244514
-		client.MergeFromWithOptimisticLock{})
+		controllerutils.MergeFromOption{MergeFromOption: client.MergeFromWithOptimisticLock{}})
 	return err
 }
 
@@ -614,9 +614,9 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 	return externalDomain, nil
 }
 
-// ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
-// reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
+// ComputeRequiredExtensionsForShoot computes the extension kind/type combinations that are required for the
+// shoot reconciliation flow.
+func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
 	requiredExtensions := utilsets.New[string]()
 
 	if seed.Spec.Backup != nil {

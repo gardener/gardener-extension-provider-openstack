@@ -24,7 +24,7 @@ import (
 )
 
 // GetZones returns a map of all zone names mapped to their IDs.
-func (c *DNSClient) GetZones(ctx context.Context) (map[string]string, error) {
+func (c *DNSClient) GetZones(_ context.Context) (map[string]string, error) {
 	result := make(map[string]string)
 	allPages, err := zones.List(c.client, zones.ListOpts{}).AllPages()
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *DNSClient) GetZones(ctx context.Context) (map[string]string, error) {
 
 // CreateOrUpdateRecordSet creates or updates the recordset with the given name, record type, records, and ttl
 // in the zone with the given zone ID.
-func (c *DNSClient) CreateOrUpdateRecordSet(ctx context.Context, zoneID, name, recordType string, records []string, ttl int) error {
+func (c *DNSClient) CreateOrUpdateRecordSet(_ context.Context, zoneID, name, recordType string, records []string, ttl int) error {
 	rs, err := c.getRecordSet(zoneID, name, recordType)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (c *DNSClient) CreateOrUpdateRecordSet(ctx context.Context, zoneID, name, r
 }
 
 // DeleteRecordSet deletes the recordset with the given name and record type in the zone with the given zone ID.
-func (c *DNSClient) DeleteRecordSet(ctx context.Context, zoneID, name, recordType string) error {
+func (c *DNSClient) DeleteRecordSet(_ context.Context, zoneID, name, recordType string) error {
 	rs, err := c.getRecordSet(zoneID, name, recordType)
 	if err != nil {
 		return err

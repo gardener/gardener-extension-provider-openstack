@@ -34,7 +34,7 @@ func NewSecretValidator() extensionswebhook.Validator {
 }
 
 // Validate checks whether the given new secret contains valid OpenStack credentials.
-func (s *secret) Validate(ctx context.Context, newObj, oldObj client.Object) error {
+func (s *secret) Validate(_ context.Context, newObj, oldObj client.Object) error {
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
 		return fmt.Errorf("wrong object type %T", newObj)

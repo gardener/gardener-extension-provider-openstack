@@ -25,8 +25,7 @@ import (
 )
 
 // CleanupKubernetesRoutes deletes all routes from the router which have a nextHop in the subnet.
-func CleanupKubernetesRoutes(ctx context.Context, client openstackclient.Networking, routerID, workers string) error {
-
+func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networking, routerID, workers string) error {
 	router, err := client.GetRouterByID(routerID)
 	if err != nil {
 		return err

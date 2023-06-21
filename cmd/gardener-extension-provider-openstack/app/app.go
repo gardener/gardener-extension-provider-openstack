@@ -49,6 +49,7 @@ import (
 	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	controlplanewebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplane"
 	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
 )
 
@@ -222,6 +223,12 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
+
+			// TODO(rfranzke): Remove the GardenletManagesMCM fields as soon as the general options no longer support the
+			//  GardenletManagesMCM field.
+			openstackworker.DefaultAddOptions.GardenletManagesMCM = generalOpts.Completed().GardenletManagesMCM
+			controlplanewebhook.GardenletManagesMCM = generalOpts.Completed().GardenletManagesMCM
+			healthcheck.GardenletManagesMCM = generalOpts.Completed().GardenletManagesMCM
 
 			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)

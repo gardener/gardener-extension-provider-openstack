@@ -163,7 +163,7 @@ var _ = Describe("Ensurer", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		ensurer = NewEnsurer(logger)
+		ensurer = NewEnsurer(logger, false)
 	})
 
 	AfterEach(func() {
@@ -358,7 +358,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			ensurer = NewEnsurer(logger)
+			ensurer = NewEnsurer(logger, false)
 		})
 
 		It("should add missing elements to kube-scheduler deployment (k8s = 1.20)", func() {
@@ -412,7 +412,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			ensurer = NewEnsurer(logger)
+			ensurer = NewEnsurer(logger, false)
 		})
 
 		It("should add missing elements to cluster-autoscaler deployment (k8s 1.20)", func() {
@@ -572,7 +572,7 @@ WantedBy=multi-user.target
 
 		It("should add additional units if resolvConfOptions field is not set", func() {
 			// Create ensurer
-			ensurer := NewEnsurer(logger)
+			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalUnits method and check the result
 			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s121, &units, nil)
@@ -590,7 +590,7 @@ WantedBy=multi-user.target
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(logger)
+			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalUnits method and check the result
 			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s121WithResolvConfOptions, &units, nil)
@@ -623,7 +623,7 @@ WantedBy=multi-user.target
 		It("should add additional files to the current ones if resolvConfOptions field is not set", func() {
 			files := []extensionsv1alpha1.File{oldFile}
 			// Create ensurer
-			ensurer := NewEnsurer(logger)
+			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121, &files, nil)
@@ -634,7 +634,7 @@ WantedBy=multi-user.target
 			files := []extensionsv1alpha1.File{oldFile}
 
 			// Create ensurer
-			ensurer := NewEnsurer(logger)
+			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121WithResolvConfOptions, &files, nil)
@@ -649,7 +649,7 @@ WantedBy=multi-user.target
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(logger)
+			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s121WithResolvConfOptions, &files, nil)

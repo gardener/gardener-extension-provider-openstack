@@ -22,13 +22,18 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
-var logger = log.Log.WithName("openstack-controlplane-webhook")
+var (
+	logger = log.Log.WithName("openstack-controlplane-webhook")
+	// GardenletManagesMCM specifies whether the machine-controller-manager should be managed.
+	GardenletManagesMCM bool
+)
 
 // AddToManager creates a webhook and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
@@ -39,9 +44,10 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Provider: openstack.Type,
 		Types: []extensionswebhook.Type{
 			{Obj: &appsv1.Deployment{}},
+			{Obj: &vpaautoscalingv1.VerticalPodAutoscaler{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
-		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(),
+		Mutator: genericmutator.NewMutator(NewEnsurer(logger, GardenletManagesMCM), oscutils.NewUnitSerializer(),
 			kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }

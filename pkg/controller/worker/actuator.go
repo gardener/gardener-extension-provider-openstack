@@ -25,6 +25,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/chart"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"k8s.io/client-go/kubernetes"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -39,16 +41,31 @@ type delegateFactory struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator() worker.Actuator {
-	delegateFactory := &delegateFactory{}
+func NewActuator(gardenletManagesMCM bool) worker.Actuator {
+	var (
+		mcmName              string
+		mcmChartSeed         *chart.Chart
+		mcmChartShoot        *chart.Chart
+		imageVector          imagevectorutils.ImageVector
+		chartRendererFactory extensionscontroller.ChartRendererFactory
+		workerDelegate       = &delegateFactory{}
+	)
+
+	if !gardenletManagesMCM {
+		mcmName = openstack.MachineControllerManagerName
+		mcmChartSeed = mcmChart
+		mcmChartShoot = mcmShootChart
+		imageVector = imagevector.ImageVector()
+		chartRendererFactory = extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot)
+	}
 
 	return genericactuator.NewActuator(
-		delegateFactory,
-		openstack.MachineControllerManagerName,
-		mcmChart,
-		mcmShootChart,
-		imagevector.ImageVector(),
-		extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
+		workerDelegate,
+		mcmName,
+		mcmChartSeed,
+		mcmChartShoot,
+		imageVector,
+		chartRendererFactory,
 	)
 }
 

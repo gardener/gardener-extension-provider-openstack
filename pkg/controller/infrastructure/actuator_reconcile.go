@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
@@ -61,7 +60,7 @@ func (a *actuator) shouldUseFlow(infrastructure *extensionsv1alpha1.Infrastructu
 		(cluster.Shoot != nil && cluster.Shoot.Annotations != nil && strings.EqualFold(cluster.Shoot.Annotations[AnnotationKeyUseFlow], "true"))
 }
 
-func (a *actuator) getStateFromInfraStatus(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure) (*infraflow.PersistentState, error) {
+func (a *actuator) getStateFromInfraStatus(_ context.Context, infrastructure *extensionsv1alpha1.Infrastructure) (*infraflow.PersistentState, error) {
 	if infrastructure.Status.State != nil {
 		return infraflow.NewPersistentStateFromJSON(infrastructure.Status.State.Raw)
 	}
@@ -157,12 +156,7 @@ func (a *actuator) createFlowContext(ctx context.Context, log logr.Logger,
 }
 
 func (a *actuator) updateStatusState(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, state *infraflow.PersistentState) error {
-	config, err := helper.InfrastructureConfigFromInfrastructure(infra)
-	if err != nil {
-		return err
-	}
-
-	status, err := computeProviderStatusFromFlowState(config, state)
+	status, err := computeProviderStatusFromFlowState(state)
 	if err != nil {
 		return err
 	}
@@ -224,7 +218,7 @@ func (a *actuator) reconcileWithTerraformer(ctx context.Context, log logr.Logger
 	return a.updateProviderStatusWithTerraformer(ctx, tf, infra, config)
 }
 
-func computeProviderStatusFromFlowState(config *api.InfrastructureConfig, state *infraflow.PersistentState) (*openstackv1alpha1.InfrastructureStatus, error) {
+func computeProviderStatusFromFlowState(state *infraflow.PersistentState) (*openstackv1alpha1.InfrastructureStatus, error) {
 	if len(state.Data) == 0 {
 		return nil, nil
 	}

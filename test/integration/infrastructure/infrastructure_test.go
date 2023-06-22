@@ -287,12 +287,12 @@ var _ = Describe("Infrastructure tests", func() {
 
 			cloudRouterName := namespace + "-cloud-router"
 
-			routerID, err := prepareNewRouter(ctx, log, cloudRouterName, openstackClient)
+			routerID, err := prepareNewRouter(log, cloudRouterName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownRouter(ctx, log, *routerID, openstackClient)
+				err := teardownRouter(log, *routerID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -342,12 +342,12 @@ var _ = Describe("Infrastructure tests", func() {
 
 			networkName := namespace + "-network"
 
-			networkID, err := prepareNewNetwork(ctx, log, networkName, openstackClient)
+			networkID, err := prepareNewNetwork(log, networkName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownNetwork(ctx, log, *networkID, openstackClient)
+				err := teardownNetwork(log, *networkID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)
@@ -408,19 +408,19 @@ var _ = Describe("Infrastructure tests", func() {
 			networkName := namespace + "-network"
 			cloudRouterName := namespace + "-cloud-router"
 
-			networkID, err := prepareNewNetwork(ctx, log, networkName, openstackClient)
+			networkID, err := prepareNewNetwork(log, networkName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
-			routerID, err := prepareNewRouter(ctx, log, cloudRouterName, openstackClient)
+			routerID, err := prepareNewRouter(log, cloudRouterName, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			var cleanupHandle framework.CleanupActionHandle
 			cleanupHandle = framework.AddCleanupAction(func() {
 				By("Tearing down network")
-				err := teardownNetwork(ctx, log, *networkID, openstackClient)
+				err := teardownNetwork(log, *networkID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Tearing down router")
-				err = teardownRouter(ctx, log, *routerID, openstackClient)
+				err = teardownRouter(log, *routerID, openstackClient)
 				Expect(err).NotTo(HaveOccurred())
 
 				framework.RemoveCleanupAction(cleanupHandle)

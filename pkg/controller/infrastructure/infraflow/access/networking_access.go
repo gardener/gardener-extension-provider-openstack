@@ -396,8 +396,8 @@ func (a *networkingAccess) GetSubnetByName(networkID, name string) ([]*subnets.S
 	}
 	var result []*subnets.Subnet
 	for _, raw := range list {
-		copy := raw
-		result = append(result, &copy)
+		tmp := raw
+		result = append(result, &tmp)
 	}
 	return result, nil
 }
@@ -445,8 +445,8 @@ func (a *networkingAccess) GetSecurityGroupByName(name string) ([]*groups.SecGro
 	}
 	var result []*groups.SecGroup
 	for _, raw := range list {
-		copy := raw
-		result = append(result, &copy)
+		tmp := raw
+		result = append(result, &tmp)
 	}
 	return result, nil
 }

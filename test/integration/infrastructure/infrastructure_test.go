@@ -606,6 +606,35 @@ func runTest(
 		Expect(err).To(Succeed())
 	}
 
+	By("wait until infrastructure is reconciled")
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		c,
+		log,
+		checkOperationAnnotationRemoved,
+		infra,
+		"Infrastucture",
+		10*time.Second,
+		30*time.Second,
+		5*time.Minute,
+		nil,
+	); err != nil {
+		Expect(err).To(Succeed())
+	}
+	if err := extensions.WaitUntilExtensionObjectReady(
+		ctx,
+		c,
+		log,
+		infra,
+		"Infrastucture",
+		10*time.Second,
+		30*time.Second,
+		16*time.Minute,
+		nil,
+	); err != nil {
+		Expect(err).To(Succeed())
+	}
+
 	By("triggering infrastructure reconciliation")
 	infraCopy := infra.DeepCopy()
 	metav1.SetMetaDataAnnotation(&infra.ObjectMeta, "gardener.cloud/operation", "reconcile")
@@ -613,13 +642,16 @@ func runTest(
 		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, infrastructure.AnnotationKeyUseFlow, "true")
 	}
 	Expect(c.Patch(ctx, infra, client.MergeFrom(infraCopy))).To(Succeed())
-
-	By("wait until infrastructure is reconciled")
 	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		log,
-		checkOperationAnnotationRemoved,
+		func(obj client.Object) error {
+			if obj.GetResourceVersion() == infraCopy.ResourceVersion {
+				return fmt.Errorf("cache not updated yet")
+			}
+			return checkOperationAnnotationRemoved(obj)
+		},
 		infra,
 		"Infrastucture",
 		10*time.Second,

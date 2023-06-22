@@ -385,6 +385,7 @@ func (c *FlowContext) ensureRouterInterface(ctx context.Context) error {
 func (c *FlowContext) ensureSecGroup(ctx context.Context) error {
 	log := c.LogFromContext(ctx)
 
+	desc := "managed by Gardener"
 	desired := &groups.SecGroup{
 		Name:        c.namespace,
 		Description: "Cluster Nodes",
@@ -393,22 +394,33 @@ func (c *FlowContext) ensureSecGroup(ctx context.Context) error {
 				Direction:     string(rules.DirIngress),
 				EtherType:     string(rules.EtherType4),
 				RemoteGroupID: access.SecurityGroupIDSelf,
+				Description:   desc,
 			},
 			{
 				Direction: string(rules.DirEgress),
 				EtherType: string(rules.EtherType4),
 			},
 			{
+				Direction: string(rules.DirEgress),
+				EtherType: string(rules.EtherType6),
+			},
+			{
 				Direction:      string(rules.DirIngress),
 				EtherType:      string(rules.EtherType4),
 				Protocol:       string(rules.ProtocolTCP),
+				PortRangeMin:   30000,
+				PortRangeMax:   32767,
 				RemoteIPPrefix: "0.0.0.0/0",
+				Description:    desc,
 			},
 			{
 				Direction:      string(rules.DirIngress),
 				EtherType:      string(rules.EtherType4),
 				Protocol:       string(rules.ProtocolUDP),
+				PortRangeMin:   30000,
+				PortRangeMax:   32767,
 				RemoteIPPrefix: "0.0.0.0/0",
+				Description:    desc,
 			},
 		},
 	}
@@ -419,7 +431,12 @@ func (c *FlowContext) ensureSecGroup(ctx context.Context) error {
 	if current != nil {
 		c.state.Set(IdentifierSecGroup, current.ID)
 		c.state.Set(NameSecGroup, current.Name)
-		if modified, err := c.access.UpdateSecurityGroup(desired, current); err != nil {
+		if modified, err := c.access.UpdateSecurityGroup(desired, current, func(rule *rules.SecGroupRule) bool {
+			// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
+			// As we don't store the role ids in the state, this function needs to be adjusted
+			// if values in existing rules are changed to identify them for update by replacement.
+			return false
+		}); err != nil {
 			return err
 		} else if modified {
 			log.Info("updated rules")

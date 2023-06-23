@@ -203,11 +203,6 @@ func SeedSettingSchedulingVisible(settings *core.SeedSettings) bool {
 	return settings == nil || settings.Scheduling == nil || settings.Scheduling.Visible
 }
 
-// SeedSettingOwnerChecksEnabled returns true if the 'ownerChecks' setting is enabled.
-func SeedSettingOwnerChecksEnabled(settings *core.SeedSettings) bool {
-	return settings != nil && settings.OwnerChecks != nil && settings.OwnerChecks.Enabled
-}
-
 // SeedSettingTopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
 func SeedSettingTopologyAwareRoutingEnabled(settings *core.SeedSettings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
@@ -497,6 +492,12 @@ func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 // IsWorkerless checks if the shoot has zero workers.
 func IsWorkerless(shoot *core.Shoot) bool {
 	return len(shoot.Spec.Provider.Workers) == 0
+}
+
+// ShootEnablesSSHAccess returns true if ssh access to worker nodes should be allowed for the given shoot.
+func ShootEnablesSSHAccess(shoot *core.Shoot) bool {
+	return !IsWorkerless(shoot) &&
+		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
 }
 
 // DeterminePrimaryIPFamily determines the primary IP family out of a specified list of IP families.

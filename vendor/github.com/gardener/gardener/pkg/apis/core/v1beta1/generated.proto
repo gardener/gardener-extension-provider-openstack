@@ -2292,8 +2292,7 @@ message SeedSettingLoadBalancerServicesZones {
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 //
 // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
-// Finally, the field will be removed from the API in a future version of Gardener.
+// The field is no-op and will be removed in a future version.
 message SeedSettingOwnerChecks {
   // Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
   optional bool enabled = 1;
@@ -2509,7 +2508,6 @@ message ServiceAccountConfig {
   // AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
   // These values are not used to generate new service account tokens. Only useful when service account tokens are also
   // issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
-  // This field is only available for Kubernetes v1.22 or later.
   // +optional
   repeated string acceptedIssuers = 5;
 }
@@ -3001,7 +2999,7 @@ message Worker {
   optional string caBundle = 2;
 
   // CRI contains configurations of CRI support of every machine in the worker pool.
-  // Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
+  // Defaults to a CRI with name `containerd`.
   // +optional
   optional CRI cri = 3;
 
@@ -3019,17 +3017,21 @@ message Worker {
   // Machine contains information about the machine type and image.
   optional Machine machine = 7;
 
-  // Maximum is the maximum number of VMs to create.
+  // Maximum is the maximum number of machines to create.
+  // This value is divided by the number of configured zones for a fair distribution.
   optional int32 maximum = 8;
 
-  // Minimum is the minimum number of VMs to create.
+  // Minimum is the minimum number of machines to create.
+  // This value is divided by the number of configured zones for a fair distribution.
   optional int32 minimum = 9;
 
-  // MaxSurge is maximum number of VMs that are created during an update.
+  // MaxSurge is maximum number of machines that are created during an update.
+  // This value is divided by the number of configured zones for a fair distribution.
   // +optional
   optional k8s.io.apimachinery.pkg.util.intstr.IntOrString maxSurge = 10;
 
-  // MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+  // MaxUnavailable is the maximum number of machines that can be unavailable during an update.
+  // This value is divided by the number of configured zones for a fair distribution.
   // +optional
   optional k8s.io.apimachinery.pkg.util.intstr.IntOrString maxUnavailable = 11;
 
@@ -3066,7 +3068,7 @@ message Worker {
   // +optional
   optional MachineControllerManagerSettings machineControllerManager = 19;
 
-  // Sysctls is a map of kernel settings to apply on all VMs in this worker pool.
+  // Sysctls is a map of kernel settings to apply on all machines in this worker pool.
   // +optional
   map<string, string> sysctls = 20;
 }

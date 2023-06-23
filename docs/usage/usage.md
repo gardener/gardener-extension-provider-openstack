@@ -111,7 +111,7 @@ loadBalancerClasses:
   subnetID: internal-id
 cloudControllerManager:
   featureGates:
-    CustomResourceValidation: true
+    RotateKubeletServerCertificate: true
 #storage:
 #  csiManila:
 #    enabled: true

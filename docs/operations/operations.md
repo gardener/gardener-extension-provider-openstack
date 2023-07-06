@@ -126,7 +126,7 @@ If no entry for the given region exists then the fallback value is the most matc
 If an additional floating pool should be selectable for a region and/or domain, you can mark it as non constraining
 with setting the optional field `nonConstraining` to `true`.
 
-The `loadBalancerClasses` field is an optional list of load balancer classes which can be when the corresponding floating pool network is choosen. The load balancer classes can be configured in the same way as in the `ControlPlaneConfig` in the `Shoot` resource, therefore see [here](usage-as-end-user.md#ControlPlaneConfig) for more details.
+The `loadBalancerClasses` field is an optional list of load balancer classes which can be when the corresponding floating pool network is choosen. The load balancer classes can be configured in the same way as in the `ControlPlaneConfig` in the `Shoot` resource, therefore see [here](../usage/usage.md#ControlPlaneConfig) for more details.
 
 Some OpenStack environments don't need these regional mappings, hence, the `region` and `keystoneURLs` fields are optional.
 If your OpenStack environment only has regional values and it doesn't make sense to provide a (non-regional) fallback then simply

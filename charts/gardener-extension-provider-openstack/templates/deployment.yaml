@@ -72,6 +72,9 @@ spec:
         {{- end }}
         - --health-bind-address=:{{ .Values.healthPort }}
         - --gardener-version={{ .Values.gardener.version }}
+        {{- if .Values.gardener.gardenlet.featureGates.MachineControllerManagerDeployment }}
+        - --gardenlet-manages-mcm={{ .Values.gardener.gardenlet.featureGates.MachineControllerManagerDeployment }}
+        {{- end }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

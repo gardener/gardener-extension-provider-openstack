@@ -10,7 +10,7 @@ allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   type: default
-  shareNetworkID: {{ required "openstack.shareNetworkID needs to be set" $.Values.openstack.shareNetworkID }}
+  shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
@@ -35,7 +35,7 @@ volumeBindingMode: WaitForFirstConsumer
 parameters:
   type: default
   availability: {{ required "openstack.availabilityZones needs to be set" . }}
-  shareNetworkID: {{ required "openstack.shareNetworkID needs to be set" $.Values.openstack.shareNetworkID }}
+  shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
@@ -66,7 +66,7 @@ allowedTopologies:
 parameters:
   type: default
   availability: {{ required "openstack.availabilityZones needs to be set" . }}
-  shareNetworkID: {{ required "openstack.shareNetworkID needs to be set" $.Values.openstack.shareNetworkID }}
+  shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}

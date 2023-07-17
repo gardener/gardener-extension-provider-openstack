@@ -41,7 +41,7 @@ type NetworkingAccess interface {
 	UpdateRouter(desired, current *Router) (modified bool, err error)
 	LookupFloatingPoolSubnetIDs(networkID, floatingPoolSubnetNameRegex string) ([]string, error)
 	AddRouterInterfaceAndWait(ctx context.Context, routerID, subnetID string) error
-	GetRouterInterfacePortID(routerID string) (portID, subnetID *string, err error)
+	GetRouterInterfacePortID(routerID, subnetID string) (portID *string, err error)
 	RemoveRouterInterfaceAndWait(ctx context.Context, routerID, subnetID, portID string) error
 
 	// Networks
@@ -60,7 +60,7 @@ type NetworkingAccess interface {
 	CreateSecurityGroup(desired *groups.SecGroup) (*groups.SecGroup, error)
 	GetSecurityGroupByID(id string) (*groups.SecGroup, error)
 	GetSecurityGroupByName(name string) ([]*groups.SecGroup, error)
-	UpdateSecurityGroup(desired, current *groups.SecGroup, allowDelete func(rule *rules.SecGroupRule) bool) (modified bool, err error)
+	UpdateSecurityGroupRules(group *groups.SecGroup, desiredRules []rules.SecGroupRule, allowDelete func(rule *rules.SecGroupRule) bool) (modified bool, err error)
 }
 
 // Router is a simplified router resource
@@ -114,7 +114,7 @@ func (a *networkingAccess) CreateRouter(desired *Router) (router *Router, err er
 	// create router in first available subnet
 	for _, subnetID := range desired.ExternalSubnetIDs {
 		router, err = a.tryCreateRouter(desired, &subnetID)
-		if err != nil && !retryOn409(a.log, err) {
+		if err != nil && !retryOnError(a.log, err) {
 			return
 		}
 		if err == nil {
@@ -228,8 +228,8 @@ func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, router
 	}
 }
 
-func (a *networkingAccess) GetRouterInterfacePortID(routerID string) (portID, subnetID *string, err error) {
-	port, err := a.networking.GetRouterInterfacePort(routerID)
+func (a *networkingAccess) GetRouterInterfacePortID(routerID, subnetID string) (portID *string, err error) {
+	port, err := a.networking.GetRouterInterfacePort(routerID, subnetID)
 	if err != nil {
 		return
 	}
@@ -237,9 +237,6 @@ func (a *networkingAccess) GetRouterInterfacePortID(routerID string) (portID, su
 		return
 	}
 	portID = &port.ID
-	if len(port.FixedIPs) == 1 {
-		subnetID = &port.FixedIPs[0].SubnetID
-	}
 	return
 }
 
@@ -290,7 +287,7 @@ func (a *networkingAccess) LookupFloatingPoolSubnetIDs(networkID, floatingPoolSu
 		// subnet name. No name means nothing to attempt a match against,
 		// therefore we are skipping such subnet.
 		if subnet.Name == "" {
-			a.log.Info("[WARN] Unable to find subnet name to match against for subnet ID, nothing to do.",
+			a.log.V(2).Info("[WARN] Unable to find subnet name to match against for subnet ID, nothing to do.",
 				"subnetID", subnet.ID)
 			continue
 		}
@@ -423,14 +420,7 @@ func (a *networkingAccess) CreateSecurityGroup(desired *groups.SecGroup) (*group
 		Name:        desired.Name,
 		Description: desired.Description,
 	}
-	sg, err := a.networking.CreateSecurityGroup(opts)
-	if err != nil {
-		return nil, err
-	}
-	if _, err = a.UpdateSecurityGroup(desired, sg, nil); err != nil {
-		return nil, err
-	}
-	return a.GetSecurityGroupByID(sg.ID)
+	return a.networking.CreateSecurityGroup(opts)
 }
 
 func (a *networkingAccess) GetSecurityGroupByID(id string) (*groups.SecGroup, error) {
@@ -451,20 +441,24 @@ func (a *networkingAccess) GetSecurityGroupByName(name string) ([]*groups.SecGro
 	return result, nil
 }
 
-func (a *networkingAccess) UpdateSecurityGroup(desired, current *groups.SecGroup, allowDelete func(rule *rules.SecGroupRule) bool) (modified bool, err error) {
-	for i := range desired.Rules {
-		rule := &desired.Rules[i]
-		rule.SecGroupID = current.ID
-		rule.ProjectID = current.ProjectID
-		rule.TenantID = current.TenantID
+func (a *networkingAccess) UpdateSecurityGroupRules(
+	group *groups.SecGroup,
+	desiredRules []rules.SecGroupRule,
+	allowDelete func(rule *rules.SecGroupRule) bool,
+) (modified bool, err error) {
+	for i := range desiredRules {
+		rule := &desiredRules[i]
+		rule.SecGroupID = group.ID
+		rule.ProjectID = group.ProjectID
+		rule.TenantID = group.TenantID
 		if rule.RemoteGroupID == SecurityGroupIDSelf {
-			rule.RemoteGroupID = current.ID
+			rule.RemoteGroupID = group.ID
 		}
 	}
 
-	for i := range current.Rules {
-		rule := &current.Rules[i]
-		if desiredRule, _ := a.findMatchingRule(rule, desired.Rules); desiredRule == nil {
+	for i := range group.Rules {
+		rule := &group.Rules[i]
+		if desiredRule, _ := a.findMatchingRule(rule, desiredRules); desiredRule == nil {
 			if allowDelete == nil || allowDelete(rule) {
 				if err = a.networking.DeleteRule(rule.ID); err != nil {
 					err = fmt.Errorf("Error deleting rule for security group %s: %s", rule.ID, err)
@@ -476,8 +470,8 @@ func (a *networkingAccess) UpdateSecurityGroup(desired, current *groups.SecGroup
 			desiredRule.ID = rule.ID // mark as found
 		}
 	}
-	for i := range desired.Rules {
-		rule := &desired.Rules[i]
+	for i := range desiredRules {
+		rule := &desiredRules[i]
 		if rule.ID != "" {
 			// ignore found rules
 			continue

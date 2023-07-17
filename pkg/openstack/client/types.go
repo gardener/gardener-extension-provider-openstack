@@ -151,7 +151,7 @@ type Networking interface {
 	DeleteSubnet(subnetID string) error
 	// Ports
 	GetPort(portID string) (*ports.Port, error)
-	GetRouterInterfacePort(routerID string) (*ports.Port, error)
+	GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error)
 }
 
 // FactoryFactory creates instances of Factory.

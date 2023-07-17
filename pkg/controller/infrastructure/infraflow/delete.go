@@ -48,9 +48,15 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 	_ = c.AddTask(g, "delete security group",
 		c.deleteSecGroup,
 		Timeout(defaultTimeout))
+	recoverRouterID := c.AddTask(g, "recover router ID",
+		c.recoverRouterID,
+		Timeout(defaultTimeout))
+	recoverSubnetID := c.AddTask(g, "recover subnet ID",
+		c.recoverSubnetID,
+		Timeout(defaultTimeout))
 	deleteRouterInterface := c.AddTask(g, "delete router interface",
 		c.deleteRouterInterface,
-		Timeout(defaultTimeout))
+		Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID))
 	// subnet deletion only needed if network is given by spec
 	_ = c.AddTask(g, "delete subnet",
 		c.deleteSubnet,
@@ -65,14 +71,7 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 	return g
 }
 
-func (c *FlowContext) hasRouter() bool {
-	return !c.state.IsAlreadyDeleted(IdentifierRouter)
-}
-
 func (c *FlowContext) deleteRouter(ctx context.Context) error {
-	if c.state.IsAlreadyDeleted(IdentifierRouter) {
-		return nil
-	}
 	log := c.LogFromContext(ctx)
 	current, err := c.findExistingRouter()
 	if err != nil {
@@ -84,15 +83,10 @@ func (c *FlowContext) deleteRouter(ctx context.Context) error {
 			return err
 		}
 	}
-	c.state.SetAsDeleted(IdentifierRouter)
-	c.state.SetAsDeleted(RouterIP)
 	return nil
 }
 
 func (c *FlowContext) deleteNetwork(ctx context.Context) error {
-	if c.state.IsAlreadyDeleted(IdentifierNetwork) {
-		return nil
-	}
 	log := c.LogFromContext(ctx)
 	current, err := c.findExistingNetwork()
 	if err != nil {
@@ -104,16 +98,11 @@ func (c *FlowContext) deleteNetwork(ctx context.Context) error {
 			return err
 		}
 	}
-	c.state.SetAsDeleted(IdentifierNetwork)
-	c.state.SetAsDeleted(IdentifierSubnet)
 	c.state.Set(NameNetwork, "")
 	return nil
 }
 
 func (c *FlowContext) deleteSubnet(ctx context.Context) error {
-	if c.state.IsAlreadyDeleted(IdentifierSubnet) {
-		return nil
-	}
 	log := c.LogFromContext(ctx)
 	current, err := c.findExistingSubnet()
 	if err != nil {
@@ -125,21 +114,54 @@ func (c *FlowContext) deleteSubnet(ctx context.Context) error {
 			return err
 		}
 	}
-	c.state.SetAsDeleted(IdentifierSubnet)
+	return nil
+}
+
+func (c *FlowContext) recoverRouterID(_ context.Context) error {
+	if c.config.Networks.Router != nil {
+		c.state.Set(IdentifierRouter, c.config.Networks.Router.ID)
+		return nil
+	}
+	routerID := c.state.Get(IdentifierRouter)
+	if routerID != nil {
+		return nil
+	}
+	router, err := c.findExistingRouter()
+	if err != nil {
+		return err
+	}
+	if router != nil {
+		c.state.Set(IdentifierRouter, router.ID)
+	}
+	return nil
+}
+
+func (c *FlowContext) recoverSubnetID(_ context.Context) error {
+	if c.state.Get(IdentifierSubnet) != nil {
+		return nil
+	}
+
+	subnet, err := c.findExistingSubnet()
+	if err != nil {
+		return err
+	}
+	if subnet != nil {
+		c.state.Set(IdentifierSubnet, subnet.ID)
+	}
 	return nil
 }
 
 func (c *FlowContext) deleteRouterInterface(ctx context.Context) error {
-	if c.state.IsAlreadyDeleted(IdentifierNetwork) && c.state.IsAlreadyDeleted(IdentifierRouter) {
+	routerID := c.state.Get(IdentifierRouter)
+	if routerID == nil {
+		return nil
+	}
+	subnetID := c.state.Get(IdentifierSubnet)
+	if subnetID == nil {
 		return nil
 	}
 
-	routerID, subnetID, err := c.getExistingRouterAndSubnetIDs()
-	if err != nil {
-		return ignoreNotFound(err)
-	}
-
-	portID, _, err := c.access.GetRouterInterfacePortID(routerID)
+	portID, err := c.access.GetRouterInterfacePortID(*routerID, *subnetID)
 	if err != nil {
 		return err
 	}
@@ -149,7 +171,7 @@ func (c *FlowContext) deleteRouterInterface(ctx context.Context) error {
 
 	log := c.LogFromContext(ctx)
 	log.Info("deleting...")
-	err = c.access.RemoveRouterInterfaceAndWait(ctx, routerID, subnetID, *portID)
+	err = c.access.RemoveRouterInterfaceAndWait(ctx, *routerID, *subnetID, *portID)
 	if err != nil {
 		return err
 	}
@@ -157,10 +179,6 @@ func (c *FlowContext) deleteRouterInterface(ctx context.Context) error {
 }
 
 func (c *FlowContext) deleteSecGroup(ctx context.Context) error {
-	if c.state.IsAlreadyDeleted(IdentifierSecGroup) {
-		return nil
-	}
-
 	log := c.LogFromContext(ctx)
 	current, err := findExisting(c.state.Get(IdentifierSecGroup), c.namespace, c.access.GetSecurityGroupByID, c.access.GetSecurityGroupByName)
 	if err != nil {
@@ -172,16 +190,12 @@ func (c *FlowContext) deleteSecGroup(ctx context.Context) error {
 			return err
 		}
 	}
-	c.state.SetAsDeleted(IdentifierSecGroup)
 	c.state.Set(NameSecGroup, "")
+	c.state.SetObject(ObjectSecGroup, nil)
 	return nil
 }
 
 func (c *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
-	if c.state.IsAlreadyDeleted(NameKeyPair) {
-		return nil
-	}
-
 	log := c.LogFromContext(ctx)
 	current, err := c.compute.GetKeyPair(c.namespace)
 	if err != nil {
@@ -193,6 +207,5 @@ func (c *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 			return err
 		}
 	}
-	c.state.SetAsDeleted(NameKeyPair)
 	return nil
 }

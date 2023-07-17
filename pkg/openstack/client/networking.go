@@ -269,10 +269,13 @@ func (c *NetworkingClient) GetPort(portID string) (*ports.Port, error) {
 }
 
 // GetRouterInterfacePort gets a port for a router interface
-func (c *NetworkingClient) GetRouterInterfacePort(routerID string) (*ports.Port, error) {
+func (c *NetworkingClient) GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error) {
 	page, err := ports.List(c.client, ports.ListOpts{
 		DeviceOwner: "network:router_interface",
 		DeviceID:    routerID,
+		FixedIPs: []ports.FixedIPOpts{
+			{SubnetID: subnetID},
+		},
 	}).AllPages()
 	if err != nil {
 		return nil, err

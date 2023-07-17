@@ -53,6 +53,9 @@ const (
 	// RouterIP is the key for the router IP address
 	RouterIP = "RouterIP"
 
+	// ObjectSecGroup is the key for the cached security group
+	ObjectSecGroup = "SecurityGroup"
+
 	// MarkerMigratedFromTerraform is the key for marking the state for successful state migration from Terraformer
 	MarkerMigratedFromTerraform = "MigratedFromTerraform"
 	// MarkerTerraformCleanedUp is the key for marking the state for successful cleanup of Terraformer resources.

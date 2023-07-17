@@ -33,13 +33,13 @@ type neutronError struct {
 	Detail  string `json:"detail"`
 }
 
-func retryOn409(log logr.Logger, err error) bool {
+func retryOnError(log logr.Logger, err error) bool {
 	switch err := err.(type) {
 	case gophercloud.ErrDefault409:
 		neutronError, e := decodeNeutronError(err.ErrUnexpectedResponseCode.Body)
 		if e != nil {
 			// retry, when error type cannot be detected
-			log.Info("[DEBUG] failed to decode a neutron error", "error", e)
+			log.V(4).Info("[DEBUG] failed to decode a neutron error", "error", e)
 			return true
 		}
 		if neutronError.Type == "IpAddressGenerationFailure" {
@@ -52,7 +52,7 @@ func retryOn409(log logr.Logger, err error) bool {
 		neutronError, e := decodeNeutronError(err.ErrUnexpectedResponseCode.Body)
 		if e != nil {
 			// retry, when error type cannot be detected
-			log.Info("[DEBUG] failed to decode a neutron error", "error", e)
+			log.V(4).Info("[DEBUG] failed to decode a neutron error", "error", e)
 			return true
 		}
 		if neutronError.Type == "ExternalIpAddressExhausted" {

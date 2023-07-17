@@ -775,18 +775,18 @@ func (mr *MockNetworkingMockRecorder) GetRouterByID(arg0 interface{}) *gomock.Ca
 }
 
 // GetRouterInterfacePort mocks base method.
-func (m *MockNetworking) GetRouterInterfacePort(arg0 string) (*ports.Port, error) {
+func (m *MockNetworking) GetRouterInterfacePort(arg0, arg1 string) (*ports.Port, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRouterInterfacePort", arg0)
+	ret := m.ctrl.Call(m, "GetRouterInterfacePort", arg0, arg1)
 	ret0, _ := ret[0].(*ports.Port)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRouterInterfacePort indicates an expected call of GetRouterInterfacePort.
-func (mr *MockNetworkingMockRecorder) GetRouterInterfacePort(arg0 interface{}) *gomock.Call {
+func (mr *MockNetworkingMockRecorder) GetRouterInterfacePort(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRouterInterfacePort", reflect.TypeOf((*MockNetworking)(nil).GetRouterInterfacePort), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRouterInterfacePort", reflect.TypeOf((*MockNetworking)(nil).GetRouterInterfacePort), arg0, arg1)
 }
 
 // GetSecurityGroup mocks base method.

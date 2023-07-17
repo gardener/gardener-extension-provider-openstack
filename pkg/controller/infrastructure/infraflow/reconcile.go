@@ -46,11 +46,15 @@ func (c *FlowContext) Reconcile(ctx context.Context) error {
 
 func (c *FlowContext) buildReconcileGraph() *flow.Graph {
 	//createNetwork := c.config.Networks.ID == nil
-	g := flow.NewGraph("Openstack infrastructure reconcilation")
+	g := flow.NewGraph("Openstack infrastructure reconciliation")
+
+	ensureExternalNetwork := c.AddTask(g, "ensure external network",
+		c.ensureExternalNetwork,
+		Timeout(defaultTimeout))
 
 	ensureRouter := c.AddTask(g, "ensure router",
 		c.ensureRouter,
-		Timeout(defaultTimeout))
+		Timeout(defaultTimeout), Dependencies(ensureExternalNetwork))
 
 	ensureNetwork := c.AddTask(g, "ensure network",
 		c.ensureNetwork,
@@ -64,9 +68,13 @@ func (c *FlowContext) buildReconcileGraph() *flow.Graph {
 		c.ensureRouterInterface,
 		Timeout(defaultTimeout), Dependencies(ensureRouter, ensureSubnet))
 
-	_ = c.AddTask(g, "ensure security group",
+	ensureSecGroup := c.AddTask(g, "ensure security group",
 		c.ensureSecGroup,
 		Timeout(defaultTimeout), Dependencies(ensureRouter))
+
+	_ = c.AddTask(g, "ensure security group rules",
+		c.ensureSecGroupRules,
+		Timeout(defaultTimeout), Dependencies(ensureSecGroup))
 
 	_ = c.AddTask(g, "ensure ssh key pair",
 		c.ensureSSHKeyPair,
@@ -75,7 +83,7 @@ func (c *FlowContext) buildReconcileGraph() *flow.Graph {
 	return g
 }
 
-func (c *FlowContext) ensureRouter(ctx context.Context) error {
+func (c *FlowContext) ensureExternalNetwork(_ context.Context) error {
 	externalNetwork, err := c.networking.GetExternalNetworkByName(c.config.FloatingPoolName)
 	if err != nil {
 		return err
@@ -85,11 +93,19 @@ func (c *FlowContext) ensureRouter(ctx context.Context) error {
 	}
 	c.state.Set(IdentifierFloatingNetwork, externalNetwork.ID)
 	c.state.Set(NameFloatingNetwork, externalNetwork.Name)
+	return nil
+}
+
+func (c *FlowContext) ensureRouter(ctx context.Context) error {
+	externalNetworkID := c.state.Get(IdentifierFloatingNetwork)
+	if externalNetworkID == nil {
+		return fmt.Errorf("missing external network ID")
+	}
 
 	if c.config.Networks.Router != nil {
 		return c.ensureConfiguredRouter(ctx)
 	}
-	return c.ensureNewRouter(ctx, externalNetwork.ID)
+	return c.ensureNewRouter(ctx, *externalNetworkID)
 }
 
 func (c *FlowContext) ensureConfiguredRouter(_ context.Context) error {
@@ -118,53 +134,32 @@ func (c *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID str
 	if current != nil {
 		c.state.Set(IdentifierRouter, current.ID)
 		c.state.Set(RouterIP, current.ExternalFixedIPs[0].IPAddress)
-		if _, err := c.access.UpdateRouter(desired, current); err != nil {
-			return err
-		}
-	} else {
-		floatingPoolSubnetName := c.findFloatingPoolSubnetName()
-		c.state.SetPtr(NameFloatingPoolSubnet, floatingPoolSubnetName)
-		if floatingPoolSubnetName != nil {
-			log.Info("looking up floating pool subnets...")
-			desired.ExternalSubnetIDs, err = c.access.LookupFloatingPoolSubnetIDs(externalNetworkID, *floatingPoolSubnetName)
-			if err != nil {
-				return err
-			}
-		}
-		log.Info("creating...")
-		created, err := c.access.CreateRouter(desired)
+		_, err := c.access.UpdateRouter(desired, current)
+		return err
+	}
+
+	floatingPoolSubnetName := c.findFloatingPoolSubnetName()
+	c.state.SetPtr(NameFloatingPoolSubnet, floatingPoolSubnetName)
+	if floatingPoolSubnetName != nil {
+		log.Info("looking up floating pool subnets...")
+		desired.ExternalSubnetIDs, err = c.access.LookupFloatingPoolSubnetIDs(externalNetworkID, *floatingPoolSubnetName)
 		if err != nil {
 			return err
 		}
-		c.state.Set(IdentifierRouter, created.ID)
-		c.state.Set(RouterIP, created.ExternalFixedIPs[0].IPAddress)
 	}
+	log.Info("creating...")
+	created, err := c.access.CreateRouter(desired)
+	if err != nil {
+		return err
+	}
+	c.state.Set(IdentifierRouter, created.ID)
+	c.state.Set(RouterIP, created.ExternalFixedIPs[0].IPAddress)
 
 	return nil
 }
 
 func (c *FlowContext) findExistingRouter() (*access.Router, error) {
 	return findExisting(c.state.Get(IdentifierRouter), c.namespace, c.access.GetRouterByID, c.access.GetRouterByName)
-}
-
-func (c *FlowContext) getRouterID() (*string, error) {
-	if c.config.Networks.Router != nil {
-		return &c.config.Networks.Router.ID, nil
-	}
-	routerID := c.state.Get(IdentifierRouter)
-	if routerID != nil {
-		return routerID, nil
-	}
-	router, err := c.findExistingRouter()
-	if err != nil {
-		return nil, err
-	}
-	if router != nil {
-		c.state.Set(IdentifierRouter, router.ID)
-		c.state.Set(RouterIP, router.ExternalFixedIPs[0].IPAddress)
-		return &router.ID, nil
-	}
-	return nil, nil
 }
 
 func (c *FlowContext) findFloatingPoolSubnetName() *string {
@@ -302,22 +297,6 @@ func (c *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
 	return findExisting(c.state.Get(IdentifierSubnet), c.namespace, c.access.GetSubnetByID, getByName)
 }
 
-func (c *FlowContext) getSubnetID() (*string, error) {
-	subnetID := c.state.Get(IdentifierSubnet)
-	if subnetID != nil {
-		return subnetID, nil
-	}
-	subnet, err := c.findExistingSubnet()
-	if err != nil {
-		return nil, err
-	}
-	if subnet != nil {
-		c.state.Set(IdentifierSubnet, subnet.ID)
-		return &subnet.ID, nil
-	}
-	return nil, nil
-}
-
 type notFoundError struct {
 	msg string
 }
@@ -335,94 +314,34 @@ func ignoreNotFound(err error) error {
 	return err
 }
 
-func (c *FlowContext) getExistingRouterAndSubnetIDs() (routerID, subnetID string, err error) {
-	prouter, err := c.getRouterID()
-	if err != nil {
-		return
-	}
-	if prouter == nil {
-		err = &notFoundError{msg: "router not found"}
-		return
-	}
-	routerID = *prouter
-	psubnet, err := c.getSubnetID()
-	if err != nil {
-		return
-	}
-	if psubnet == nil {
-		err = &notFoundError{msg: "subnet not found"}
-		return
-	}
-	subnetID = *psubnet
-	return
-}
-
 func (c *FlowContext) ensureRouterInterface(ctx context.Context) error {
 	log := c.LogFromContext(ctx)
 
-	routerID, subnetID, err := c.getExistingRouterAndSubnetIDs()
-	if err != nil {
-		return err
+	routerID := c.state.Get(IdentifierRouter)
+	if routerID == nil {
+		return fmt.Errorf("internal error: missing routerID")
 	}
-	portID, actualSubnetID, err := c.access.GetRouterInterfacePortID(routerID)
+	subnetID := c.state.Get(IdentifierSubnet)
+	if subnetID == nil {
+		return fmt.Errorf("internal error: missing subnetID")
+	}
+	portID, err := c.access.GetRouterInterfacePortID(*routerID, *subnetID)
 	if err != nil {
 		return err
 	}
 	if portID != nil {
-		if actualSubnetID != nil && *actualSubnetID == subnetID {
-			return nil
-		}
-		log.Info("router interface mismatch, deleting...", "port", *portID)
-		err = c.access.RemoveRouterInterfaceAndWait(ctx, routerID, "", *portID)
-		if err != nil {
-			return err
-		}
+		return nil
 	}
 	log.Info("creating...")
-	return c.access.AddRouterInterfaceAndWait(ctx, routerID, subnetID)
+	return c.access.AddRouterInterfaceAndWait(ctx, *routerID, *subnetID)
 }
 
 func (c *FlowContext) ensureSecGroup(ctx context.Context) error {
 	log := c.LogFromContext(ctx)
 
-	desc := "managed by Gardener"
 	desired := &groups.SecGroup{
 		Name:        c.namespace,
 		Description: "Cluster Nodes",
-		Rules: []rules.SecGroupRule{
-			{
-				Direction:     string(rules.DirIngress),
-				EtherType:     string(rules.EtherType4),
-				RemoteGroupID: access.SecurityGroupIDSelf,
-				Description:   desc,
-			},
-			{
-				Direction: string(rules.DirEgress),
-				EtherType: string(rules.EtherType4),
-			},
-			{
-				Direction: string(rules.DirEgress),
-				EtherType: string(rules.EtherType6),
-			},
-			{
-				Direction:      string(rules.DirIngress),
-				EtherType:      string(rules.EtherType4),
-				Protocol:       string(rules.ProtocolTCP),
-				PortRangeMin:   30000,
-				PortRangeMax:   32767,
-				RemoteIPPrefix: "0.0.0.0/0",
-				Description:    desc,
-			},
-			{
-				Direction:      string(rules.DirIngress),
-				EtherType:      string(rules.EtherType4),
-				Protocol:       string(rules.ProtocolUDP),
-				PortRangeMin:   30000,
-				PortRangeMax:   32767,
-				RemoteIPPrefix: "0.0.0.0/0",
-				Description:    desc,
-			},
-		},
 	}
 	current, err := findExisting(c.state.Get(IdentifierSecGroup), c.namespace, c.access.GetSecurityGroupByID, c.access.GetSecurityGroupByName)
 	if err != nil {
@@ -431,24 +350,78 @@ func (c *FlowContext) ensureSecGroup(ctx context.Context) error {
 	if current != nil {
 		c.state.Set(IdentifierSecGroup, current.ID)
 		c.state.Set(NameSecGroup, current.Name)
-		if modified, err := c.access.UpdateSecurityGroup(desired, current, func(rule *rules.SecGroupRule) bool {
-			// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
-			// As we don't store the role ids in the state, this function needs to be adjusted
-			// if values in existing rules are changed to identify them for update by replacement.
-			return false
-		}); err != nil {
-			return err
-		} else if modified {
-			log.Info("updated rules")
-		}
-	} else {
-		log.Info("creating...")
-		created, err := c.access.CreateSecurityGroup(desired)
-		if err != nil {
-			return err
-		}
-		c.state.Set(IdentifierSecGroup, created.ID)
-		c.state.Set(NameSecGroup, created.Name)
+		c.state.SetObject(ObjectSecGroup, current)
+		return nil
+	}
+
+	log.Info("creating...")
+	created, err := c.access.CreateSecurityGroup(desired)
+	if err != nil {
+		return err
+	}
+	c.state.Set(IdentifierSecGroup, created.ID)
+	c.state.Set(NameSecGroup, created.Name)
+	c.state.SetObject(ObjectSecGroup, created)
+	return nil
+}
+
+func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
+	log := c.LogFromContext(ctx)
+
+	obj := c.state.GetObject(ObjectSecGroup)
+	if obj == nil {
+		return fmt.Errorf("internal error: security group object not found")
+	}
+	group, ok := obj.(*groups.SecGroup)
+	if !ok {
+		return fmt.Errorf("internal error: casting to SecGroup failed")
+	}
+
+	desc := "managed by Gardener"
+	desiredRules := []rules.SecGroupRule{
+		{
+			Direction:     string(rules.DirIngress),
+			EtherType:     string(rules.EtherType4),
+			RemoteGroupID: access.SecurityGroupIDSelf,
+			Description:   desc,
+		},
+		{
+			Direction: string(rules.DirEgress),
+			EtherType: string(rules.EtherType4),
+		},
+		{
+			Direction: string(rules.DirEgress),
+			EtherType: string(rules.EtherType6),
+		},
+		{
+			Direction:      string(rules.DirIngress),
+			EtherType:      string(rules.EtherType4),
+			Protocol:       string(rules.ProtocolTCP),
+			PortRangeMin:   30000,
+			PortRangeMax:   32767,
+			RemoteIPPrefix: "0.0.0.0/0",
+			Description:    desc,
+		},
+		{
+			Direction:      string(rules.DirIngress),
+			EtherType:      string(rules.EtherType4),
+			Protocol:       string(rules.ProtocolUDP),
+			PortRangeMin:   30000,
+			PortRangeMax:   32767,
+			RemoteIPPrefix: "0.0.0.0/0",
+			Description:    desc,
+		},
+	}
+
+	if modified, err := c.access.UpdateSecurityGroupRules(group, desiredRules, func(rule *rules.SecGroupRule) bool {
+		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
+		// As we don't store the role ids in the state, this function needs to be adjusted
+		// if values in existing rules are changed to identify them for update by replacement.
+		return false
+	}); err != nil {
+		return err
+	} else if modified {
+		log.Info("updated rules")
 	}
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -28,6 +29,8 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
@@ -92,6 +95,11 @@ type Compute interface {
 	FindFlavorID(name string) (string, error)
 	FindImages(name string) ([]images.Image, error)
 	ListImages(listOpts images.ListOpts) ([]images.Image, error)
+
+	// KeyPairs
+	CreateKeyPair(name, publicKey string) (*keypairs.KeyPair, error)
+	GetKeyPair(name string) (*keypairs.KeyPair, error)
+	DeleteKeyPair(name string) error
 }
 
 // DNS describes the operations of a client interacting with OpenStack's DNS service.
@@ -105,8 +113,13 @@ type DNS interface {
 type Networking interface {
 	// External Network
 	GetExternalNetworkNames(ctx context.Context) ([]string, error)
+	GetExternalNetworkByName(name string) (*networks.Network, error)
+	// Network
+	CreateNetwork(opts networks.CreateOpts) (*networks.Network, error)
 	ListNetwork(listOpts networks.ListOpts) ([]networks.Network, error)
+	UpdateNetwork(networkID string, opts networks.UpdateOpts) (*networks.Network, error)
 	GetNetworkByName(name string) ([]networks.Network, error)
+	DeleteNetwork(networkID string) error
 	// FloatingIP
 	CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error)
 	DeleteFloatingIP(id string) error
@@ -116,15 +129,29 @@ type Networking interface {
 	CreateSecurityGroup(listOpts groups.CreateOpts) (*groups.SecGroup, error)
 	DeleteSecurityGroup(groupID string) error
 	ListSecurityGroup(listOpts groups.ListOpts) ([]groups.SecGroup, error)
+	GetSecurityGroup(groupID string) (*groups.SecGroup, error)
 	GetSecurityGroupByName(name string) ([]groups.SecGroup, error)
 	// Security Group rules
 	CreateRule(createOpts rules.CreateOpts) (*rules.SecGroupRule, error)
 	ListRules(listOpts rules.ListOpts) ([]rules.SecGroupRule, error)
 	DeleteRule(ruleID string) error
 	// Routers
-	GetRouterByID(id string) ([]routers.Router, error)
+	GetRouterByID(id string) (*routers.Router, error)
 	ListRouters(listOpts routers.ListOpts) ([]routers.Router, error)
 	UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error)
+	UpdateRouter(routerID string, updateOpts routers.UpdateOpts) (*routers.Router, error)
+	CreateRouter(createOpts routers.CreateOpts) (*routers.Router, error)
+	DeleteRouter(routerID string) error
+	AddRouterInterface(routerID string, addOpts routers.AddInterfaceOpts) (*routers.InterfaceInfo, error)
+	RemoveRouterInterface(routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error)
+	// Subnets
+	CreateSubnet(createOpts subnets.CreateOpts) (*subnets.Subnet, error)
+	ListSubnets(listOpts subnets.ListOpts) ([]subnets.Subnet, error)
+	UpdateSubnet(subnetID string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error)
+	DeleteSubnet(subnetID string) error
+	// Ports
+	GetPort(portID string) (*ports.Port, error)
+	GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error)
 }
 
 // FactoryFactory creates instances of Factory.

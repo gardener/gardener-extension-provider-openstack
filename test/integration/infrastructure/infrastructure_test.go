@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -51,7 +52,17 @@ import (
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+)
+
+type flowUsage int
+
+const (
+	fuUseTerraformer flowUsage = iota
+	fuMigrateFromTerraformer
+	fuUseFlow
+	fuUseFlowRecoverState
 )
 
 const (
@@ -117,7 +128,7 @@ var _ = BeforeSuite(func() {
 	// enable manager logs
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 
-	log = logf.Log.WithName("bastion-test")
+	log = logf.Log.WithName("infrastructure-test")
 
 	DeferCleanup(func() {
 		defer func() {
@@ -207,13 +218,35 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RunCleanupActions()
 		})
 
-		It("should successfully create and delete", func() {
+		It("should successfully create and delete (flow)", func() {
 			providerConfig := newProviderConfig("", nil)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlow)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should successfully create and delete (migration)", func() {
+			providerConfig := newProviderConfig("", nil)
+			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			namespace, err := generateNamespaceName()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuMigrateFromTerraformer)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should successfully create and delete (terraformer)", func() {
+			providerConfig := newProviderConfig("", nil)
+			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			namespace, err := generateNamespaceName()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -224,7 +257,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RunCleanupActions()
 		})
 
-		It("should successfully create and delete", func() {
+		It("should successfully create and delete (flow)", func() {
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -244,7 +277,31 @@ var _ = Describe("Infrastructure tests", func() {
 			providerConfig := newProviderConfig(*routerID, nil)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlow)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should successfully create and delete (terraformer)", func() {
+			namespace, err := generateNamespaceName()
+			Expect(err).NotTo(HaveOccurred())
+
+			cloudRouterName := namespace + "-cloud-router"
+
+			routerID, err := prepareNewRouter(log, cloudRouterName, openstackClient)
+			Expect(err).NotTo(HaveOccurred())
+
+			var cleanupHandle framework.CleanupActionHandle
+			cleanupHandle = framework.AddCleanupAction(func() {
+				err := teardownRouter(log, *routerID, openstackClient)
+				Expect(err).NotTo(HaveOccurred())
+
+				framework.RemoveCleanupAction(cleanupHandle)
+			})
+
+			providerConfig := newProviderConfig(*routerID, nil)
+			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -254,7 +311,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RunCleanupActions()
 		})
 
-		It("should successfully create and delete", func() {
+		It("should successfully create and delete (flow)", func() {
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -274,7 +331,32 @@ var _ = Describe("Infrastructure tests", func() {
 			providerConfig := newProviderConfig("", networkID)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlow)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should successfully create and delete (terraformer)", func() {
+			namespace, err := generateNamespaceName()
+			Expect(err).NotTo(HaveOccurred())
+
+			networkName := namespace + "-network"
+
+			networkID, err := prepareNewNetwork(log, networkName, openstackClient)
+			Expect(err).NotTo(HaveOccurred())
+
+			var cleanupHandle framework.CleanupActionHandle
+			cleanupHandle = framework.AddCleanupAction(func() {
+				err := teardownNetwork(log, *networkID, openstackClient)
+				Expect(err).NotTo(HaveOccurred())
+
+				framework.RemoveCleanupAction(cleanupHandle)
+			})
+
+			providerConfig := newProviderConfig("", networkID)
+			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -285,7 +367,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RunCleanupActions()
 		})
 
-		It("should successfully create and delete", func() {
+		It("should successfully create and delete (flow)", func() {
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -313,7 +395,41 @@ var _ = Describe("Infrastructure tests", func() {
 			providerConfig := newProviderConfig(*routerID, networkID)
 			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
 
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig)
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlowRecoverState)
+
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+
+		It("should successfully create and delete (terraformer)", func() {
+			namespace, err := generateNamespaceName()
+			Expect(err).NotTo(HaveOccurred())
+
+			networkName := namespace + "-network"
+			cloudRouterName := namespace + "-cloud-router"
+
+			networkID, err := prepareNewNetwork(log, networkName, openstackClient)
+			Expect(err).NotTo(HaveOccurred())
+			routerID, err := prepareNewRouter(log, cloudRouterName, openstackClient)
+			Expect(err).NotTo(HaveOccurred())
+
+			var cleanupHandle framework.CleanupActionHandle
+			cleanupHandle = framework.AddCleanupAction(func() {
+				By("Tearing down network")
+				err := teardownNetwork(log, *networkID, openstackClient)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Tearing down router")
+				err = teardownRouter(log, *routerID, openstackClient)
+				Expect(err).NotTo(HaveOccurred())
+
+				framework.RemoveCleanupAction(cleanupHandle)
+			})
+
+			providerConfig := newProviderConfig(*routerID, networkID)
+			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+
+			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 
 			Expect(err).NotTo(HaveOccurred())
 
@@ -330,6 +446,7 @@ func runTest(
 	decoder runtime.Decoder,
 	openstackClient *OpenstackClient,
 	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
+	flow flowUsage,
 ) error {
 	var (
 		namespace                 *corev1.Namespace
@@ -440,7 +557,7 @@ func runTest(
 	}
 
 	By("create infrastructure")
-	infra, err = newInfrastructure(namespaceName, providerConfig)
+	infra, err = newInfrastructure(namespaceName, providerConfig, flow == fuUseFlow || flow == fuUseFlowRecoverState)
 	if err != nil {
 		return err
 	}
@@ -477,7 +594,108 @@ func runTest(
 	By("verify infrastructure creation")
 	infrastructureIdentifiers = verifyCreation(openstackClient, providerStatus, providerConfig)
 
+	oldState := infra.Status.State
+	if flow == fuUseFlowRecoverState {
+		By("drop state for testing recover")
+		patch := client.MergeFrom(infra.DeepCopy())
+		infra.Status.ProviderStatus = nil
+		state, err := infraflow.NewPersistentState().ToJSON()
+		Expect(err).To(Succeed())
+		infra.Status.State = &runtime.RawExtension{Raw: state}
+		err = c.Status().Patch(ctx, infra, patch)
+		Expect(err).To(Succeed())
+	}
+
+	By("wait until infrastructure is reconciled")
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		c,
+		log,
+		checkOperationAnnotationRemoved,
+		infra,
+		"Infrastucture",
+		10*time.Second,
+		30*time.Second,
+		5*time.Minute,
+		nil,
+	); err != nil {
+		Expect(err).To(Succeed())
+	}
+	if err := extensions.WaitUntilExtensionObjectReady(
+		ctx,
+		c,
+		log,
+		infra,
+		"Infrastucture",
+		10*time.Second,
+		30*time.Second,
+		16*time.Minute,
+		nil,
+	); err != nil {
+		Expect(err).To(Succeed())
+	}
+
+	By("triggering infrastructure reconciliation")
+	infraCopy := infra.DeepCopy()
+	metav1.SetMetaDataAnnotation(&infra.ObjectMeta, "gardener.cloud/operation", "reconcile")
+	if flow == fuMigrateFromTerraformer {
+		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, infrastructure.AnnotationKeyUseFlow, "true")
+	}
+	Expect(c.Patch(ctx, infra, client.MergeFrom(infraCopy))).To(Succeed())
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		c,
+		log,
+		func(obj client.Object) error {
+			if obj.GetResourceVersion() == infraCopy.ResourceVersion {
+				return fmt.Errorf("cache not updated yet")
+			}
+			return checkOperationAnnotationRemoved(obj)
+		},
+		infra,
+		"Infrastucture",
+		10*time.Second,
+		30*time.Second,
+		5*time.Minute,
+		nil,
+	); err != nil {
+		Expect(err).To(Succeed())
+	}
+	if err := extensions.WaitUntilExtensionObjectReady(
+		ctx,
+		c,
+		log,
+		infra,
+		"Infrastucture",
+		10*time.Second,
+		30*time.Second,
+		16*time.Minute,
+		nil,
+	); err != nil {
+		Expect(err).To(Succeed())
+	}
+
+	if flow == fuUseFlowRecoverState {
+		By("check state recovery")
+		if err := c.Get(ctx, client.ObjectKey{Namespace: infra.Namespace, Name: infra.Name}, infra); err != nil {
+			return err
+		}
+		Expect(infra.Status.State).To(Equal(oldState))
+		newProviderStatus := &openstackv1alpha1.InfrastructureStatus{}
+		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, newProviderStatus); err != nil {
+			return err
+		}
+		Expect(newProviderStatus).To(Equal(providerStatus))
+	}
+
 	return nil
+}
+
+func checkOperationAnnotationRemoved(obj client.Object) error {
+	if annots := obj.GetAnnotations(); annots["gardener.cloud/operation"] == "" {
+		return nil
+	}
+	return fmt.Errorf("reconciliation not started yet")
 }
 
 // newProviderConfig creates a providerConfig with the network and router details.
@@ -519,7 +737,7 @@ func newCloudProfileConfig(region string, authURL string) *openstackv1alpha1.Clo
 	}
 }
 
-func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.InfrastructureConfig) (*extensionsv1alpha1.Infrastructure, error) {
+func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.InfrastructureConfig, useFlow bool) (*extensionsv1alpha1.Infrastructure, error) {
 	const sshPublicKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDcSZKq0lM9w+ElLp9I9jFvqEFbOV1+iOBX7WEe66GvPLOWl9ul03ecjhOf06+FhPsWFac1yaxo2xj+SJ+FVZ3DdSn4fjTpS9NGyQVPInSZveetRw0TV0rbYCFBTJuVqUFu6yPEgdcWq8dlUjLqnRNwlelHRcJeBfACBZDLNSxjj0oUz7ANRNCEne1ecySwuJUAz3IlNLPXFexRT0alV7Nl9hmJke3dD73nbeGbQtwvtu8GNFEoO4Eu3xOCKsLw6ILLo4FBiFcYQOZqvYZgCb4ncKM52bnABagG54upgBMZBRzOJvWp0ol+jK3Em7Vb6ufDTTVNiQY78U6BAlNZ8Xg+LUVeyk1C6vWjzAQf02eRvMdfnRCFvmwUpzbHWaVMsQm8gf3AgnTUuDR0ev1nQH/5892wZA86uLYW/wLiiSbvQsqtY1jSn9BAGFGdhXgWLAkGsd/E1vOT+vDcor6/6KjHBm0rG697A3TDBRkbXQ/1oFxcM9m17RteCaXuTiAYWMqGKDoJvTMDc4L+Uvy544pEfbOH39zfkIYE76WLAFPFsUWX6lXFjQrX3O7vEV73bCHoJnwzaNd03PSdJOw+LCzrTmxVezwli3F9wUDiBRB0HkQxIXQmncc1HSecCKALkogIK+1e1OumoWh6gPdkF4PlTMUxRitrwPWSaiUIlPfCpQ== your_email@example.com"
 
 	providerConfigJSON, err := json.Marshal(&providerConfig)
@@ -527,7 +745,7 @@ func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.Infra
 		return nil, err
 	}
 
-	return &extensionsv1alpha1.Infrastructure{
+	infra := &extensionsv1alpha1.Infrastructure{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "infrastructure",
 			Namespace: namespace,
@@ -546,7 +764,11 @@ func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.Infra
 			Region:       *region,
 			SSHPublicKey: []byte(sshPublicKey),
 		},
-	}, nil
+	}
+	if useFlow {
+		infra.Annotations = map[string]string{infrastructure.AnnotationKeyUseFlow: "true"}
+	}
+	return infra, nil
 }
 
 func generateNamespaceName() (string, error) {

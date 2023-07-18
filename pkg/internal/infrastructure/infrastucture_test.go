@@ -38,7 +38,7 @@ var _ = Describe("Infrastructure", func() {
 
 	prepRoutes := func(routes ...routers.Route) {
 		router.Routes = routes
-		nw.EXPECT().GetRouterByID(routerID).Return([]routers.Router{*router}, nil)
+		nw.EXPECT().GetRouterByID(routerID).Return(router, nil)
 	}
 
 	DescribeTable("#RouteCleanup", func(a args, expErr error) {

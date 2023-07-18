@@ -31,7 +31,7 @@ func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networkin
 		return err
 	}
 
-	if len(router) == 0 {
+	if router == nil {
 		return nil
 	}
 
@@ -41,7 +41,7 @@ func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networkin
 		return err
 	}
 
-	for _, route := range router[0].Routes {
+	for _, route := range router.Routes {
 		ipNode, _, err := net.ParseCIDR(route.NextHop + "/32")
 		if err != nil {
 			return err
@@ -52,7 +52,7 @@ func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networkin
 	}
 
 	// return early if no changes were made
-	if len(router[0].Routes) == len(routes) {
+	if len(router.Routes) == len(routes) {
 		return nil
 	}
 

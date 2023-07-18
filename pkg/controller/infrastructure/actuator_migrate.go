@@ -28,7 +28,18 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
 
-func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	flowState, err := a.getStateFromInfraStatus(ctx, infra)
+	if err != nil {
+		return err
+	}
+	if flowState != nil {
+		return nil // nothing to do if already using new flow without Terraformer
+	}
+	return a.migrateWithTerraformer(ctx, log, infra, cluster)
+}
+
+func (a *actuator) migrateWithTerraformer(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
 	tf, err := internal.NewTerraformer(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)

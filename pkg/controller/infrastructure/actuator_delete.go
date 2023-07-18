@@ -28,6 +28,7 @@ import (
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -35,6 +36,34 @@ import (
 )
 
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	state, err := a.getStateFromInfraStatus(ctx, infra)
+	if err != nil {
+		return err
+	}
+	if state != nil {
+		err = a.deleteWithFlow(ctx, log, infra, cluster, state)
+	} else {
+		err = a.deleteWithTerraformer(ctx, log, infra, cluster)
+	}
+	return util.DetermineError(err, helper.KnownCodes)
+}
+
+func (a *actuator) deleteWithFlow(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure,
+	cluster *extensionscontroller.Cluster, oldState *infraflow.PersistentState) error {
+	log.Info("deleteWithFlow")
+
+	flowContext, err := a.createFlowContext(ctx, log, infra, cluster, oldState)
+	if err != nil {
+		return err
+	}
+	if err = flowContext.Delete(ctx); err != nil {
+		_ = flowContext.PersistState(ctx, true)
+		return err
+	}
+	return flowContext.PersistState(ctx, true)
+}
+
+func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	tf, err := internal.NewTerraformer(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)

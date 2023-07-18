@@ -184,16 +184,15 @@ func ensurePublicIPAddress(opt *Options, log logr.Logger, client openstackclient
 		return nil, errors.New("router must not be empty")
 	}
 
-	routerList, err := client.GetRouterByID(infraStatus.Networks.Router.ID)
+	router, err := client.GetRouterByID(infraStatus.Networks.Router.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(routerList) == 0 {
+	if router == nil {
 		return nil, fmt.Errorf("router with ID %s was not found", infraStatus.Networks.Router.ID)
 	}
 
-	router := routerList[0]
 	if len(router.GatewayInfo.ExternalFixedIPs) == 0 {
 		return nil, errors.New("no external fixed IPs detected on the router")
 	}

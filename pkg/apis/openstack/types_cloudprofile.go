@@ -52,7 +52,7 @@ type CloudProfileConfig struct {
 	// the filesystem.
 	RescanBlockStorageOnResize *bool
 	// IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,
-	// to allow for differences between volume and compute zone naming. Only works with kubernetes 1.20.x and newer.
+	// to allow for differences between volume and compute zone naming.
 	IgnoreVolumeAZ *bool
 	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
 	NodeVolumeAttachLimit *int32

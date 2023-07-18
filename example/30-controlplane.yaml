@@ -68,7 +68,7 @@ spec:
     loadBalancerProvider: provider
     cloudControllerManager:
       featureGates:
-        CustomResourceValidation: true
+        RotateKubeletServerCertificate: true
   infrastructureProviderStatus:
     apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
     kind: InfrastructureStatus

@@ -24,7 +24,7 @@ For those hypervisors you can enable the storage plugin interacting with Cinder 
 
 Some openstack configurations do not allow to attach more volumes than a specific amount to a single node.
 To tell the k8s scheduler to not over schedule volumes on a node, you can set `nodeVolumeAttachLimit` which defaults to 256.
-Some openstack configurations have different names for volume and compute availability zones, which might cause pods to go into pending state as there are no nodes available in the detected volume AZ. To ignore the volume AZ when scheduling pods, you can set `ignoreVolumeAZ` to `true`, which is only supported for shoot kubernetes version 1.20.x and newer (it defaults to `false`).
+Some openstack configurations have different names for volume and compute availability zones, which might cause pods to go into pending state as there are no nodes available in the detected volume AZ. To ignore the volume AZ when scheduling pods, you can set `ignoreVolumeAZ` to `true` (it defaults to `false`).
 See [CSI Cinder driver](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/cinder-csi-plugin/using-cinder-csi-plugin.md#block-storage).
 
 The cloud profile config also contains constraints for floating pools and load balancer providers that can be used in shoots.

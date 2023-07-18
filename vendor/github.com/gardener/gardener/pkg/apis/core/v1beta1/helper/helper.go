@@ -493,11 +493,6 @@ func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSet
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
 }
 
-// SeedSettingOwnerChecksEnabled returns true if the 'ownerChecks' setting is enabled.
-func SeedSettingOwnerChecksEnabled(settings *gardencorev1beta1.SeedSettings) bool {
-	return settings != nil && settings.OwnerChecks != nil && settings.OwnerChecks.Enabled
-}
-
 // SeedSettingDependencyWatchdogWeederEnabled returns true if the dependency-watchdog-weeder is enabled.
 func SeedSettingDependencyWatchdogWeederEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.DependencyWatchdog == nil || settings.DependencyWatchdog.Weeder == nil || settings.DependencyWatchdog.Weeder.Enabled
@@ -511,11 +506,6 @@ func SeedSettingDependencyWatchdogProberEnabled(settings *gardencorev1beta1.Seed
 // SeedSettingTopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
 func SeedSettingTopologyAwareRoutingEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
-}
-
-// SeedUsesNginxIngressController returns true if the seed's specification requires an nginx ingress controller to be deployed.
-func SeedUsesNginxIngressController(seed *gardencorev1beta1.Seed) bool {
-	return seed.Spec.DNS.Provider != nil && seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
@@ -670,7 +660,7 @@ func IsAPIServerExposureManaged(obj metav1.Object) bool {
 }
 
 // FindPrimaryDNSProvider finds the primary provider among the given `providers`.
-// It returns the first provider in case no primary provider is available or the first one if multiple candidates are found.
+// It returns the first provider if multiple candidates are found.
 func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardencorev1beta1.DNSProvider {
 	for _, provider := range providers {
 		if provider.Primary != nil && *provider.Primary {
@@ -1408,13 +1398,13 @@ func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.
 	return nil
 }
 
-// SeedWantsManagedIngress returns true in case the seed cluster wants its ingress controller to be managed by Gardener.
-func SeedWantsManagedIngress(seed *gardencorev1beta1.Seed) bool {
-	return seed.Spec.DNS.Provider != nil && seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
-}
-
 // IsTopologyAwareRoutingForShootControlPlaneEnabled returns whether the topology aware routing is enabled for the given Shoot control plane.
 // Topology-aware routing is enabled when the corresponding Seed setting is enabled and the Shoot has a multi-zonal control plane.
 func IsTopologyAwareRoutingForShootControlPlaneEnabled(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) bool {
 	return SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings) && IsMultiZonalShootControlPlane(shoot)
+}
+
+// ShootHasOperationType returns true when the 'type' in the last operation matches the provided type.
+func ShootHasOperationType(lastOperation *gardencorev1beta1.LastOperation, lastOperationType gardencorev1beta1.LastOperationType) bool {
+	return lastOperation != nil && lastOperation.Type == lastOperationType
 }

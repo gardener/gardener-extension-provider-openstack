@@ -443,23 +443,13 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootSecretControllerConfiguration)(nil), (*config.ShootSecretControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ShootSecretControllerConfiguration_To_config_ShootSecretControllerConfiguration(a.(*ShootSecretControllerConfiguration), b.(*config.ShootSecretControllerConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootStateControllerConfiguration)(nil), (*config.ShootStateControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootStateControllerConfiguration_To_config_ShootStateControllerConfiguration(a.(*ShootStateControllerConfiguration), b.(*config.ShootStateControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*config.ShootSecretControllerConfiguration)(nil), (*ShootSecretControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_ShootSecretControllerConfiguration_To_v1alpha1_ShootSecretControllerConfiguration(a.(*config.ShootSecretControllerConfiguration), b.(*ShootSecretControllerConfiguration), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*ShootStateSyncControllerConfiguration)(nil), (*config.ShootStateSyncControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootStateSyncControllerConfiguration(a.(*ShootStateSyncControllerConfiguration), b.(*config.ShootStateSyncControllerConfiguration), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*config.ShootStateSyncControllerConfiguration)(nil), (*ShootStateSyncControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(a.(*config.ShootStateSyncControllerConfiguration), b.(*ShootStateSyncControllerConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*config.ShootStateControllerConfiguration)(nil), (*ShootStateControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ShootStateControllerConfiguration_To_v1alpha1_ShootStateControllerConfiguration(a.(*config.ShootStateControllerConfiguration), b.(*ShootStateControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -470,6 +460,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.StaleExtensionHealthChecks)(nil), (*StaleExtensionHealthChecks)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(a.(*config.StaleExtensionHealthChecks), b.(*StaleExtensionHealthChecks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TokenRequestorControllerConfiguration)(nil), (*config.TokenRequestorControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(a.(*TokenRequestorControllerConfiguration), b.(*config.TokenRequestorControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.TokenRequestorControllerConfiguration)(nil), (*TokenRequestorControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(a.(*config.TokenRequestorControllerConfiguration), b.(*TokenRequestorControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -1005,10 +1005,10 @@ func autoConvert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletCo
 	out.SeedCare = (*config.SeedCareControllerConfiguration)(unsafe.Pointer(in.SeedCare))
 	out.Shoot = (*config.ShootControllerConfiguration)(unsafe.Pointer(in.Shoot))
 	out.ShootCare = (*config.ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
-	out.ShootStateSync = (*config.ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
+	out.ShootState = (*config.ShootStateControllerConfiguration)(unsafe.Pointer(in.ShootState))
 	out.NetworkPolicy = (*config.NetworkPolicyControllerConfiguration)(unsafe.Pointer(in.NetworkPolicy))
 	out.ManagedSeed = (*config.ManagedSeedControllerConfiguration)(unsafe.Pointer(in.ManagedSeed))
-	out.ShootSecret = (*config.ShootSecretControllerConfiguration)(unsafe.Pointer(in.ShootSecret))
+	out.TokenRequestor = (*config.TokenRequestorControllerConfiguration)(unsafe.Pointer(in.TokenRequestor))
 	return nil
 }
 
@@ -1028,10 +1028,10 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 	out.SeedCare = (*SeedCareControllerConfiguration)(unsafe.Pointer(in.SeedCare))
 	out.Shoot = (*ShootControllerConfiguration)(unsafe.Pointer(in.Shoot))
 	out.ShootCare = (*ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
-	out.ShootStateSync = (*ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
+	out.ShootState = (*ShootStateControllerConfiguration)(unsafe.Pointer(in.ShootState))
 	out.NetworkPolicy = (*NetworkPolicyControllerConfiguration)(unsafe.Pointer(in.NetworkPolicy))
 	out.ManagedSeed = (*ManagedSeedControllerConfiguration)(unsafe.Pointer(in.ManagedSeed))
-	out.ShootSecret = (*ShootSecretControllerConfiguration)(unsafe.Pointer(in.ShootSecret))
+	out.TokenRequestor = (*TokenRequestorControllerConfiguration)(unsafe.Pointer(in.TokenRequestor))
 	return nil
 }
 
@@ -1582,44 +1582,26 @@ func Convert_config_ShootNodeLogging_To_v1alpha1_ShootNodeLogging(in *config.Sho
 	return autoConvert_config_ShootNodeLogging_To_v1alpha1_ShootNodeLogging(in, out, s)
 }
 
-func autoConvert_v1alpha1_ShootSecretControllerConfiguration_To_config_ShootSecretControllerConfiguration(in *ShootSecretControllerConfiguration, out *config.ShootSecretControllerConfiguration, s conversion.Scope) error {
+func autoConvert_v1alpha1_ShootStateControllerConfiguration_To_config_ShootStateControllerConfiguration(in *ShootStateControllerConfiguration, out *config.ShootStateControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 
-// Convert_v1alpha1_ShootSecretControllerConfiguration_To_config_ShootSecretControllerConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_ShootSecretControllerConfiguration_To_config_ShootSecretControllerConfiguration(in *ShootSecretControllerConfiguration, out *config.ShootSecretControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ShootSecretControllerConfiguration_To_config_ShootSecretControllerConfiguration(in, out, s)
+// Convert_v1alpha1_ShootStateControllerConfiguration_To_config_ShootStateControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ShootStateControllerConfiguration_To_config_ShootStateControllerConfiguration(in *ShootStateControllerConfiguration, out *config.ShootStateControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootStateControllerConfiguration_To_config_ShootStateControllerConfiguration(in, out, s)
 }
 
-func autoConvert_config_ShootSecretControllerConfiguration_To_v1alpha1_ShootSecretControllerConfiguration(in *config.ShootSecretControllerConfiguration, out *ShootSecretControllerConfiguration, s conversion.Scope) error {
+func autoConvert_config_ShootStateControllerConfiguration_To_v1alpha1_ShootStateControllerConfiguration(in *config.ShootStateControllerConfiguration, out *ShootStateControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 
-// Convert_config_ShootSecretControllerConfiguration_To_v1alpha1_ShootSecretControllerConfiguration is an autogenerated conversion function.
-func Convert_config_ShootSecretControllerConfiguration_To_v1alpha1_ShootSecretControllerConfiguration(in *config.ShootSecretControllerConfiguration, out *ShootSecretControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_config_ShootSecretControllerConfiguration_To_v1alpha1_ShootSecretControllerConfiguration(in, out, s)
-}
-
-func autoConvert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootStateSyncControllerConfiguration(in *ShootStateSyncControllerConfiguration, out *config.ShootStateSyncControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	return nil
-}
-
-// Convert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootStateSyncControllerConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootStateSyncControllerConfiguration(in *ShootStateSyncControllerConfiguration, out *config.ShootStateSyncControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootStateSyncControllerConfiguration(in, out, s)
-}
-
-func autoConvert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(in *config.ShootStateSyncControllerConfiguration, out *ShootStateSyncControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	return nil
-}
-
-// Convert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration is an autogenerated conversion function.
-func Convert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(in *config.ShootStateSyncControllerConfiguration, out *ShootStateSyncControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(in, out, s)
+// Convert_config_ShootStateControllerConfiguration_To_v1alpha1_ShootStateControllerConfiguration is an autogenerated conversion function.
+func Convert_config_ShootStateControllerConfiguration_To_v1alpha1_ShootStateControllerConfiguration(in *config.ShootStateControllerConfiguration, out *ShootStateControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ShootStateControllerConfiguration_To_v1alpha1_ShootStateControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_StaleExtensionHealthChecks_To_config_StaleExtensionHealthChecks(in *StaleExtensionHealthChecks, out *config.StaleExtensionHealthChecks, s conversion.Scope) error {
@@ -1642,6 +1624,26 @@ func autoConvert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHea
 // Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks is an autogenerated conversion function.
 func Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(in *config.StaleExtensionHealthChecks, out *StaleExtensionHealthChecks, s conversion.Scope) error {
 	return autoConvert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(in, out, s)
+}
+
+func autoConvert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(in *TokenRequestorControllerConfiguration, out *config.TokenRequestorControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(in *TokenRequestorControllerConfiguration, out *config.TokenRequestorControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(in *config.TokenRequestorControllerConfiguration, out *TokenRequestorControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration is an autogenerated conversion function.
+func Convert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(in *config.TokenRequestorControllerConfiguration, out *TokenRequestorControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_Vali_To_config_Vali(in *Vali, out *config.Vali, s conversion.Scope) error {

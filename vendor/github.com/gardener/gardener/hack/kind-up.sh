@@ -21,7 +21,6 @@ set -o pipefail
 CLUSTER_NAME=""
 PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
-ENVIRONMENT="skaffold"
 DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
@@ -45,9 +44,6 @@ parse_flags() {
       ;;
     --path-kubeconfig)
       shift; PATH_KUBECONFIG="$1"
-      ;;
-    --environment)
-      shift; ENVIRONMENT="$1"
       ;;
     --skip-registry)
       DEPLOY_REGISTRY=false
@@ -118,6 +114,41 @@ setup_loopback_device() {
   echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
 }
 
+# setup_containerd_registry_mirrors sets up all containerd registry mirrors.
+# Resources:
+# - https://github.com/containerd/containerd/blob/main/docs/hosts.md
+# - https://kind.sigs.k8s.io/docs/user/local-registry/
+setup_containerd_registry_mirrors() {
+  REGISTRY_HOSTNAME="garden.local.gardener.cloud"
+
+  for NODE in $(kind get nodes --name="$CLUSTER_NAME"); do
+    setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
+    setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
+    setup_containerd_registry_mirror $NODE "eu.gcr.io" "https://eu.gcr.io" "http://${REGISTRY_HOSTNAME}:5004"
+    setup_containerd_registry_mirror $NODE "ghcr.io" "https://ghcr.io" "http://${REGISTRY_HOSTNAME}:5005"
+    setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
+    setup_containerd_registry_mirror $NODE "quay.io" "https://quay.io" "http://${REGISTRY_HOSTNAME}:5007"
+  done
+}
+
+# setup_containerd_registry_mirror sets up a given contained registry mirror.
+setup_containerd_registry_mirror() {
+  NODE=$1
+  UPSTREAM_HOST=$2
+  UPSTREAM_SERVER=$3
+  MIRROR_HOST=$4
+
+  echo "Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
+  REGISTRY_DIR="/etc/containerd/certs.d/${UPSTREAM_HOST}"
+  docker exec "${NODE}" mkdir -p "${REGISTRY_DIR}"
+  cat <<EOF | docker exec -i "${NODE}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
+server = "${UPSTREAM_SERVER}"
+
+[host."${MIRROR_HOST}"]
+  capabilities = ["pull", "resolve"]
+EOF
+}
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
@@ -141,7 +172,7 @@ fi
 kind create cluster \
   --name "$CLUSTER_NAME" \
   --image "kindest/node:v1.27.1" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
 # this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
@@ -236,6 +267,8 @@ if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
 fi
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
+
+setup_containerd_registry_mirrors
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\

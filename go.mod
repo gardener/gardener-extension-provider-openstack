@@ -8,7 +8,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gardener/etcd-druid v0.18.1
-	github.com/gardener/gardener v1.73.0
+	github.com/gardener/gardener v1.74.0
 	github.com/gardener/gardener-extension-networking-calico v1.28.0
 	github.com/gardener/gardener-extension-networking-cilium v1.20.0
 	github.com/gardener/machine-controller-manager v0.48.1
@@ -133,7 +133,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	istio.io/api v0.0.0-20230217221049-9d422bf48675 // indirect
 	istio.io/client-go v1.17.1 // indirect
-	k8s.io/apiserver v0.26.3 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/helm v2.16.1+incompatible // indirect
 	k8s.io/klog v1.0.0 // indirect
@@ -147,4 +146,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace k8s.io/client-go => k8s.io/client-go v0.26.2
+replace k8s.io/client-go => k8s.io/client-go v0.26.3

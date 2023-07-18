@@ -45,7 +45,6 @@ func (c *FlowContext) Reconcile(ctx context.Context) error {
 }
 
 func (c *FlowContext) buildReconcileGraph() *flow.Graph {
-	//createNetwork := c.config.Networks.ID == nil
 	g := flow.NewGraph("Openstack infrastructure reconciliation")
 
 	ensureExternalNetwork := c.AddTask(g, "ensure external network",

@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -30,7 +31,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -55,6 +55,7 @@ const (
 var _ = Describe("Actuator", func() {
 	var (
 		ctrl                          *gomock.Controller
+		mgr                           *mockmanager.MockManager
 		c                             *mockclient.MockClient
 		sw                            *mockclient.MockStatusWriter
 		openstackClientFactoryFactory *mockopenstackclient.MockFactoryFactory
@@ -83,10 +84,10 @@ var _ = Describe("Actuator", func() {
 		ctx = context.TODO()
 		logger = log.Log.WithName("test")
 
-		a = NewActuator(openstackClientFactoryFactory)
+		mgr = mockmanager.NewMockManager(ctrl)
+		mgr.EXPECT().GetClient().Return(c)
 
-		err := a.(inject.Client).InjectClient(c)
-		Expect(err).NotTo(HaveOccurred())
+		a = NewActuator(mgr, openstackClientFactoryFactory)
 
 		dns = &extensionsv1alpha1.DNSRecord{
 			ObjectMeta: metav1.ObjectMeta{

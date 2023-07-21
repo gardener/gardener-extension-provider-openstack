@@ -22,13 +22,14 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -48,12 +49,20 @@ var _ = Describe("Ensurer", func() {
 		scheme  *runtime.Scheme
 		cluster *extensionscontroller.Cluster
 
+		ctrl *gomock.Controller
+		mgr  *mockmanager.MockManager
+
 		authUrl = "foo://bar"
 	)
 
 	BeforeEach(func() {
 		scheme = runtime.NewScheme()
 		install.Install(scheme)
+
+		ctrl = gomock.NewController(GinkgoT())
+		mgr = mockmanager.NewMockManager(ctrl)
+		mgr.EXPECT().GetScheme().Return(scheme)
+
 		cluster = &extensionscontroller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				TypeMeta: metav1.TypeMeta{
@@ -76,9 +85,8 @@ var _ = Describe("Ensurer", func() {
 		}
 
 		ectx = gcontext.NewInternalGardenContext(cluster)
-		ensurer = NewEnsurer(logger)
-		err := ensurer.(inject.Scheme).InjectScheme(scheme)
-		Expect(err).NotTo(HaveOccurred())
+
+		ensurer = NewEnsurer(mgr, logger)
 	})
 
 	It("Should ensure auth_url if present in cluster object", func() {

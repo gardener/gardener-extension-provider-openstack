@@ -23,6 +23,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -33,13 +34,10 @@ type actuator struct {
 	client client.Client
 }
 
-func newActuator() genericactuator.BackupEntryDelegate {
-	return &actuator{}
-}
-
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
+func newActuator(mgr manager.Manager) genericactuator.BackupEntryDelegate {
+	return &actuator{
+		client: mgr.GetClient(),
+	}
 }
 
 func (a *actuator) GetETCDSecretData(_ context.Context, _ logr.Logger, be *extensionsv1alpha1.BackupEntry, backupSecretData map[string][]byte) (map[string][]byte, error) {

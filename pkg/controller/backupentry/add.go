@@ -15,6 +15,8 @@
 package backupentry
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -38,9 +40,9 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	return backupentry.Add(mgr, backupentry.AddArgs{
-		Actuator:          genericactuator.NewActuator(newActuator()),
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
+	return backupentry.Add(ctx, mgr, backupentry.AddArgs{
+		Actuator:          genericactuator.NewActuator(mgr, newActuator(mgr)),
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
@@ -48,6 +50,6 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }

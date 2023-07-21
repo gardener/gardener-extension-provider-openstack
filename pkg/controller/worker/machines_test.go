@@ -77,7 +77,7 @@ var _ = Describe("Machines", func() {
 
 	Context("workerDelegate", func() {
 		BeforeEach(func() {
-			workerDelegate, _ = NewWorkerDelegate(nil, nil, nil, "", nil, nil, nil)
+			workerDelegate, _ = NewWorkerDelegate(nil, scheme, nil, "", nil, nil, nil)
 		})
 
 		Describe("#MachineClassKind", func() {

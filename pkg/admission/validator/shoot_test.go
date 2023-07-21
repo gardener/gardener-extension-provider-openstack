@@ -21,13 +21,13 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/validator"
 )
@@ -39,9 +39,11 @@ var _ = Describe("Shoot validator", func() {
 		var (
 			shootValidator extensionswebhook.Validator
 
-			ctrl  *gomock.Controller
-			c     *mockclient.MockClient
-			shoot *core.Shoot
+			ctrl      *gomock.Controller
+			mgr       *mockmanager.MockManager
+			c         *mockclient.MockClient
+			apiReader *mockclient.MockReader
+			shoot     *core.Shoot
 
 			ctx = context.TODO()
 		)
@@ -49,14 +51,17 @@ var _ = Describe("Shoot validator", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 
-			shootValidator = validator.NewShootValidator()
-
 			scheme := runtime.NewScheme()
 			Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
-			Expect(shootValidator.(inject.Scheme).InjectScheme(scheme)).To(Succeed())
 
 			c = mockclient.NewMockClient(ctrl)
-			Expect(shootValidator.(inject.Client).InjectClient(c)).To(Succeed())
+			apiReader = mockclient.NewMockReader(ctrl)
+
+			mgr = mockmanager.NewMockManager(ctrl)
+			mgr.EXPECT().GetScheme().Return(scheme).Times(2)
+			mgr.EXPECT().GetClient().Return(c)
+			mgr.EXPECT().GetAPIReader().Return(apiReader)
+			shootValidator = validator.NewShootValidator(mgr)
 
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{

@@ -42,7 +42,7 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Path:       "/webhooks/mutate",
 		Predicates: []predicate.Predicate{extensionspredicate.GardenCoreProviderType(openstack.Type)},
 		Mutators: map[extensionswebhook.Mutator][]extensionswebhook.Type{
-			NewShootMutator(): {{Obj: &gardencorev1beta1.Shoot{}}},
+			NewShootMutator(mgr): {{Obj: &gardencorev1beta1.Shoot{}}},
 		},
 	})
 }

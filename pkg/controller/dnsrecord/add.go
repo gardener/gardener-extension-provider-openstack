@@ -15,6 +15,8 @@
 package dnsrecord
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,16 +40,16 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	return dnsrecord.Add(mgr, dnsrecord.AddArgs{
-		Actuator:          NewActuator(openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials)),
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
+	return dnsrecord.Add(ctx, mgr, dnsrecord.AddArgs{
+		Actuator:          NewActuator(mgr, openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials)),
 		ControllerOptions: opts.Controller,
-		Predicates:        dnsrecord.DefaultPredicates(opts.IgnoreOperationAnnotation),
+		Predicates:        dnsrecord.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              openstack.DNSType,
 	})
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }

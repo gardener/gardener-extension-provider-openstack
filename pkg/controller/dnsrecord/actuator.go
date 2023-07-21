@@ -29,6 +29,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -48,8 +49,9 @@ type actuator struct {
 }
 
 // NewActuator creates a new dnsrecord.Actuator.
-func NewActuator(openstackClientFactory openstackclient.FactoryFactory) dnsrecord.Actuator {
+func NewActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory) dnsrecord.Actuator {
 	return &actuator{
+		client:                 mgr.GetClient(),
 		openstackClientFactory: openstackClientFactory,
 	}
 }

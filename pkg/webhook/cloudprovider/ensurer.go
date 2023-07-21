@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -31,20 +32,16 @@ import (
 )
 
 // NewEnsurer creates cloudprovider ensurer.
-func NewEnsurer(logger logr.Logger) cloudprovider.Ensurer {
+func NewEnsurer(mgr manager.Manager, logger logr.Logger) cloudprovider.Ensurer {
 	return &ensurer{
-		logger: logger,
+		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		logger:  logger,
 	}
 }
 
 type ensurer struct {
 	logger  logr.Logger
 	decoder runtime.Decoder
-}
-
-func (e *ensurer) InjectScheme(scheme *runtime.Scheme) error {
-	e.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	return nil
 }
 
 func (e *ensurer) EnsureCloudProviderSecret(

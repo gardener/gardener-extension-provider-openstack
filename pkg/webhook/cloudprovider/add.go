@@ -54,7 +54,7 @@ func AddToManager(gardenerVersion *string) func(mgr manager.Manager) (*extension
 		logger.Info("adding webhook to manager")
 		return cloudprovider.New(mgr, cloudprovider.Args{
 			Provider:             openstack.Type,
-			Mutator:              cloudprovider.NewMutator(logger, NewEnsurer(logger)),
+			Mutator:              cloudprovider.NewMutator(mgr, logger, NewEnsurer(mgr, logger)),
 			EnableObjectSelector: enable,
 		})
 	}

@@ -63,6 +63,8 @@ type GardenSpec struct {
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
+	// Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.
+	Ingress gardencorev1beta1.Ingress `json:"ingress"`
 	// Networking defines the networking configuration of the runtime cluster.
 	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
@@ -110,7 +112,7 @@ type Settings struct {
 	// +optional
 	VerticalPodAutoscaler *SettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty"`
 	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
 }
@@ -136,7 +138,7 @@ type SettingVerticalPodAutoscaler struct {
 }
 
 // SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
-// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 type SettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the cluster should be topology-aware.
 	// These Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.

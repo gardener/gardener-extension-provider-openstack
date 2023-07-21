@@ -655,6 +655,7 @@ message DNSIncludeExclude {
 // DNSProvider contains information about a DNS provider.
 message DNSProvider {
   // Domains contains information about which domains shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
   // +optional
   optional DNSIncludeExclude domains = 1;
 
@@ -674,6 +675,7 @@ message DNSProvider {
   optional string type = 4;
 
   // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
   // +optional
   optional DNSIncludeExclude zones = 5;
 }
@@ -910,10 +912,13 @@ message HorizontalPodAutoscalerConfig {
   optional double tolerance = 6;
 }
 
-// Ingress configures the Ingress specific settings of the Seed cluster
+// Ingress configures the Ingress specific settings of the cluster
 message Ingress {
-  // Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-  // to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+  // Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
+  // to construct ingress URLs for system applications running in Shoot/Garden clusters. Once set this field is immutable.
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+  // +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
   optional string domain = 1;
 
   // Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
@@ -922,7 +927,8 @@ message Ingress {
 
 // IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
 message IngressController {
-  // Kind defines which kind of IngressController to use, for example `nginx`
+  // Kind defines which kind of IngressController to use. At the moment only `nginx` is supported
+  // +kubebuilder:validation:Enum="nginx"
   optional string kind = 1;
 
   // ProviderConfig specifies infrastructure specific configuration for the ingressController
@@ -1409,6 +1415,9 @@ message Kubernetes {
   optional KubeletConfig kubelet = 7;
 
   // Version is the semantic Kubernetes version to use for the Shoot cluster.
+  // Defaults to the highest supported minor and patch version given in the referenced cloud profile.
+  // The version can be omitted completely or partially specified, e.g. `<major>.<minor>`.
+  // +optional
   optional string version = 8;
 
   // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
@@ -2306,7 +2315,7 @@ message SeedSettingScheduling {
 }
 
 // SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 message SeedSettingTopologyAwareRouting {
   // Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
   // These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.
@@ -2353,7 +2362,7 @@ message SeedSettings {
   optional SeedSettingDependencyWatchdog dependencyWatchdog = 7;
 
   // TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-  // See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+  // See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
   // +optional
   optional SeedSettingTopologyAwareRouting topologyAwareRouting = 8;
 }

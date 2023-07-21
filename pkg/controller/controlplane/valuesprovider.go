@@ -103,8 +103,8 @@ func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfig
 	}
 }
 
-func shootAccessSecretsFunc(namespace string) []*gutil.ShootAccessSecret {
-	return []*gutil.ShootAccessSecret{
+func shootAccessSecretsFunc(namespace string) []*gutil.AccessSecret {
+	return []*gutil.AccessSecret{
 		gutil.NewShootAccessSecret(openstack.CloudControllerManagerName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSIProvisionerName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSIAttacherName, namespace),

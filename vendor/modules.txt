@@ -86,7 +86,6 @@ github.com/gardener/gardener/extensions/pkg/controller/backupentry
 github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator
 github.com/gardener/gardener/extensions/pkg/controller/bastion
 github.com/gardener/gardener/extensions/pkg/controller/cmd
-github.com/gardener/gardener/extensions/pkg/controller/common
 github.com/gardener/gardener/extensions/pkg/controller/controlplane
 github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator
 github.com/gardener/gardener/extensions/pkg/controller/dnsrecord

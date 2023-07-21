@@ -64,7 +64,7 @@ func (a *actuator) deleteWithFlow(ctx context.Context, log logr.Logger, infra *e
 }
 
 func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	tf, err := internal.NewTerraformer(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
+	tf, err := internal.NewTerraformer(log, a.restConfig, infrastructure.TerraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)
 	}
@@ -93,7 +93,7 @@ func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, i
 	}
 
 	// need to known if application credentials are used
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
+	credentials, err := openstack.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -109,7 +109,7 @@ func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, i
 	}
 
 	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
-	tf = tf.InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...)
+	tf = tf.InitializeWith(ctx, terraformer.DefaultInitializer(a.client, terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...)
 
 	configExists, err := tf.ConfigExists(ctx)
 	if err != nil {

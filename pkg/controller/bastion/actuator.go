@@ -20,12 +20,12 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
@@ -38,8 +38,8 @@ const (
 )
 
 type actuator struct {
-	common.ClientContext
-	client client.Client
+	client  client.Client
+	decoder runtime.Decoder
 
 	openstackClientFactory openstackclient.FactoryFactory
 	bastionConfig          *controllerconfig.BastionConfig

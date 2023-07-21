@@ -20,7 +20,6 @@ import (
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -44,7 +43,7 @@ const (
 )
 
 type actuator struct {
-	common.ClientContext
+	client                 client.Client
 	openstackClientFactory openstackclient.FactoryFactory
 }
 
@@ -58,7 +57,7 @@ func NewActuator(openstackClientFactory openstackclient.FactoryFactory) dnsrecor
 // Reconcile reconciles the DNSRecord.
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dns *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
 	// Create Openstack DNS client
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), dns.Spec.SecretRef, true)
+	credentials, err := openstack.GetCredentials(ctx, a.client, dns.Spec.SecretRef, true)
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
@@ -102,13 +101,13 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dns *extensio
 	// Update resource status
 	patch := client.MergeFrom(dns.DeepCopy())
 	dns.Status.Zone = &zone
-	return a.Client().Status().Patch(ctx, dns, patch)
+	return a.client.Status().Patch(ctx, dns, patch)
 }
 
 // Delete deletes the DNSRecord.
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, dns *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
 	// Create Openstack DNS client
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), dns.Spec.SecretRef, true)
+	credentials, err := openstack.GetCredentials(ctx, a.client, dns.Spec.SecretRef, true)
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %+v", err)
 	}

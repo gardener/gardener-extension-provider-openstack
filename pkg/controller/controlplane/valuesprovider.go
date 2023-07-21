@@ -27,7 +27,6 @@ import (
 	ciliumv1alpha1 "github.com/gardener/gardener-extension-networking-cilium/pkg/apis/cilium/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-cilium/pkg/cilium"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -50,9 +49,11 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -308,7 +309,8 @@ func NewValuesProvider() genericactuator.ValuesProvider {
 // valuesProvider is a ValuesProvider that provides OpenStack-specific values for the 2 charts applied by the generic actuator.
 type valuesProvider struct {
 	genericactuator.NoopValuesProvider
-	common.ClientContext
+	client  client.Client
+	decoder runtime.Decoder
 }
 
 // GetConfigChartValues returns the values for the config chart applied by the generic actuator.
@@ -319,7 +321,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 ) (map[string]interface{}, error) {
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
-		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
+		if _, _, err := vp.decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
 			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
 		}
 	}
@@ -335,7 +337,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	}
 
 	// Get credentials
-	credentials, err := openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef, false)
+	credentials, err := openstack.GetCredentials(ctx, vp.client, cp.Spec.SecretRef, false)
 	if err != nil {
 		return nil, fmt.Errorf("could not get service account from secret '%s/%s': %w", cp.Spec.SecretRef.Namespace, cp.Spec.SecretRef.Name, err)
 	}
@@ -349,7 +351,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 
 func (vp *valuesProvider) getInfrastructureStatus(cp *extensionsv1alpha1.ControlPlane) (*api.InfrastructureStatus, error) {
 	infraStatus := &api.InfrastructureStatus{}
-	if _, _, err := vp.Decoder().Decode(cp.Spec.InfrastructureProviderStatus.Raw, nil, infraStatus); err != nil {
+	if _, _, err := vp.decoder.Decode(cp.Spec.InfrastructureProviderStatus.Raw, nil, infraStatus); err != nil {
 		return nil, fmt.Errorf("could not decode infrastructureProviderStatus of controlplane '%s': %w", kutil.ObjectName(cp), err)
 	}
 	return infraStatus, nil
@@ -370,25 +372,25 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	// Decode providerConfig
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
-		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
+		if _, _, err := vp.decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
 			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
 		}
 	}
 
 	// TODO(timuthy): Delete this in a future release.
-	if err := kutil.DeleteObject(ctx, vp.Client(), &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-csi-snapshot-validation", Namespace: cp.Namespace}}); err != nil {
+	if err := kutil.DeleteObject(ctx, vp.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-csi-snapshot-validation", Namespace: cp.Namespace}}); err != nil {
 		return nil, fmt.Errorf("failed deleting legacy csi-snapshot-validation network policy: %w", err)
 	}
 
 	cpConfigSecret := &corev1.Secret{}
-	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderConfigName), cpConfigSecret); err != nil {
+	if err := vp.client.Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderConfigName), cpConfigSecret); err != nil {
 		return nil, err
 	}
 	checksums[openstack.CloudProviderConfigName] = gardenerutils.ComputeChecksum(cpConfigSecret.Data)
 
 	var userAgentHeaders []string
 	cpDiskConfigSecret := &corev1.Secret{}
-	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
+	if err := vp.client.Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
 		return nil, err
 	}
 	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(cpDiskConfigSecret.Data)
@@ -409,7 +411,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	// Decode providerConfig
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
-		if _, _, err := vp.Decoder().Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
+		if _, _, err := vp.decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
 			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
 		}
 	}
@@ -425,7 +427,7 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 ) (map[string]interface{}, error) {
 	providerConfig := api.CloudProfileConfig{}
 	if cluster.CloudProfile.Spec.ProviderConfig != nil {
-		if _, _, err := vp.Decoder().Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, &providerConfig); err != nil {
+		if _, _, err := vp.decoder.Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, &providerConfig); err != nil {
 			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(controlPlane), err)
 		}
 	}
@@ -489,7 +491,7 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 }
 
 func (vp *valuesProvider) getCredentials(ctx context.Context, cp *extensionsv1alpha1.ControlPlane) (*openstack.Credentials, error) {
-	return openstack.GetCredentials(ctx, vp.Client(), cp.Spec.SecretRef, false)
+	return openstack.GetCredentials(ctx, vp.client, cp.Spec.SecretRef, false)
 }
 
 func (vp *valuesProvider) getUserAgentHeaders(
@@ -842,7 +844,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	)
 
 	secret := &corev1.Secret{}
-	if err := vp.Client().Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
+	if err := vp.client.Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
 		return nil, err
 	}
 
@@ -909,7 +911,7 @@ func (vp *valuesProvider) isOverlayEnabled(network *v1beta1.Networking) (bool, e
 	switch *network.Type {
 	case calico.ReleaseName:
 		networkConfig := &calicov1alpha1.NetworkConfig{}
-		if _, _, err := vp.Decoder().Decode(networkProviderConfig, nil, networkConfig); err != nil {
+		if _, _, err := vp.decoder.Decode(networkProviderConfig, nil, networkConfig); err != nil {
 			return false, err
 		}
 		o := networkConfig.Overlay
@@ -919,7 +921,7 @@ func (vp *valuesProvider) isOverlayEnabled(network *v1beta1.Networking) (bool, e
 		return o.Enabled, nil
 	case cilium.ReleaseName:
 		networkConfig := &ciliumv1alpha1.NetworkConfig{}
-		if _, _, err := vp.Decoder().Decode(networkProviderConfig, nil, networkConfig); err != nil {
+		if _, _, err := vp.decoder.Decode(networkProviderConfig, nil, networkConfig); err != nil {
 			return false, err
 		}
 		o := networkConfig.Overlay

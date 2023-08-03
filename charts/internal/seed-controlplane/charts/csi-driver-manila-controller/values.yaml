@@ -19,38 +19,26 @@ resources:
     requests:
       cpu: 20m
       memory: 50Mi
-    limits:
-      memory: 360Mi
   driverNFSController:
     requests:
       cpu: 20m
       memory: 50Mi
-    limits:
-      memory: 360Mi
   provisioner:
     requests:
       cpu: 11m
       memory: 38Mi
-    limits:
-      memory: 400Mi
   snapshotter:
     requests:
       cpu: 11m
       memory: 36Mi
-    limits:
-      memory: 220Mi
   resizer:
     requests:
       cpu: 11m
       memory: 32Mi
-    limits:
-      memory: 220Mi
   livenessProbe:
     requests:
       cpu: 11m
       memory: 32Mi
-    limits:
-      memory: 200Mi
 
 vpa:
   resourcePolicy:

@@ -16,16 +16,14 @@ package infrastructure
 
 import (
 	"context"
-	"strings"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -40,15 +38,15 @@ const (
 type actuator struct {
 	client                     client.Client
 	restConfig                 *rest.Config
-	scheme                     *runtime.Scheme
-	decoder                    runtime.Decoder
 	disableProjectedTokenMount bool
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
-func NewActuator(disableProjectedTokenMount bool) infrastructure.Actuator {
+func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastructure.Actuator {
 	return &actuator{
 		disableProjectedTokenMount: disableProjectedTokenMount,
+		client:                     mgr.GetClient(),
+		restConfig:                 mgr.GetConfig(),
 	}
 }
 
@@ -88,14 +86,4 @@ func (a *actuator) updateProviderStatus(
 	infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
 	infra.Status.State = &runtime.RawExtension{Raw: stateBytes}
 	return a.client.Status().Patch(ctx, infra, patch)
-}
-
-func (a *actuator) addErrorCodes(err error) error {
-	if err == nil {
-		return nil
-	}
-	if msg := err.Error(); strings.Contains(msg, "PolicyNotAuthorized") {
-		return helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorInfraUnauthorized)
-	}
-	return err
 }

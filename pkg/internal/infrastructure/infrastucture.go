@@ -36,6 +36,10 @@ const (
 	servicePrefix = "kube_service_"
 )
 
+// CleanupKubernetesLoadbalancers cleans loadbalancers that could prevent shoot deletion from proceeding. Particularly it tries to prevent orphan ports from blocking subnet deletion.
+// It filters for LBs that bear the "kube_service" prefix along with the cluster name.
+// Note that this deletion may still leave some leftover resources like the floating IPs. This is intentional because the users may want to preserve them but without the k8s
+// service object we cannot decide that - therefore the floating IPs will be untouched.
 func CleanupKubernetesLoadbalancers(ctx context.Context, log logr.Logger, client openstackclient.Loadbalancing, subnetID, clusterName string) error {
 	lbList, err := client.ListLoadbalancers(loadbalancers.ListOpts{
 		VipSubnetID: subnetID,

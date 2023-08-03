@@ -180,6 +180,7 @@ func (oc *OpenstackClientFactory) Networking(options ...Option) (Networking, err
 	}, nil
 }
 
+// Loadbalancing creates a Loadbalancing client.
 func (oc *OpenstackClientFactory) Loadbalancing(options ...Option) (Loadbalancing, error) {
 	eo := gophercloud.EndpointOpts{}
 	for _, opt := range options {

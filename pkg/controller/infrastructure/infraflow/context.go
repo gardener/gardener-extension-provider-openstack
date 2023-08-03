@@ -100,6 +100,9 @@ func NewFlowContext(log logr.Logger, clientFactory osclient.Factory,
 		return nil, fmt.Errorf("creating compute client failed: %w", err)
 	}
 	loadbalancing, err := clientFactory.Loadbalancing(osclient.WithRegion(infra.Spec.Region))
+	if err != nil {
+		return nil, err
+	}
 
 	flowContext := &FlowContext{
 		BasicFlowContext:   *shared.NewBasicFlowContext(log, whiteboard, persistor),

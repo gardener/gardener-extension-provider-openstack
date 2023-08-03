@@ -61,6 +61,7 @@ type NetworkingClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// LoadbalancingClient is a client for Octavia service.
 type LoadbalancingClient struct {
 	client *gophercloud.ServiceClient
 }
@@ -160,6 +161,7 @@ type Networking interface {
 	GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error)
 }
 
+// Loadbalancing describes the operations of a client interacting with OpenStack's Octavia service.
 type Loadbalancing interface {
 	ListLoadbalancers(opts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error)
 	DeleteLoadbalancer(id string, opts loadbalancers.DeleteOpts) error

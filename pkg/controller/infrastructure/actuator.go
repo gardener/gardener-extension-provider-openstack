@@ -42,7 +42,6 @@ const (
 type actuator struct {
 	client                     client.Client
 	restConfig                 *rest.Config
-	scheme                     *runtime.Scheme
 	decoder                    runtime.Decoder
 	disableProjectedTokenMount bool
 }

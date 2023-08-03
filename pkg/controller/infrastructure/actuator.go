@@ -16,12 +16,9 @@ package infrastructure
 
 import (
 	"context"
-	"strings"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -92,14 +89,4 @@ func (a *actuator) updateProviderStatus(
 	infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
 	infra.Status.State = &runtime.RawExtension{Raw: stateBytes}
 	return a.client.Status().Patch(ctx, infra, patch)
-}
-
-func (a *actuator) addErrorCodes(err error) error {
-	if err == nil {
-		return nil
-	}
-	if msg := err.Error(); strings.Contains(msg, "PolicyNotAuthorized") {
-		return helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorInfraUnauthorized)
-	}
-	return err
 }

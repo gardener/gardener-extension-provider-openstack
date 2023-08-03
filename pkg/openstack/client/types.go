@@ -24,6 +24,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -60,6 +61,10 @@ type NetworkingClient struct {
 	client *gophercloud.ServiceClient
 }
 
+type LoadbalancingClient struct {
+	client *gophercloud.ServiceClient
+}
+
 // Option can be passed to Factory implementations to modify the produced clients.
 type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
 
@@ -69,6 +74,7 @@ type Factory interface {
 	Storage(options ...Option) (Storage, error)
 	DNS(options ...Option) (DNS, error)
 	Networking(options ...Option) (Networking, error)
+	Loadbalancing(options ...Option) (Loadbalancing, error)
 }
 
 // Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
@@ -152,6 +158,12 @@ type Networking interface {
 	// Ports
 	GetPort(portID string) (*ports.Port, error)
 	GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error)
+}
+
+type Loadbalancing interface {
+	ListLoadbalancers(opts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error)
+	DeleteLoadbalancer(id string, opts loadbalancers.DeleteOpts) error
+	GetLoadbalancer(id string) (*loadbalancers.LoadBalancer, error)
 }
 
 // FactoryFactory creates instances of Factory.

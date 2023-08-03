@@ -86,6 +86,25 @@ func (mr *MockFactoryMockRecorder) DNS(arg0 ...interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DNS", reflect.TypeOf((*MockFactory)(nil).DNS), arg0...)
 }
 
+// Loadbalancing mocks base method.
+func (m *MockFactory) Loadbalancing(arg0 ...client.Option) (client.Loadbalancing, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Loadbalancing", varargs...)
+	ret0, _ := ret[0].(client.Loadbalancing)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Loadbalancing indicates an expected call of Loadbalancing.
+func (mr *MockFactoryMockRecorder) Loadbalancing(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Loadbalancing", reflect.TypeOf((*MockFactory)(nil).Loadbalancing), arg0...)
+}
+
 // Networking mocks base method.
 func (m *MockFactory) Networking(arg0 ...client.Option) (client.Networking, error) {
 	m.ctrl.T.Helper()

@@ -107,6 +107,10 @@ func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, i
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
+	loadbalancerClient, err := openstackClient.Loadbalancing()
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
 
 	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
 	tf = tf.InitializeWith(ctx, terraformer.DefaultInitializer(a.client, terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).SetEnvVars(internal.TerraformerEnvVars(infra.Spec.SecretRef, credentials)...)
@@ -122,8 +126,15 @@ func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, i
 	}
 
 	var (
-		g = flow.NewGraph("Openstack infrastructure destruction")
-
+		g                              = flow.NewGraph("Openstack infrastructure destruction")
+		destroyKubernetesLoadbalancers = g.Add(flow.Task{
+			Name: "Destroying Kubernetes loadbalancers entries",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return a.cleanupKubernetesLoadbalancers(ctx, log, loadbalancerClient, vars[infrastructure.TerraformOutputKeySubnetID], infra.Namespace)
+			}).
+				RetryUntilTimeout(10*time.Second, 5*time.Minute).
+				DoIf(configExists),
+		})
 		destroyKubernetesRoutes = g.Add(flow.Task{
 			Name: "Destroying Kubernetes route entries",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -136,7 +147,7 @@ func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, i
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Shoot infrastructure",
 			Fn:           tf.Destroy,
-			Dependencies: flow.NewTaskIDs(destroyKubernetesRoutes),
+			Dependencies: flow.NewTaskIDs(destroyKubernetesRoutes, destroyKubernetesLoadbalancers),
 		})
 
 		f = g.Compile()
@@ -162,4 +173,14 @@ func (a *actuator) cleanupKubernetesRoutes(
 		return nil
 	}
 	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, workesCIDR)
+}
+
+func (a *actuator) cleanupKubernetesLoadbalancers(
+	ctx context.Context,
+	log logr.Logger,
+	client openstackclient.Loadbalancing,
+	subnetID string,
+	clusterName string,
+) error {
+	return infrastructure.CleanupKubernetesLoadbalancers(ctx, log, client, subnetID, clusterName)
 }

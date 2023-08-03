@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
 
 // Delete creates and runs the flow to delete the AWS infrastructure.
@@ -54,13 +55,33 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 	recoverSubnetID := c.AddTask(g, "recover subnet ID",
 		c.recoverSubnetID,
 		Timeout(defaultTimeout))
+	k8sRoutes := c.AddTask(g, "delete kubernetes routes",
+		func(ctx context.Context) error {
+			routerID := c.state.Get(IdentifierRouter)
+			if routerID == nil {
+				return nil
+			}
+			return infrastructure.CleanupKubernetesRoutes(ctx, c.networking, *routerID, c.config.Networks.Worker)
+		},
+		Timeout(defaultTimeout),
+	)
+	k8sLoadBalancers := c.AddTask(g, "delete kubernetes loadbalancers",
+		func(ctx context.Context) error {
+			subnetID := c.state.Get(IdentifierSubnet)
+			if subnetID == nil {
+				return nil
+			}
+			return infrastructure.CleanupKubernetesLoadbalancers(ctx, c.LogFromContext(ctx), c.loadbalancing, *subnetID, c.namespace)
+		},
+		Timeout(defaultTimeout),
+	)
 	deleteRouterInterface := c.AddTask(g, "delete router interface",
 		c.deleteRouterInterface,
-		Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID))
+		Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID, k8sRoutes))
 	// subnet deletion only needed if network is given by spec
 	_ = c.AddTask(g, "delete subnet",
 		c.deleteSubnet,
-		DoIf(!needToDeleteNetwork), Timeout(defaultTimeout), Dependencies(deleteRouterInterface))
+		DoIf(!needToDeleteNetwork), Timeout(defaultTimeout), Dependencies(deleteRouterInterface, k8sLoadBalancers))
 	_ = c.AddTask(g, "delete network",
 		c.deleteNetwork,
 		DoIf(needToDeleteNetwork), Timeout(defaultTimeout), Dependencies(deleteRouterInterface))

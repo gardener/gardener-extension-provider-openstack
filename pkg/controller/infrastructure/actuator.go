@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -39,7 +38,6 @@ const (
 type actuator struct {
 	client                     client.Client
 	restConfig                 *rest.Config
-	decoder                    runtime.Decoder
 	disableProjectedTokenMount bool
 }
 
@@ -47,7 +45,6 @@ type actuator struct {
 func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastructure.Actuator {
 	return &actuator{
 		disableProjectedTokenMount: disableProjectedTokenMount,
-		decoder:                    serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		client:                     mgr.GetClient(),
 		restConfig:                 mgr.GetConfig(),
 	}

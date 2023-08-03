@@ -15,10 +15,13 @@
 package controlplane
 
 import (
+	"context"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -43,20 +46,25 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	return controlplane.Add(mgr, controlplane.AddArgs{
-		Actuator: genericactuator.NewActuator(openstack.Name,
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
+	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
+	if err != nil {
+		return err
+	}
+
+	return controlplane.Add(ctx, mgr, controlplane.AddArgs{
+		Actuator: genericactuator.NewActuator(mgr, openstack.Name,
 			secretConfigsFunc, shootAccessSecretsFunc, nil, nil,
 			configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassChart, nil,
-			NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-			imagevector.ImageVector(), "", nil, opts.WebhookServerNamespace, mgr.GetWebhookServer().Port),
+			NewValuesProvider(mgr), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
+			imagevector.ImageVector(), "", nil, opts.WebhookServerNamespace, mgr.GetWebhookServer().Port, gardenerClientset),
 		ControllerOptions: opts.Controller,
-		Predicates:        controlplane.DefaultPredicates(opts.IgnoreOperationAnnotation),
+		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
 	})
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }

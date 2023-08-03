@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
@@ -32,15 +33,11 @@ type secretBinding struct {
 	apiReader client.Reader
 }
 
-// InjectAPIReader injects the given apiReader into the validator.
-func (sb *secretBinding) InjectAPIReader(apiReader client.Reader) error {
-	sb.apiReader = apiReader
-	return nil
-}
-
 // NewSecretBindingValidator returns a new instance of a secret binding validator.
-func NewSecretBindingValidator() extensionswebhook.Validator {
-	return &secretBinding{}
+func NewSecretBindingValidator(mgr manager.Manager) extensionswebhook.Validator {
+	return &secretBinding{
+		apiReader: mgr.GetAPIReader(),
+	}
 }
 
 // Validate checks whether the given SecretBinding refers to a Secret with valid OpenStack credentials.

@@ -29,11 +29,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // NewShootMutator returns a new instance of a shoot mutator.
-func NewShootMutator() extensionswebhook.Mutator {
-	return &shoot{}
+func NewShootMutator(mgr manager.Manager) extensionswebhook.Mutator {
+	return &shoot{
+		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+	}
 }
 
 type shoot struct {
@@ -46,12 +49,6 @@ var (
 	// EnableOverlayAsDefaultForCilium enables the overlay network for all new cilium shoot clusters on openstack
 	EnableOverlayAsDefaultForCilium bool
 )
-
-// InjectScheme injects the given scheme into the validator.
-func (s *shoot) InjectScheme(scheme *runtime.Scheme) error {
-	s.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	return nil
-}
 
 // Mutate mutates the given shoot object.
 func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {

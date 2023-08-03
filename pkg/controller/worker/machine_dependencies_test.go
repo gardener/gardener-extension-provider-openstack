@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -36,7 +35,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -54,7 +52,6 @@ var _ = Describe("#MachineDependencies", func() {
 		cl             *k8smocks.MockClient
 		statusCl       *k8smocks.MockStatusWriter
 		scheme         *runtime.Scheme
-		decoder        runtime.Decoder
 		workerDelegate genericactuator.WorkerDelegate
 	)
 
@@ -72,7 +69,6 @@ var _ = Describe("#MachineDependencies", func() {
 		scheme = runtime.NewScheme()
 		_ = api.AddToScheme(scheme)
 		_ = apiv1alpha1.AddToScheme(scheme)
-		decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 	})
 
 	AfterEach(func() {
@@ -98,7 +94,8 @@ var _ = Describe("#MachineDependencies", func() {
 		Context("#PreReconcileHook", func() {
 			It("should not create server groups by default", func() {
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -132,7 +129,8 @@ var _ = Describe("#MachineDependencies", func() {
 				w.Spec.Pools = append(w.Spec.Pools, pools...)
 
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -176,7 +174,8 @@ var _ = Describe("#MachineDependencies", func() {
 
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -247,7 +246,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -301,7 +301,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -363,7 +364,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -417,7 +419,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -471,7 +474,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,
@@ -533,7 +537,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 				workerDelegate, _ = worker.NewWorkerDelegate(
-					common.NewClientContext(cl, scheme, decoder),
+					cl,
+					scheme,
 					nil,
 					"",
 					w,

@@ -20,13 +20,15 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
@@ -38,23 +40,20 @@ const (
 )
 
 type actuator struct {
-	common.ClientContext
-	client client.Client
+	client  client.Client
+	decoder runtime.Decoder
 
 	openstackClientFactory openstackclient.FactoryFactory
 	bastionConfig          *controllerconfig.BastionConfig
 }
 
-func newActuator(openstackClientFactory openstackclient.FactoryFactory, bastionConfig *controllerconfig.BastionConfig) bastion.Actuator {
+func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory, bastionConfig *controllerconfig.BastionConfig) bastion.Actuator {
 	return &actuator{
+		client:                 mgr.GetClient(),
+		decoder:                serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		openstackClientFactory: openstackClientFactory,
 		bastionConfig:          bastionConfig,
 	}
-}
-
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
 }
 
 func getBastionInstance(client openstackclient.Compute, name string) ([]servers.Server, error) {

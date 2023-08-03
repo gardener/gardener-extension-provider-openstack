@@ -122,7 +122,7 @@ func (a *actuator) createFlowContext(ctx context.Context, log logr.Logger,
 		return nil, err
 	}
 
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
+	credentials, err := openstack.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
 	if err != nil {
 		return nil, fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
@@ -138,7 +138,7 @@ func (a *actuator) createFlowContext(ctx context.Context, log logr.Logger,
 	persistor := func(ctx context.Context, flatState shared.FlatMap) error {
 		state := infraflow.NewPersistentStateFromFlatMap(flatState)
 		infra := &extensionsv1alpha1.Infrastructure{}
-		if err := a.Client().Get(ctx, infraObjectKey, infra); err != nil {
+		if err := a.client.Get(ctx, infraObjectKey, infra); err != nil {
 			return err
 		}
 		return a.updateStatusState(ctx, infra, state)
@@ -170,12 +170,12 @@ func (a *actuator) updateStatusState(ctx context.Context, infra *extensionsv1alp
 }
 
 func (a *actuator) cleanupTerraformerResources(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure) error {
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
+	credentials, err := openstack.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
 	if err != nil {
 		return err
 	}
 
-	tf, err := internal.NewTerraformerWithAuth(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
+	tf, err := internal.NewTerraformerWithAuth(log, a.restConfig, infrastructure.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
 	if err != nil {
 		return fmt.Errorf("could not create terraformer object: %w", err)
 	}
@@ -198,18 +198,18 @@ func (a *actuator) reconcileWithTerraformer(ctx context.Context, log logr.Logger
 	}
 
 	// need to know if application credentials are used
-	credentials, err := openstack.GetCredentials(ctx, a.Client(), infra.Spec.SecretRef, false)
+	credentials, err := openstack.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
 	if err != nil {
 		return err
 	}
 
-	tf, err := internal.NewTerraformerWithAuth(log, a.RESTConfig(), infrastructure.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
+	tf, err := internal.NewTerraformerWithAuth(log, a.restConfig, infrastructure.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	if err := tf.
-		InitializeWith(ctx, terraformer.DefaultInitializer(a.Client(), terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
+		InitializeWith(ctx, terraformer.DefaultInitializer(a.client, terraformFiles.Main, terraformFiles.Variables, terraformFiles.TFVars, stateInitializer)).
 		Apply(ctx); err != nil {
 
 		return util.DetermineError(fmt.Errorf("failed to apply the terraform config: %w", err), helper.KnownCodes)

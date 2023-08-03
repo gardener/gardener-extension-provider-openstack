@@ -18,13 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -33,14 +33,15 @@ import (
 
 // configValidator implements ConfigValidator for openstack infrastructure resources.
 type configValidator struct {
-	common.ClientContext
+	client               client.Client
 	clientFactoryFactory openstackclient.FactoryFactory
 	logger               logr.Logger
 }
 
 // NewConfigValidator creates a new ConfigValidator.
-func NewConfigValidator(clientFactoryFactory openstackclient.FactoryFactory, logger logr.Logger) infrastructure.ConfigValidator {
+func NewConfigValidator(mgr manager.Manager, clientFactoryFactory openstackclient.FactoryFactory, logger logr.Logger) infrastructure.ConfigValidator {
 	return &configValidator{
+		client:               mgr.GetClient(),
 		clientFactoryFactory: clientFactoryFactory,
 		logger:               logger.WithName("openstack-infrastructure-config-validator"),
 	}
@@ -60,7 +61,7 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 	}
 
 	// Create openstack networking client
-	credentials, err := openstack.GetCredentials(ctx, c.Client(), infra.Spec.SecretRef, false)
+	credentials, err := openstack.GetCredentials(ctx, c.client, infra.Spec.SecretRef, false)
 	if err != nil {
 		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not get Openstack credentials: %+v", err)))
 		return allErrs

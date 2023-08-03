@@ -24,23 +24,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
 
 // NewCloudProfileValidator returns a new instance of a cloud profile validator.
-func NewCloudProfileValidator() extensionswebhook.Validator {
-	return &cloudProfile{}
+func NewCloudProfileValidator(mgr manager.Manager) extensionswebhook.Validator {
+	return &cloudProfile{
+		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+	}
 }
 
 type cloudProfile struct {
 	decoder runtime.Decoder
-}
-
-// InjectScheme injects the given scheme into the validator.
-func (cp *cloudProfile) InjectScheme(scheme *runtime.Scheme) error {
-	cp.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	return nil
 }
 
 // Validate validates the given cloud profile objects.

@@ -118,7 +118,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return errors.New("infrastructureConfig raw must not be empty")
 	}
 
-	if _, _, err := a.Decoder().Decode(cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+	if _, _, err := a.decoder.Decode(cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
 		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
 	}
 

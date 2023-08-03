@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackvalidation "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
@@ -36,8 +37,13 @@ import (
 )
 
 // NewShootValidator returns a new instance of a shoot validator.
-func NewShootValidator() extensionswebhook.Validator {
-	return &shoot{}
+func NewShootValidator(mgr manager.Manager) extensionswebhook.Validator {
+	return &shoot{
+		client:         mgr.GetClient(),
+		apiReader:      mgr.GetAPIReader(),
+		decoder:        serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		lenientDecoder: serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
+	}
 }
 
 type shoot struct {
@@ -63,25 +69,6 @@ var (
 	cpConfigPath    = providerPath.Child("controlPlaneConfig")
 	workersPath     = providerPath.Child("workers")
 )
-
-// InjectClient injects the given client into the validator.
-func (s *shoot) InjectClient(client client.Client) error {
-	s.client = client
-	return nil
-}
-
-// InjectAPIReader injects the given apiReader into the validator.
-func (s *shoot) InjectAPIReader(apiReader client.Reader) error {
-	s.apiReader = apiReader
-	return nil
-}
-
-// InjectScheme injects the given scheme into the validator.
-func (s *shoot) InjectScheme(scheme *runtime.Scheme) error {
-	s.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	s.lenientDecoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
-	return nil
-}
 
 // Validate validates the given shoot object.
 func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {

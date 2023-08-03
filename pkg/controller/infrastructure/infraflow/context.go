@@ -71,6 +71,7 @@ type FlowContext struct {
 	config             *openstackapi.InfrastructureConfig
 	cloudProfileConfig *openstackapi.CloudProfileConfig
 	networking         osclient.Networking
+	loadbalancing      osclient.Loadbalancing
 	access             access.NetworkingAccess
 	compute            osclient.Compute
 }
@@ -98,6 +99,10 @@ func NewFlowContext(log logr.Logger, clientFactory osclient.Factory,
 	if err != nil {
 		return nil, fmt.Errorf("creating compute client failed: %w", err)
 	}
+	loadbalancing, err := clientFactory.Loadbalancing(osclient.WithRegion(infra.Spec.Region))
+	if err != nil {
+		return nil, err
+	}
 
 	flowContext := &FlowContext{
 		BasicFlowContext:   *shared.NewBasicFlowContext(log, whiteboard, persistor),
@@ -107,6 +112,7 @@ func NewFlowContext(log logr.Logger, clientFactory osclient.Factory,
 		config:             config,
 		cloudProfileConfig: cloudProfileConfig,
 		networking:         networking,
+		loadbalancing:      loadbalancing,
 		access:             access,
 		compute:            compute,
 	}

@@ -51,7 +51,7 @@ type actuator struct {
 func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastructure.Actuator {
 	return &actuator{
 		disableProjectedTokenMount: disableProjectedTokenMount,
-		decoder:                    serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
+		decoder:                    serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		client:                     mgr.GetClient(),
 		restConfig:                 mgr.GetConfig(),
 	}

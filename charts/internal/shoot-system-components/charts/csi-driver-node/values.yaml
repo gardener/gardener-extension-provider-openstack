@@ -23,20 +23,14 @@ resources:
     requests:
       cpu: 15m
       memory: 42Mi
-    limits:
-      memory: 2Gi
   nodeDriverRegistrar:
     requests:
       cpu: 11m
       memory: 32Mi
-    limits:
-      memory: 1Gi
   livenessProbe:
     requests:
       cpu: 11m
       memory: 32Mi
-    limits:
-      memory: 200Mi
 
 pspDisabled: false
 

@@ -24,8 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -46,9 +48,12 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
-func NewActuator(disableProjectedTokenMount bool) infrastructure.Actuator {
+func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastructure.Actuator {
 	return &actuator{
 		disableProjectedTokenMount: disableProjectedTokenMount,
+		decoder:                    serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
+		client:                     mgr.GetClient(),
+		restConfig:                 mgr.GetConfig(),
 	}
 }
 

@@ -36,6 +36,10 @@ const (
 	CSIProvisionerImageName = "csi-provisioner"
 	// CSIAttacherImageName is the name of the csi-attacher image.
 	CSIAttacherImageName = "csi-attacher"
+	// CSIDiskDriverTopologyKey is the label on persistent volumes that represents availability by zone.
+	// See https://github.com/kubernetes/cloud-provider-openstack/blob/master/examples/cinder-csi-plugin/topology/example.yaml
+	// See https://gitlab.cern.ch/cloud/cloud-provider-openstack/-/blob/release-1.19/docs/using-cinder-csi-plugin.md#enable-topology-aware-dynamic-provisioning-for-cinder-volumes
+	CSIDiskDriverTopologyKey = "topology.cinder.csi.openstack.org/zone"
 	// CSISnapshotterImageName is the name of the csi-snapshotter image.
 	CSISnapshotterImageName = "csi-snapshotter"
 	// CSIResizerImageName is the name of the csi-resizer image.

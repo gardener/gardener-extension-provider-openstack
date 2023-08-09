@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -46,6 +47,7 @@ import (
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var _ = Describe("Machines", func() {
@@ -222,7 +224,7 @@ var _ = Describe("Machines", func() {
 
 				machineConfiguration = &machinev1alpha1.MachineConfiguration{}
 
-				shootVersionMajorMinor = "1.2"
+				shootVersionMajorMinor = "1.24"
 				shootVersion = shootVersionMajorMinor + ".3"
 
 				cloudProfileConfig = &api.CloudProfileConfig{
@@ -462,6 +464,8 @@ var _ = Describe("Machines", func() {
 						machineClassPool2Zone2,
 					}}
 
+					labelsZone1 := map[string]string{openstack.CSIDiskDriverTopologyKey: zone1}
+					labelsZone2 := map[string]string{openstack.CSIDiskDriverTopologyKey: zone2}
 					machineDeployments = worker.MachineDeployments{
 						{
 							Name:                 machineClassNamePool1Zone1,
@@ -471,6 +475,7 @@ var _ = Describe("Machines", func() {
 							Maximum:              worker.DistributeOverZones(0, maxPool1, 2),
 							MaxSurge:             worker.DistributePositiveIntOrPercent(0, maxSurgePool1, 2, maxPool1),
 							MaxUnavailable:       worker.DistributePositiveIntOrPercent(0, maxUnavailablePool1, 2, minPool1),
+							Labels:               labelsZone1,
 							MachineConfiguration: machineConfiguration,
 						},
 						{
@@ -481,6 +486,7 @@ var _ = Describe("Machines", func() {
 							Maximum:              worker.DistributeOverZones(1, maxPool1, 2),
 							MaxSurge:             worker.DistributePositiveIntOrPercent(1, maxSurgePool1, 2, maxPool1),
 							MaxUnavailable:       worker.DistributePositiveIntOrPercent(1, maxUnavailablePool1, 2, minPool1),
+							Labels:               labelsZone2,
 							MachineConfiguration: machineConfiguration,
 						},
 						{
@@ -491,6 +497,7 @@ var _ = Describe("Machines", func() {
 							Maximum:              worker.DistributeOverZones(0, maxPool2, 2),
 							MaxSurge:             worker.DistributePositiveIntOrPercent(0, maxSurgePool2, 2, maxPool2),
 							MaxUnavailable:       worker.DistributePositiveIntOrPercent(0, maxUnavailablePool2, 2, minPool2),
+							Labels:               labelsZone1,
 							MachineConfiguration: machineConfiguration,
 						},
 						{
@@ -501,6 +508,7 @@ var _ = Describe("Machines", func() {
 							Maximum:              worker.DistributeOverZones(1, maxPool2, 2),
 							MaxSurge:             worker.DistributePositiveIntOrPercent(1, maxSurgePool2, 2, maxPool2),
 							MaxUnavailable:       worker.DistributePositiveIntOrPercent(1, maxUnavailablePool2, 2, minPool2),
+							Labels:               labelsZone2,
 							MachineConfiguration: machineConfiguration,
 						},
 					}
@@ -760,7 +768,7 @@ var _ = Describe("Machines", func() {
 						setup(region, machineImage, "")
 
 						applyLabelsAndPolicy := func(labels []apiv1alpha1.MachineLabel, policy *string) string {
-							w.Spec.Pools[0].Labels = map[string]string{"k1": "v1"}
+							w.Spec.Pools[0].Labels = utils.MergeStringMaps(w.Spec.Pools[0].Labels, map[string]string{"k1": "v1"})
 							workerConfig := &apiv1alpha1.WorkerConfig{
 								TypeMeta: metav1.TypeMeta{
 									Kind:       "WorkerConfig",
@@ -792,7 +800,7 @@ var _ = Describe("Machines", func() {
 							workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 							result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
 							Expect(err).NotTo(HaveOccurred())
-							Expect(result[0].Labels).To(Equal(map[string]string{"k1": "v1"}))
+							Expect(result[0].Labels).To(HaveKeyWithValue("k1", "v1"))
 							return result[0].ClassName
 						}
 

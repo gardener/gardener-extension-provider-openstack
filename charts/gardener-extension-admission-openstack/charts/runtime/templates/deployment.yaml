@@ -49,6 +49,9 @@ spec:
         {{- if .Values.global.kubeconfig }}
         - --kubeconfig=/etc/gardener-extension-admission-openstack/kubeconfig/kubeconfig
         {{- end }}
+        {{- if .Values.global.projectedKubeconfig }}
+        - --kubeconfig={{ required ".Values.global.projectedKubeconfig.baseMountPath is required" .Values.global.projectedKubeconfig.baseMountPath }}/kubeconfig
+        {{- end }}
         {{- if .Values.global.metricsPort }}
         - --metrics-bind-address=:{{ .Values.global.metricsPort }}
         {{- end }}
@@ -89,6 +92,11 @@ spec:
           mountPath: /var/run/secrets/projected/serviceaccount
           readOnly: true
         {{- end }}
+        {{- if .Values.global.projectedKubeconfig }}
+        - name: kubeconfig
+          mountPath: {{ required ".Values.global.projectedKubeconfig.baseMountPath is required" .Values.global.projectedKubeconfig.baseMountPath }}
+          readOnly: true
+        {{- end }}
       volumes:
       - name: gardener-extension-admission-openstack-cert
         secret:
@@ -110,4 +118,22 @@ spec:
               {{- if .Values.global.serviceAccountTokenVolumeProjection.audience }}
               audience: {{ .Values.global.serviceAccountTokenVolumeProjection.audience }}
               {{- end }}
+      {{- end }}
+      {{- if .Values.global.projectedKubeconfig }}
+      - name: kubeconfig
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ required ".Values.global.projectedKubeconfig.genericKubeconfigSecretName is required" .Values.global.projectedKubeconfig.genericKubeconfigSecretName }}
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: {{ required ".Values.global.projectedKubeconfig.tokenSecretName is required" .Values.global.projectedKubeconfig.tokenSecretName }}
+              optional: false
       {{- end }}

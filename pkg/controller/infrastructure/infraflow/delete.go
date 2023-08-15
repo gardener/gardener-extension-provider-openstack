@@ -61,7 +61,7 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 			if routerID == nil {
 				return nil
 			}
-			return infrastructure.CleanupKubernetesRoutes(ctx, c.networking, *routerID, c.config.Networks.Worker)
+			return infrastructure.CleanupKubernetesRoutes(ctx, c.networking, *routerID, infrastructure.WorkersCIDR(c.config))
 		},
 		Timeout(defaultTimeout),
 	)
@@ -75,6 +75,7 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 		},
 		Timeout(defaultTimeout),
 	)
+
 	deleteRouterInterface := c.AddTask(g, "delete router interface",
 		c.deleteRouterInterface,
 		Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID, k8sRoutes))

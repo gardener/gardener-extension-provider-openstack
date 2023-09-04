@@ -128,10 +128,6 @@ check: $(GOIMPORTS) $(GOLANGCI_LINT)
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./pkg/... ./test/...
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/check-charts.sh ./charts
 
-.PHONY: check-docforge
-check-docforge: $(DOCFORGE)
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/check-docforge.sh $(REPO_ROOT) $(REPO_ROOT)/.docforge/manifest.yaml ".docforge/;docs/" "gardener-extension-provider-openstack" false
-
 .PHONY: generate
 generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(HELM) $(MOCKGEN) $(YQ)
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/generate.sh ./charts/... ./cmd/... ./example/... ./pkg/...

@@ -14,4 +14,4 @@ mkdir -p /go/src/github.com/gardener/gardener-extension-provider-openstack
 cp -r . /go/src/github.com/gardener/gardener-extension-provider-openstack
 cd /go/src/github.com/gardener/gardener-extension-provider-openstack
 
-make verify-extended check-docforge
+make verify-extended

@@ -94,6 +94,7 @@ resource "openstack_networking_secgroup_v2" "cluster" {
 
 resource "openstack_networking_secgroup_rule_v2" "cluster_self" {
   direction         = "ingress"
+  description       = "IPv4: allow all incoming traffic within the same security group"
   ethertype         = "IPv4"
   security_group_id = openstack_networking_secgroup_v2.cluster.id
   remote_group_id   = openstack_networking_secgroup_v2.cluster.id
@@ -101,12 +102,14 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_self" {
 
 resource "openstack_networking_secgroup_rule_v2" "cluster_egress" {
   direction         = "egress"
+  description       = "IPv4: allow all outgoing traffic"
   ethertype         = "IPv4"
   security_group_id = openstack_networking_secgroup_v2.cluster.id
 }
 
 resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
   direction         = "ingress"
+  description       = "IPv4: allow all incoming tcp traffic with port range 30000-32767"
   ethertype         = "IPv4"
   protocol          = "tcp"
   remote_ip_prefix  = "0.0.0.0/0"
@@ -117,6 +120,7 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
 
 resource "openstack_networking_secgroup_rule_v2" "cluster_udp_all" {
   direction         = "ingress"
+  description       = "IPv4: allow all incoming udp traffic with port range 30000-32767"
   ethertype         = "IPv4"
   protocol          = "udp"
   remote_ip_prefix  = "0.0.0.0/0"

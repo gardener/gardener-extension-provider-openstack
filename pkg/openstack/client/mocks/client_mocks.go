@@ -10,7 +10,7 @@ import (
 
 	openstack "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	client "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	floatingips "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	keypairs "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	servergroups "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"

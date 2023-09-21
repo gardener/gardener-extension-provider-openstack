@@ -376,21 +376,22 @@ func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 		return fmt.Errorf("internal error: casting to SecGroup failed")
 	}
 
-	desc := "managed by Gardener"
 	desiredRules := []rules.SecGroupRule{
 		{
 			Direction:     string(rules.DirIngress),
 			EtherType:     string(rules.EtherType4),
 			RemoteGroupID: access.SecurityGroupIDSelf,
-			Description:   desc,
+			Description:   "IPv4: allow all incoming traffic within the same security group",
 		},
 		{
-			Direction: string(rules.DirEgress),
-			EtherType: string(rules.EtherType4),
+			Direction:   string(rules.DirEgress),
+			EtherType:   string(rules.EtherType4),
+			Description: "IPv4: allow all outgoing traffic",
 		},
 		{
-			Direction: string(rules.DirEgress),
-			EtherType: string(rules.EtherType6),
+			Direction:   string(rules.DirEgress),
+			EtherType:   string(rules.EtherType6),
+			Description: "IPv6: allow all outgoing traffic",
 		},
 		{
 			Direction:      string(rules.DirIngress),
@@ -399,7 +400,7 @@ func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 			PortRangeMin:   30000,
 			PortRangeMax:   32767,
 			RemoteIPPrefix: "0.0.0.0/0",
-			Description:    desc,
+			Description:    "IPv4: allow all incoming tcp traffic with port range 30000-32767",
 		},
 		{
 			Direction:      string(rules.DirIngress),
@@ -408,7 +409,7 @@ func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 			PortRangeMin:   30000,
 			PortRangeMax:   32767,
 			RemoteIPPrefix: "0.0.0.0/0",
-			Description:    desc,
+			Description:    "IPv4: allow all incoming udp traffic with port range 30000-32767",
 		},
 	}
 

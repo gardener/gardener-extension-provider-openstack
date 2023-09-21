@@ -93,11 +93,6 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 		return nil, err
 	}
 
-	_, err = openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{})
-	if err != nil {
-		return nil, err
-	}
-
 	return &OpenstackClientFactory{
 		providerClient: provider,
 	}, nil

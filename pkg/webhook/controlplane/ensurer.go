@@ -37,7 +37,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -55,7 +54,6 @@ func NewEnsurer(logger logr.Logger, gardenletManagesMCM bool) genericmutator.Ens
 
 type ensurer struct {
 	genericmutator.NoopEnsurer
-	client              client.Client
 	logger              logr.Logger
 	gardenletManagesMCM bool
 }
@@ -315,10 +313,10 @@ func ensureKubeControllerManagerVolumes(ps *corev1.PodSpec) {
 }
 
 // EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-func (e *ensurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ gcontext.GardenContext, kubeletVersion *semver.Version, newObj, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
+func (e *ensurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ gcontext.GardenContext, _ *semver.Version, newObj, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	if opt := extensionswebhook.UnitOptionWithSectionAndName(newObj, "Service", "ExecStart"); opt != nil {
 		command := extensionswebhook.DeserializeCommandLine(opt.Value)
-		command = ensureKubeletCommandLineArgs(command, kubeletVersion)
+		command = ensureKubeletCommandLineArgs(command)
 		opt.Value = extensionswebhook.SerializeCommandLine(command, 1, " \\\n    ")
 	}
 
@@ -330,12 +328,8 @@ func (e *ensurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ gcontext.
 	return newObj, nil
 }
 
-func ensureKubeletCommandLineArgs(command []string, kubeletVersion *semver.Version) []string {
-	command = extensionswebhook.EnsureStringWithPrefix(command, "--cloud-provider=", "external")
-	if !versionutils.ConstraintK8sGreaterEqual123.Check(kubeletVersion) {
-		command = extensionswebhook.EnsureStringWithPrefix(command, "--enable-controller-attach-detach=", "true")
-	}
-	return command
+func ensureKubeletCommandLineArgs(command []string) []string {
+	return extensionswebhook.EnsureStringWithPrefix(command, "--cloud-provider=", "external")
 }
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
@@ -353,9 +347,7 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.Garde
 		newObj.FeatureGates["InTreePluginOpenStackUnregister"] = true
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual123.Check(kubeletVersion) {
-		newObj.EnableControllerAttachDetach = pointer.Bool(true)
-	}
+	newObj.EnableControllerAttachDetach = pointer.Bool(true)
 
 	// resolv-for-kubelet.conf is created by update-resolv-conf.service
 	newObj.ResolverConfig = pointer.String("/etc/resolv-for-kubelet.conf")

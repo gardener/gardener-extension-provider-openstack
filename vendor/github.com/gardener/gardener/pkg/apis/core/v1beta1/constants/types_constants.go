@@ -14,6 +14,10 @@
 
 package constants
 
+import (
+	"time"
+)
+
 const (
 	// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
 	SecretManagerIdentityControllerManager = "controller-manager"
@@ -69,6 +73,12 @@ const (
 	// SecretNamePrefixETCDEncryptionConfiguration is a constant for the name prefix of a Kubernetes secret object that
 	// contains the configuration for encryption data in ETCD.
 	SecretNamePrefixETCDEncryptionConfiguration = "kube-apiserver-etcd-encryption-configuration"
+	// SecretNameGardenerETCDEncryptionKey is a constant for the name of a Kubernetes secret object that contains the
+	// key for encryption data in ETCD for gardener-apiserver.
+	SecretNameGardenerETCDEncryptionKey = "gardener-apiserver-etcd-encryption-key"
+	// SecretNamePrefixGardenerETCDEncryptionConfiguration is a constant for the name prefix of a Kubernetes secret
+	// object that contains the configuration for encryption data in ETCD for gardener-apiserver.
+	SecretNamePrefixGardenerETCDEncryptionConfiguration = "gardener-apiserver-etcd-encryption-configuration"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension
@@ -511,6 +521,8 @@ const (
 	LabelRole = "role"
 	// LabelKubernetes is a constant for a label for Kubernetes workload.
 	LabelKubernetes = "kubernetes"
+	// LabelGardener is a constant for a label for Gardener workload.
+	LabelGardener = "gardener"
 	// LabelAPIServer is a constant for a label for the kube-apiserver.
 	LabelAPIServer = "apiserver"
 	// LabelControllerManager is a constant for a label for the kube-controller-manager.
@@ -552,6 +564,9 @@ const (
 	DefaultSNIIngressServiceName = "istio-ingressgateway"
 	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
 	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
+
+	// DefaultSchedulerName is the name of the default scheduler.
+	DefaultSchedulerName = "default-scheduler"
 
 	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
 	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"
@@ -735,6 +750,11 @@ const (
 	// EnvSeedName is a constant for the environment variable which holds the name of the Seed that the extension
 	// controller is running on.
 	EnvSeedName = "SEED_NAME"
+
+	// IngressTLSCertificateValidity is the default validity for ingress TLS certificates.
+	IngressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
+	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
+	VPNTunnel string = "vpn-shoot"
 )
 
 var (

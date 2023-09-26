@@ -66,6 +66,10 @@ const (
 	Partial KubeProxyReplacementMode = "partial"
 	// Disabled defines the disabled kube-proxy replacement mode
 	KubeProxyReplacementDisabled KubeProxyReplacementMode = "disabled"
+	// KubeProxyReplacementTrue defines the true kube-proxy replacement mode
+	KubeProxyReplacementTrue KubeProxyReplacementMode = "true"
+	// KubeProxyReplacementFalse defines the false kube-proxy replacement mode
+	KubeProxyReplacementFalse KubeProxyReplacementMode = "false"
 )
 
 // NodePortMode defines how NodePort services are enabled.
@@ -82,8 +86,6 @@ type Store string
 const (
 	// Kubernetes defines the kubernetes CRD store type
 	Kubernetes Store = "kubernetes"
-	// ETCD defines the ETCD store type
-	ETCD Store = "etcd"
 )
 
 // Hubble enablement for cilium
@@ -101,6 +103,12 @@ type IPv6 struct {
 // BPFSocketLBHostnsOnly enablement for cilium
 type BPFSocketLBHostnsOnly struct {
 	Enabled bool `json:"enabled"`
+}
+
+// CNI configuration for cilium
+type CNI struct {
+	// false indicates that cilium will not overwrite its CNI configuration.
+	Exclusive bool `json:"exclusive"`
 }
 
 // EgressGateway enablement for cilium
@@ -130,10 +138,19 @@ type KubeProxy struct {
 type Overlay struct {
 	// Enabled enables the network overlay.
 	Enabled bool `json:"enabled"`
+	// CreatePodRoutes installs routes to pods on all cluster nodes.
+	// This will only work if the cluster nodes share a single L2 network.
+	// +optional
+	CreatePodRoutes *bool `json:"createPodRoutes,omitempty"`
 }
 
-// SnatToUpstreamDNS  enables the masquerading of packets to the upstream dns server
+// SnatToUpstreamDNS enables the masquerading of packets to the upstream dns server
 type SnatToUpstreamDNS struct {
+	Enabled bool `json:"enabled"`
+}
+
+// SnatOutOfCluster enables the masquerading of packets outside of the cluster
+type SnatOutOfCluster struct {
 	Enabled bool `json:"enabled"`
 }
 
@@ -168,6 +185,9 @@ type NetworkConfig struct {
 	// BPFSocketLBHostnsOnly flag to be enabled or not
 	// +optional
 	BPFSocketLBHostnsOnly *BPFSocketLBHostnsOnly `json:"bpfSocketLBHostnsOnly,omitempty"`
+	// CNI configuration for cilium
+	// +optional
+	CNI *CNI `json:"cni,omitempty"`
 	// EgressGateway enablement for cilium
 	// +optional
 	EgressGateway *EgressGateway `json:"egressGateway,omitempty"`
@@ -189,4 +209,7 @@ type NetworkConfig struct {
 	// SnatToUpstreamDNS enables the masquerading of packets to the upstream dns server
 	// +optional
 	SnatToUpstreamDNS *SnatToUpstreamDNS `json:"snatToUpstreamDNS,omitempty"`
+	// SnatOutOfCluster enables the masquerading of packets outside of the cluster
+	// +optional
+	SnatOutOfCluster *SnatOutOfCluster `json:"snatOutOfCluster,omitempty"`
 }

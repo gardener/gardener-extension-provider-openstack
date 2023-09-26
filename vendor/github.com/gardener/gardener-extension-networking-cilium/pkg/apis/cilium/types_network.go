@@ -66,6 +66,10 @@ const (
 	Partial KubeProxyReplacementMode = "partial"
 	// Disabled defines the disabled kube-proxy replacement mode
 	KubeProxyReplacementDisabled KubeProxyReplacementMode = "disabled"
+	// KubeProxyReplacementTrue defines the true kube-proxy replacement mode
+	KubeProxyReplacementTrue KubeProxyReplacementMode = "true"
+	// KubeProxyReplacementFalse defines the false kube-proxy replacement mode
+	KubeProxyReplacementFalse KubeProxyReplacementMode = "false"
 )
 
 // NodePortMode defines how NodePort services are enabled.
@@ -81,8 +85,6 @@ type Store string
 const (
 	// Kubernetes defines the kubernetes CRD store type
 	Kubernetes Store = "kubernetes"
-	// ETCD defines the ETCD store type
-	ETCD Store = "etcd"
 )
 
 // InstallIPTableRules configuration for cilium
@@ -113,6 +115,11 @@ type BPFSocketLBHostnsOnly struct {
 	Enabled bool
 }
 
+// CNI configuration for cilium
+type CNI struct {
+	Exclusive bool
+}
+
 // EgressGateway enablement for cilium
 type EgressGateway struct {
 	Enabled bool
@@ -138,10 +145,18 @@ type KubeProxy struct {
 type Overlay struct {
 	// Enabled enables the network overlay.
 	Enabled bool
+	// CreatePodRoutes installs routes to pods on all cluster nodes.
+	// This will only work if the cluster nodes share a single L2 network.
+	CreatePodRoutes *bool
 }
 
 // SnatToUpstreamDNS  enables the masquerading of packets to the upstream dns server
 type SnatToUpstreamDNS struct {
+	Enabled bool
+}
+
+// SnatOutOfCluster enables the masquerading of packets outside of the cluster
+type SnatOutOfCluster struct {
 	Enabled bool
 }
 
@@ -168,6 +183,8 @@ type NetworkConfig struct {
 	IPv6 *IPv6
 	// BPFSocketLBHostnsOnly flag to be enabled or not
 	BPFSocketLBHostnsOnly *BPFSocketLBHostnsOnly
+	// CNI configuration
+	CNI *CNI
 	// EgressGateway flag to be enabled or not
 	EgressGateway *EgressGateway
 	// MTU overwrites the auto-detected MTU of the underlying network
@@ -182,4 +199,6 @@ type NetworkConfig struct {
 	Overlay *Overlay
 	// SnatToUpstreamDNS enables the masquerading of packets to the upstream dns server
 	SnatToUpstreamDNS *SnatToUpstreamDNS
+	// SnatOutOfCluster enables the masquerading of packets outside of the cluster
+	SnatOutOfCluster *SnatOutOfCluster
 }

@@ -24,12 +24,6 @@ const (
 	CiliumAgentImageName = "cilium-agent"
 	// CiliumOperatorImageName defines cilium operator's image name.
 	CiliumOperatorImageName = "cilium-operator"
-	// CiliumETCDOperatorImageName defines cilium etcd operator image name.
-	CiliumETCDOperatorImageName = "cilium-etcd-operator"
-	// CiliumNodeInitImageName defines cilium's node init image name.
-	CiliumNodeInitImageName = "cilium-nodeinit"
-	// CiliumPreflightImageName defines the cilium preflight image name.
-	CiliumPreflightImageName = "cilium-preflight"
 
 	// HubbleRelayImageName defines the Hubble image name.
 	HubbleRelayImageName = "hubble-relay"
@@ -43,9 +37,6 @@ const (
 
 	// KubeProxyImageName defines the kube-proxy image name.
 	KubeProxyImageName = "kube-proxy"
-
-	// PortmapCopierImageName defines the portmap-copier image name.
-	PortmapCopierImageName = "portmap-copier"
 
 	// MonitoringChartName
 	MonitoringName = "cilium-monitoring-config"

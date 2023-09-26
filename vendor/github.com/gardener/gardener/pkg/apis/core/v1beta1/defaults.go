@@ -258,12 +258,16 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
 		}
 	}
+
+	if obj.Spec.SchedulerName == nil {
+		obj.Spec.SchedulerName = pointer.String(v1beta1constants.DefaultSchedulerName)
+	}
 }
 
 // SetDefaults_KubeAPIServerConfig sets default values for KubeAPIServerConfig objects.
 func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 	if obj.Requests == nil {
-		obj.Requests = &KubeAPIServerRequests{}
+		obj.Requests = &APIServerRequests{}
 	}
 	if obj.Requests.MaxNonMutatingInflight == nil {
 		obj.Requests.MaxNonMutatingInflight = pointer.Int32(400)
@@ -278,7 +282,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
 	}
 	if obj.Logging == nil {
-		obj.Logging = &KubeAPIServerLogging{}
+		obj.Logging = &APIServerLogging{}
 	}
 	if obj.Logging.Verbosity == nil {
 		obj.Logging.Verbosity = pointer.Int32(2)

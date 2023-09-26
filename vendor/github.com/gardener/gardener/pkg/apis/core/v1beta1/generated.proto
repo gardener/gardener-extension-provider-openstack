@@ -32,6 +32,31 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/core/v1beta1";
 
+// APIServerLogging contains configuration for the logs level and http access logs
+message APIServerLogging {
+  // Verbosity is the kube-apiserver log verbosity level
+  // Defaults to 2.
+  // +optional
+  optional int32 verbosity = 1;
+
+  // HTTPAccessVerbosity is the kube-apiserver access logs level
+  // +optional
+  optional int32 httpAccessVerbosity = 2;
+}
+
+// APIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+message APIServerRequests {
+  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxNonMutatingInflight = 1;
+
+  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxMutatingInflight = 2;
+}
+
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
   // Enabled indicates whether the addon is enabled or not.
@@ -1030,7 +1055,7 @@ message KubeAPIServerConfig {
 
   // Requests contains configuration for request-specific settings for the kube-apiserver.
   // +optional
-  optional KubeAPIServerRequests requests = 10;
+  optional APIServerRequests requests = 10;
 
   // EnableAnonymousAuthentication defines whether anonymous requests to the secure port
   // of the API server should be allowed (flag `--anonymous-auth`).
@@ -1045,7 +1070,7 @@ message KubeAPIServerConfig {
 
   // Logging contains configuration for the log level and HTTP access logs.
   // +optional
-  optional KubeAPIServerLogging logging = 13;
+  optional APIServerLogging logging = 13;
 
   // DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
   // that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
@@ -1060,31 +1085,6 @@ message KubeAPIServerConfig {
   // Defaults to 300.
   // +optional
   optional int64 defaultUnreachableTolerationSeconds = 15;
-}
-
-// KubeAPIServerLogging contains configuration for the logs level and http access logs
-message KubeAPIServerLogging {
-  // Verbosity is the kube-apiserver log verbosity level
-  // Defaults to 2.
-  // +optional
-  optional int32 verbosity = 1;
-
-  // HTTPAccessVerbosity is the kube-apiserver access logs level
-  // +optional
-  optional int32 httpAccessVerbosity = 2;
-}
-
-// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
-message KubeAPIServerRequests {
-  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
-  // exceeds this, it rejects requests.
-  // +optional
-  optional int32 maxNonMutatingInflight = 1;
-
-  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
-  // exceeds this, it rejects requests.
-  // +optional
-  optional int32 maxMutatingInflight = 2;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -2298,15 +2298,6 @@ message SeedSettingLoadBalancerServicesZones {
   optional string externalTrafficPolicy = 3;
 }
 
-// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
-//
-// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field is no-op and will be removed in a future version.
-message SeedSettingOwnerChecks {
-  // Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
-  optional bool enabled = 1;
-}
-
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
 message SeedSettingScheduling {
   // Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
@@ -2348,14 +2339,6 @@ message SeedSettings {
   // VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
   // +optional
   optional SeedSettingVerticalPodAutoscaler verticalPodAutoscaler = 5;
-
-  // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
-  //
-  // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-  // The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
-  // Finally, the field will be removed from the API in a future version of Gardener.
-  // +optional
-  optional SeedSettingOwnerChecks ownerChecks = 6;
 
   // DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
   // +optional
@@ -2758,6 +2741,12 @@ message ShootSpec {
   // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
   optional ControlPlane controlPlane = 20;
+
+  // SchedulerName is the name of the responsible scheduler which schedules the shoot.
+  // If not specified, the default scheduler takes over.
+  // This field is immutable.
+  // +optional
+  optional string schedulerName = 21;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

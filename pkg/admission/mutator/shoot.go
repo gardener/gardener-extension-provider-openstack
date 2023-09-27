@@ -28,6 +28,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -117,6 +118,10 @@ func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 				}
 			}
 
+			if networkConfig.Overlay != nil && !networkConfig.Overlay.Enabled && networkConfig.Overlay.CreatePodRoutes == nil {
+				networkConfig.Overlay.CreatePodRoutes = pointer.Bool(true)
+			}
+
 			shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
 				Object: networkConfig,
 			}
@@ -144,6 +149,10 @@ func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 				if oldNetworkConfig.Overlay != nil {
 					networkConfig.Overlay = oldNetworkConfig.Overlay
 				}
+			}
+
+			if networkConfig.Overlay != nil && !networkConfig.Overlay.Enabled && networkConfig.Overlay.CreatePodRoutes == nil {
+				networkConfig.Overlay.CreatePodRoutes = pointer.Bool(true)
 			}
 
 			shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{

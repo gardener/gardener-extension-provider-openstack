@@ -167,7 +167,8 @@ var _ = Describe("Shoot mutator", func() {
 				Expect(shoot.Spec.Networking.ProviderConfig).To(Equal(&runtime.RawExtension{
 					Object: &calicov1alpha1.NetworkConfig{
 						Overlay: &calicov1alpha1.Overlay{
-							Enabled: false,
+							Enabled:         false,
+							CreatePodRoutes: pointer.Bool(true),
 						},
 					},
 				}))
@@ -244,7 +245,8 @@ var _ = Describe("Shoot mutator", func() {
 				Expect(shoot.Spec.Networking.ProviderConfig).To(Equal(&runtime.RawExtension{
 					Object: &ciliumv1alpha1.NetworkConfig{
 						Overlay: &ciliumv1alpha1.Overlay{
-							Enabled: false,
+							Enabled:         false,
+							CreatePodRoutes: pointer.Bool(true),
 						},
 					},
 				}))

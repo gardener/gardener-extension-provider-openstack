@@ -293,5 +293,8 @@ func (w *workerDelegate) hasPreserveAnnotation() bool {
 }
 
 func addTopologyLabel(labels map[string]string, zone string) map[string]string {
-	return utils.MergeStringMaps(labels, map[string]string{openstack.CSIDiskDriverTopologyKey: zone})
+	return utils.MergeStringMaps(labels, map[string]string{
+		openstack.CSIDiskDriverTopologyKey:   zone,
+		openstack.CSIManilaDriverTopologyKey: zone,
+	})
 }

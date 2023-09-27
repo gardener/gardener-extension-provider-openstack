@@ -464,8 +464,8 @@ var _ = Describe("Machines", func() {
 						machineClassPool2Zone2,
 					}}
 
-					labelsZone1 := map[string]string{openstack.CSIDiskDriverTopologyKey: zone1}
-					labelsZone2 := map[string]string{openstack.CSIDiskDriverTopologyKey: zone2}
+					labelsZone1 := map[string]string{openstack.CSIDiskDriverTopologyKey: zone1, openstack.CSIManilaDriverTopologyKey: zone1}
+					labelsZone2 := map[string]string{openstack.CSIDiskDriverTopologyKey: zone2, openstack.CSIManilaDriverTopologyKey: zone2}
 					machineDeployments = worker.MachineDeployments{
 						{
 							Name:                 machineClassNamePool1Zone1,

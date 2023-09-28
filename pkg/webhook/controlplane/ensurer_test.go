@@ -96,23 +96,12 @@ var _ = Describe("Ensurer", func() {
 		ensurer genericmutator.Ensurer
 
 		dummyContext   = gcontext.NewGardenContext(nil, nil)
-		eContextK8s122 = gcontext.NewInternalGardenContext(
+		eContextK8s125 = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.22.0",
-						},
-					},
-				},
-			},
-		)
-		eContextK8s123 = gcontext.NewInternalGardenContext(
-			&extensionscontroller.Cluster{
-				Shoot: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.23.0",
+							Version: "1.25.0",
 						},
 					},
 				},
@@ -140,7 +129,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			},
 		)
-		eContextK8s122WithResolvConfOptions = gcontext.NewInternalGardenContext(
+		eContextK8s126WithResolvConfOptions = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				CloudProfile: &gardencorev1beta1.CloudProfile{
 					Spec: gardencorev1beta1.CloudProfileSpec{
@@ -158,7 +147,7 @@ var _ = Describe("Ensurer", func() {
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.22.0",
+							Version: "1.26.0",
 						},
 					},
 				},
@@ -195,14 +184,7 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should add missing elements to kube-apiserver deployment", func() {
-			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s122, dep, nil)
-			Expect(err).To(Not(HaveOccurred()))
-
-			checkKubeAPIServerDeployment(dep, "1.22.0")
-		})
-
-		It("should add missing elements to kube-apiserver deployment (k8s >= 1.26)", func() {
+		It("should add missing elements to kube-apiserver deployment (k8s < 1.27)", func() {
 			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s126, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
@@ -238,10 +220,10 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s122, dep, nil)
+			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s126, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeAPIServerDeployment(dep, "1.22.0")
+			checkKubeAPIServerDeployment(dep, "1.26.0")
 		})
 	})
 
@@ -265,14 +247,7 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should add missing elements to kube-controller-manager deployment", func() {
-			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s122, dep, nil)
-			Expect(err).To(Not(HaveOccurred()))
-
-			checkKubeControllerManagerDeployment(dep, "1.22.0")
-		})
-
-		It("should add missing elements to kube-controller-manager deployment (k8s >= 1.26)", func() {
+		It("should add missing elements to kube-controller-manager deployment (k8s < 1.27)", func() {
 			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s126, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
@@ -320,10 +295,10 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s122, dep, nil)
+			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s126, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeControllerManagerDeployment(dep, "1.22.0")
+			checkKubeControllerManagerDeployment(dep, "1.26.0")
 		})
 	})
 
@@ -352,11 +327,11 @@ var _ = Describe("Ensurer", func() {
 			ensurer = NewEnsurer(logger, false)
 		})
 
-		It("should add missing elements to kube-scheduler deployment", func() {
-			err := ensurer.EnsureKubeSchedulerDeployment(ctx, eContextK8s122, dep, nil)
+		It("should add missing elements to kube-scheduler deployment (k8s < 1.26)", func() {
+			err := ensurer.EnsureKubeSchedulerDeployment(ctx, eContextK8s125, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeSchedulerDeployment(dep, "1.22.0")
+			checkKubeSchedulerDeployment(dep, "1.25.0")
 		})
 
 		It("should add missing elements to kube-scheduler deployment (k8s = 1.26)", func() {
@@ -399,11 +374,11 @@ var _ = Describe("Ensurer", func() {
 			ensurer = NewEnsurer(logger, false)
 		})
 
-		It("should add missing elements to cluster-autoscaler deployment", func() {
-			err := ensurer.EnsureClusterAutoscalerDeployment(ctx, eContextK8s122, dep, nil)
+		It("should add missing elements to cluster-autoscaler deployment (k8s < 1.26))", func() {
+			err := ensurer.EnsureClusterAutoscalerDeployment(ctx, eContextK8s125, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkClusterAutoscalerDeployment(dep, "1.22.0")
+			checkClusterAutoscalerDeployment(dep, "1.25.0")
 		})
 
 		It("should add missing elements to cluster-autoscaler deployment (k8s >= 1.26)", func() {
@@ -445,7 +420,7 @@ var _ = Describe("Ensurer", func() {
 		})
 
 		DescribeTable("should modify existing elements of kubelet.service unit options",
-			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, cloudProvider string, withControllerAttachDetachFlag bool) {
+			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, cloudProvider string) {
 				newUnitOptions := []*unit.UnitOption{
 					{
 						Section: "Service",
@@ -466,18 +441,12 @@ var _ = Describe("Ensurer", func() {
 					}
 				}
 
-				if withControllerAttachDetachFlag {
-					newUnitOptions[0].Value += ` \
-    --enable-controller-attach-detach=true`
-				}
-
 				opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, gctx, kubeletVersion, oldUnitOptions, nil)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(opts).To(Equal(newUnitOptions))
 			},
 
-			Entry("1.22 <= kubelet version < 1.23", dummyContext, semver.MustParse("1.22.0"), "external", true),
-			Entry("kubelet version >= 1.23", dummyContext, semver.MustParse("1.23.0"), "external", false),
+			Entry("kubelet version >= 1.24", dummyContext, semver.MustParse("1.25.0"), "external"),
 		)
 	})
 
@@ -493,13 +462,13 @@ var _ = Describe("Ensurer", func() {
 		})
 
 		DescribeTable("should modify existing elements of kubelet configuration",
-			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, featureGates []string, enableControllerAttachDetach *bool) {
+			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, featureGates []string) {
 				newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
 					FeatureGates: map[string]bool{
 						"Foo": true,
 					},
 					ResolverConfig:               pointer.String("/etc/resolv-for-kubelet.conf"),
-					EnableControllerAttachDetach: enableControllerAttachDetach,
+					EnableControllerAttachDetach: pointer.Bool(true),
 				}
 
 				for _, featureGate := range featureGates {
@@ -513,10 +482,9 @@ var _ = Describe("Ensurer", func() {
 				Expect(&kubeletConfig).To(Equal(newKubeletConfig))
 			},
 
-			Entry("1.22 <= kubelet < 1.23", eContextK8s122, semver.MustParse("1.22.0"), []string{"CSIMigration", "CSIMigrationOpenStack", "InTreePluginOpenStackUnregister"}, nil),
-			Entry("kubelet >= 1.23", eContextK8s123, semver.MustParse("1.23.0"), []string{"CSIMigration", "CSIMigrationOpenStack", "InTreePluginOpenStackUnregister"}, pointer.Bool(true)),
-			Entry("kubelet >= 1.26", eContextK8s126, semver.MustParse("1.26.0"), []string{"CSIMigration"}, pointer.Bool(true)),
-			Entry("kubelet >= 1.27", eContextK8s127, semver.MustParse("1.27.1"), nil, pointer.Bool(true)),
+			Entry("kubelet < 1.26", eContextK8s125, semver.MustParse("1.25.0"), []string{"CSIMigration", "CSIMigrationOpenStack", "InTreePluginOpenStackUnregister"}),
+			Entry("kubelet >= 1.26", eContextK8s126, semver.MustParse("1.26.0"), []string{"CSIMigration"}),
+			Entry("kubelet >= 1.27", eContextK8s127, semver.MustParse("1.27.1"), nil),
 		)
 	})
 
@@ -550,7 +518,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalUnits method and check the result
-			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s122, &units, nil)
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s126, &units, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(units).To(ConsistOf(oldUnit, additionalPath, additionalUnit))
 		})
@@ -568,7 +536,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalUnits method and check the result
-			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s122WithResolvConfOptions, &units, nil)
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s126WithResolvConfOptions, &units, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(units).To(ConsistOf(oldUnit, additionalPath, additionalUnit))
 		})
@@ -601,7 +569,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalFiles method and check the result
-			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s122, &files, nil)
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s126, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`""`)))
 		})
@@ -612,7 +580,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalFiles method and check the result
-			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s122WithResolvConfOptions, &files, nil)
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s126WithResolvConfOptions, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`"options rotate timeout:1"`)))
 		})
@@ -627,7 +595,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger, false)
 
 			// Call EnsureAdditionalFiles method and check the result
-			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s122WithResolvConfOptions, &files, nil)
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s126WithResolvConfOptions, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(files).To(ConsistOf(oldFile, additionalFile))
 			Expect(files).To(HaveLen(2))

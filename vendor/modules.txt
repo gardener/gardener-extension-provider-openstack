@@ -202,16 +202,6 @@ github.com/gardener/gardener/test/testmachinery/extensions/operation
 github.com/gardener/gardener/test/utils/access
 github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil
 github.com/gardener/gardener/third_party/gopkg.in/yaml.v2
-# github.com/gardener/gardener-extension-networking-calico v1.36.0
-## explicit; go 1.20
-github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico
-github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1
-github.com/gardener/gardener-extension-networking-calico/pkg/calico
-# github.com/gardener/gardener-extension-networking-cilium v1.28.0
-## explicit; go 1.20
-github.com/gardener/gardener-extension-networking-cilium/pkg/apis/cilium
-github.com/gardener/gardener-extension-networking-cilium/pkg/apis/cilium/v1alpha1
-github.com/gardener/gardener-extension-networking-cilium/pkg/cilium
 # github.com/gardener/hvpa-controller/api v0.5.0
 ## explicit; go 1.15
 github.com/gardener/hvpa-controller/api/v1alpha1

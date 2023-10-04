@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"time"
 
-	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
-	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -230,14 +228,9 @@ var _ = Describe("ValuesProvider", func() {
 			Shoot: &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String(calico.ReleaseName),
+						Type: pointer.String("calico"),
 						ProviderConfig: &runtime.RawExtension{
-							Object: &calicov1alpha1.NetworkConfig{
-								TypeMeta: metav1.TypeMeta{},
-								Overlay: &calicov1alpha1.Overlay{
-									Enabled: false,
-								},
-							},
+							Raw: []byte(`{"overlay":{"enabled": false}}`),
 						},
 						Pods: &cidr,
 					},

@@ -121,9 +121,7 @@ var _ = BeforeSuite(func() {
 	flag.Parse()
 	validateFlags()
 
-	internalChartsPath := openstack.InternalChartsPath
 	repoRoot := filepath.Join("..", "..", "..")
-	openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
 
 	// enable manager logs
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
@@ -141,8 +139,6 @@ var _ = BeforeSuite(func() {
 
 		By("stopping test environment")
 		Expect(testEnv.Stop()).To(Succeed())
-
-		openstack.InternalChartsPath = internalChartsPath
 	})
 
 	By("starting test environment")

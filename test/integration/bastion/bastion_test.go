@@ -109,8 +109,7 @@ var _ = Describe("Bastion tests", func() {
 		mgrCancel context.CancelFunc
 		c         client.Client
 
-		openstackClient    *OpenstackClient
-		internalChartsPath string
+		openstackClient *OpenstackClient
 	)
 
 	randString, err := randomString()
@@ -123,9 +122,7 @@ var _ = Describe("Bastion tests", func() {
 		flag.Parse()
 		validateFlags()
 
-		internalChartsPath = openstack.InternalChartsPath
 		repoRoot := filepath.Join("..", "..", "..")
-		openstack.InternalChartsPath = filepath.Join(repoRoot, openstack.InternalChartsPath)
 
 		// enable manager logs
 		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
@@ -203,8 +200,6 @@ var _ = Describe("Bastion tests", func() {
 
 		By("stopping test environment")
 		Expect(testEnv.Stop()).To(Succeed())
-
-		openstack.InternalChartsPath = internalChartsPath
 	})
 
 	It("should successfully create and delete", func() {

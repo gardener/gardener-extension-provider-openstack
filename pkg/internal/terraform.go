@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
+	"github.com/gardener/gardener-extension-provider-openstack/imagevector"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 

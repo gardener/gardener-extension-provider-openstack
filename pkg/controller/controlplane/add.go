@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/imagevector"
+	"github.com/gardener/gardener-extension-provider-openstack/imagevector"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 

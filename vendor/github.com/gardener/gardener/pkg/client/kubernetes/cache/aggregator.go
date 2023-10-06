@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -83,12 +82,12 @@ func (c *aggregator) List(ctx context.Context, list client.ObjectList, opts ...c
 	return nil
 }
 
-func (c *aggregator) GetInformer(ctx context.Context, obj client.Object) (cache.Informer, error) {
-	return c.cacheForObject(obj).GetInformer(ctx, obj)
+func (c *aggregator) GetInformer(ctx context.Context, obj client.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {
+	return c.cacheForObject(obj).GetInformer(ctx, obj, opts...)
 }
 
-func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind) (cache.Informer, error) {
-	return c.cacheForKind(gvk).GetInformerForKind(ctx, gvk)
+func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...cache.InformerGetOption) (cache.Informer, error) {
+	return c.cacheForKind(gvk).GetInformerForKind(ctx, gvk, opts...)
 }
 
 func (c *aggregator) Start(ctx context.Context) error {
@@ -97,13 +96,13 @@ func (c *aggregator) Start(ctx context.Context) error {
 	// goroutines to finish, because there might still be goroutines running under the hood of caches.
 	// However, this is not problematic, as long as the aggregator cache is not in any client set, that might
 	// be invalidated during runtime.
-	for gvk, cache := range c.gvkToCache {
-		go func(gvk schema.GroupVersionKind, cache runtimecache.Cache) {
-			err := cache.Start(ctx)
+	for gvk, runtimecache := range c.gvkToCache {
+		go func(gvk schema.GroupVersionKind, runtimecache cache.Cache) {
+			err := runtimecache.Start(ctx)
 			if err != nil {
 				logf.Log.Error(err, "Cache failed to start", "gvk", gvk.String())
 			}
-		}(gvk, cache)
+		}(gvk, runtimecache)
 	}
 	go func() {
 		if err := c.fallbackCache.Start(ctx); err != nil {

@@ -158,6 +158,9 @@ const (
 	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetrics = "kube-state-metrics"
+	// DeploymentNameGardenerMetricsExporter is a constant for the name of a Kubernetes deployment object that contains
+	// the gardener-metrics-exporter pod.
+	DeploymentNameGardenerMetricsExporter = "gardener-metrics-exporter"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
@@ -230,7 +233,8 @@ const (
 	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
 	// operation that extends the lifetime of the object having the operation annotation.
 	GardenerOperationKeepalive = "keepalive"
-	// GardenerOperationRenewKubeconfig is a constant for the value of the operation annotation to renew the gardenlet's kubeconfig secret.
+	// GardenerOperationRenewKubeconfig is a constant for the value of the operation annotation to renew the gardenlet's
+	// kubeconfig secret.
 	GardenerOperationRenewKubeconfig = "renew-kubeconfig"
 
 	// GardenRole is a constant for a label that describes a role.
@@ -401,6 +405,9 @@ const (
 	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that the
 	// all garden access secrets on the seed shall be renewed.
 	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets"
+	// KubeconfigSecretOperationRenew is a constant for an annotation on the secret in a Seed containing the garden
+	// cluster kubeconfig of a gardenlet indicating that it should be renewed.
+	KubeconfigSecretOperationRenew = "renew"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -552,6 +559,8 @@ const (
 	GardenNamespace = "garden"
 	// IstioSystemNamespace is the istio-system namespace.
 	IstioSystemNamespace = "istio-system"
+	// KubernetesDashboardNamespace is the kubernetes-dashboard namespace.
+	KubernetesDashboardNamespace = "kubernetes-dashboard"
 
 	// DefaultSNIIngressNamespace is the default sni ingress namespace.
 	DefaultSNIIngressNamespace = "istio-ingress"
@@ -657,10 +666,6 @@ const (
 	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
 	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPool = "worker.gardener.cloud/pool"
-	// LabelWorkerPoolImageName is a label that indicates the name of the OS image for that worker pool
-	LabelWorkerPoolImageName = "worker.gardener.cloud/image-name"
-	// LabelWorkerPoolImageVersion is a label that indicates the version of the OS image for that worker pool
-	LabelWorkerPoolImageVersion = "worker.gardener.cloud/image-version"
 	// LabelWorkerKubernetesVersion is a constant for a label that indicates the Kubernetes version used for the worker pool nodes.
 	LabelWorkerKubernetesVersion = "worker.gardener.cloud/kubernetes-version"
 	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to

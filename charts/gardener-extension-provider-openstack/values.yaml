@@ -61,9 +61,6 @@ webhookConfig:
   servicePort: 443
   serverPort: 10250
 
-leaderElection:
-  resourceLock: leases
-
 ## settings for metrics, e.g. scraping by seed-prometheus
 metrics:
   ## enable metrics scraping

@@ -27,14 +27,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
+	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var (
 	mcmChart = &chart.Chart{
-		Name:   openstack.MachineControllerManagerName,
-		Path:   filepath.Join(openstack.InternalChartsPath, openstack.MachineControllerManagerName, "seed"),
-		Images: []string{openstack.MachineControllerManagerImageName, openstack.MachineControllerManagerProviderOpenStackImageName},
+		Name:       openstack.MachineControllerManagerName,
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, openstack.MachineControllerManagerName, "seed"),
+		Images:     []string{openstack.MachineControllerManagerImageName, openstack.MachineControllerManagerProviderOpenStackImageName},
 		Objects: []*chart.Object{
 			{Type: &appsv1.Deployment{}, Name: openstack.MachineControllerManagerName},
 			{Type: &corev1.Service{}, Name: openstack.MachineControllerManagerName},
@@ -46,8 +48,9 @@ var (
 	}
 
 	mcmShootChart = &chart.Chart{
-		Name: openstack.MachineControllerManagerName,
-		Path: filepath.Join(openstack.InternalChartsPath, openstack.MachineControllerManagerName, "shoot"),
+		Name:       openstack.MachineControllerManagerName,
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, openstack.MachineControllerManagerName, "shoot"),
 		Objects: []*chart.Object{
 			{Type: &rbacv1.ClusterRole{}, Name: fmt.Sprintf("extensions.gardener.cloud:%s:%s", openstack.Name, openstack.MachineControllerManagerName)},
 			{Type: &rbacv1.ClusterRoleBinding{}, Name: fmt.Sprintf("extensions.gardener.cloud:%s:%s", openstack.Name, openstack.MachineControllerManagerName)},

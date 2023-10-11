@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -210,7 +209,7 @@ func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kuber
 		t.GardenerFramework.Logger.Info("Found node", "index", i, "nodeName", node.Name)
 		nodeNames[i] = node.Name
 	}
-	sort.Strings(nodeNames)
+	slices.Sort(nodeNames)
 	return
 }
 
@@ -236,8 +235,8 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 		machineNames[i] = machine.GetName()
 		machineNodes[i] = machine.GetLabels()["node"]
 	}
-	sort.Strings(machineNames)
-	sort.Strings(machineNodes)
+	slices.Sort(machineNames)
+	slices.Sort(machineNodes)
 	return
 }
 
@@ -402,7 +401,7 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 
 	for _, obj := range []client.ObjectList{
 		&extensionsv1alpha1.ClusterList{},
-		&v1alpha1.BackupEntryList{},
+		&extensionsv1alpha1.BackupEntryList{},
 		&rbacv1.ClusterRoleBindingList{},
 		&rbacv1.ClusterRoleList{},
 	} {

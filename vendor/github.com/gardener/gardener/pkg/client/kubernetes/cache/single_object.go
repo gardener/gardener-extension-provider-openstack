@@ -141,12 +141,12 @@ func (s *singleObject) Get(ctx context.Context, key client.ObjectKey, obj client
 	return cache.Get(ctx, key, obj, opts...)
 }
 
-func (s *singleObject) GetInformer(ctx context.Context, obj client.Object) (cache.Informer, error) {
+func (s *singleObject) GetInformer(ctx context.Context, obj client.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {
 	cache, err := s.getOrCreateCache(client.ObjectKeyFromObject(obj))
 	if err != nil {
 		return nil, err
 	}
-	return cache.GetInformer(ctx, obj)
+	return cache.GetInformer(ctx, obj, opts...)
 }
 
 func (s *singleObject) IndexField(ctx context.Context, obj client.Object, field string, extractValue client.IndexerFunc) error {
@@ -201,9 +201,9 @@ func (s *singleObject) createAndStartCache(log logr.Logger, key client.ObjectKey
 	}
 
 	opts := s.opts()
-	opts.Namespace = key.Namespace
-	opts.DefaultSelector = cache.ObjectSelector{Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: key.Name})}
-	opts.SelectorsByObject = nil
+	opts.DefaultNamespaces = map[string]cache.Config{key.Namespace: {}}
+	opts.DefaultFieldSelector = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: key.Name})
+	opts.ByObject = nil
 
 	log.V(1).Info("Creating new cache")
 	cache, err := s.newCache(s.restConfig, opts)
@@ -262,6 +262,6 @@ func (s *singleObject) List(_ context.Context, _ client.ObjectList, _ ...client.
 	return fmt.Errorf("the List operation is not supported by singleObject cache")
 }
 
-func (s *singleObject) GetInformerForKind(_ context.Context, _ schema.GroupVersionKind) (cache.Informer, error) {
+func (s *singleObject) GetInformerForKind(_ context.Context, _ schema.GroupVersionKind, _ ...cache.InformerGetOption) (cache.Informer, error) {
 	return nil, fmt.Errorf("the GetInformerForKind operation is not supported by singleObject cache")
 }

@@ -1806,6 +1806,17 @@ message OIDCConfig {
   optional string usernamePrefix = 10;
 }
 
+// ObservabilityRotation contains information about the observability credential rotation.
+message ObservabilityRotation {
+  // LastInitiationTime is the most recent time when the observability credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
 // OpenIDConnectClientAuthentication contains configuration for OIDC clients.
 message OpenIDConnectClientAuthentication {
   // Extra configuration added to kubeconfig's auth-provider.
@@ -2258,8 +2269,27 @@ message SeedSettingDependencyWatchdogWeeder {
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservation {
-  // Enabled controls whether the excess capacity reservation should be enabled.
+  // Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.
+  // +optional
   optional bool enabled = 1;
+
+  // Configs configures excess capacity reservation deployments for shoot control planes in the seed.
+  // +optional
+  repeated SeedSettingExcessCapacityReservationConfig configs = 2;
+}
+
+// SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
+message SeedSettingExcessCapacityReservationConfig {
+  // Resources specify the resource requests and limits of the excess-capacity-reservation pod.
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> resources = 1;
+
+  // NodeSelector specifies the node where the excess-capacity-reservation pod should run.
+  // +optional
+  map<string, string> nodeSelector = 2;
+
+  // Tolerations specify the tolerations for the the excess-capacity-reservation pod.
+  // +optional
+  repeated k8s.io.api.core.v1.Toleration tolerations = 3;
 }
 
 // SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
@@ -2430,6 +2460,10 @@ message SeedStatus {
   // ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 8;
+
+  // LastOperation holds information about the last operation on the Seed.
+  // +optional
+  optional LastOperation lastOperation = 9;
 }
 
 // SeedTaint describes a taint on a seed.
@@ -2577,7 +2611,7 @@ message ShootCredentialsRotation {
 
   // Observability contains information about the observability credential rotation.
   // +optional
-  optional ShootObservabilityRotation observability = 4;
+  optional ObservabilityRotation observability = 4;
 
   // ServiceAccountKey contains information about the service account key credential rotation.
   // +optional
@@ -2634,17 +2668,6 @@ message ShootNetworks {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 2;
-}
-
-// ShootObservabilityRotation contains information about the observability credential rotation.
-message ShootObservabilityRotation {
-  // LastInitiationTime is the most recent time when the observability credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
-
-  // LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.

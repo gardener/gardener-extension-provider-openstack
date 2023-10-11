@@ -77,7 +77,7 @@ func CleanupKubernetesLoadbalancers(ctx context.Context, log logr.Logger, client
 				return
 			}
 
-			err := wait.ExponentialBackoffWithContext(ctx, b, func() (done bool, err error) {
+			err := wait.ExponentialBackoffWithContext(ctx, b, func(_ context.Context) (done bool, err error) {
 				lb, err := client.GetLoadbalancer(lb.ID)
 				if err != nil {
 					return false, err

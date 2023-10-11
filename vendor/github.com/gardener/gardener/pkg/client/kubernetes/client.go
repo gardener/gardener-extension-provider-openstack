@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -277,9 +278,9 @@ func newClientSet(conf *Config) (Interface, error) {
 
 	if runtimeCache == nil {
 		runtimeCache, err = conf.newRuntimeCache(conf.restConfig, cache.Options{
-			Scheme: conf.clientOptions.Scheme,
-			Mapper: conf.clientOptions.Mapper,
-			Resync: conf.cacheResync,
+			Scheme:     conf.clientOptions.Scheme,
+			Mapper:     conf.clientOptions.Mapper,
+			SyncPeriod: conf.cacheSyncPeriod,
 		})
 		if err != nil {
 			return nil, err
@@ -288,7 +289,7 @@ func newClientSet(conf *Config) (Interface, error) {
 
 	var uncachedClient client.Client
 	if runtimeAPIReader == nil || runtimeClient == nil {
-		uncachedClient, err = client.New(conf.restConfig, conf.clientOptions)
+		uncachedClient, err = newClient(conf, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -302,17 +303,13 @@ func newClientSet(conf *Config) (Interface, error) {
 		if conf.disableCache {
 			runtimeClient = uncachedClient
 		} else {
-			delegatingClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-				CacheReader:     runtimeCache,
-				Client:          uncachedClient,
-				UncachedObjects: conf.uncachedObjects,
-			})
+			cachedClient, err := newClient(conf, runtimeCache)
 			if err != nil {
 				return nil, err
 			}
 
 			runtimeClient = &FallbackClient{
-				Client: delegatingClient,
+				Client: cachedClient,
 				Reader: runtimeAPIReader,
 			}
 		}
@@ -368,13 +365,26 @@ func defaultContentTypeProtobuf(c *rest.Config) *rest.Config {
 	return &config
 }
 
+func newClient(conf *Config, reader client.Reader) (client.Client, error) {
+	cacheOptions := conf.clientOptions.Cache
+	if cacheOptions == nil {
+		cacheOptions = &client.CacheOptions{}
+	}
+
+	cacheOptions.Reader = reader
+	conf.clientOptions.Cache = cacheOptions
+
+	return client.New(conf.restConfig, conf.clientOptions)
+}
+
 var _ client.Client = &FallbackClient{}
 
 // FallbackClient holds a `client.Client` and a `client.Reader` which is meant as a fallback
 // in case Get/List requests with the ordinary `client.Client` fail (e.g. because of cache errors).
 type FallbackClient struct {
 	client.Client
-	Reader client.Reader
+	Reader           client.Reader
+	KindToNamespaces map[string]sets.Set[string]
 }
 
 var cacheError = &kubernetescache.CacheError{}
@@ -382,7 +392,24 @@ var cacheError = &kubernetescache.CacheError{}
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
 // In case of a cache error, the underlying API reader is used to execute the request again.
 func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	err := d.Client.Get(ctx, key, obj)
+	gvk, err := apiutil.GVKForObject(obj, GardenScheme)
+	if err != nil {
+		return err
+	}
+
+	// Check if there are specific namespaces for this object's kind in the cache.
+	namespaces, ok := d.KindToNamespaces[gvk.Kind]
+
+	// If there are specific namespaces for this kind in the cache and the object's namespace is not cached,
+	// use the API reader to get the object.
+	if ok && !namespaces.Has(obj.GetNamespace()) {
+		return d.Reader.Get(ctx, key, obj)
+	}
+
+	// Otherwise, try to get the object from the cache.
+	err = d.Client.Get(ctx, key, obj)
+
+	// If an error occurs and it's a cache error, log it and use the API reader as a fallback.
 	if err != nil && errors.As(err, &cacheError) {
 		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
 		return d.Reader.Get(ctx, key, obj)

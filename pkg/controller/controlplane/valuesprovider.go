@@ -57,6 +57,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
@@ -125,8 +126,9 @@ func makeUnstructured(gvk schema.GroupVersionKind) *unstructured.Unstructured {
 
 var (
 	configChart = &chart.Chart{
-		Name: openstack.CloudProviderConfigName,
-		Path: filepath.Join(openstack.InternalChartsPath, openstack.CloudProviderConfigName),
+		Name:       openstack.CloudProviderConfigName,
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, openstack.CloudProviderConfigName),
 		Objects: []*chart.Object{
 			{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
 			{Type: &corev1.Secret{}, Name: openstack.CloudProviderDiskConfigName},
@@ -134,8 +136,9 @@ var (
 	}
 
 	controlPlaneChart = &chart.Chart{
-		Name: "seed-controlplane",
-		Path: filepath.Join(openstack.InternalChartsPath, "seed-controlplane"),
+		Name:       "seed-controlplane",
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, "seed-controlplane"),
 		SubCharts: []*chart.Chart{
 			{
 				Name:   openstack.CloudControllerManagerName,
@@ -192,12 +195,12 @@ var (
 	}
 
 	controlPlaneShootChart = &chart.Chart{
-		Name: "shoot-system-components",
-		Path: filepath.Join(openstack.InternalChartsPath, "shoot-system-components"),
+		Name:       "shoot-system-components",
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, "shoot-system-components"),
 		SubCharts: []*chart.Chart{
 			{
 				Name: openstack.CloudControllerManagerName,
-				Path: filepath.Join(openstack.InternalChartsPath, openstack.CloudControllerManagerName),
 				Objects: []*chart.Object{
 					{Type: &rbacv1.ClusterRole{}, Name: "system:controller:cloud-node-controller"},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: "system:controller:cloud-node-controller"},
@@ -283,8 +286,9 @@ var (
 	}
 
 	controlPlaneShootCRDsChart = &chart.Chart{
-		Name: "shoot-crds",
-		Path: filepath.Join(openstack.InternalChartsPath, "shoot-crds"),
+		Name:       "shoot-crds",
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, "shoot-crds"),
 		SubCharts: []*chart.Chart{
 			{
 				Name: "volumesnapshots",
@@ -298,8 +302,9 @@ var (
 	}
 
 	storageClassChart = &chart.Chart{
-		Name: "shoot-storageclasses",
-		Path: filepath.Join(openstack.InternalChartsPath, "shoot-storageclasses"),
+		Name:       "shoot-storageclasses",
+		EmbeddedFS: &charts.InternalChart,
+		Path:       filepath.Join(charts.InternalChartsPath, "shoot-storageclasses"),
 	}
 )
 

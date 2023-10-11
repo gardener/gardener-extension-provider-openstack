@@ -9,6 +9,7 @@
 !docs/
 !example/
 !hack/
+!imagevector/
 !pkg/
 !test/
 !tools/

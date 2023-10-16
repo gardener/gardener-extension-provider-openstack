@@ -17,7 +17,7 @@ package cloudprovider
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

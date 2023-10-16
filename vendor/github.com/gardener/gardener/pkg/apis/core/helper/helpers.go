@@ -16,9 +16,10 @@ package helper
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -231,6 +233,21 @@ func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
 	}
 
 	return len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == core.DNSUnmanaged
+}
+
+// ShootNeedsForceDeletion determines whether a Shoot should be force deleted or not.
+func ShootNeedsForceDeletion(shoot *core.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+
+	value, ok := shoot.Annotations[v1beta1constants.AnnotationConfirmationForceDeletion]
+	if !ok {
+		return false
+	}
+
+	forceDelete, _ := strconv.ParseBool(value)
+	return forceDelete
 }
 
 // FindPrimaryDNSProvider finds the primary provider among the given `providers`.
@@ -512,32 +529,44 @@ func DeterminePrimaryIPFamily(ipFamilies []core.IPFamily) core.IPFamily {
 	return ipFamilies[0]
 }
 
-// KubeAPIServerFeatureGateEnabled returns whether the given feature gate is enabled for the kube-apiserver for the given Shoot spec.
-func KubeAPIServerFeatureGateEnabled(shoot *core.Shoot, featureGate string) bool {
+// KubeAPIServerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-apiserver for the given Shoot spec.
+func KubeAPIServerFeatureGateDisabled(shoot *core.Shoot, featureGate string) bool {
 	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
-	if kubeAPIServer != nil && kubeAPIServer.FeatureGates != nil {
-		return kubeAPIServer.FeatureGates[featureGate]
+	if kubeAPIServer == nil || kubeAPIServer.FeatureGates == nil {
+		return false
 	}
 
-	return false
+	value, ok := kubeAPIServer.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
 }
 
-// KubeControllerManagerFeatureGateEnabled returns whether the given feature gate is enabled for the kube-controller-manager for the given Shoot spec.
-func KubeControllerManagerFeatureGateEnabled(shoot *core.Shoot, featureGate string) bool {
+// KubeControllerManagerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-controller-manager for the given Shoot spec.
+func KubeControllerManagerFeatureGateDisabled(shoot *core.Shoot, featureGate string) bool {
 	kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager
-	if kubeControllerManager != nil && kubeControllerManager.FeatureGates != nil {
-		return kubeControllerManager.FeatureGates[featureGate]
+	if kubeControllerManager == nil || kubeControllerManager.FeatureGates == nil {
+		return false
 	}
 
-	return false
+	value, ok := kubeControllerManager.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
 }
 
-// KubeProxyFeatureGateEnabled returns whether the given feature gate is enabled for the kube-proxy for the given Shoot spec.
-func KubeProxyFeatureGateEnabled(shoot *core.Shoot, featureGate string) bool {
+// KubeProxyFeatureGateDisabled returns whether the given feature gate is disabled for the kube-proxy for the given Shoot spec.
+func KubeProxyFeatureGateDisabled(shoot *core.Shoot, featureGate string) bool {
 	kubeProxy := shoot.Spec.Kubernetes.KubeProxy
-	if kubeProxy != nil && kubeProxy.FeatureGates != nil {
-		return kubeProxy.FeatureGates[featureGate]
+	if kubeProxy == nil || kubeProxy.FeatureGates == nil {
+		return false
 	}
 
-	return false
+	value, ok := kubeProxy.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
 }

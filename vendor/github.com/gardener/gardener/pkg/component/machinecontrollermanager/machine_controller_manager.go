@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -157,7 +157,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, getLabels())
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(portMetrics),
+			Port:     utils.IntStrPtrFromInt32(portMetrics),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 
@@ -213,13 +213,13 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						"--safety-up=2",
 						"--safety-down=1",
 						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-						"--v=4",
+						"--v=3",
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   "/healthz",
-								Port:   intstr.FromInt(portMetrics),
+								Port:   intstr.FromInt32(portMetrics),
 								Scheme: corev1.URISchemeHTTP,
 							},
 						},
@@ -259,7 +259,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = utils.MergeStringMaps(podDisruptionBudget.Labels, getLabels())
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt(1),
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
 		return nil

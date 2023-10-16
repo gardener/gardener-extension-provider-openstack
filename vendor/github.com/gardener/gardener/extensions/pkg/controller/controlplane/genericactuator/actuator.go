@@ -35,6 +35,7 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -76,8 +77,11 @@ func NewActuator(
 	configName string,
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
-	webhookServerPort int,
-) (controlplane.Actuator, error) {
+	webhookServerPort int32,
+) (
+	controlplane.Actuator,
+	error,
+) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
 		return nil, err
@@ -137,7 +141,7 @@ type actuator struct {
 	configName                 string
 	atomicShootWebhookConfig   *atomic.Value
 	webhookServerNamespace     string
-	webhookServerPort          int
+	webhookServerPort          int32
 
 	gardenerClientset kubernetesclient.Interface
 	client            client.Client
@@ -404,6 +408,16 @@ func (a *actuator) Delete(
 	return sm.Cleanup(ctx)
 }
 
+// ForceDelete forcefully deletes the controlplane.
+func (a *actuator) ForceDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+) error {
+	return a.Delete(ctx, log, cp, cluster)
+}
+
 func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
 	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
 		return a.deleteControlPlaneExposure(ctx, log, cp)
@@ -446,6 +460,8 @@ func (a *actuator) deleteControlPlane(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
+	forceDelete := cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
+
 	// Get config chart values
 	if a.configChart != nil {
 		values, err := a.vp.GetConfigChartValues(ctx, cp, cluster)
@@ -469,27 +485,31 @@ func (a *actuator) deleteControlPlane(
 			return fmt.Errorf("could not delete managed resource containing shoot CRDs chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 
-		// Wait for shoot CRDs chart ManagedResource deletion before deleting the shoot chart ManagedResource
-		timeoutCtx1, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		if err := managedresources.WaitUntilDeleted(timeoutCtx1, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
-			return fmt.Errorf("error while waiting for managed resource containing shoot CRDs chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+		if !forceDelete {
+			// Wait for shoot CRDs chart ManagedResource deletion before deleting the shoot chart ManagedResource
+			timeoutCtx1, cancel := context.WithTimeout(ctx, 2*time.Minute)
+			defer cancel()
+			if err := managedresources.WaitUntilDeleted(timeoutCtx1, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
+				return fmt.Errorf("error while waiting for managed resource containing shoot CRDs chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+			}
 		}
 	}
 	if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, false); err != nil {
 		return fmt.Errorf("could not delete managed resource containing shoot chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
-	timeoutCtx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	if err := managedresources.WaitUntilDeleted(timeoutCtx2, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
-		return fmt.Errorf("error while waiting for managed resource containing storage classes chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
-	}
+	if !forceDelete {
+		timeoutCtx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		if err := managedresources.WaitUntilDeleted(timeoutCtx2, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
+			return fmt.Errorf("error while waiting for managed resource containing storage classes chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+		}
 
-	timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	if err := managedresources.WaitUntilDeleted(timeoutCtx3, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
-		return fmt.Errorf("error while waiting for managed resource containing shoot chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+		timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		if err := managedresources.WaitUntilDeleted(timeoutCtx3, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
+			return fmt.Errorf("error while waiting for managed resource containing shoot chart for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+		}
 	}
 
 	// Delete control plane objects
@@ -526,10 +546,12 @@ func (a *actuator) deleteControlPlane(
 			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 
-		timeoutCtx4, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		if err := managedresources.WaitUntilDeleted(timeoutCtx4, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
-			return fmt.Errorf("error while waiting for managed resource containing shoot webhooks for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+		if !forceDelete {
+			timeoutCtx4, cancel := context.WithTimeout(ctx, 2*time.Minute)
+			defer cancel()
+			if err := managedresources.WaitUntilDeleted(timeoutCtx4, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
+				return fmt.Errorf("error while waiting for managed resource containing shoot webhooks for controlplane '%s' to be deleted: %w", kubernetesutils.ObjectName(cp), err)
+			}
 		}
 	}
 

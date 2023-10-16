@@ -22,16 +22,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/utils/access"
 )
 
 // GetSeeds returns all registered seeds
@@ -53,13 +56,45 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 		return nil, nil, fmt.Errorf("could not get Seed from Shoot in Garden cluster: %w", err)
 	}
 
-	seedSecretRef := seed.Spec.SecretRef
-	if seedSecretRef == nil {
-		f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
-		return seed, nil, nil
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			f.Logger.Info("Seed is not a ManagedSeed, checking seed.spec.secretRef")
+
+			seedSecretRef := seed.Spec.SecretRef
+			if seedSecretRef == nil {
+				f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
+				return seed, nil, nil
+			}
+
+			seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
+				kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+				kubernetes.WithDisabledCachedClient(),
+			)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not construct Seed client: %w", err)
+			}
+			return seed, seedClient, nil
+		}
+		return seed, nil, fmt.Errorf("failed to get ManagedSeed for Seed, %s: %w", client.ObjectKeyFromObject(seed), err)
 	}
 
-	seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
+	if managedSeed.Spec.Shoot == nil {
+		return seed, nil, fmt.Errorf("shoot for ManagedSeed, %s is nil", client.ObjectKeyFromObject(managedSeed))
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		return seed, nil, fmt.Errorf("failed to get Shoot %s for ManagedSeed, %s: %w", managedSeed.Spec.Shoot.Name, client.ObjectKeyFromObject(managedSeed), err)
+	}
+
+	const expirationSeconds = 6 * 3600 // 6h
+	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, shoot, pointer.Int64(expirationSeconds))
+	if err != nil {
+		return seed, nil, fmt.Errorf("failed to request AdminKubeConfig for Shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
+	}
+
+	seedClient, err := kubernetes.NewClientFromBytes(kubeconfig,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
@@ -136,7 +171,7 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
-// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found any more
+// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found anymore.
 func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
 	if f.Config.ExistingShootName != "" {
 		f.Logger.Info("Skip deletion of existing shoot", "shoot", client.ObjectKey{Name: f.Config.ExistingShootName, Namespace: f.ProjectNamespace})
@@ -169,6 +204,54 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 	}
 
 	log.Info("Shoot was deleted successfully")
+	return nil
+}
+
+// ForceDeleteShootAndWaitForDeletion forcefully deletes the test shoot and waits until it cannot be found anymore.
+func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
+	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
+
+	if err := f.AnnotateShoot(ctx, shoot, map[string]string{v1beta1constants.ShootIgnore: "true"}); err != nil {
+		return fmt.Errorf("failed patching Shoot to be ignored")
+	}
+
+	if err := f.DeleteShoot(ctx, shoot); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(shoot.DeepCopy())
+	shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
+		Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies},
+	}}
+	if err := f.GardenClient.Client().Status().Patch(ctx, shoot, patch); err != nil {
+		return err
+	}
+
+	if err := f.AnnotateShoot(ctx, shoot, map[string]string{
+		v1beta1constants.AnnotationConfirmationForceDeletion: "true",
+		v1beta1constants.ShootIgnore:                         "false",
+	}); err != nil {
+		return fmt.Errorf("failed annotating Shoot with force-delete and to not be ignored")
+	}
+
+	if err := f.WaitForShootToBeDeleted(ctx, shoot); err != nil {
+		return fmt.Errorf("failed waiting for Shoot to be deleted")
+	}
+
+	defer func() {
+		if rErr != nil {
+			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			if shootFramework, err := f.NewShootFramework(dumpCtx, shoot); err != nil {
+				log.Error(err, "Cannot dump shoot state")
+			} else {
+				shootFramework.DumpState(dumpCtx)
+			}
+		}
+	}()
+
+	log.Info("Shoot was force-deleted successfully")
 	return nil
 }
 

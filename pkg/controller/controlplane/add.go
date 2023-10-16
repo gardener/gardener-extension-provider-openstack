@@ -58,7 +58,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		secretConfigsFunc, shootAccessSecretsFunc, nil, nil,
 		configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassChart, nil,
 		NewValuesProvider(mgr), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-		imagevector.ImageVector(), "", nil, opts.WebhookServerNamespace, defaultServer.Options.Port)
+		imagevector.ImageVector(), "", nil, opts.WebhookServerNamespace, int32(defaultServer.Options.Port))
 	if err != nil {
 		return err
 	}

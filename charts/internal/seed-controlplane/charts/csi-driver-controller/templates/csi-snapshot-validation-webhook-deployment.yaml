@@ -38,6 +38,10 @@ spec:
         resources:
 {{ toYaml .Values.csiSnapshotValidationWebhook.resources | indent 10 }}
 {{- end }}
+        readinessProbe:
+          tcpSocket:
+            port: 443
+          initialDelaySeconds: 5
         volumeMounts:
           - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
             name: kubeconfig

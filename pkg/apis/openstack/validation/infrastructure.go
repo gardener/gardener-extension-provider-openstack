@@ -59,6 +59,15 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		}
 	}
 
+	if infra.Networks.SubnetID != nil {
+		if infra.Networks.ID == nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID, "if subnet ID is provided a networkID must be provided"))
+		}
+		if _, err := uuid.Parse(*infra.Networks.SubnetID); err != nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID, "if subnet ID is provided it must be a valid OpenStack UUID"))
+		}
+	}
+
 	if infra.Networks.Router != nil && len(infra.Networks.Router.ID) == 0 {
 		allErrs = append(allErrs, field.Invalid(networksPath.Child("router", "id"), infra.Networks.Router.ID, "router id must not be empty when router key is provided"))
 	}

@@ -76,6 +76,7 @@ func ComputeTerraformerTemplateValues(
 ) (map[string]interface{}, error) {
 	var (
 		createRouter  = true
+		createSubnet  = true
 		createNetwork = true
 		useCACert     = false
 		routerConfig  = map[string]interface{}{
@@ -136,6 +137,11 @@ func ComputeTerraformerTemplateValues(
 		outputKeysConfig["shareNetworkName"] = TerraformOutputKeyShareNetworkName
 	}
 
+	if config.Networks.SubnetID != nil {
+		createSubnet = false
+		networksConfig["subnet"] = *config.Networks.SubnetID
+	}
+
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
 			"maxApiCallRetries": MaxApiCallRetries,
@@ -147,6 +153,7 @@ func ComputeTerraformerTemplateValues(
 		},
 		"create": map[string]interface{}{
 			"router":       createRouter,
+			"subnet":       createSubnet,
 			"network":      createNetwork,
 			"shareNetwork": createShareNetwork,
 		},

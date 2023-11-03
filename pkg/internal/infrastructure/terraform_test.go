@@ -125,6 +125,7 @@ var _ = Describe("Terraform", func() {
 			}
 			expectedCreateValues = map[string]interface{}{
 				"router":       false,
+				"subnet":       true,
 				"network":      true,
 				"shareNetwork": false,
 			}
@@ -193,6 +194,63 @@ var _ = Describe("Terraform", func() {
 			config.Networks.ID = &networkID
 			expectedCreateValues["network"] = false
 			expectedNetworkValues["id"] = networkID
+
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
+			Expect(err).To(BeNil())
+			Expect(values).To(Equal(map[string]interface{}{
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
+				"dnsServers":   dnsServers,
+				"sshPublicKey": string(infra.Spec.SSHPublicKey),
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
+			}))
+		})
+
+		It("should correctly compute the terraformer chart values when reusing vpc and subnet", func() {
+			networkID := "networkID"
+			subnetID := "subneID"
+
+			config.Networks.ID = &networkID
+			config.Networks.SubnetID = &subnetID
+			config.Networks.Router = nil
+			expectedCreateValues["network"] = false
+			expectedNetworkValues["id"] = networkID
+			expectedCreateValues["subnet"] = false
+			expectedNetworkValues["subnet"] = subnetID
+			expectedCreateValues["router"] = true
+			expectedRouterValues["id"] = "openstack_networking_router_v2.router.id"
+
+			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
+			Expect(err).To(BeNil())
+			Expect(values).To(Equal(map[string]interface{}{
+				"openstack":    expectedOpenStackValues,
+				"create":       expectedCreateValues,
+				"dnsServers":   dnsServers,
+				"sshPublicKey": string(infra.Spec.SSHPublicKey),
+				"router":       expectedRouterValues,
+				"clusterName":  infra.Namespace,
+				"networks":     expectedNetworkValues,
+				"outputKeys":   expectedOutputKeysValues,
+			}))
+		})
+
+		It("should correctly compute the terraformer chart values when reusing vpc and subnet and router", func() {
+			networkID := "networkID"
+			subnetID := "subneID"
+			routerID := "routerID"
+
+			config.Networks.ID = &networkID
+			config.Networks.SubnetID = &subnetID
+			config.Networks.Router.ID = routerID
+			expectedCreateValues["network"] = false
+			expectedNetworkValues["id"] = networkID
+			expectedCreateValues["subnet"] = false
+			expectedNetworkValues["subnet"] = subnetID
+			expectedCreateValues["router"] = false
+			expectedRouterValues["id"] = strconv.Quote(routerID)
 
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
 			Expect(err).To(BeNil())

@@ -247,6 +247,23 @@ func (c *FlowContext) getNetworkID() (*string, error) {
 }
 
 func (c *FlowContext) ensureSubnet(ctx context.Context) error {
+	if c.config.Networks.SubnetID != nil {
+		return c.ensureConfiguredSubnet(ctx)
+	}
+	return c.ensureNewSubnet(ctx)
+}
+
+func (c *FlowContext) ensureConfiguredSubnet(_ context.Context) error {
+	_, err := c.access.GetSubnetByID(*c.config.Networks.SubnetID)
+	if err != nil {
+		c.state.Set(IdentifierSubnet, "")
+		return err
+	}
+	c.state.Set(IdentifierSubnet, *c.config.Networks.SubnetID)
+	return nil
+}
+
+func (c *FlowContext) ensureNewSubnet(ctx context.Context) error {
 	log := c.LogFromContext(ctx)
 
 	networkID := *c.state.Get(IdentifierNetwork)

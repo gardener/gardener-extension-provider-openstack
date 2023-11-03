@@ -26,6 +26,10 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -34,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -173,6 +178,148 @@ var _ = Describe("ConfigValidator", func() {
 				"Detail": Equal("could not get external network names: test"),
 			}))
 		})
+
+		Context("failing path", func() {
+
+			var (
+				config *apisopenstack.InfrastructureConfig
+				id     string
+			)
+
+			BeforeEach(func() {
+				networkingClient.EXPECT().GetExternalNetworkNames(ctx).Return([]string{"test1", "test2", "test3"}, nil)
+
+				id = uuid.NewString()
+				config = &apisopenstack.InfrastructureConfig{
+					FloatingPoolName: floatingPoolName,
+					Networks:         apisopenstack.Networks{},
+				}
+			})
+
+			It("should fail with InternalError if getting network failed", func() {
+				config.Networks.ID = pointer.String(id)
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return(nil, errors.New("test"))
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInternal),
+					"Field": Equal("networks.id"),
+				}))
+			})
+
+			It("should fail with NotFound if no network found", func() {
+				config.Networks.ID = pointer.String("nonexisting")
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{}, nil)
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeNotFound),
+					"Field": Equal("networks.id"),
+				}))
+			})
+
+			It("should fail with InternalError if getting subnet failed", func() {
+				config.Networks.ID = pointer.String(id)
+				config.Networks.SubnetID = pointer.String(id)
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
+				networkingClient.EXPECT().ListSubnets(gomock.Any()).Return(nil, errors.New("test"))
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInternal),
+					"Field": Equal("networks.subnetId"),
+				}))
+			})
+
+			It("should fail with NotFound if no subnet found", func() {
+				config.Networks.ID = pointer.String(id)
+				config.Networks.SubnetID = pointer.String("nonexisting")
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
+				networkingClient.EXPECT().ListSubnets(gomock.Any()).Return([]subnets.Subnet{}, nil)
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeNotFound),
+					"Field": Equal("networks.subnetId"),
+				}))
+			})
+
+			It("should fail with Invalid if subnet isn't child of specified network", func() {
+				config.Networks.ID = pointer.String(id)
+				config.Networks.SubnetID = pointer.String("subnetID")
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
+				networkingClient.EXPECT().ListSubnets(gomock.Any()).Return([]subnets.Subnet{{NetworkID: "wrong-parent"}}, nil)
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("networks.subnetId"),
+				}))
+			})
+
+			It("should fail with InternalError if getting router failed", func() {
+				config.Networks.Router = &apisopenstack.Router{ID: id}
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListRouters(gomock.Any()).Return(nil, errors.New("test"))
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInternal),
+					"Field": Equal("networks.router.id"),
+				}))
+			})
+
+			It("should fail with NotFound if no router found", func() {
+				config.Networks.Router = &apisopenstack.Router{ID: "nonexisting"}
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListRouters(gomock.Any()).Return([]routers.Router{}, nil)
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeNotFound),
+					"Field": Equal("networks.router.id"),
+				}))
+			})
+		})
+
+		Context("happy path", func() {
+			It("doesn't fail", func() {
+				networkingClient.EXPECT().GetExternalNetworkNames(ctx).Return([]string{"test1", "test2", "test3"}, nil)
+
+				id := uuid.NewString()
+				config := &apisopenstack.InfrastructureConfig{
+					FloatingPoolName: floatingPoolName,
+					Networks: apisopenstack.Networks{
+						ID:       &id,
+						SubnetID: &id,
+						Router: &apisopenstack.Router{
+							ID: id,
+						},
+					},
+				}
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: id}}, nil)
+				networkingClient.EXPECT().ListSubnets(gomock.Any()).Return([]subnets.Subnet{{NetworkID: id}}, nil)
+				networkingClient.EXPECT().ListRouters(gomock.Any()).Return([]routers.Router{{ID: id}}, nil)
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(BeEmpty())
+			})
+		})
+
 	})
 })
 

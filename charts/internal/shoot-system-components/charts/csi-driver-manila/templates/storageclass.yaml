@@ -8,8 +8,10 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+{{- if $.Values.csimanila.mountOptions }}
 mountOptions:
 {{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
+{{- end }}
 parameters:
   type: default
   shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
@@ -33,7 +35,7 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
-{{- if .Values.csimanila.mountOptions }}
+{{- if $.Values.csimanila.mountOptions }}
 mountOptions:
 {{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
 {{- end }}
@@ -50,8 +52,8 @@ parameters:
   csi.storage.k8s.io/node-publish-secret-namespace: {{ $.Release.Namespace }}
   csi.storage.k8s.io/controller-expand-secret-name: manila-csi-plugin
   csi.storage.k8s.io/controller-expand-secret-namespace: {{ $.Release.Namespace }}
-{{- range .Values.openstack.availabilityZones }}
 
+{{- range .Values.openstack.availabilityZones }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -62,8 +64,10 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+{{- if $.Values.csimanila.mountOptions }}
 mountOptions:
 {{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
+{{- end }}
 parameters:
   type: default
   availability: {{ required "openstack.availabilityZones needs to be set" . }}
@@ -90,8 +94,10 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+{{- if $.Values.csimanila.mountOptions }}
 mountOptions:
 {{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
+{{- end }}
 allowedTopologies:
 - matchLabelExpressions:
   - key: topology.manila.csi.openstack.org/zone

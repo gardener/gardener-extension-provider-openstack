@@ -8,6 +8,8 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+mountOptions:
+{{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
 parameters:
   type: default
   shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
@@ -32,6 +34,8 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+mountOptions:
+{{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
 parameters:
   type: default
   availability: {{ required "openstack.availabilityZones needs to be set" . }}
@@ -58,6 +62,8 @@ metadata:
 provisioner: nfs.manila.csi.openstack.org
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+mountOptions:
+{{ toYaml $.Values.csimanila.mountOptions | indent 2 }}
 allowedTopologies:
 - matchLabelExpressions:
   - key: topology.manila.csi.openstack.org/zone

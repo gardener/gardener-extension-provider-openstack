@@ -86,3 +86,8 @@ csimanila:
   # You may set ID of the cluster where manila-csi is deployed. This value will be appended
   # to share metadata in newly provisioned shares as `manila.csi.openstack.org/cluster=<cluster ID>`.
   clusterID: ""
+
+  # mountOptions are additional mount options to be used for the storage classes.
+  mountOptions:
+  - nfsvers=4.1
+

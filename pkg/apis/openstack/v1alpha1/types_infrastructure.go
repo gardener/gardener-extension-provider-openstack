@@ -47,6 +47,9 @@ type Networks struct {
 	// ID is the ID of an existing private network.
 	// +optional
 	ID *string `json:"id,omitempty"`
+	// SubnetID is the ID of an existing subnet.
+	// +optional
+	SubnetID *string `json:"subnetId,omitempty"`
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	// +optional
 	ShareNetwork *ShareNetwork `json:"shareNetwork,omitempty"`

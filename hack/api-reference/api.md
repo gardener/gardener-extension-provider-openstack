@@ -1363,6 +1363,18 @@ string
 </tr>
 <tr>
 <td>
+<code>subnetId</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubnetID is the ID of an existing subnet.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>shareNetwork</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetwork">

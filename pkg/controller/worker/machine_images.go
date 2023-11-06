@@ -19,7 +19,9 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"k8s.io/utils/pointer"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -59,7 +61,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 			return nil, fmt.Errorf("could not decode worker status of worker '%s': %w", kutil.ObjectName(w.worker), err)
 		}
 
-		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version)
+		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version, architecture)
 		if err != nil {
 			return nil, worker.ErrorMachineImageNotFound(name, version)
 		}
@@ -71,7 +73,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 }
 
 func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage) []api.MachineImage {
-	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version); err != nil {
+	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version, pointer.StringDeref(machineImage.Architecture, v1beta1constants.ArchitectureAMD64)); err != nil {
 		return append(machineImages, machineImage)
 	}
 	return machineImages

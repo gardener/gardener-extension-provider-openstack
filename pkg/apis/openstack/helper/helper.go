@@ -48,9 +48,9 @@ func FindSecurityGroupByPurpose(securityGroups []api.SecurityGroup, purpose api.
 // FindMachineImage takes a list of machine images and tries to find the first entry
 // whose name, version, and zone matches with the given name, version, and cloud profile. If no such
 // entry is found then an error will be returned.
-func FindMachineImage(machineImages []api.MachineImage, name, version string) (*api.MachineImage, error) {
+func FindMachineImage(machineImages []api.MachineImage, name, version, architecture string) (*api.MachineImage, error) {
 	for _, machineImage := range machineImages {
-		if machineImage.Name == name && machineImage.Version == version {
+		if machineImage.Name == name && machineImage.Version == version && architecture == pointer.StringDeref(machineImage.Architecture, v1beta1constants.ArchitectureAMD64) {
 			return &machineImage, nil
 		}
 	}
@@ -73,17 +73,19 @@ func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, image
 				for _, region := range version.Regions {
 					if regionName == region.Name {
 						return &api.MachineImage{
-							Name:    imageName,
-							Version: imageVersion,
-							ID:      region.ID,
+							Name:         imageName,
+							Version:      imageVersion,
+							Architecture: &architecture,
+							ID:           region.ID,
 						}, nil
 					}
 				}
 				if version.Image != "" {
 					return &api.MachineImage{
-						Name:    imageName,
-						Version: imageVersion,
-						Image:   version.Image,
+						Name:         imageName,
+						Version:      imageVersion,
+						Architecture: &architecture,
+						Image:        version.Image,
 					}, nil
 				}
 			}

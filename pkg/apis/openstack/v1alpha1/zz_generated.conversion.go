@@ -702,6 +702,7 @@ func autoConvert_v1alpha1_MachineImage_To_openstack_MachineImage(in *MachineImag
 	out.Version = in.Version
 	out.Image = in.Image
 	out.ID = in.ID
+	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
 	return nil
 }
 
@@ -715,6 +716,7 @@ func autoConvert_openstack_MachineImage_To_v1alpha1_MachineImage(in *openstack.M
 	out.Version = in.Version
 	out.Image = in.Image
 	out.ID = in.ID
+	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
 	return nil
 }
 
@@ -882,6 +884,7 @@ func Convert_openstack_NodeStatus_To_v1alpha1_NodeStatus(in *openstack.NodeStatu
 func autoConvert_v1alpha1_RegionIDMapping_To_openstack_RegionIDMapping(in *RegionIDMapping, out *openstack.RegionIDMapping, s conversion.Scope) error {
 	out.Name = in.Name
 	out.ID = in.ID
+	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
 	return nil
 }
 
@@ -893,6 +896,7 @@ func Convert_v1alpha1_RegionIDMapping_To_openstack_RegionIDMapping(in *RegionIDM
 func autoConvert_openstack_RegionIDMapping_To_v1alpha1_RegionIDMapping(in *openstack.RegionIDMapping, out *RegionIDMapping, s conversion.Scope) error {
 	out.Name = in.Name
 	out.ID = in.ID
+	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
 	return nil
 }
 

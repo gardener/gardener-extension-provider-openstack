@@ -15,6 +15,7 @@
 package helper_test
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
@@ -55,7 +56,7 @@ var _ = Describe("Helper", func() {
 
 	DescribeTable("#FindMachineImage",
 		func(machineImages []api.MachineImage, name, version string, expectedMachineImage *api.MachineImage, expectErr bool) {
-			machineImage, err := FindMachineImage(machineImages, name, version)
+			machineImage, err := FindMachineImage(machineImages, name, version, v1beta1constants.ArchitectureAMD64)
 			expectResults(machineImage, expectedMachineImage, err, expectErr)
 		},
 

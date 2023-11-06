@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
@@ -106,7 +107,8 @@ func (w *workerDelegate) generateMachineConfig() error {
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones))
 
-		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version)
+		architecture := pointer.StringDeref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
+		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version, architecture)
 		if err != nil {
 			return err
 		}

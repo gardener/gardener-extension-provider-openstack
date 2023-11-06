@@ -48,8 +48,8 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineImage, error) {
-	image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, w.cluster.Shoot.Spec.Region)
+func (w *workerDelegate) findMachineImage(name, version, architecture string) (*api.MachineImage, error) {
+	image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, w.cluster.Shoot.Spec.Region, architecture)
 	if err == nil {
 		return image, nil
 	}
@@ -64,6 +64,13 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version, architecture)
 		if err != nil {
 			return nil, worker.ErrorMachineImageNotFound(name, version)
+		}
+
+		// The architecture field might not be present in the WorkerStatus if the Shoot has been created before introduction
+		// of the field. Hence, initialize it if it's empty.
+		machineImage = machineImage.DeepCopy()
+		if machineImage.Architecture == nil {
+			machineImage.Architecture = &architecture
 		}
 
 		return machineImage, nil

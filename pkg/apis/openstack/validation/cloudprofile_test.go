@@ -328,6 +328,85 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					"Field": Equal("root.machineImages[0].versions[0].version"),
 				}))))
 			})
+
+			Context("region mapping validation", func() {
+				It("should forbid empty region name", func() {
+					cloudProfileConfig.MachineImages = []api.MachineImages{
+						{
+							Name: "abc",
+							Versions: []api.MachineImageVersion{{
+								Version: "foo",
+								Regions: []api.RegionIDMapping{{
+									ID: "abc_foo",
+								}},
+							}},
+						},
+					}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("root.machineImages[0].versions[0].regions[0].name"),
+					}))))
+				})
+
+				It("should forbid empty image ID", func() {
+					cloudProfileConfig.MachineImages = []api.MachineImages{
+						{
+							Name: "abc",
+							Versions: []api.MachineImageVersion{{
+								Version: "foo",
+								Regions: []api.RegionIDMapping{{
+									Name: "eu01",
+								}},
+							}},
+						},
+					}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("root.machineImages[0].versions[0].regions[0].id"),
+					}))))
+				})
+
+				It("should forbid unknown architectures", func() {
+					cloudProfileConfig.MachineImages = []api.MachineImages{
+						{
+							Name: "abc",
+							Versions: []api.MachineImageVersion{{
+								Version: "foo",
+								Regions: []api.RegionIDMapping{
+									{
+										Name:         "eu01",
+										ID:           "abc_foo_amd64",
+										Architecture: pointer.String("amd64"),
+									},
+									{
+										Name:         "eu01",
+										ID:           "abc_foo_arm64",
+										Architecture: pointer.String("arm64"),
+									},
+									{
+										Name:         "eu01",
+										ID:           "abc_foo_ppc64",
+										Architecture: pointer.String("ppc64"),
+									},
+								},
+							}},
+						},
+					}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("root.machineImages[0].versions[0].regions[2].architecture"),
+					}))))
+				})
+			})
 		})
 
 		Context("server group policy validation", func() {

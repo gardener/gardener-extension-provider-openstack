@@ -17,10 +17,13 @@ package validation
 import (
 	"fmt"
 	"net"
+	"slices"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
@@ -112,6 +115,20 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 
 			if len(version.Version) == 0 {
 				allErrs = append(allErrs, field.Required(jdxPath.Child("version"), "must provide a version"))
+			}
+
+			for k, region := range version.Regions {
+				kdxPath := jdxPath.Child("regions").Index(k)
+
+				if len(region.Name) == 0 {
+					allErrs = append(allErrs, field.Required(kdxPath.Child("name"), "must provide a name"))
+				}
+				if len(region.ID) == 0 {
+					allErrs = append(allErrs, field.Required(kdxPath.Child("id"), "must provide an image ID"))
+				}
+				if !slices.Contains(v1beta1constants.ValidArchitectures, pointer.StringDeref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
+					allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), *region.Architecture, v1beta1constants.ValidArchitectures))
+				}
 			}
 		}
 	}

@@ -616,7 +616,6 @@ type ServiceAccountConfig struct {
 	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
 	// These values are not used to generate new service account tokens. Only useful when service account tokens are also
 	// issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
-	// This field is only available for Kubernetes v1.22 or later.
 	AcceptedIssuers []string
 }
 
@@ -1056,7 +1055,7 @@ type Worker struct {
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	CABundle *string
 	// CRI contains configurations of CRI support of every machine in the worker pool.
-	// Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
+	// Defaults to a CRI with name `containerd`.
 	CRI *CRI
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	Kubernetes *WorkerKubernetes
@@ -1206,9 +1205,9 @@ type ContainerRuntime struct {
 
 var (
 	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.
-	DefaultWorkerMaxSurge = intstr.FromInt(1)
+	DefaultWorkerMaxSurge = intstr.FromInt32(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
-	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
 )
 
 // WorkersSettings contains settings for all workers.

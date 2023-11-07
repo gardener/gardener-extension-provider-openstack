@@ -83,6 +83,10 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensi
 	return util.DetermineError(removeSecurityGroup(networkingClient, opt), helper.KnownCodes)
 }
 
+func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.Bastion, _ *controller.Cluster) error {
+	return nil
+}
+
 func removeBastionInstance(log logr.Logger, client openstackclient.Compute, opt *Options) error {
 	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {

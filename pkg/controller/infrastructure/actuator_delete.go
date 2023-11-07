@@ -48,6 +48,10 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infra *extension
 	return util.DetermineError(err, helper.KnownCodes)
 }
 
+func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+	return nil
+}
+
 func (a *actuator) deleteWithFlow(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure,
 	cluster *extensionscontroller.Cluster, oldState *infraflow.PersistentState) error {
 	log.Info("deleteWithFlow")

@@ -171,6 +171,17 @@ var _ = Describe("Shoot mutator", func() {
 				Expect(networkConfig).To(DeepEqual(expectedConfig))
 			})
 
+			It("should disable overlay for a new shoot non empty network config", func() {
+				shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+					Raw: []byte(`{"foo":{"enabled":true}}`),
+				}
+				err := shootMutator.Mutate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.ProviderConfig).To(Equal(&runtime.RawExtension{
+					Raw: []byte(`{"foo":{"enabled":true},"overlay":{"createPodRoutes":true,"enabled":false}}`),
+				}))
+			})
+
 			It("should take overlay field value from old shoot when unspecified in new shoot", func() {
 				oldShoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
 					Raw: []byte(`{"overlay":{"enabled":true}}`),
@@ -181,6 +192,14 @@ var _ = Describe("Shoot mutator", func() {
 					Raw: []byte(`{"overlay":{"enabled":true}}`),
 				}))
 			})
+		})
+
+		It("should disable overlay for a new shoot when unspecified in new and old shoot", func() {
+			err := shootMutator.Mutate(ctx, shoot, oldShoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Spec.Networking.ProviderConfig).To(Equal(&runtime.RawExtension{
+				Raw: []byte(`{"overlay":{"createPodRoutes":true,"enabled":false}}`),
+			}))
 		})
 
 		Context("Mutate shoot networking providerconfig for type cilium", func() {

@@ -120,7 +120,10 @@ func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 			}
 		}
 
-		overlayConfig, _ = networkConfig["overlay"].(map[string]interface{})
+		if currentOverlayConfig, ok := networkConfig["overlay"].(map[string]interface{}); ok {
+			overlayConfig = currentOverlayConfig
+		}
+
 		if !overlayConfig["enabled"].(bool) && overlayConfig[createPodRoutesKey] == nil {
 			overlayConfig[createPodRoutesKey] = true
 			networkConfig[overlayKey] = overlayConfig

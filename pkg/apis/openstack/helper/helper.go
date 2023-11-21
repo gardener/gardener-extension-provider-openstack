@@ -17,6 +17,9 @@ package helper
 import (
 	"fmt"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"k8s.io/utils/pointer"
+
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
@@ -48,9 +51,11 @@ func FindSecurityGroupByPurpose(securityGroups []api.SecurityGroup, purpose api.
 // FindMachineImage takes a list of machine images and tries to find the first entry
 // whose name, version, and zone matches with the given name, version, and cloud profile. If no such
 // entry is found then an error will be returned.
-func FindMachineImage(machineImages []api.MachineImage, name, version string) (*api.MachineImage, error) {
+func FindMachineImage(machineImages []api.MachineImage, name, version, architecture string) (*api.MachineImage, error) {
 	for _, machineImage := range machineImages {
-		if machineImage.Name == name && machineImage.Version == version {
+		// If the architecture field is not present, ignore it for backwards-compatibility.
+		if machineImage.Name == name && machineImage.Version == version &&
+			(machineImage.Architecture == nil || *machineImage.Architecture == architecture) {
 			return &machineImage, nil
 		}
 	}
@@ -60,7 +65,7 @@ func FindMachineImage(machineImages []api.MachineImage, name, version string) (*
 // FindImageFromCloudProfile takes a list of machine images, and the desired image name and version. It tries
 // to find the image with the given name and version in the desired cloud profile. If it cannot be found then an error
 // is returned.
-func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, imageName, imageVersion, regionName string) (*api.MachineImage, error) {
+func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, imageName, imageVersion, regionName, architecture string) (*api.MachineImage, error) {
 	if cloudProfileConfig != nil {
 		for _, machineImage := range cloudProfileConfig.MachineImages {
 			if machineImage.Name != imageName {
@@ -71,19 +76,28 @@ func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, image
 					continue
 				}
 				for _, region := range version.Regions {
-					if regionName == region.Name {
+					if regionName == region.Name && architecture == pointer.StringDeref(region.Architecture, v1beta1constants.ArchitectureAMD64) {
 						return &api.MachineImage{
-							Name:    imageName,
-							Version: imageVersion,
-							ID:      region.ID,
+							Name:         imageName,
+							Version:      imageVersion,
+							Architecture: &architecture,
+							ID:           region.ID,
 						}, nil
 					}
 				}
-				if version.Image != "" {
+
+				// if we haven't found a region mapping, fallback to the image name
+				if version.Image != "" && architecture == v1beta1constants.ArchitectureAMD64 {
+					// The fallback image name doesn't specify an architecture, but we assume it is amd64 as arm was not supported
+					// previously.
+					// Referencing images by name is error-prone and is highly discouraged anyways.
+					// If people want to use arm images in their CloudProfile, they need to specify a region mapping and can't
+					// use the fallback MachineImage by name.
 					return &api.MachineImage{
-						Name:    imageName,
-						Version: imageVersion,
-						Image:   version.Image,
+						Name:         imageName,
+						Version:      imageVersion,
+						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+						Image:        version.Image,
 					}, nil
 				}
 			}

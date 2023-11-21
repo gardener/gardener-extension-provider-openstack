@@ -1050,6 +1050,18 @@ string
 <p>ID is the id of the image. (one of Image or ID must be set)</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>architecture</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Architecture is the CPU architecture of the machine image</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion
@@ -1454,6 +1466,18 @@ string
 </td>
 <td>
 <p>ID is the ID for the machine image in the given region.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>architecture</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Architecture is the CPU architecture of the machine image</p>
 </td>
 </tr>
 </tbody>

@@ -543,9 +543,10 @@ var _ = Describe("Machines", func() {
 						},
 						MachineImages: []apiv1alpha1.MachineImage{
 							{
-								Name:    machineImageName,
-								Version: machineImageVersion,
-								Image:   machineImage,
+								Name:         machineImageName,
+								Version:      machineImageVersion,
+								Image:        machineImage,
+								Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
 							},
 						},
 					}
@@ -599,9 +600,10 @@ var _ = Describe("Machines", func() {
 						},
 						MachineImages: []apiv1alpha1.MachineImage{
 							{
-								Name:    machineImageName,
-								Version: machineImageVersion,
-								ID:      machineImageID,
+								Name:         machineImageName,
+								Version:      machineImageVersion,
+								ID:           machineImageID,
+								Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
 							},
 						},
 					}

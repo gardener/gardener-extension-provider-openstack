@@ -49,7 +49,19 @@ machineImages:
 - name: coreos
   versions:
   - version: 2135.6.0
+    # Fallback to image name if no region mapping is found
+    # Only works for amd64 and is strongly discouraged. Prefer image IDs!
     image: coreos-2135.6.0
+    regions:
+    - name: europe
+      id: "1234-amd64"
+      architecture: amd64 # optional, defaults to amd64
+    - name: europe
+      id: "1234-arm64"
+      architecture: arm64
+    - name: asia
+      id: "5678-amd64"
+      architecture: amd64
 # keystoneURL: https://url-to-keystone/v3/
 # keystoneURLs:
 # - region: europe
@@ -158,11 +170,24 @@ spec:
   - name: coreos
     versions:
     - version: 2135.6.0
+      architectures: # optional, defaults to [amd64]
+      - amd64
+      - arm64
   machineTypes:
   - name: medium_4_8
     cpu: "4"
     gpu: "0"
     memory: 8Gi
+    architecture: amd64 # optional, defaults to amd64
+    storage:
+      class: standard
+      type: default
+      size: 40Gi
+  - name: medium_4_8_arm
+    cpu: "4"
+    gpu: "0"
+    memory: 8Gi
+    architecture: arm64
     storage:
       class: standard
       type: default
@@ -180,7 +205,19 @@ spec:
     - name: coreos
       versions:
       - version: 2135.6.0
+        # Fallback to image name if no region mapping is found
+        # Only works for amd64 and is strongly discouraged. Prefer image IDs!
         image: coreos-2135.6.0
+        regions:
+        - name: europe
+          id: "1234-amd64"
+          architecture: amd64 # optional, defaults to amd64
+        - name: europe
+          id: "1234-arm64"
+          architecture: arm64
+        - name: asia
+          id: "5678-amd64"
+          architecture: amd64
     keystoneURL: https://url-to-keystone/v3/
     constraints:
       floatingPools:

@@ -49,6 +49,9 @@ type MachineImage struct {
 	Image string `json:"image,omitempty"`
 	// ID is the id of the image. (one of Image or ID must be set)
 	ID string `json:"id,omitempty"`
+	// Architecture is the CPU architecture of the machine image
+	// +optional
+	Architecture *string `json:"architecture,omitempty"`
 }
 
 // ServerGroupDependency is a reference to an external machine dependency of OpenStack server groups.

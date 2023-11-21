@@ -198,6 +198,9 @@ type RegionIDMapping struct {
 	Name string
 	// ID is the ID for the machine image in the given region.
 	ID string
+	// Architecture is the CPU architecture of the machine image
+	// +optional
+	Architecture *string
 }
 
 // StorageClassDefinition is a definition of a storageClass

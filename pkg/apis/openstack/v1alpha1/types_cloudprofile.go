@@ -177,6 +177,9 @@ type RegionIDMapping struct {
 	Name string `json:"name"`
 	// ID is the ID for the machine image in the given region.
 	ID string `json:"id"`
+	// Architecture is the CPU architecture of the machine image
+	// +optional
+	Architecture *string `json:"architecture,omitempty"`
 }
 
 // StorageClassDefinition is a definition of a storageClass

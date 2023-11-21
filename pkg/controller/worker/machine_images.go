@@ -19,7 +19,9 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"k8s.io/utils/pointer"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -46,8 +48,8 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineImage, error) {
-	image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, w.cluster.Shoot.Spec.Region)
+func (w *workerDelegate) findMachineImage(name, version, architecture string) (*api.MachineImage, error) {
+	image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, w.cluster.Shoot.Spec.Region, architecture)
 	if err == nil {
 		return image, nil
 	}
@@ -59,9 +61,16 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 			return nil, fmt.Errorf("could not decode worker status of worker '%s': %w", kutil.ObjectName(w.worker), err)
 		}
 
-		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version)
+		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version, architecture)
 		if err != nil {
 			return nil, worker.ErrorMachineImageNotFound(name, version)
+		}
+
+		// The architecture field might not be present in the WorkerStatus if the Shoot has been created before introduction
+		// of the field. Hence, initialize it if it's empty.
+		machineImage = machineImage.DeepCopy()
+		if machineImage.Architecture == nil {
+			machineImage.Architecture = &architecture
 		}
 
 		return machineImage, nil
@@ -71,7 +80,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (*api.MachineIma
 }
 
 func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage) []api.MachineImage {
-	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version); err != nil {
+	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version, pointer.StringDeref(machineImage.Architecture, v1beta1constants.ArchitectureAMD64)); err != nil {
 		return append(machineImages, machineImage)
 	}
 	return machineImages

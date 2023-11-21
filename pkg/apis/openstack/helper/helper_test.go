@@ -54,49 +54,213 @@ var _ = Describe("Helper", func() {
 	)
 
 	DescribeTable("#FindMachineImage",
-		func(machineImages []api.MachineImage, name, version string, expectedMachineImage *api.MachineImage, expectErr bool) {
-			machineImage, err := FindMachineImage(machineImages, name, version)
+		func(machineImages []api.MachineImage, name, version, architecture string, expectedMachineImage *api.MachineImage, expectErr bool) {
+			machineImage, err := FindMachineImage(machineImages, name, version, architecture)
 			expectResults(machineImage, expectedMachineImage, err, expectErr)
 		},
 
-		Entry("list is nil", nil, "foo", "1.2.3", nil, true),
-		Entry("empty list", []api.MachineImage{}, "foo", "1.2.3", nil, true),
-		Entry("entry not found (no name)", []api.MachineImage{{Name: "bar", Version: "1.2.3"}}, "foo", "1.2.3", nil, true),
-		Entry("entry not found (no version)", []api.MachineImage{{Name: "bar", Version: "1.2.3"}}, "foo", "1.2.3", nil, true),
-		Entry("entry exists", []api.MachineImage{{Name: "bar", Version: "1.2.3"}}, "bar", "1.2.3", &api.MachineImage{Name: "bar", Version: "1.2.3"}, false),
+		Entry("list is nil",
+			nil,
+			"foo", "1.2.3", "",
+			nil, true,
+		),
+		Entry("empty list",
+			[]api.MachineImage{},
+			"foo", "1.2.3", "",
+			nil, true,
+		),
+		Entry("entry not found (name mismatch)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
+			"foo", "1.2.3", "",
+			nil, true,
+		),
+		Entry("entry not found (version mismatch)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
+			"foo", "1.2.3", "",
+			nil, true,
+		),
+		Entry("entry not found (architecture mismatch)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: pointer.String("amd64")}},
+			"bar", "1.2.3", "arm64",
+			nil, true,
+		),
+		Entry("entry exists (architecture is ignored, amd64)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
+			"bar", "1.2.3", "amd64",
+			&api.MachineImage{Name: "bar", Version: "1.2.3"}, false,
+		),
+		Entry("entry exists (architecture is ignored, arm64)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
+			"bar", "1.2.3", "arm64",
+			&api.MachineImage{Name: "bar", Version: "1.2.3"}, false,
+		),
+		Entry("entry exists (architecture amd64)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: pointer.String("amd64")}},
+			"bar", "1.2.3", "amd64",
+			&api.MachineImage{Name: "bar", Version: "1.2.3", Architecture: pointer.String("amd64")}, false,
+		),
+		Entry("entry exists (architecture arm64)",
+			[]api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: pointer.String("arm64")}},
+			"bar", "1.2.3", "arm64",
+			&api.MachineImage{Name: "bar", Version: "1.2.3", Architecture: pointer.String("arm64")}, false,
+		),
+		Entry("entry exists (multiple architectures)",
+			[]api.MachineImage{
+				{Name: "bar", Version: "1.2.3", ID: "amd", Architecture: pointer.String("amd64")},
+				{Name: "bar", Version: "1.2.3", ID: "arm", Architecture: pointer.String("arm64")},
+			},
+			"bar", "1.2.3", "amd64",
+			&api.MachineImage{Name: "bar", Version: "1.2.3", ID: "amd", Architecture: pointer.String("amd64")}, false,
+		),
 	)
 
 	regionName := "eu-de-1"
 
-	DescribeTable("#FindImageForCloudProfile",
-		func(profileImages []api.MachineImages, imageName, version, region, expectedImage string) {
-			cfg := &api.CloudProfileConfig{}
-			cfg.MachineImages = profileImages
-			image, err := FindImageFromCloudProfile(cfg, imageName, version, region)
+	Describe("#FindImageForCloudProfile", func() {
+		var (
+			cfg *api.CloudProfileConfig
+		)
 
-			if expectedImage == "" {
-				Expect(err).To(HaveOccurred())
+		BeforeEach(func() {
+			cfg = &api.CloudProfileConfig{
+				MachineImages: []api.MachineImages{
+					{
+						Name: "flatcar",
+						Versions: []api.MachineImageVersion{
+							{
+								Version: "1.0",
+								Image:   "flatcar_1.0",
+							},
+							{
+								Version: "2.0",
+								Image:   "flatcar_2.0",
+								Regions: []api.RegionIDMapping{
+									{
+										Name: "eu01",
+										ID:   "flatcar_eu01_2.0",
+									},
+								},
+							},
+							{
+								Version: "3.0",
+								Regions: []api.RegionIDMapping{
+									{
+										Name:         "eu01",
+										ID:           "flatcar_eu01_3.0_amd64",
+										Architecture: pointer.String("amd64"),
+									},
+									{
+										Name:         "eu01",
+										ID:           "flatcar_eu01_3.0_arm64",
+										Architecture: pointer.String("arm64"),
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("no image found", func() {
+			It("should not find image in nil list", func() {
+				cfg.MachineImages = nil
+
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "amd64")
 				Expect(image).To(BeNil())
-				return
-			}
-			Expect(err).NotTo(HaveOccurred())
-			Expect(image).NotTo(BeNil())
-			if image.ID != "" {
-				Expect(image.ID).To(Equal(expectedImage))
-			} else {
-				Expect(image.Image).To(Equal(expectedImage))
-			}
-		},
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
 
-		Entry("list is nil", nil, "ubuntu", "1", regionName, ""),
+			It("should not find image in empty list", func() {
+				cfg.MachineImages = []api.MachineImages{}
 
-		Entry("profile empty list", []api.MachineImages{}, "ubuntu", "1", regionName, ""),
-		Entry("profile entry not found (image does not exist)", makeProfileMachineImages("debian", "1", "0"), "ubuntu", "1", regionName, ""),
-		Entry("profile entry not found (version does not exist)", makeProfileMachineImages("ubuntu", "2", "0"), "ubuntu", "1", regionName, ""),
-		Entry("profile entry", makeProfileMachineImages("ubuntu", "1", "image-1234"), "ubuntu", "1", regionName, "image-1234"),
-		Entry("profile region entry", makeProfileRegionMachineImages("ubuntu", "1", "image-1234", regionName), "ubuntu", "1", regionName, "image-1234"),
-		Entry("profile region not found", makeProfileRegionMachineImages("ubuntu", "1", "image-1234", regionName+"x"), "ubuntu", "1", regionName, ""),
-	)
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "amd64")
+				Expect(image).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
+
+			It("should not find image for wrong image name", func() {
+				image, err := FindImageFromCloudProfile(cfg, "gardenlinux", "1.0", "eu01", "amd64")
+				Expect(image).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
+
+			It("should not find image for wrong version", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.1", "eu01", "amd64")
+				Expect(image).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
+
+		})
+
+		Context("without region mapping", func() {
+			It("should fallback to image name (amd64)", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "amd64")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image).To(Equal(&api.MachineImage{
+					Name:         "flatcar",
+					Version:      "1.0",
+					Image:        "flatcar_1.0",
+					Architecture: pointer.String("amd64"),
+				}))
+			})
+
+			It("should not fallback to image name (not amd64)", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "arm64")
+				Expect(image).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
+		})
+
+		Context("with region mapping, without architectures", func() {
+			It("should fallback to image name if region is not mapped", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "2.0", "eu02", "amd64")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image).To(Equal(&api.MachineImage{
+					Name:         "flatcar",
+					Version:      "2.0",
+					Image:        "flatcar_2.0",
+					Architecture: pointer.String("amd64"),
+				}))
+			})
+
+			It("should use the correct mapping (without architecture)", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "2.0", "eu01", "amd64")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image).To(Equal(&api.MachineImage{
+					Name:         "flatcar",
+					Version:      "2.0",
+					ID:           "flatcar_eu01_2.0",
+					Architecture: pointer.String("amd64"),
+				}))
+			})
+
+			It("should not find image because of non-amd64 architecture", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "2.0", "eu01", "arm64")
+				Expect(image).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
+		})
+
+		Context("with region mapping and architectures", func() {
+			It("should not find image if architecture is not mapped", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "3.0", "eu01", "ppc64")
+				Expect(image).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			})
+
+			It("should pick the correctly mapped architecture", func() {
+				image, err := FindImageFromCloudProfile(cfg, "flatcar", "3.0", "eu01", "arm64")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image).To(Equal(&api.MachineImage{
+					Name:         "flatcar",
+					Version:      "3.0",
+					ID:           "flatcar_eu01_3.0_arm64",
+					Architecture: pointer.String("arm64"),
+				}))
+			})
+		})
+	})
 
 	DescribeTable("#FindKeyStoneURL",
 		func(keyStoneURLs []api.KeyStoneURL, keystoneURL, region, expectedKeyStoneURL string, expectErr bool) {
@@ -137,45 +301,6 @@ var _ = Describe("Helper", func() {
 		Entry("return non-constraing fip as there is no other matching fip", []api.FloatingPool{{Name: "nofip-1", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: pointer.Bool(true)}}, "fip-1", regionName, nil, pointer.String("fip-1")),
 	)
 })
-
-func makeProfileMachineImages(name, version, image string) []api.MachineImages {
-	var versions []api.MachineImageVersion
-	if len(image) != 0 {
-		versions = append(versions, api.MachineImageVersion{
-			Version: version,
-			Image:   image,
-		})
-	}
-
-	return []api.MachineImages{
-		{
-			Name:     name,
-			Versions: versions,
-		},
-	}
-}
-
-func makeProfileRegionMachineImages(name, version, image, region string) []api.MachineImages {
-	var versions []api.MachineImageVersion
-	if len(image) != 0 {
-		versions = append(versions, api.MachineImageVersion{
-			Version: version,
-			Regions: []api.RegionIDMapping{
-				{
-					Name: region,
-					ID:   image,
-				},
-			},
-		})
-	}
-
-	return []api.MachineImages{
-		{
-			Name:     name,
-			Versions: versions,
-		},
-	}
-}
 
 func expectResults(result, expected interface{}, err error, expectErr bool) {
 	if !expectErr {

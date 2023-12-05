@@ -1,7 +1,5 @@
 gardener-extension-provider-openstack:
-  template: 'default'
   base_definition:
-    repo: ~
     traits:
       version:
         preprocess: 'inject-commit-hash'
@@ -9,7 +7,6 @@ gardener-extension-provider-openstack:
         oci-builder: 'docker-buildx'
         dockerimages:
           gardener-extension-provider-openstack:
-            registry: 'gcr-readwrite'
             image: 'eu.gcr.io/gardener-project/gardener/extensions/provider-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-provider-openstack
@@ -29,7 +26,6 @@ gardener-extension-provider-openstack:
                 integrity_requirement: 'high'
                 availability_requirement: 'high'
           gardener-extension-admission-openstack:
-            registry: 'gcr-readwrite'
             image: 'eu.gcr.io/gardener-project/gardener/extensions/admission-openstack'
             dockerfile: 'Dockerfile'
             target: gardener-extension-admission-openstack

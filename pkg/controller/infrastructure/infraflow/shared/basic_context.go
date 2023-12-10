@@ -136,18 +136,13 @@ func (c *BasicFlowContext) AddTask(g *flow.Graph, name string, fn flow.TaskFn, o
 	}
 
 	tunedFn := fn
-	if allOptions.DoIf != nil {
-		tunedFn = tunedFn.DoIf(*allOptions.DoIf)
-		if !*allOptions.DoIf {
-			name = "[Skipped] " + name
-		}
-	}
 	if allOptions.Timeout > 0 {
 		tunedFn = tunedFn.Timeout(allOptions.Timeout)
 	}
 	task := flow.Task{
-		Name: name,
-		Fn:   c.wrapTaskFn(g.Name(), name, tunedFn),
+		Name:   name,
+		Fn:     c.wrapTaskFn(g.Name(), name, tunedFn),
+		SkipIf: allOptions.DoIf != nil && !*allOptions.DoIf,
 	}
 
 	if len(allOptions.Dependencies) > 0 {

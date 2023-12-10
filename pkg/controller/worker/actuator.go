@@ -25,59 +25,40 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/chart"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener-extension-provider-openstack/imagevector"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 type delegateFactory struct {
-	client     client.Client
-	restConfig *rest.Config
-	scheme     *runtime.Scheme
+	seedClient   client.Client
+	restConfig   *rest.Config
+	scheme       *runtime.Scheme
+	gardenReader client.Reader
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator, error) {
+func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actuator {
 	var (
-		mcmName              string
-		mcmChartSeed         *chart.Chart
-		mcmChartShoot        *chart.Chart
-		imageVector          imagevectorutils.ImageVector
-		chartRendererFactory extensionscontroller.ChartRendererFactory
-		workerDelegate       = &delegateFactory{
-			client:     mgr.GetClient(),
+		workerDelegate = &delegateFactory{
+			seedClient: mgr.GetClient(),
 			restConfig: mgr.GetConfig(),
 			scheme:     mgr.GetScheme(),
 		}
 	)
 
-	if !gardenletManagesMCM {
-		mcmName = openstack.MachineControllerManagerName
-		mcmChartSeed = mcmChart
-		mcmChartShoot = mcmShootChart
-		imageVector = imagevector.ImageVector()
-		chartRendererFactory = extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot)
-	}
-
 	return genericactuator.NewActuator(
 		mgr,
+		gardenCluster,
 		workerDelegate,
-		mcmName,
-		mcmChartSeed,
-		mcmChartShoot,
-		imageVector,
-		chartRendererFactory,
 		func(err error) []gardencorev1beta1.ErrorCode {
 			return util.DetermineErrorCodes(err, helper.KnownCodes)
 		},
@@ -110,13 +91,13 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		return nil, err
 	}
 
-	openstackClient, err := openstackclient.NewOpenStackClientFromSecretRef(ctx, d.client, worker.Spec.SecretRef, &keyStoneURL)
+	openstackClient, err := openstackclient.NewOpenStackClientFromSecretRef(ctx, d.seedClient, worker.Spec.SecretRef, &keyStoneURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create openstack client: %w", err)
+		return nil, fmt.Errorf("failed to create openstack seedClient: %w", err)
 	}
 
 	return NewWorkerDelegate(
-		d.client,
+		d.seedClient,
 		d.scheme,
 
 		seedChartApplier,
@@ -129,9 +110,9 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 }
 
 type workerDelegate struct {
-	client  client.Client
-	scheme  *runtime.Scheme
-	decoder runtime.Decoder
+	seedClient client.Client
+	scheme     *runtime.Scheme
+	decoder    runtime.Decoder
 
 	seedChartApplier gardener.ChartApplier
 	serverVersion    string
@@ -149,7 +130,7 @@ type workerDelegate struct {
 
 // NewWorkerDelegate creates a new context for a worker reconciliation.
 func NewWorkerDelegate(
-	client client.Client,
+	seedClient client.Client,
 	scheme *runtime.Scheme,
 
 	seedChartApplier gardener.ChartApplier,
@@ -165,9 +146,9 @@ func NewWorkerDelegate(
 	}
 
 	return &workerDelegate{
-		client:  client,
-		scheme:  scheme,
-		decoder: serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder(),
+		seedClient: seedClient,
+		scheme:     scheme,
+		decoder:    serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder(),
 
 		seedChartApplier: seedChartApplier,
 		serverVersion:    serverVersion,

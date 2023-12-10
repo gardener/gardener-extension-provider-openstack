@@ -150,10 +150,6 @@ const (
 	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret
 	CSIManilaSecret = "csi-manila-secret"
 
-	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
-	MachineControllerManagerName = "machine-controller-manager"
-	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager deployment.
-	MachineControllerManagerVpaName = "machine-controller-manager-vpa"
 	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack configurations for machine-controller-manager.
 	MachineControllerManagerMonitoringConfigName = "machine-controller-manager-monitoring-config"
 	// PreserveWorkerHashAnnotation controls whether the providerConfig will be included in the hash calculation for the respective worker pool.

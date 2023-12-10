@@ -406,6 +406,14 @@ message ClusterAutoscaler {
   // IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
   // +optional
   repeated string ignoreTaints = 10;
+
+  // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
+
+  // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+  // +optional
+  optional int32 maxEmptyBulkDelete = 12;
 }
 
 // Condition holds the information about the state of a resource.
@@ -545,7 +553,7 @@ message ControllerRegistrationDeployment {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 4;
 
-  // DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+  // DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.
   // +optional
   repeated DeploymentRef deploymentRefs = 5;
 }
@@ -1556,6 +1564,13 @@ message MachineImage {
   // +patchMergeKey=version
   // +patchStrategy=merge
   repeated MachineImageVersion versions = 2;
+
+  // UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+  //  - patch: update to the latest patch version of the current minor version.
+  //  - minor: update to the latest minor and patch version.
+  //  - major: always update to the overall latest version (default).
+  // +optional
+  optional string updateStrategy = 3;
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces

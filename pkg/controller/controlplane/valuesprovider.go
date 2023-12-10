@@ -123,7 +123,7 @@ func makeUnstructured(gvk schema.GroupVersionKind) *unstructured.Unstructured {
 var (
 	configChart = &chart.Chart{
 		Name:       openstack.CloudProviderConfigName,
-		EmbeddedFS: &charts.InternalChart,
+		EmbeddedFS: charts.InternalChart,
 		Path:       filepath.Join(charts.InternalChartsPath, openstack.CloudProviderConfigName),
 		Objects: []*chart.Object{
 			{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
@@ -133,7 +133,7 @@ var (
 
 	controlPlaneChart = &chart.Chart{
 		Name:       "seed-controlplane",
-		EmbeddedFS: &charts.InternalChart,
+		EmbeddedFS: charts.InternalChart,
 		Path:       filepath.Join(charts.InternalChartsPath, "seed-controlplane"),
 		SubCharts: []*chart.Chart{
 			{
@@ -192,7 +192,7 @@ var (
 
 	controlPlaneShootChart = &chart.Chart{
 		Name:       "shoot-system-components",
-		EmbeddedFS: &charts.InternalChart,
+		EmbeddedFS: charts.InternalChart,
 		Path:       filepath.Join(charts.InternalChartsPath, "shoot-system-components"),
 		SubCharts: []*chart.Chart{
 			{
@@ -283,7 +283,7 @@ var (
 
 	controlPlaneShootCRDsChart = &chart.Chart{
 		Name:       "shoot-crds",
-		EmbeddedFS: &charts.InternalChart,
+		EmbeddedFS: charts.InternalChart,
 		Path:       filepath.Join(charts.InternalChartsPath, "shoot-crds"),
 		SubCharts: []*chart.Chart{
 			{
@@ -299,7 +299,7 @@ var (
 
 	storageClassChart = &chart.Chart{
 		Name:       "shoot-storageclasses",
-		EmbeddedFS: &charts.InternalChart,
+		EmbeddedFS: charts.InternalChart,
 		Path:       filepath.Join(charts.InternalChartsPath, "shoot-storageclasses"),
 	}
 )

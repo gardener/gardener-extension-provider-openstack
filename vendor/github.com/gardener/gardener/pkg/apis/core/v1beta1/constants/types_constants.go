@@ -530,16 +530,6 @@ const (
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
 
-	// LabelAPIServerExposure is a constant for label key which gardener can add to various objects related
-	// to kube-apiserver exposure.
-	// Deprecated: This label key is deprecated and will be removed after Gardener v1.80 has been released.
-	// TODO(rfranzke): Drop this after v1.80 has been released.
-	LabelAPIServerExposure = "core.gardener.cloud/apiserver-exposure"
-	// LabelAPIServerExposureGardenerManaged is a constant for label value which gardener sets on the label key
-	// "core.gardener.cloud/apiserver-exposure" to indicate that it's responsible for apiserver exposure (via SNI).
-	// Deprecated: This label key is deprecated and will be removed after Gardener v1.80 has been released.
-	// TODO(rfranzke): Drop this after v1.80 has been released.
-	LabelAPIServerExposureGardenerManaged = "gardener-managed"
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
 
@@ -562,6 +552,13 @@ const (
 	DefaultSNIIngressServiceName = "istio-ingressgateway"
 	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
 	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
+
+	// DataTypeSecret is a constant for a value of the 'Type' field in 'GardenerResourceData' structs describing that
+	// the data is a secret.
+	DataTypeSecret = "secret"
+	// DataTypeMachineState is a constant for a value of the 'Type' field in 'GardenerResourceData' structs describing
+	// that the data is machine state.
+	DataTypeMachineState = "machine-state"
 
 	// DefaultSchedulerName is the name of the default scheduler.
 	DefaultSchedulerName = "default-scheduler"
@@ -845,7 +842,10 @@ const (
 	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
 	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
 	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
-	// AnnotationWaitForCSINode is the annotation key for csi-driver-node pods,
-	// indicating they use the driver specified in the value.
+	// AnnotationPrefixWaitForCSINode is the annotation key for csi-driver-node pods, indicating they use the driver
+	// specified in the value.
 	AnnotationPrefixWaitForCSINode = "node.gardener.cloud/wait-for-csi-node-"
+
+	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
+	GardenPurposeMachineClass = "machineclass"
 )

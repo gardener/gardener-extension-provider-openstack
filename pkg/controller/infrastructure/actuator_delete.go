@@ -135,17 +135,15 @@ func (a *actuator) deleteWithTerraformer(ctx context.Context, log logr.Logger, i
 			Name: "Destroying Kubernetes loadbalancers entries",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return a.cleanupKubernetesLoadbalancers(ctx, log, loadbalancerClient, vars[infrastructure.TerraformOutputKeySubnetID], infra.Namespace)
-			}).
-				RetryUntilTimeout(10*time.Second, 5*time.Minute).
-				DoIf(configExists),
+			}).RetryUntilTimeout(10*time.Second, 5*time.Minute),
+			SkipIf: !configExists,
 		})
 		destroyKubernetesRoutes = g.Add(flow.Task{
 			Name: "Destroying Kubernetes route entries",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return a.cleanupKubernetesRoutes(ctx, config, networkingClient, vars[infrastructure.TerraformOutputKeyRouterID])
-			}).
-				RetryUntilTimeout(10*time.Second, 5*time.Minute).
-				DoIf(configExists),
+			}).RetryUntilTimeout(10*time.Second, 5*time.Minute),
+			SkipIf: !configExists,
 		})
 
 		_ = g.Add(flow.Task{

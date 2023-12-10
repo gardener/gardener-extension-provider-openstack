@@ -82,18 +82,6 @@ var _ = Describe("Machines", func() {
 			workerDelegate, _ = NewWorkerDelegate(nil, scheme, nil, "", nil, nil, nil)
 		})
 
-		Describe("#MachineClassKind", func() {
-			It("should return the correct kind of the machine class", func() {
-				Expect(workerDelegate.MachineClassKind()).To(Equal("MachineClass"))
-			})
-		})
-
-		Describe("#MachineClassList", func() {
-			It("should return the correct type for the machine class list", func() {
-				Expect(workerDelegate.MachineClassList()).To(Equal(&machinev1alpha1.MachineClassList{}))
-			})
-		})
-
 		Describe("#TestLabelNormalization", func() {
 			It("should return the correct list of labels", func() {
 				input := map[string]string{
@@ -985,7 +973,7 @@ func addNodeTemplateToMachineClass(class map[string]interface{}, nodeTemplate ma
 func addNameAndSecretToMachineClass(class map[string]interface{}, name string, credentialsSecretRef corev1.SecretReference) {
 	class["name"] = name
 	class["labels"] = map[string]string{
-		v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass,
+		v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass,
 	}
 	class["credentialsSecretRef"] = map[string]interface{}{
 		"name":      credentialsSecretRef.Name,

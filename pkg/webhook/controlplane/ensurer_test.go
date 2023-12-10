@@ -157,7 +157,7 @@ var _ = Describe("Ensurer", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		ensurer = NewEnsurer(logger, false)
+		ensurer = NewEnsurer(logger)
 	})
 
 	AfterEach(func() {
@@ -324,7 +324,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			ensurer = NewEnsurer(logger, false)
+			ensurer = NewEnsurer(logger)
 		})
 
 		It("should add missing elements to kube-scheduler deployment (k8s < 1.26)", func() {
@@ -371,7 +371,7 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			ensurer = NewEnsurer(logger, false)
+			ensurer = NewEnsurer(logger)
 		})
 
 		It("should add missing elements to cluster-autoscaler deployment (k8s < 1.26))", func() {
@@ -515,7 +515,7 @@ WantedBy=multi-user.target
 
 		It("should add additional units if resolvConfOptions field is not set", func() {
 			// Create ensurer
-			ensurer := NewEnsurer(logger, false)
+			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalUnits method and check the result
 			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s126, &units, nil)
@@ -533,7 +533,7 @@ WantedBy=multi-user.target
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(logger, false)
+			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalUnits method and check the result
 			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s126WithResolvConfOptions, &units, nil)
@@ -566,7 +566,7 @@ WantedBy=multi-user.target
 		It("should add additional files to the current ones if resolvConfOptions field is not set", func() {
 			files := []extensionsv1alpha1.File{oldFile}
 			// Create ensurer
-			ensurer := NewEnsurer(logger, false)
+			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s126, &files, nil)
@@ -577,7 +577,7 @@ WantedBy=multi-user.target
 			files := []extensionsv1alpha1.File{oldFile}
 
 			// Create ensurer
-			ensurer := NewEnsurer(logger, false)
+			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s126WithResolvConfOptions, &files, nil)
@@ -592,7 +592,7 @@ WantedBy=multi-user.target
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(logger, false)
+			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalFiles method and check the result
 			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s126WithResolvConfOptions, &files, nil)
@@ -612,70 +612,56 @@ WantedBy=multi-user.target
 			deployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "foo"}}
 		})
 
-		Context("when gardenlet does not manage MCM", func() {
-			BeforeEach(func() {
-				ensurer = NewEnsurer(logger, false)
-			})
-
-			It("should do nothing", func() {
-				deploymentBefore := deployment.DeepCopy()
-				Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), nil, deployment, nil)).To(BeNil())
-				Expect(deployment).To(Equal(deploymentBefore))
-			})
+		BeforeEach(func() {
+			ensurer = NewEnsurer(logger)
+			DeferCleanup(testutils.WithVar(&ImageVector, imagevector.ImageVector{{
+				Name:       "machine-controller-manager-provider-openstack",
+				Repository: "foo",
+				Tag:        pointer.String("bar"),
+			}}))
 		})
 
-		Context("when gardenlet manages MCM", func() {
-			BeforeEach(func() {
-				ensurer = NewEnsurer(logger, true)
-				DeferCleanup(testutils.WithVar(&ImageVector, imagevector.ImageVector{{
-					Name:       "machine-controller-manager-provider-openstack",
-					Repository: "foo",
-					Tag:        pointer.String("bar"),
-				}}))
-			})
-
-			It("should inject the sidecar container", func() {
-				Expect(deployment.Spec.Template.Spec.Containers).To(BeEmpty())
-				Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), nil, deployment, nil)).To(BeNil())
-				Expect(deployment.Spec.Template.Spec.Containers).To(ConsistOf(corev1.Container{
-					Name:            "machine-controller-manager-provider-openstack",
-					Image:           "foo:bar",
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command: []string{
-						"./machine-controller",
-						"--control-kubeconfig=inClusterConfig",
-						"--machine-creation-timeout=20m",
-						"--machine-drain-timeout=2h",
-						"--machine-health-timeout=10m",
-						"--machine-safety-apiserver-statuscheck-timeout=30s",
-						"--machine-safety-apiserver-statuscheck-period=1m",
-						"--machine-safety-orphan-vms-period=30m",
-						"--namespace=" + deployment.Namespace,
-						"--port=10259",
-						"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-						"--v=3",
-					},
-					LivenessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path:   "/healthz",
-								Port:   intstr.FromInt(10259),
-								Scheme: "HTTP",
-							},
+		It("should inject the sidecar container", func() {
+			Expect(deployment.Spec.Template.Spec.Containers).To(BeEmpty())
+			Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), nil, deployment, nil)).To(BeNil())
+			Expect(deployment.Spec.Template.Spec.Containers).To(ConsistOf(corev1.Container{
+				Name:            "machine-controller-manager-provider-openstack",
+				Image:           "foo:bar",
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command: []string{
+					"./machine-controller",
+					"--control-kubeconfig=inClusterConfig",
+					"--machine-creation-timeout=20m",
+					"--machine-drain-timeout=2h",
+					"--machine-health-timeout=10m",
+					"--machine-safety-apiserver-statuscheck-timeout=30s",
+					"--machine-safety-apiserver-statuscheck-period=1m",
+					"--machine-safety-orphan-vms-period=30m",
+					"--namespace=" + deployment.Namespace,
+					"--port=10259",
+					"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+					"--v=3",
+				},
+				LivenessProbe: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:   "/healthz",
+							Port:   intstr.FromInt(10259),
+							Scheme: "HTTP",
 						},
-						InitialDelaySeconds: 30,
-						TimeoutSeconds:      5,
-						PeriodSeconds:       10,
-						SuccessThreshold:    1,
-						FailureThreshold:    3,
 					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "kubeconfig",
-						MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-						ReadOnly:  true,
-					}},
-				}))
-			})
+					InitialDelaySeconds: 30,
+					TimeoutSeconds:      5,
+					PeriodSeconds:       10,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "kubeconfig",
+					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+					ReadOnly:  true,
+				}},
+			}))
 		})
 	})
 
@@ -689,40 +675,26 @@ WantedBy=multi-user.target
 			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
 		})
 
-		Context("when gardenlet does not manage MCM", func() {
-			BeforeEach(func() {
-				ensurer = NewEnsurer(logger, false)
-			})
-
-			It("should do nothing", func() {
-				vpaBefore := vpa.DeepCopy()
-				Expect(ensurer.EnsureMachineControllerManagerVPA(context.TODO(), nil, vpa, nil)).To(BeNil())
-				Expect(vpa).To(Equal(vpaBefore))
-			})
+		BeforeEach(func() {
+			ensurer = NewEnsurer(logger)
 		})
 
-		Context("when gardenlet manages MCM", func() {
-			BeforeEach(func() {
-				ensurer = NewEnsurer(logger, true)
-			})
+		It("should inject the sidecar container policy", func() {
+			Expect(vpa.Spec.ResourcePolicy).To(BeNil())
+			Expect(ensurer.EnsureMachineControllerManagerVPA(context.TODO(), nil, vpa, nil)).To(BeNil())
 
-			It("should inject the sidecar container policy", func() {
-				Expect(vpa.Spec.ResourcePolicy).To(BeNil())
-				Expect(ensurer.EnsureMachineControllerManagerVPA(context.TODO(), nil, vpa, nil)).To(BeNil())
-
-				ccv := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-				Expect(vpa.Spec.ResourcePolicy.ContainerPolicies).To(ConsistOf(vpaautoscalingv1.ContainerResourcePolicy{
-					ContainerName:    "machine-controller-manager-provider-openstack",
-					ControlledValues: &ccv,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("64Mi"),
-					},
-					MaxAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("2"),
-						corev1.ResourceMemory: resource.MustParse("5G"),
-					},
-				}))
-			})
+			ccv := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+			Expect(vpa.Spec.ResourcePolicy.ContainerPolicies).To(ConsistOf(vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    "machine-controller-manager-provider-openstack",
+				ControlledValues: &ccv,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+				MaxAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("2"),
+					corev1.ResourceMemory: resource.MustParse("5G"),
+				},
+			}))
 		})
 	})
 })

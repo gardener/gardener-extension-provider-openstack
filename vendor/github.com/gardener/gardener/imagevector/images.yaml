@@ -49,7 +49,7 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.20.1"
+  tag: "v0.20.3"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -57,7 +57,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.9.3"
+  tag: "v1.9.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -233,7 +233,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
-  tag: "v7.5.24"
+  tag: "v7.5.25"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -408,7 +408,7 @@ images:
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/vali
-  tag: "v2.2.8"
+  tag: "v2.2.9"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -460,7 +460,7 @@ images:
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
-  tag: "v2.2.8"
+  tag: "v2.2.9"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -634,7 +634,7 @@ images:
 - name: ext-authz-server
   sourceRepository: github.com/gardener/ext-authz-server
   repository: eu.gcr.io/gardener-project/gardener/ext-authz-server
-  tag: "0.8.0"
+  tag: "0.9.0"
 
 # API Server SNI
 - name: apiserver-proxy
@@ -659,4 +659,4 @@ images:
     name: apiserver-proxy
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
-  tag: "v0.13.0"
+  tag: "v0.14.0"

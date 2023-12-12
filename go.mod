@@ -34,7 +34,7 @@ require (
 	sigs.k8s.io/controller-tools v0.13.0
 )
 
-replace github.com/gardener/gardener => github.com/afritzler/gardener v1.29.1-0.20231211124713-84403cc17c23
+replace github.com/gardener/gardener => github.com/gardener/gardener v1.73.1-0.20231211213023-cdad185a27b3
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

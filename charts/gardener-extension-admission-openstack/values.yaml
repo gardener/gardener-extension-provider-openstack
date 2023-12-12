@@ -4,7 +4,7 @@ global:
     user:
       name: ""
   image:
-    repository: eu.gcr.io/gardener-project/gardener/extensions/admission-openstack
+    repository: europe-docker.pkg.dev/gardener-project/public/gardener/extensions/admission-openstack
     tag: latest
     pullPolicy: IfNotPresent
   replicaCount: 1

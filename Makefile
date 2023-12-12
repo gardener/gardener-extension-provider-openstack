@@ -15,8 +15,8 @@
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := provider-openstack
 ADMISSION_NAME              := admission-openstack
-REGISTRY                    := eu.gcr.io/gardener-project/gardener
-IMAGE_PREFIX                := $(REGISTRY)/extensions
+REGISTRY                    := europe-docker.pkg.dev/gardener-project/public
+IMAGE_PREFIX                := $(REGISTRY)/gardener/extensions
 REPO_ROOT                   := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HACK_DIR                    := $(REPO_ROOT)/hack
 VERSION                     := $(shell cat "$(REPO_ROOT)/VERSION")

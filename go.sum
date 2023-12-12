@@ -136,6 +136,8 @@ github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4
 github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
 github.com/gardener/etcd-druid v0.21.0 h1:kgr3KR+lVL4+k2WD+9PMrTY1eePkQ7CZHSCB5A+Q9TQ=
 github.com/gardener/etcd-druid v0.21.0/go.mod h1:1tAeHycB0Vb2GfCX6sUCc6V6frGrCQI//quVg4K3GNA=
+github.com/gardener/etcd-druid-api v0.0.0-20230321081456-b1b1ae7b5d19 h1:m+5mfjIWaQzz5KUvkZz09cIAF18ON41SOa1i/LJ5MIU=
+github.com/gardener/etcd-druid-api v0.0.0-20230321081456-b1b1ae7b5d19/go.mod h1:LMgzYYWiPvSOdC1OcQ0y0rOhkEZlfP7cjRE2f7DkUT4=
 github.com/gardener/gardener v1.73.1-0.20231211213023-cdad185a27b3 h1:q4XBYmHllZTi5wwgjSTfkjMCDyjL+uUhoNDpQzvDuDU=
 github.com/gardener/gardener v1.73.1-0.20231211213023-cdad185a27b3/go.mod h1:8eHlXs2EkaghrgQwK8qEiVw3dZGpNJaq+I9IkPpReA4=
 github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=

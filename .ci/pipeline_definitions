@@ -3,11 +3,13 @@ gardener-extension-provider-openstack:
     traits:
       version:
         preprocess: 'inject-commit-hash'
+      component_descriptor:
+        ocm_repository: europe-docker.pkg.dev/gardener-project/snapshots
       publish:
         oci-builder: 'docker-buildx'
         dockerimages:
           gardener-extension-provider-openstack:
-            image: 'eu.gcr.io/gardener-project/gardener/extensions/provider-openstack'
+            image: europe-docker.pkg.dev/gardener-project/snapshots/gardener/extensions/provider-openstack
             dockerfile: 'Dockerfile'
             target: gardener-extension-provider-openstack
             resource_labels:
@@ -26,7 +28,7 @@ gardener-extension-provider-openstack:
                 integrity_requirement: 'high'
                 availability_requirement: 'high'
           gardener-extension-admission-openstack:
-            image: 'eu.gcr.io/gardener-project/gardener/extensions/admission-openstack'
+            image: europe-docker.pkg.dev/gardener-project/snapshots/gardener/extensions/admission-openstack
             dockerfile: 'Dockerfile'
             target: gardener-extension-admission-openstack
             resource_labels:
@@ -48,6 +50,8 @@ gardener-extension-provider-openstack:
     head-update:
       traits:
         component_descriptor:
+          ocm_repository_mappings:
+            - repository: europe-docker.pkg.dev/gardener-project/releases
           retention_policy: 'clean-snapshots'
         draft_release: ~
         options:
@@ -55,7 +59,9 @@ gardener-extension-provider-openstack:
     pull-request:
       traits:
         pull-request: ~
-        component_descriptor: ~
+        component_descriptor:
+          ocm_repository_mappings:
+            - repository: europe-docker.pkg.dev/gardener-project/releases
         options:
           public_build_logs: true
     release:
@@ -72,11 +78,14 @@ gardener-extension-provider-openstack:
             internal_scp_workspace:
               channel_name: 'C9CEBQPGE' #sap-tech-gardener
               slack_cfg_name: 'scp_workspace'
-        component_descriptor: ~
+        component_descriptor:
+          ocm_repository: europe-docker.pkg.dev/gardener-project/releases
         publish:
           oci-builder: 'docker-buildx'
           dockerimages:
             gardener-extension-provider-openstack:
+              image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/provider-openstack
               tag_as_latest: true
             gardener-extension-admission-openstack:
+              image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/admission-openstack
               tag_as_latest: true

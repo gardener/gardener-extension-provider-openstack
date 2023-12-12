@@ -1,7 +1,7 @@
 images:
 - name: terraformer
   sourceRepository: github.com/gardener/terraformer
-  repository: eu.gcr.io/gardener-project/gardener/terraformer-openstack
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/terraformer-openstack
   tag: "v2.23.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -86,7 +86,7 @@ images:
 
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
-  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager
   tag: "v0.50.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -99,7 +99,7 @@ images:
       availability_requirement: 'low'
 - name: machine-controller-manager-provider-openstack
   sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
-  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-openstack
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-openstack
   tag: "v0.15.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'

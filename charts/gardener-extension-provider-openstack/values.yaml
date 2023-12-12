@@ -1,5 +1,5 @@
 image:
-  repository: eu.gcr.io/gardener-project/gardener/extensions/provider-openstack
+  repository: europe-docker.pkg.dev/gardener-project/public/gardener/extensions/provider-openstack
   tag: latest
   pullPolicy: IfNotPresent
 

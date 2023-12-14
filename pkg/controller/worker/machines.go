@@ -230,7 +230,7 @@ func (w *workerDelegate) generateMachineConfig() error {
 
 			machineClassSpec["name"] = className
 			machineClassSpec["labels"] = map[string]string{
-				v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass,
+				v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass,
 			}
 
 			machineClasses = append(machineClasses, machineClassSpec)

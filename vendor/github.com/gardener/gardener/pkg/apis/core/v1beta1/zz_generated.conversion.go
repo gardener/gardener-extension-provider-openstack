@@ -2328,6 +2328,8 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
+	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
+	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	return nil
 }
 
@@ -2347,6 +2349,8 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
+	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
+	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	return nil
 }
 
@@ -4010,6 +4014,7 @@ func Convert_core_MachineControllerManagerSettings_To_v1beta1_MachineControllerM
 func autoConvert_v1beta1_MachineImage_To_core_MachineImage(in *MachineImage, out *core.MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Versions = *(*[]core.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	out.UpdateStrategy = (*core.MachineImageUpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
 	return nil
 }
 
@@ -4021,6 +4026,7 @@ func Convert_v1beta1_MachineImage_To_core_MachineImage(in *MachineImage, out *co
 func autoConvert_core_MachineImage_To_v1beta1_MachineImage(in *core.MachineImage, out *MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	out.UpdateStrategy = (*MachineImageUpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
 	return nil
 }
 

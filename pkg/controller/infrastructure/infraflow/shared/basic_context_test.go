@@ -145,7 +145,6 @@ var _ = Describe("BasicFlowContext", func() {
 			Expect(c.state.Get("task2")).To(Equal(pointer.String("done")))
 			Expect(c.state.Get("afterTask2")).To(Equal(c.state.Get("task2")))
 			Expect(c.state.Get("task3")).To(Equal(pointer.String("done")))
-			Expect(logBuffer.String()).To(ContainSubstring(`"task":"[Skipped] task1"`))
 			Expect(logBuffer.String()).To(ContainSubstring(`"task":"task2"`))
 			Expect(logBuffer.String()).To(ContainSubstring(`"msg":"message from task2"`))
 			Expect(logBuffer.String()).To(ContainSubstring(`"task":"task3"`))

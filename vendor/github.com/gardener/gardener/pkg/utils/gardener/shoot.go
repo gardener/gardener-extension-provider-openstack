@@ -15,8 +15,10 @@
 package gardener
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,7 +26,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilsets "k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
@@ -478,7 +481,7 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 // on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
 func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
 	var (
-		tolerations = utilsets.New[corev1.Toleration]()
+		tolerations = sets.New[corev1.Toleration]()
 
 		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
 		// before they are added to the tolerations set.
@@ -494,7 +497,13 @@ func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []co
 		}
 	}
 
-	return tolerations.UnsortedList()
+	sortedTolerations := tolerations.UnsortedList()
+
+	// sort system component tolerations for a stable output
+	slices.SortFunc(sortedTolerations, func(a, b corev1.Toleration) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+	return sortedTolerations
 }
 
 // IncompleteDNSConfigError is a custom error type.
@@ -587,8 +596,8 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 
 // ComputeRequiredExtensionsForShoot computes the extension kind/type combinations that are required for the
 // shoot reconciliation flow.
-func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
-	requiredExtensions := utilsets.New[string]()
+func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) sets.Set[string] {
+	requiredExtensions := sets.New[string]()
 
 	if seed.Spec.Backup != nil {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
@@ -608,7 +617,7 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		}
 	}
 
-	disabledExtensions := utilsets.New[string]()
+	disabledExtensions := sets.New[string]()
 	for _, extension := range shoot.Spec.Extensions {
 		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
 
@@ -680,4 +689,31 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 
 	// New clusters shall be created with the new technical id (double hyphens).
 	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
+}
+
+// GetShootConditionTypes returns all known shoot condition types.
+func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
+	shootConditionTypes := []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ShootAPIServerAvailable,
+		gardencorev1beta1.ShootControlPlaneHealthy,
+		gardencorev1beta1.ShootObservabilityComponentsHealthy,
+	}
+
+	if !workerless {
+		shootConditionTypes = append(shootConditionTypes, gardencorev1beta1.ShootEveryNodeReady)
+	}
+
+	return append(shootConditionTypes, gardencorev1beta1.ShootSystemComponentsHealthy)
+}
+
+// DefaultGVKsForEncryption returns the list of GroupVersionKinds which are encrypted by default.
+func DefaultGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		corev1.SchemeGroupVersion.WithKind("Secret"),
+	}
+}
+
+// DefaultResourcesForEncryption returns the list of resources which are encrypted by default.
+func DefaultResourcesForEncryption() sets.Set[string] {
+	return sets.New(corev1.Resource("secrets").String())
 }

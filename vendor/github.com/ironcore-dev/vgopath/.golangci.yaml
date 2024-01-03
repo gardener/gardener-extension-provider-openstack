@@ -1,0 +1,20 @@
+run:
+  timeout: 3m
+
+linters:
+  enable:
+    - revive
+    - ineffassign
+    - misspell
+    - goimports
+
+severity:
+  default-severity: error
+
+linters-settings:
+  revive:
+    severity: error
+    rules:
+      - name: exported
+      - name: if-return
+        disabled: true

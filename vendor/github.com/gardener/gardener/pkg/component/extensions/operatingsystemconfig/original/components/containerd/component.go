@@ -84,12 +84,22 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/log/pods/*/*/*.log", ContainerRuntime)
 
-	return append([]extensionsv1alpha1.Unit{
-			{
-				Name:    UnitNameMonitor,
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	monitorFile := extensionsv1alpha1.File{
+		Path:        pathHealthMonitor,
+		Permissions: pointer.Int32(0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
+			},
+		},
+	}
+
+	monitorUnit := extensionsv1alpha1.Unit{
+		Name:    UnitNameMonitor,
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
 Description=Containerd-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -98,19 +108,8 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment
 ExecStart=` + pathHealthMonitor),
-			},
-		}, logRotateUnits...),
-		append([]extensionsv1alpha1.File{
-			{
-				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32(0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
-					},
-				},
-			},
-		}, logRotateFiles...),
-		nil
+		FilePaths: []string{monitorFile.Path},
+	}
+
+	return append(logRotateUnits, monitorUnit), append(logRotateFiles, monitorFile), nil
 }

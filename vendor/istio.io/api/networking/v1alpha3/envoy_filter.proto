@@ -139,19 +139,20 @@ import "networking/v1alpha3/sidecar.proto";
 //        name: envoy.filters.http.lua
 //        typed_config:
 //           "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
-//           inlineCode: |
-//             function envoy_on_request(request_handle)
-//               -- Make an HTTP call to an upstream host with the following headers, body, and timeout.
-//               local headers, body = request_handle:httpCall(
-//                "lua_cluster",
-//                {
-//                 [":method"] = "POST",
-//                 [":path"] = "/acl",
-//                 [":authority"] = "internal.org.net"
-//                },
-//               "authorize call",
-//               5000)
-//             end
+//           defaultSourceCode:
+//             inlineString: |
+//               function envoy_on_request(request_handle)
+//                 -- Make an HTTP call to an upstream host with the following headers, body, and timeout.
+//                 local headers, body = request_handle:httpCall(
+//                  "lua_cluster",
+//                  {
+//                   [":method"] = "POST",
+//                   [":path"] = "/acl",
+//                   [":authority"] = "internal.org.net"
+//                  },
+//                 "authorize call",
+//                 5000)
+//               end
 //   # The second patch adds the cluster that is referenced by the lua code
 //   # cds match is omitted as a new cluster is being added
 //   - applyTo: CLUSTER
@@ -329,7 +330,7 @@ import "networking/v1alpha3/sidecar.proto";
 //   # and the binary configuration. It should come before the next patch that applies it.
 //   # This resource is visible to all proxies in the namespace "myns". It is possible to provide
 //   # multiple definitions for the same name "my-wasm-extension" in multiple namespaces. We recommend that:
-//   # - if overriding is desired, then the root level definition can be overriden per namespace with REPLACE.
+//   # - if overriding is desired, then the root level definition can be overridden per namespace with REPLACE.
 //   # - if overriding is not desired, then the name should be qualified with the namespace "myns/my-wasm-extension",
 //   #   to avoid accidental name collisions.
 //   - applyTo: EXTENSION_CONFIG
@@ -380,11 +381,11 @@ import "networking/v1alpha3/sidecar.proto";
 // apiVersion: networking.istio.io/v1alpha3
 // kind: EnvoyFilter
 // metadata:
-//   name: listener-filter-example
+//   name: wasm-service
 //   namespace: myns
 // spec:
 //   configPatches:
-//   - applyTo: LISTENER_FILTER
+//   - applyTo: BOOTSTRAP
 //     patch:
 //       operation: MERGE
 //       value:
@@ -412,7 +413,7 @@ import "networking/v1alpha3/sidecar.proto";
 // apiVersion: networking.istio.io/v1alpha3
 // kind: EnvoyFilter
 // metadata:
-//   name: wasm-service
+//   name: listener-filter-example
 //   namespace: myns
 // spec:
 //   configPatches:
@@ -804,7 +805,7 @@ message EnvoyFilter {
 
     // FilterClass determines the filter insertion point in the filter chain
     // relative to the filters implicitly inserted by the control plane.
-    // It is used in conjuction with the `ADD` operation.
+    // It is used in conjunction with the `ADD` operation.
     // This is the preferred insertion mechanism for adding filters over
     // the `INSERT_*` operations since those operations rely on potentially unstable
     // filter names.
@@ -886,7 +887,7 @@ message EnvoyFilter {
 
   // One or more patches with match conditions.
   repeated EnvoyConfigObjectPatch config_patches = 4 [(google.api.field_behavior) = REQUIRED];
- 
+
   // Priority defines the order in which patch sets are applied within a context.
   // When one patch depends on another patch, the order of patch application
   // is significant. The API provides two primary ways to order patches.
@@ -897,7 +898,7 @@ message EnvoyFilter {
   // The default value for priority is 0 and the range is [ min-int32, max-int32 ].
   // A patch set with a negative priority is processed before the default. A patch
   // set with a positive priority is processed after the default.
-  // 
+  //
   // It is recommended to start with priority values that are multiples of 10
   // to leave room for further insertion.
   //

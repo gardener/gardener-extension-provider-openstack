@@ -27,7 +27,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -59,23 +58,31 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
 	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
-			f.Logger.Info("Seed is not a ManagedSeed, checking seed.spec.secretRef")
+			f.Logger.Info("Seed is not a ManagedSeed, checking seed secret")
 
-			seedSecretRef := seed.Spec.SecretRef
-			if seedSecretRef == nil {
-				f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
-				return seed, nil, nil
+			// For tests, we expect the seed kubeconfig secret to be present in the garden namespace
+			seedSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "seed-" + seedName,
+					Namespace: "garden",
+				},
 			}
 
-			seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seedSecret), seedSecret); err != nil {
+				return seed, nil, fmt.Errorf("seed is not a ManagedSeed also no seed kubeconfig secret present in the garden namespace, %s: %w", client.ObjectKeyFromObject(seed), err)
+			}
+
+			seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecret.Namespace, seedSecret.Name,
 				kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 				kubernetes.WithDisabledCachedClient(),
 			)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not construct Seed client: %w", err)
 			}
+
 			return seed, seedClient, nil
 		}
+
 		return seed, nil, fmt.Errorf("failed to get ManagedSeed for Seed, %s: %w", client.ObjectKeyFromObject(seed), err)
 	}
 
@@ -339,11 +346,9 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 		return err
 	}
 
-	if !v1beta1helper.IsWorkerless(shoot) {
-		// Verify no running pods after hibernation
-		if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
-			return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
-		}
+	// Verify no running pods after hibernation
+	if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
+		return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
 	}
 
 	log.Info("Shoot was hibernated successfully")

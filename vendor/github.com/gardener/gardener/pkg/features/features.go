@@ -62,6 +62,7 @@ const (
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.70.0
 	// beta: v1.79.0
+	// GA: v1.86.0
 	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
 
 	// ShootForceDeletion allows force deletion of Shoots.
@@ -94,6 +95,7 @@ const (
 	//
 	// owner: @ialidzhikov, @dimitar-kostadinov
 	// alpha: v1.77.0
+	// beta: v1.86.0
 	ContainerdRegistryHostsDir featuregate.Feature = "ContainerdRegistryHostsDir"
 
 	// APIServerFastRollout enables fast rollouts for Shoot kube-apiservers on the given Seed.
@@ -140,10 +142,10 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
-	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta},
+	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta, LockToDefault: true},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
+	ContainerdRegistryHostsDir:         {Default: true, PreRelease: featuregate.Beta},
 	APIServerFastRollout:               {Default: true, PreRelease: featuregate.Beta},
 	UseGardenerNodeAgent:               {Default: false, PreRelease: featuregate.Alpha},
 }

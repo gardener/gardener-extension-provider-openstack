@@ -33,6 +33,11 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/resource-manager
   resourceId:
     name: resource-manager
+- name: gardener-node-agent
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/node-agent
+  resourceId:
+    name: node-agent
 
 # Seed bootstrap
 - name: pause-container
@@ -49,7 +54,7 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.20.3"
+  tag: "v0.21.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -70,7 +75,7 @@ images:
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.17.0"
+  tag: "0.18.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -102,7 +107,7 @@ images:
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
   repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
-  tag: "v0.50.0"
+  tag: "v0.50.1"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -134,8 +139,8 @@ images:
   targetVersion: "1.24.x"
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
-  repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
-  tag: "0.19.0"
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-seed-server
+  tag: "0.22.0"
 
 # Monitoring
 - name: alertmanager
@@ -174,7 +179,7 @@ images:
       teamname: 'gardener/monitoring-maintainers'
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
-  repository: ghcr.io/prometheus-operator/prometheus-config-reloader
+  repository: quay.io/prometheus-operator/prometheus-config-reloader
   tag: v0.67.1
   labels:
   - name: gardener.cloud/cve-categorisation
@@ -209,7 +214,7 @@ images:
 - name: gardener-metrics-exporter
   sourceRepository: github.com/gardener/gardener-metrics-exporter
   repository: eu.gcr.io/gardener-project/gardener/metrics-exporter
-  tag: "0.27.0"
+  tag: "0.28.0"
   resourceId:
     name: metrics-exporter
 - name: node-exporter
@@ -233,7 +238,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
-  tag: "v7.5.25"
+  tag: "v7.5.26"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -286,8 +291,8 @@ images:
 # Shoot core addons
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
-  repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
-  tag: "0.19.0"
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-shoot-client
+  tag: "0.22.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: registry.k8s.io/coredns/coredns
@@ -348,7 +353,7 @@ images:
 # Miscellaenous
 - name: alpine
   repository: eu.gcr.io/gardener-project/3rd/alpine
-  tag: "3.15.8"
+  tag: "3.18.4"
 
 # Logging
 - name: fluent-operator
@@ -408,7 +413,7 @@ images:
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/vali
-  tag: "v2.2.9"
+  tag: "v2.2.11"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -442,7 +447,7 @@ images:
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
-  tag: v0.14.2
+  tag: v0.15.0
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -460,7 +465,7 @@ images:
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
-  tag: "v2.2.9"
+  tag: "v2.2.11"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -536,7 +541,7 @@ images:
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-admission-controller
-  tag: "0.14.0"
+  tag: "1.0.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -549,7 +554,7 @@ images:
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-recommender
-  tag: "0.14.0"
+  tag: "1.0.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -562,7 +567,7 @@ images:
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
-  tag: "0.14.0"
+  tag: "1.0.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -598,7 +603,7 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.17.1-distroless"
+  tag: "1.19.3-distroless"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -615,7 +620,7 @@ images:
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.17.1-distroless"
+  tag: "1.19.3-distroless"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -659,4 +664,4 @@ images:
     name: apiserver-proxy
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
-  tag: "v0.14.0"
+  tag: "v0.15.0"

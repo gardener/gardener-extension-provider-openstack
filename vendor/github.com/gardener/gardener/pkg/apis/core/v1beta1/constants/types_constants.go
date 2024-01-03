@@ -267,6 +267,8 @@ const (
 	GardenRoleOptionalAddon = "optional-addon"
 	// GardenRoleCloudConfig is the value of the GardenRole key indicating type 'cloud-config'.
 	GardenRoleCloudConfig = "cloud-config"
+	// GardenRoleOperatingSystemConfig is the value of the GardenRole key indicating type 'operating-system-config'.
+	GardenRoleOperatingSystemConfig = "operating-system-config"
 	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleCACluster is the value of the GardenRole key indicating type 'ca-cluster'.
@@ -603,10 +605,10 @@ const (
 	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
 	// AnnotationShootCloudConfigExecutionMaxDelaySeconds is a key for an annotation on a Shoot resource that declares
 	// the maximum delay in seconds when potentially updated cloud-config user data is executed on the worker nodes.
-	// Concretely, the cloud-config-downloader systemd service running on all worker nodes will wait for a random
-	// duration based on the configured value before executing the user data (default value is 300) plus an additional
-	// offset of 30s. If set to 0 then no random delay will be applied and the minimum delay (30s) applies. Any value
-	// above 1800 is ignored (in this case the default value is used).
+	// Concretely, the cloud-config-downloader/gardener-node-agent systemd service running on all worker nodes will wait
+	// for a random duration based on the configured value before executing the user data (default value is 300) plus an
+	// additional offset of 30s. If set to 0 then no random delay will be applied and the minimum delay (30s) applies.
+	// Any value above 1800 is ignored (in this case the default value is used).
 	// Note that changing this value only applies to new nodes. Existing nodes which already computed their individual
 	// delays will not recompute it.
 	AnnotationShootCloudConfigExecutionMaxDelaySeconds = "shoot.gardener.cloud/cloud-config-execution-max-delay-seconds"
@@ -626,8 +628,6 @@ const (
 	AnnotationPodSecurityEnforce = "security.gardener.cloud/pod-security-enforce"
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
-	// OperatingSystemConfigUnitNameDockerService is a constant for a unit in the operating system config that contains the docker service.
-	OperatingSystemConfigUnitNameDockerService = "docker.service"
 	// OperatingSystemConfigUnitNameContainerDService is a constant for a unit in the operating system config that contains the containerd service.
 	OperatingSystemConfigUnitNameContainerDService = "containerd.service"
 	// OperatingSystemConfigFilePathKernelSettings is a constant for a path to a file in the operating system config that contains some general kernel settings.
@@ -698,6 +698,10 @@ const (
 	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
 
+	// ShootGroupViewers is a constant for a group name in shoot clusters whose users get read-only privileges (except
+	// for core/v1.Secrets).
+	ShootGroupViewers = "gardener.cloud:system:viewers"
+
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
 	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
@@ -715,8 +719,10 @@ const (
 	// or the specified namespace was not present.
 	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
-	// DefaultVPNRange is the default network range for the VPN between seed and shoot cluster.
+	// DefaultVPNRange is the default IPv4 network range for the VPN between seed and shoot cluster.
 	DefaultVPNRange = "192.168.123.0/24"
+	// DefaultVPNRangeV6 is the default IPv6 network range for the VPN between seed and shoot cluster.
+	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/120"
 
 	// BackupSecretName is the name of secret having credentials for etcd backups.
 	BackupSecretName string = "etcd-backup"

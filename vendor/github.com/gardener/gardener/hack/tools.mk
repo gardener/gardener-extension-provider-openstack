@@ -23,7 +23,7 @@ ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
 TOOLS_PKG_PATH             := ./hack/tools
 else
 # dependency on github.com/gardener/gardener/hack/tools is optional and only needed if other projects want to reuse
-# install-promtool.sh, logcheck, or gomegacheck. If they don't use it and the project doesn't depend on the package,
+# install-promtool.sh, or logcheck. If they don't use it and the project doesn't depend on the package,
 # silence the error to minimize confusion.
 TOOLS_PKG_PATH             := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack/tools 2>/dev/null)
 endif
@@ -35,7 +35,6 @@ GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOIMPORTSREVISER           := $(TOOLS_BIN_DIR)/goimports-reviser
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
-GOMEGACHECK                := $(TOOLS_BIN_DIR)/gomegacheck.so # plugin binary
 GO_ADD_LICENSE             := $(TOOLS_BIN_DIR)/addlicense
 GO_APIDIFF                 := $(TOOLS_BIN_DIR)/go-apidiff
 GO_VULN_CHECK              := $(TOOLS_BIN_DIR)/govulncheck
@@ -55,20 +54,22 @@ SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
+VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 
 # default tool versions
-GOLANGCI_LINT_VERSION ?= v1.55.1
-GO_APIDIFF_VERSION ?= v0.6.1
+GOLANGCI_LINT_VERSION ?= v1.55.2
+GO_APIDIFF_VERSION ?= v0.7.0
 GO_ADD_LICENSE_VERSION ?= v1.1.1
-GOIMPORTSREVISER_VERSION ?= v3.5.6
+GOIMPORTSREVISER_VERSION ?= v3.6.0
 GO_VULN_CHECK_VERSION ?= latest
-HELM_VERSION ?= v3.13.1
+HELM_VERSION ?= v3.13.2
 KIND_VERSION ?= v0.20.0
-KUBECTL_VERSION ?= v1.28.3
-PROMTOOL_VERSION ?= 2.47.2
-PROTOC_VERSION ?= 24.4
-SKAFFOLD_VERSION ?= v2.8.0
-YQ_VERSION ?= v4.35.2
+KUBECTL_VERSION ?= v1.28.4
+PROMTOOL_VERSION ?= 2.48.0
+PROTOC_VERSION ?= 25.1
+SKAFFOLD_VERSION ?= v2.9.0
+YQ_VERSION ?= v4.40.4
+VGOPATH_VERSION ?= v0.1.3
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
@@ -122,7 +123,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YAML2JSON) $(YQ)
+create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YAML2JSON) $(YQ) $(VGOPATH)
 
 #########################################
 # Tools                                 #
@@ -147,14 +148,6 @@ $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERS
 	@# CGO_ENABLED has to be set to 1 in order for golangci-lint to be able to load plugins
 	@# see https://github.com/golangci/golangci-lint/issues/1276
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-
-ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
-$(GOMEGACHECK): $(TOOLS_PKG_PATH)/gomegacheck/go.* $(shell find $(TOOLS_PKG_PATH)/gomegacheck -type f -name '*.go')
-	cd $(TOOLS_PKG_PATH)/gomegacheck; CGO_ENABLED=1 go build -o $(abspath $(GOMEGACHECK)) -buildmode=plugin ./plugin
-else
-$(GOMEGACHECK): go.mod
-	CGO_ENABLED=1 go build -o $(GOMEGACHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/gomegacheck/plugin
-endif
 
 $(GO_ADD_LICENSE):  $(call tool_version_file,$(GO_ADD_LICENSE),$(GO_ADD_LICENSE_VERSION))
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/google/addlicense@$(GO_ADD_LICENSE_VERSION)
@@ -226,3 +219,6 @@ $(YAML2JSON): $(call tool_version_file,$(YAML2JSON),$(YAML2JSON_VERSION))
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 	chmod +x $(YQ)
+
+$(VGOPATH): $(call tool_version_file,$(VGOPATH),$(VGOPATH_VERSION))
+	go build -o $(VGOPATH) github.com/ironcore-dev/vgopath

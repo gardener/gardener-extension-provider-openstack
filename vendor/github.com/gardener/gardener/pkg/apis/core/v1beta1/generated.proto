@@ -288,7 +288,7 @@ message CARotation {
 
 // CRI contains information about the Container Runtimes.
 message CRI {
-  // The name of the CRI library. Supported values are `docker` and `containerd`.
+  // The name of the CRI library. Supported values are `containerd`.
   optional string name = 1;
 
   // ContainerRuntimes is the list of the required container runtimes supported for a worker pool.
@@ -761,6 +761,16 @@ message ETCDEncryptionKeyRotation {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
+// EncryptionConfig contains customizable encryption configuration of the API server.
+message EncryptionConfig {
+  // Resources contains the list of resources that shall be encrypted in addition to secrets.
+  // Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+  // Note that configuring a custom resource is only supported for versions >= 1.26.
+  // Wildcards are not supported for now.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+  repeated string resources = 1;
+}
+
 // ExpirableVersion contains a version and an expiration date.
 message ExpirableVersion {
   // Version is the version identifier.
@@ -1093,6 +1103,10 @@ message KubeAPIServerConfig {
   // Defaults to 300.
   // +optional
   optional int64 defaultUnreachableTolerationSeconds = 15;
+
+  // EncryptionConfig contains customizable encryption configuration of the Kube API server.
+  // +optional
+  optional EncryptionConfig encryptionConfig = 16;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -2229,16 +2243,6 @@ message SeedSelector {
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
 message SeedSettingDependencyWatchdog {
-  // Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
-  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Weeder` instead.
-  // +optional
-  optional SeedSettingDependencyWatchdogEndpoint endpoint = 1;
-
-  // Probe controls the probe settings for the dependency-watchdog for the seed.
-  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Prober` instead.
-  // +optional
-  optional SeedSettingDependencyWatchdogProbe probe = 2;
-
   // Weeder controls the weeder settings for the dependency-watchdog for the seed.
   // +optional
   optional SeedSettingDependencyWatchdogWeeder weeder = 3;
@@ -2246,24 +2250,6 @@ message SeedSettingDependencyWatchdog {
   // Prober controls the prober settings for the dependency-watchdog for the seed.
   // +optional
   optional SeedSettingDependencyWatchdogProber prober = 4;
-}
-
-// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
-// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogWeeder` instead.
-message SeedSettingDependencyWatchdogEndpoint {
-  // Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
-  // helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
-  // CrashLoopBackoff status and restarting them once their dependants become ready and available again.
-  optional bool enabled = 1;
-}
-
-// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
-// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogProber` instead.
-message SeedSettingDependencyWatchdogProbe {
-  // Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
-  // scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
-  // reachable via its external ingress in order to avoid melt-down situations.
-  optional bool enabled = 1;
 }
 
 // SeedSettingDependencyWatchdogProber controls the prober settings for the dependency-watchdog for the seed.
@@ -2902,6 +2888,12 @@ message ShootStatus {
   // LastMaintenance holds information about the last maintenance operations on the Shoot.
   // +optional
   optional LastMaintenance lastMaintenance = 17;
+
+  // EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+  // Secrets are encrypted by default and are not part of the list.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+  // +optional
+  repeated string encryptedResources = 18;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

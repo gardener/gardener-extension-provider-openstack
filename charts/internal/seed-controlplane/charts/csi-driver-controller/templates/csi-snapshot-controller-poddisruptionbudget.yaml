@@ -12,3 +12,6 @@ spec:
     matchLabels:
       app: csi-snapshot-controller
       role: controller
+{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}

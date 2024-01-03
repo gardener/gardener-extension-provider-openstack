@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
-"$(dirname $0)"/../vendor/github.com/gardener/gardener/hack/.ci/component_descriptor "$(dirname $0)"/..
+COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project" \
+  "$(dirname $0)"/../vendor/github.com/gardener/gardener/hack/.ci/component_descriptor "$(dirname $0)"/..

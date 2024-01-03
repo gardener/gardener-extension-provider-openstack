@@ -223,7 +223,7 @@ spec:
     nodes: 10.250.0.0/16
     type: calico
   kubernetes:
-    version: 1.24.3
+    version: 1.28.2
   maintenance:
     autoUpdate:
       kubernetesVersion: true

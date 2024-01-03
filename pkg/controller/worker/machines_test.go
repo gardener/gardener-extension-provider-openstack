@@ -212,7 +212,7 @@ var _ = Describe("Machines", func() {
 
 				machineConfiguration = &machinev1alpha1.MachineConfiguration{}
 
-				shootVersionMajorMinor = "1.24"
+				shootVersionMajorMinor = "1.28"
 				shootVersion = shootVersionMajorMinor + ".3"
 
 				cloudProfileConfig = &api.CloudProfileConfig{

@@ -182,7 +182,7 @@ var _ = Describe("ValuesProvider", func() {
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.24.4",
+						Version: "1.28.4",
 						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},
@@ -543,7 +543,7 @@ var _ = Describe("ValuesProvider", func() {
 	Describe("#GetControlPlaneChartValues", func() {
 		ccmChartValues := utils.MergeMaps(enabledTrue, map[string]interface{}{
 			"replicas":          1,
-			"kubernetesVersion": "1.24.1",
+			"kubernetesVersion": "1.28.2",
 			"clusterName":       namespace,
 			"podNetwork":        cidr,
 			"podAnnotations": map[string]interface{}{

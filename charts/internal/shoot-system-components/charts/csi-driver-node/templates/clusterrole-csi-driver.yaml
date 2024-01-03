@@ -16,9 +16,3 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["volumeattachments"]
   verbs: ["get", "list", "watch", "update", "patch"]
-{{- if not .Values.pspDisabled }}
-- apiGroups: ["policy", "extensions"]
-  resourceNames: ["{{ include "csi-driver-node.extensionsGroup" . }}.{{ include "csi-driver-node.name" . }}.csi-driver-node"]
-  resources: ["podsecuritypolicies"]
-  verbs: ["use"]
-{{- end }}

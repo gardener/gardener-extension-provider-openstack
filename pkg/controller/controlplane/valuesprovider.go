@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
@@ -39,7 +38,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -217,7 +215,6 @@ var (
 					{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
-					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSIDriverName, ":", ".", -1)},
 					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSINodeName},
 					// csi-provisioner
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIProvisionerName},
@@ -274,7 +271,6 @@ var (
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIManilaNodeName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
-					{Type: &policyv1beta1.PodSecurityPolicy{}, Name: strings.Replace(openstack.UsernamePrefix+openstack.CSIManilaNodeName, ":", ".", -1)},
 					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSIManilaNodeName},
 				},
 			},
@@ -871,7 +867,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 			"url":      "https://" + openstack.CSISnapshotValidationName + "." + cp.Namespace + "/volumesnapshot",
 			"caBundle": caBundle,
 		},
-		"pspDisabled": gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot),
 	}
 
 	// add keystone CA bundle
@@ -936,7 +931,6 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 
 	if csiManilaEnabled {
 		values["vpaEnabled"] = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot)
-		values["pspDisabled"] = gardencorev1beta1helper.IsPSPDisabled(cluster.Shoot)
 
 		if err := vp.addCSIManilaValues(values, cp, cluster, credentials); err != nil {
 			return nil, err

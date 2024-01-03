@@ -5,7 +5,6 @@ images:
   csi-liveness-probe: image-repository:image-tag
 
 vpaEnabled: false
-pspDisabled: false
 dnsPolicy: ClusterFirstWithHostNet # available values: Default, ClusterFirstWithHostNet, ClusterFirst
 timeout: 3m
 

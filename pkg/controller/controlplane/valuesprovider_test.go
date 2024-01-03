@@ -757,7 +757,6 @@ var _ = Describe("ValuesProvider", func() {
 							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
 							"caBundle": "",
 						},
-						"pspDisabled": false,
 					}),
 					openstack.CSIDriverManila: enabledFalse,
 				}))
@@ -783,7 +782,6 @@ var _ = Describe("ValuesProvider", func() {
 							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
 							"caBundle": "",
 						},
-						"pspDisabled": false,
 					}),
 					openstack.CSIDriverManila: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"csimanila": map[string]interface{}{
@@ -805,75 +803,8 @@ var _ = Describe("ValuesProvider", func() {
 							"tlsInsecure":                 "",
 							"caCert":                      "",
 						},
-						"pspDisabled": false,
-						"vpaEnabled":  true,
-					}),
-				}))
-			})
-		})
-
-		Context("PodSecurityPolicy", func() {
-			It("should return correct shoot control plane chart when PodSecurityPolicy admission plugin is not disabled in the shoot", func() {
-				cluster.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-					AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
-						{
-							Name: "PodSecurityPolicy",
-						},
-					},
-				}
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
-				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, cluster, fakeSecretsManager, map[string]string{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(values).To(Equal(map[string]interface{}{
-					openstack.CloudControllerManagerName: enabledTrue,
-					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"vpaEnabled": true,
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-						},
-						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-						"cloudProviderConfig": cloudProviderDiskConfig,
-						"webhookConfig": map[string]interface{}{
-							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
-							"caBundle": "",
-						},
-						"pspDisabled": false,
 					}),
-					openstack.CSIDriverManila: enabledFalse,
-				}))
-			})
-			It("should return correct shoot control plane chart when PodSecurityPolicy admission plugin is disabled in the shoot", func() {
-				cluster.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-					AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
-						{
-							Name:     "PodSecurityPolicy",
-							Disabled: pointer.Bool(true),
-						},
-					},
-				}
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
-				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, cluster, fakeSecretsManager, map[string]string{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(values).To(Equal(map[string]interface{}{
-					openstack.CloudControllerManagerName: enabledTrue,
-					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-						"vpaEnabled": true,
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-						},
-						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-						"cloudProviderConfig": cloudProviderDiskConfig,
-						"webhookConfig": map[string]interface{}{
-							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
-							"caBundle": "",
-						},
-						"pspDisabled": true,
-					}),
-					openstack.CSIDriverManila: enabledFalse,
 				}))
 			})
 		})

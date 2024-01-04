@@ -52,6 +52,7 @@ spec:
         - --metrics-bind-address=:{{ .Values.global.metricsPort }}
         {{- end }}
         - --health-bind-address=:{{ .Values.global.healthPort }}
+        - --leader-election-id={{ include "leaderelectionid" . }}
         - --enable-overlay-as-default-for-calico={{ .Values.global.enableOverlayAsDefaultForCalico }}
         - --enable-overlay-as-default-for-cilium={{ .Values.global.enableOverlayAsDefaultForCilium }}
         livenessProbe:

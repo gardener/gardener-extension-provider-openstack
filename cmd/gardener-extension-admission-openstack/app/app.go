@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/component-base/version/verflag"
@@ -41,6 +42,9 @@ import (
 	provideropenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
+// AdmissionName is the name of the admission component.
+const AdmissionName = "admission-openstack"
+
 var log = logf.Log.WithName("gardener-extension-admission-openstack")
 
 // NewAdmissionCommand creates a new command for running an Openstack admission webhook.
@@ -48,10 +52,13 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 	var (
 		restOpts = &controllercmd.RESTOptions{}
 		mgrOpts  = &controllercmd.ManagerOptions{
-			WebhookServerPort:  443,
-			MetricsBindAddress: ":8080",
-			HealthBindAddress:  ":8081",
-			WebhookCertDir:     "/tmp/admission-openstack-cert",
+			LeaderElection:          true,
+			LeaderElectionID:        controllercmd.LeaderElectionNameID(AdmissionName),
+			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
+			WebhookServerPort:       443,
+			MetricsBindAddress:      ":8080",
+			HealthBindAddress:       ":8081",
+			WebhookCertDir:          "/tmp/admission-openstack-cert",
 		}
 		// options for the webhook server
 		webhookServerOptions = &webhookcmd.ServerOptions{
@@ -92,7 +99,25 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 				Burst: 130,
 			}, restOpts.Completed().Config)
 
-			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
+			managerOptions := mgrOpts.Completed().Options()
+
+			// Operators can enable the source cluster option via SOURCE_CLUSTER environment variable.
+			// In-cluster config will be used if no SOURCE_KUBECONFIG is specified.
+			//
+			// The source cluster is for instance used by Gardener's certificate controller, to maintain certificate
+			// secrets in a different cluster ('runtime-garden') than the cluster where the webhook configurations
+			// are maintained ('virtual-garden').
+			var sourceClusterConfig *rest.Config
+			if sourceClusterEnabled := os.Getenv("SOURCE_CLUSTER"); sourceClusterEnabled != "" {
+				var err error
+				sourceClusterConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("SOURCE_KUBECONFIG"))
+				if err != nil {
+					return err
+				}
+				managerOptions.LeaderElectionConfig = sourceClusterConfig
+			}
+
+			mgr, err := manager.New(restOpts.Completed().Config, managerOptions)
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
@@ -103,21 +128,9 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 
-			// Operators can enable the source cluster option via SOURCE_CLUSTER environment variable.
-			// In-cluster config will be used if no SOURCE_KUBECONFIG is specified.
-			//
-			// The source cluster is for instance used by Gardener's certificate controller, to maintain certificate
-			// secrets in a different cluster ('runtime-garden') than the cluster where the webhook configurations
-			// are maintained ('virtual-garden').
 			var sourceCluster cluster.Cluster
-			if sourceClusterEnabled := os.Getenv("SOURCE_CLUSTER"); sourceClusterEnabled != "" {
-				log.Info("Configuring source cluster option")
-				config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("SOURCE_KUBECONFIG"))
-				if err != nil {
-					return err
-				}
-
-				sourceCluster, err = cluster.New(config, func(opts *cluster.Options) {
+			if sourceClusterConfig != nil {
+				sourceCluster, err = cluster.New(sourceClusterConfig, func(opts *cluster.Options) {
 					opts.Logger = log
 					opts.Cache.DefaultNamespaces = map[string]cache.Config{v1beta1constants.GardenNamespace: {}}
 				})

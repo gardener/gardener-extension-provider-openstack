@@ -19,6 +19,7 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -49,6 +50,10 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			NewCloudProfileValidator(mgr):  {{Obj: &core.CloudProfile{}}},
 			NewSecretBindingValidator(mgr): {{Obj: &core.SecretBinding{}}},
 		},
+		Target: extensionswebhook.TargetSeed,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"provider.extensions.gardener.cloud/openstack": "true"},
+		},
 	})
 }
 
@@ -62,6 +67,10 @@ func NewSecretsWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, error) 
 		Path:     "/webhooks/validate/secrets",
 		Validators: map[extensionswebhook.Validator][]extensionswebhook.Type{
 			NewSecretValidator(): {{Obj: &corev1.Secret{}}},
+		},
+		Target: extensionswebhook.TargetSeed,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"provider.shoot.gardener.cloud/openstack": "true"},
 		},
 	})
 }

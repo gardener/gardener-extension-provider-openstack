@@ -9,7 +9,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/integration/bastion
+    go test -timeout=0 ./test/integration/bastion
     --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     --kubeconfig=$TM_KUBECONFIG_PATH/testmachinery.config
     --auth-url="$AUTH_URL"

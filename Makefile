@@ -85,6 +85,10 @@ start-admission:
 		--webhook-config-mode=$(WEBHOOK_CONFIG_MODE) \
 		$(WEBHOOK_PARAM)
 
+.PHONY: hook-me
+hook-me:
+	@bash $(GARDENER_HACK_DIR)/hook-me.sh $(EXTENSION_NAMESPACE) $(EXTENSION_PREFIX)-$(NAME) $(WEBHOOK_CONFIG_PORT)
+
 #################################################################
 # Rules related to binary build, Docker image build and release #
 #################################################################

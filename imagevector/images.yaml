@@ -242,7 +242,7 @@ images:
 - name: csi-driver-nfs
   sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
   repository: registry.k8s.io/sig-storage/nfsplugin
-  tag: "v4.4.0"
+  tag: "v4.6.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:

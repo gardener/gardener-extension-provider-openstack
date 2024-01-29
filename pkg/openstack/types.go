@@ -52,8 +52,6 @@ const (
 	CSISnapshotControllerImageName = "csi-snapshot-controller"
 	// CSISnapshotValidationWebhookImageName is the name of the csi-snapshot-validation-webhook image.
 	CSISnapshotValidationWebhookImageName = "csi-snapshot-validation-webhook"
-	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
-	MachineControllerManagerImageName = "machine-controller-manager"
 	// MachineControllerManagerProviderOpenStackImageName is the name of the MachineControllerManager OpenStack image.
 	MachineControllerManagerProviderOpenStackImageName = "machine-controller-manager-provider-openstack"
 
@@ -150,8 +148,6 @@ const (
 	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret
 	CSIManilaSecret = "csi-manila-secret"
 
-	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack configurations for machine-controller-manager.
-	MachineControllerManagerMonitoringConfigName = "machine-controller-manager-monitoring-config"
 	// PreserveWorkerHashAnnotation controls whether the providerConfig will be included in the hash calculation for the respective worker pool.
 	// Deprecated: It is only introduced to ease the transition to the new hash calculation.
 	// TODO(KA): Remove in release v1.36

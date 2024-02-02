@@ -26,7 +26,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 	"k8s.io/utils/pointer"
 )
 
@@ -289,23 +288,4 @@ func (c *NetworkingClient) GetRouterInterfacePort(routerID, subnetID string) (*p
 		return nil, nil
 	}
 	return &list[0], nil
-}
-
-// CreateShareNetwork creates the share network.
-func (c *NetworkingClient) CreateShareNetwork(createOpts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error) {
-	return sharenetworks.Create(c.client, createOpts).Extract()
-}
-
-// ListShareNetworks returns a list of subnets
-func (c *NetworkingClient) ListShareNetworks(listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error) {
-	page, err := sharenetworks.ListDetail(c.client, listOpts).AllPages()
-	if err != nil {
-		return nil, err
-	}
-	return sharenetworks.ExtractShareNetworks(page)
-}
-
-// DeleteShareNetwork deletes a subnet by identifier
-func (c *NetworkingClient) DeleteShareNetwork(id string) error {
-	return sharenetworks.Delete(c.client, id).ExtractErr()
 }

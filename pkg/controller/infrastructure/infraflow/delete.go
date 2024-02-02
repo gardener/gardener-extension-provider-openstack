@@ -18,6 +18,8 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
@@ -76,6 +78,9 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 		Timeout(defaultTimeout),
 	)
 
+	_ = c.AddTask(g, "delete share network",
+		c.deleteShareNetwork,
+		Timeout(defaultTimeout), Dependencies(recoverSubnetID))
 	deleteRouterInterface := c.AddTask(g, "delete router interface",
 		c.deleteRouterInterface,
 		Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID, k8sRoutes))
@@ -229,5 +234,37 @@ func (c *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *FlowContext) deleteShareNetwork(ctx context.Context) error {
+	log := c.LogFromContext(ctx)
+	networkID := pointer.StringDeref(c.state.Get(IdentifierNetwork), "")
+	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
+	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
+		c.namespace,
+		noopFinder[sharenetworks.ShareNetwork],
+		func(name string) ([]*sharenetworks.ShareNetwork, error) {
+			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+				AllTenants:      false,
+				NeutronNetID:    networkID,
+				NeutronSubnetID: subnetID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return sliceToPtr(list), nil
+		})
+	if err != nil {
+		return err
+	}
+	if current != nil {
+		log.Info("deleting...", "securityGroup", current.ID)
+		if err := c.sharedFilesystem.DeleteShareNetwork(current.ID); err != nil {
+			return err
+		}
+	}
+	c.state.Set(IdentifierNetwork, "")
+	c.state.Set(NameShareNetwork, "")
 	return nil
 }

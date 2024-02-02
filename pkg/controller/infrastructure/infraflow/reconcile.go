@@ -24,6 +24,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
@@ -464,23 +465,21 @@ func (c *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 
 func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	log := c.LogFromContext(ctx)
-	networkID := *c.state.Get(IdentifierNetwork)
-	subnetID := *c.state.Get(IdentifierSubnet)
-	desired := &sharenetworks.ShareNetwork{
-		Name:            c.namespace,
-		NeutronNetID:    networkID,
-		NeutronSubnetID: subnetID,
-	}
-
+	networkID := pointer.StringDeref(c.state.Get(IdentifierNetwork), "")
+	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
 		c.namespace,
 		noopFinder[sharenetworks.ShareNetwork],
-		c.access.GetShareNetworkByName,
-		func(item *sharenetworks.ShareNetwork) bool {
-			if item.NeutronSubnetID == networkID && item.NeutronSubnetID == subnetID {
-				return true
+		func(name string) ([]*sharenetworks.ShareNetwork, error) {
+			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+				Name:            name,
+				NeutronNetID:    networkID,
+				NeutronSubnetID: subnetID,
+			})
+			if err != nil {
+				return nil, err
 			}
-			return false
+			return sliceToPtr(list), nil
 		})
 
 	if err != nil {
@@ -492,11 +491,15 @@ func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	}
 
 	log.Info("creating...")
-	created, err := c.access.CreateShareNetwork(desired)
+	created, err := c.sharedFilesystem.CreateShareNetwork(sharenetworks.CreateOpts{
+		NeutronNetID:    networkID,
+		NeutronSubnetID: subnetID,
+		Name:            c.namespace,
+	})
 	if err != nil {
 		return err
 	}
 	c.state.Set(IdentifierShareNetwork, created.ID)
+	c.state.Set(NameShareNetwork, created.Name)
 	return nil
-
 }

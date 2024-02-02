@@ -118,3 +118,11 @@ func copyMap(src map[string]string) map[string]string {
 	}
 	return dst
 }
+
+func sliceToPtr[T any](slice []T) []*T {
+	res := make([]*T, len(slice))
+	for _, t := range slice {
+		res = append(res, &t)
+	}
+	return res
+}

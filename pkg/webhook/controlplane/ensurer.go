@@ -447,7 +447,7 @@ mv "$tmp" "$dest" && echo updated "$dest"
 			},
 		},
 	}
-	appendUniqueFile(newObj, file)
+	*newObj = extensionswebhook.EnsureFileWithPath(*newObj, file)
 }
 
 func getCloudProfileConfig(ctx context.Context, gctx gcontext.GardenContext) (*apisopenstack.CloudProfileConfig, error) {
@@ -467,17 +467,4 @@ func getResolveConfOptions(cloudProfileConfig *apisopenstack.CloudProfileConfig)
 		return nil
 	}
 	return cloudProfileConfig.ResolvConfOptions
-}
-
-// appendUniqueFile appends a unit file only if it does not exist, otherwise overwrite content of previous files
-func appendUniqueFile(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
-	resFiles := make([]extensionsv1alpha1.File, 0, len(*files))
-
-	for _, f := range *files {
-		if f.Path != file.Path {
-			resFiles = append(resFiles, f)
-		}
-	}
-
-	*files = append(resFiles, file)
 }

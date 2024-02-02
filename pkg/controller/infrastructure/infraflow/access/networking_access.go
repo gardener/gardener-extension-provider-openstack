@@ -28,6 +28,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -61,6 +62,10 @@ type NetworkingAccess interface {
 	GetSecurityGroupByID(id string) (*groups.SecGroup, error)
 	GetSecurityGroupByName(name string) ([]*groups.SecGroup, error)
 	UpdateSecurityGroupRules(group *groups.SecGroup, desiredRules []rules.SecGroupRule, allowDelete func(rule *rules.SecGroupRule) bool) (modified bool, err error)
+
+	// Share
+	CreateShareNetwork(desired *sharenetworks.ShareNetwork) (*sharenetworks.ShareNetwork, error)
+	GetShareNetworkByName(name string) ([]*sharenetworks.ShareNetwork, error)
 }
 
 // Router is a simplified router resource
@@ -517,4 +522,35 @@ func (a *networkingAccess) findMatchingRule(rule *rules.SecGroupRule, desiredRul
 		}
 	}
 	return nil, false
+}
+
+// CreateShareNetwork creates a share network.
+func (a *networkingAccess) CreateShareNetwork(desired *sharenetworks.ShareNetwork) (*sharenetworks.ShareNetwork, error) {
+	shareNetwork, err := a.networking.CreateShareNetwork(sharenetworks.CreateOpts{
+		NeutronNetID:    desired.NeutronNetID,
+		NeutronSubnetID: desired.NeutronSubnetID,
+		Name:            desired.Name,
+		Description:     fmt.Sprintf("share network for shoot %s", desired.Name),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return shareNetwork, nil
+}
+
+// GetShareNetworkByName retrieves a share network by the name.
+func (a *networkingAccess) GetShareNetworkByName(name string) ([]*sharenetworks.ShareNetwork, error) {
+	list, err := a.networking.ListShareNetworks(sharenetworks.ListOpts{
+		Name: name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*sharenetworks.ShareNetwork
+	for _, sn := range list {
+		result = append(result, &sn)
+	}
+
+	return result, nil
 }

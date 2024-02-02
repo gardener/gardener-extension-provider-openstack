@@ -32,6 +32,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
@@ -159,6 +160,11 @@ type Networking interface {
 	// Ports
 	GetPort(portID string) (*ports.Port, error)
 	GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error)
+
+	// Share Networks
+	CreateShareNetwork(createOpts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error)
+	ListShareNetworks(listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error)
+	DeleteShareNetwork(id string) error
 }
 
 // Loadbalancing describes the operations of a client interacting with OpenStack's Octavia service.

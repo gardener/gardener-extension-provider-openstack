@@ -235,6 +235,7 @@ func computeProviderStatusFromFlowState(state *infraflow.PersistentState) (*open
 	status.Networks.Router.IP = shared.ValidValue(state.Data[infraflow.RouterIP])
 	status.Networks.FloatingPool.ID = shared.ValidValue(state.Data[infraflow.IdentifierFloatingNetwork])
 	status.Networks.FloatingPool.Name = shared.ValidValue(state.Data[infraflow.NameFloatingNetwork])
+	status.Networks.ShareNetwork.ID = shared.ValidValue(state.Data[infraflow.IdentifierShareNetwork])
 
 	subnetID := shared.ValidValue(state.Data[infraflow.IdentifierSubnet])
 	if subnetID != "" {

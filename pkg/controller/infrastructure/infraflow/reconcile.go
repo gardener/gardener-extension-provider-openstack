@@ -23,6 +23,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
@@ -78,6 +79,11 @@ func (c *FlowContext) buildReconcileGraph() *flow.Graph {
 	_ = c.AddTask(g, "ensure ssh key pair",
 		c.ensureSSHKeyPair,
 		Timeout(defaultTimeout), Dependencies(ensureRouter))
+
+	_ = c.AddTask(g, "ensure share network",
+		c.ensureShareNetwork,
+		Timeout(defaultTimeout), Dependencies(ensureSubnet),
+	)
 
 	return g
 }
@@ -454,4 +460,43 @@ func (c *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 	}
 	c.state.Set(NameKeyPair, keyPair.Name)
 	return nil
+}
+
+func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
+	log := c.LogFromContext(ctx)
+	networkID := *c.state.Get(IdentifierNetwork)
+	subnetID := *c.state.Get(IdentifierSubnet)
+	desired := &sharenetworks.ShareNetwork{
+		Name:            c.namespace,
+		NeutronNetID:    networkID,
+		NeutronSubnetID: subnetID,
+	}
+
+	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
+		c.namespace,
+		noopFinder[sharenetworks.ShareNetwork],
+		c.access.GetShareNetworkByName,
+		func(item *sharenetworks.ShareNetwork) bool {
+			if item.NeutronSubnetID == networkID && item.NeutronSubnetID == subnetID {
+				return true
+			}
+			return false
+		})
+
+	if err != nil {
+		return err
+	}
+	if current != nil {
+		c.state.Set(IdentifierShareNetwork, current.ID)
+		return nil
+	}
+
+	log.Info("creating...")
+	created, err := c.access.CreateShareNetwork(desired)
+	if err != nil {
+		return err
+	}
+	c.state.Set(IdentifierShareNetwork, created.ID)
+	return nil
+
 }

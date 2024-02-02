@@ -23,6 +23,7 @@ import (
 	networks "github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	ports "github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	subnets "github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	sharenetworks "github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -605,6 +606,21 @@ func (mr *MockNetworkingMockRecorder) CreateSecurityGroup(arg0 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecurityGroup", reflect.TypeOf((*MockNetworking)(nil).CreateSecurityGroup), arg0)
 }
 
+// CreateShareNetwork mocks base method.
+func (m *MockNetworking) CreateShareNetwork(arg0 sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateShareNetwork", arg0)
+	ret0, _ := ret[0].(*sharenetworks.ShareNetwork)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateShareNetwork indicates an expected call of CreateShareNetwork.
+func (mr *MockNetworkingMockRecorder) CreateShareNetwork(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShareNetwork", reflect.TypeOf((*MockNetworking)(nil).CreateShareNetwork), arg0)
+}
+
 // CreateSubnet mocks base method.
 func (m *MockNetworking) CreateSubnet(arg0 subnets.CreateOpts) (*subnets.Subnet, error) {
 	m.ctrl.T.Helper()
@@ -688,6 +704,20 @@ func (m *MockNetworking) DeleteSecurityGroup(arg0 string) error {
 func (mr *MockNetworkingMockRecorder) DeleteSecurityGroup(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecurityGroup", reflect.TypeOf((*MockNetworking)(nil).DeleteSecurityGroup), arg0)
+}
+
+// DeleteShareNetwork mocks base method.
+func (m *MockNetworking) DeleteShareNetwork(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteShareNetwork", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteShareNetwork indicates an expected call of DeleteShareNetwork.
+func (mr *MockNetworkingMockRecorder) DeleteShareNetwork(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteShareNetwork", reflect.TypeOf((*MockNetworking)(nil).DeleteShareNetwork), arg0)
 }
 
 // DeleteSubnet mocks base method.
@@ -912,6 +942,21 @@ func (m *MockNetworking) ListSecurityGroup(arg0 groups.ListOpts) ([]groups.SecGr
 func (mr *MockNetworkingMockRecorder) ListSecurityGroup(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSecurityGroup", reflect.TypeOf((*MockNetworking)(nil).ListSecurityGroup), arg0)
+}
+
+// ListShareNetworks mocks base method.
+func (m *MockNetworking) ListShareNetworks(arg0 sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListShareNetworks", arg0)
+	ret0, _ := ret[0].([]sharenetworks.ShareNetwork)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListShareNetworks indicates an expected call of ListShareNetworks.
+func (mr *MockNetworkingMockRecorder) ListShareNetworks(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListShareNetworks", reflect.TypeOf((*MockNetworking)(nil).ListShareNetworks), arg0)
 }
 
 // ListSubnets mocks base method.

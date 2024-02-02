@@ -55,6 +55,10 @@ func findExisting[T any](id *string, name string,
 	return found[0], nil
 }
 
+func noopFinder[T any](_ string) (*T, error) {
+	return nil, nil
+}
+
 type waiter struct {
 	log           logr.Logger
 	start         time.Time

@@ -38,6 +38,8 @@ const (
 	IdentifierFloatingNetwork = "FloatingNetwork"
 	// IdentifierSecGroup is the key for the security group id
 	IdentifierSecGroup = "SecurityGroup"
+	// IdentifierShareNetwork is the key for the share network id
+	IdentifierShareNetwork = "ShareNetwork"
 
 	// NameFloatingNetwork is the key for the floating network name
 	NameFloatingNetwork = "FloatingNetworkName"

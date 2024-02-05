@@ -32,7 +32,6 @@ EXTENSION_NAMESPACE			:= garden
 WEBHOOK_CONFIG_PORT	:= 8443
 WEBHOOK_CONFIG_MODE	:= url
 WEBHOOK_CONFIG_URL	:= host.docker.internal:$(WEBHOOK_CONFIG_PORT)
-EXTENSION_NAMESPACE	:=
 
 WEBHOOK_PARAM := --webhook-config-url=$(WEBHOOK_CONFIG_URL)
 ifeq ($(WEBHOOK_CONFIG_MODE), service)
@@ -83,12 +82,13 @@ start:
 
 .PHONY: start-admission
 start-admission:
-	@LEADER_ELECTION_NAMESPACE=$(EXTENSION_NAMESPACE) go run \
+	@go run \
 		-ldflags $(LD_FLAGS) \
 		./cmd/$(EXTENSION_PREFIX)-$(ADMISSION_NAME) \
 		--webhook-config-server-host=0.0.0.0 \
 		--webhook-config-server-port=$(WEBHOOK_CONFIG_PORT) \
 		--webhook-config-mode=$(WEBHOOK_CONFIG_MODE) \
+		--leader-election-namespace=$(EXTENSION_NAMESPACE) \
 		$(WEBHOOK_PARAM)
 
 .PHONY: hook-me

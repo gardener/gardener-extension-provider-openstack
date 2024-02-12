@@ -243,7 +243,7 @@ func (c *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
 		c.namespace,
-		noopFinder[sharenetworks.ShareNetwork],
+		c.sharedFilesystem.GetShareNetwork,
 		func(name string) ([]*sharenetworks.ShareNetwork, error) {
 			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
 				AllTenants:      false,
@@ -259,12 +259,12 @@ func (c *FlowContext) deleteShareNetwork(ctx context.Context) error {
 		return err
 	}
 	if current != nil {
-		log.Info("deleting...", "securityGroup", current.ID)
+		log.Info("deleting...", "shareNetwork", current.ID)
 		if err := c.sharedFilesystem.DeleteShareNetwork(current.ID); err != nil {
 			return err
 		}
 	}
-	c.state.Set(IdentifierNetwork, "")
+	c.state.Set(IdentifierShareNetwork, "")
 	c.state.Set(NameShareNetwork, "")
 	return nil
 }

@@ -1143,6 +1143,21 @@ func (mr *MockSharedFilesystemMockRecorder) DeleteShareNetwork(arg0 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteShareNetwork", reflect.TypeOf((*MockSharedFilesystem)(nil).DeleteShareNetwork), arg0)
 }
 
+// GetShareNetwork mocks base method.
+func (m *MockSharedFilesystem) GetShareNetwork(arg0 string) (*sharenetworks.ShareNetwork, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShareNetwork", arg0)
+	ret0, _ := ret[0].(*sharenetworks.ShareNetwork)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetShareNetwork indicates an expected call of GetShareNetwork.
+func (mr *MockSharedFilesystemMockRecorder) GetShareNetwork(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShareNetwork", reflect.TypeOf((*MockSharedFilesystem)(nil).GetShareNetwork), arg0)
+}
+
 // ListShareNetworks mocks base method.
 func (m *MockSharedFilesystem) ListShareNetworks(arg0 sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error) {
 	m.ctrl.T.Helper()

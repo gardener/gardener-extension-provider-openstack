@@ -178,6 +178,7 @@ type Loadbalancing interface {
 // SharedFilesystem describes operations for OpenStack's Manila service.
 type SharedFilesystem interface {
 	// Share Networks
+	GetShareNetwork(id string) (*sharenetworks.ShareNetwork, error)
 	CreateShareNetwork(createOpts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error)
 	ListShareNetworks(listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error)
 	DeleteShareNetwork(id string) error

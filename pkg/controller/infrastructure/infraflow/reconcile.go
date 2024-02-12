@@ -464,12 +464,16 @@ func (c *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 }
 
 func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
+	if c.config.Networks.ShareNetwork == nil || !c.config.Networks.ShareNetwork.Enabled {
+		return c.deleteShareNetwork(ctx)
+	}
+
 	log := c.LogFromContext(ctx)
 	networkID := pointer.StringDeref(c.state.Get(IdentifierNetwork), "")
 	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
 		c.namespace,
-		noopFinder[sharenetworks.ShareNetwork],
+		c.sharedFilesystem.GetShareNetwork,
 		func(name string) ([]*sharenetworks.ShareNetwork, error) {
 			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
 				Name:            name,
@@ -485,8 +489,10 @@ func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	if current != nil {
 		c.state.Set(IdentifierShareNetwork, current.ID)
+		c.state.Set(NameShareNetwork, current.Name)
 		return nil
 	}
 

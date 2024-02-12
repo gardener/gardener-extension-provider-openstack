@@ -32,7 +32,6 @@ EXTENSION_NAMESPACE			:= garden
 WEBHOOK_CONFIG_PORT	:= 8443
 WEBHOOK_CONFIG_MODE	:= url
 WEBHOOK_CONFIG_URL	:= host.docker.internal:$(WEBHOOK_CONFIG_PORT)
-EXTENSION_NAMESPACE	:=
 
 WEBHOOK_PARAM := --webhook-config-url=$(WEBHOOK_CONFIG_URL)
 ifeq ($(WEBHOOK_CONFIG_MODE), service)
@@ -83,12 +82,13 @@ start:
 
 .PHONY: start-admission
 start-admission:
-	@LEADER_ELECTION_NAMESPACE=$(EXTENSION_NAMESPACE) go run \
+	@go run \
 		-ldflags $(LD_FLAGS) \
 		./cmd/$(EXTENSION_PREFIX)-$(ADMISSION_NAME) \
 		--webhook-config-server-host=0.0.0.0 \
 		--webhook-config-server-port=$(WEBHOOK_CONFIG_PORT) \
 		--webhook-config-mode=$(WEBHOOK_CONFIG_MODE) \
+		--leader-election-namespace=$(EXTENSION_NAMESPACE) \
 		$(WEBHOOK_PARAM)
 
 .PHONY: hook-me
@@ -109,11 +109,11 @@ docker-login:
 	@gcloud auth activate-service-account --key-file .kube-secrets/gcr/gcr-readwrite.json
 
 .PHONY: docker-image-provider
-docker-images-provider:
+docker-image-provider:
 	@docker buildx build --platform $(PLATFORM) --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(IMAGE_PREFIX)/$(NAME):$(VERSION)           -t $(IMAGE_PREFIX)/$(NAME):latest           -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(NAME)           .
 
 .PHONY: docker-image-admission
-docker-images-admission:
+docker-image-admission:
 	@docker buildx build --platform $(PLATFORM) --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):$(VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):latest -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(ADMISSION_NAME) .
 
 .PHONY: docker-images

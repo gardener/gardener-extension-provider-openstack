@@ -202,7 +202,23 @@ func (oc *OpenstackClientFactory) Loadbalancing(options ...Option) (Loadbalancin
 	return &LoadbalancingClient{
 		client: client,
 	}, nil
+}
 
+// SharedFilesystem creates a new Manila client.
+func (oc *OpenstackClientFactory) SharedFilesystem(options ...Option) (SharedFilesystem, error) {
+	eo := gophercloud.EndpointOpts{}
+	for _, opt := range options {
+		eo = opt(eo)
+	}
+
+	client, err := openstack.NewSharedFileSystemV2(oc.providerClient, eo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SharedFilesystemClient{
+		client: client,
+	}, nil
 }
 
 // IsNotFoundError checks if an error returned by OpenStack is caused by HTTP 404 status code.

@@ -23,6 +23,8 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
@@ -78,6 +80,11 @@ func (c *FlowContext) buildReconcileGraph() *flow.Graph {
 	_ = c.AddTask(g, "ensure ssh key pair",
 		c.ensureSSHKeyPair,
 		Timeout(defaultTimeout), Dependencies(ensureRouter))
+
+	_ = c.AddTask(g, "ensure share network",
+		c.ensureShareNetwork,
+		Timeout(defaultTimeout), Dependencies(ensureSubnet),
+	)
 
 	return g
 }
@@ -453,5 +460,52 @@ func (c *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 		}
 	}
 	c.state.Set(NameKeyPair, keyPair.Name)
+	return nil
+}
+
+func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
+	if c.config.Networks.ShareNetwork == nil || !c.config.Networks.ShareNetwork.Enabled {
+		return c.deleteShareNetwork(ctx)
+	}
+
+	log := c.LogFromContext(ctx)
+	networkID := pointer.StringDeref(c.state.Get(IdentifierNetwork), "")
+	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
+	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
+		c.namespace,
+		c.sharedFilesystem.GetShareNetwork,
+		func(name string) ([]*sharenetworks.ShareNetwork, error) {
+			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+				Name:            name,
+				NeutronNetID:    networkID,
+				NeutronSubnetID: subnetID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return sliceToPtr(list), nil
+		})
+
+	if err != nil {
+		return err
+	}
+
+	if current != nil {
+		c.state.Set(IdentifierShareNetwork, current.ID)
+		c.state.Set(NameShareNetwork, current.Name)
+		return nil
+	}
+
+	log.Info("creating...")
+	created, err := c.sharedFilesystem.CreateShareNetwork(sharenetworks.CreateOpts{
+		NeutronNetID:    networkID,
+		NeutronSubnetID: subnetID,
+		Name:            c.namespace,
+	})
+	if err != nil {
+		return err
+	}
+	c.state.Set(IdentifierShareNetwork, created.ID)
+	c.state.Set(NameShareNetwork, created.Name)
 	return nil
 }

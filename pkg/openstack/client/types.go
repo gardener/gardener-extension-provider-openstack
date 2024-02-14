@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,FactoryFactory,Compute,DNS,Networking,Loadbalancing
+//go:generate mockgen -destination=mocks/client_mocks.go -package=mocks . Factory,FactoryFactory,Compute,DNS,Networking,Loadbalancing,SharedFilesystem
 package client
 
 import (
@@ -32,6 +32,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
@@ -66,6 +67,11 @@ type LoadbalancingClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// SharedFilesystemClient is a client for Manila service.
+type SharedFilesystemClient struct {
+	client *gophercloud.ServiceClient
+}
+
 // Option can be passed to Factory implementations to modify the produced clients.
 type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
 
@@ -76,6 +82,7 @@ type Factory interface {
 	DNS(options ...Option) (DNS, error)
 	Networking(options ...Option) (Networking, error)
 	Loadbalancing(options ...Option) (Loadbalancing, error)
+	SharedFilesystem(options ...Option) (SharedFilesystem, error)
 }
 
 // Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
@@ -166,6 +173,15 @@ type Loadbalancing interface {
 	ListLoadbalancers(opts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error)
 	DeleteLoadbalancer(id string, opts loadbalancers.DeleteOpts) error
 	GetLoadbalancer(id string) (*loadbalancers.LoadBalancer, error)
+}
+
+// SharedFilesystem describes operations for OpenStack's Manila service.
+type SharedFilesystem interface {
+	// Share Networks
+	GetShareNetwork(id string) (*sharenetworks.ShareNetwork, error)
+	CreateShareNetwork(createOpts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error)
+	ListShareNetworks(listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error)
+	DeleteShareNetwork(id string) error
 }
 
 // FactoryFactory creates instances of Factory.

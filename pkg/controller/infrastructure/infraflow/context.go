@@ -38,6 +38,8 @@ const (
 	IdentifierFloatingNetwork = "FloatingNetwork"
 	// IdentifierSecGroup is the key for the security group id
 	IdentifierSecGroup = "SecurityGroup"
+	// IdentifierShareNetwork is the key for the share network id
+	IdentifierShareNetwork = "ShareNetwork"
 
 	// NameFloatingNetwork is the key for the floating network name
 	NameFloatingNetwork = "FloatingNetworkName"
@@ -49,6 +51,8 @@ const (
 	NameKeyPair = "KeyPair"
 	// NameSecGroup is the name of the security group
 	NameSecGroup = "SecurityGroupName"
+	// NameShareNetwork is the name of the shared network
+	NameShareNetwork = "ShareNetworkName"
 
 	// RouterIP is the key for the router IP address
 	RouterIP = "RouterIP"
@@ -72,6 +76,7 @@ type FlowContext struct {
 	cloudProfileConfig *openstackapi.CloudProfileConfig
 	networking         osclient.Networking
 	loadbalancing      osclient.Loadbalancing
+	sharedFilesystem   osclient.SharedFilesystem
 	access             access.NetworkingAccess
 	compute            osclient.Compute
 }
@@ -103,6 +108,10 @@ func NewFlowContext(log logr.Logger, clientFactory osclient.Factory,
 	if err != nil {
 		return nil, err
 	}
+	sharedFilesytem, err := clientFactory.SharedFilesystem(osclient.WithRegion(infra.Spec.Region))
+	if err != nil {
+		return nil, err
+	}
 
 	flowContext := &FlowContext{
 		BasicFlowContext:   *shared.NewBasicFlowContext(log, whiteboard, persistor),
@@ -115,6 +124,7 @@ func NewFlowContext(log logr.Logger, clientFactory osclient.Factory,
 		loadbalancing:      loadbalancing,
 		access:             access,
 		compute:            compute,
+		sharedFilesystem:   sharedFilesytem,
 	}
 	return flowContext, nil
 }

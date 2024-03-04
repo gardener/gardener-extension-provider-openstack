@@ -152,7 +152,6 @@ var _ = Describe("Actuator", func() {
 			openstackClientFactory.EXPECT().DNS().Return(dnsClient, nil)
 			dnsClient.EXPECT().GetZones(ctx).Return(zones, nil)
 			dnsClient.EXPECT().CreateOrUpdateRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA), []string{address}, 120).Return(nil)
-			dnsClient.EXPECT().DeleteRecordSet(ctx, zone, "comment-"+dnsName, "TXT").Return(nil)
 			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, obj *extensionsv1alpha1.DNSRecord, _ client.Patch, opts ...client.PatchOption) error {
 					Expect(obj.Status).To(Equal(extensionsv1alpha1.DNSRecordStatus{

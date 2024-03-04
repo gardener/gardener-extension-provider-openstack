@@ -22,7 +22,6 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
@@ -85,18 +84,6 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dns *extensio
 		return &reconcilerutils.RequeueAfterError{
 			Cause:        fmt.Errorf("could not create or update DNS recordset in zone %s with name %s, type %s, and values %v: %+v", zone, dns.Spec.Name, dns.Spec.RecordType, dns.Spec.Values, err),
 			RequeueAfter: requeueAfterOnProviderError,
-		}
-	}
-
-	// Delete meta DNS recordset if exists
-	if dns.Status.LastOperation == nil || dns.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate {
-		name, recordType := dnsrecord.GetMetaRecordName(dns.Spec.Name), "TXT"
-		log.Info("Deleting meta DNS recordset", "zone", zone, "name", name, "type", recordType, "dnsrecord", kutil.ObjectName(dns))
-		if err := dnsClient.DeleteRecordSet(ctx, zone, name, recordType); err != nil {
-			return &reconcilerutils.RequeueAfterError{
-				Cause:        fmt.Errorf("could not delete meta DNS recordset in zone %s with name %s and type %s: %+v", zone, name, recordType, err),
-				RequeueAfter: requeueAfterOnProviderError,
-			}
 		}
 	}
 

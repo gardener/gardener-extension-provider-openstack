@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/go-logr/logr"
@@ -63,17 +64,17 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 	// Create openstack networking client
 	credentials, err := openstack.GetCredentials(ctx, c.client, infra.Spec.SecretRef, false)
 	if err != nil {
-		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not get Openstack credentials: %+v", err)))
+		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not get Openstack credentials: %+v", util.DetermineError(err, helper.KnownCodes))))
 		return allErrs
 	}
 	clientFactory, err := c.clientFactoryFactory.NewFactory(credentials)
 	if err != nil {
-		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack client factory: %+v", err)))
+		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack client factory: %+v", util.DetermineError(err, helper.KnownCodes))))
 		return allErrs
 	}
 	networkingClient, err := clientFactory.Networking()
 	if err != nil {
-		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack networking client: %+v", err)))
+		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack networking client: %+v", util.DetermineError(err, helper.KnownCodes))))
 		return allErrs
 	}
 
@@ -90,7 +91,7 @@ func (c *configValidator) validateFloatingPoolName(ctx context.Context, networki
 	// Get external network names
 	externalNetworkNames, err := networkingClient.GetExternalNetworkNames(ctx)
 	if err != nil {
-		allErrs = append(allErrs, field.InternalError(fldPath, fmt.Errorf("could not get external network names: %w", err)))
+		allErrs = append(allErrs, field.InternalError(fldPath, fmt.Errorf("could not get external network names: %w", util.DetermineError(err, helper.KnownCodes))))
 		return allErrs
 	}
 

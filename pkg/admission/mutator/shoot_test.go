@@ -11,8 +11,8 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"

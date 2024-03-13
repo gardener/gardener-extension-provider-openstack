@@ -95,7 +95,6 @@ var _ = Describe("Ensurer", func() {
 
 		ensurer genericmutator.Ensurer
 
-		dummyContext   = gcontext.NewGardenContext(nil, nil)
 		eContextK8s125 = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
@@ -419,35 +418,22 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		DescribeTable("should modify existing elements of kubelet.service unit options",
-			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, cloudProvider string) {
-				newUnitOptions := []*unit.UnitOption{
-					{
-						Section: "Service",
-						Name:    "ExecStart",
-						Value: `/opt/bin/hyperkube kubelet \
-    --config=/var/lib/kubelet/config/kubelet`,
-					},
-					hostnamectlUnitOption,
-				}
+		It("should modify existing elements of kubelet.service unit options", func() {
+			newUnitOptions := []*unit.UnitOption{
+				{
+					Section: "Service",
+					Name:    "ExecStart",
+					Value: `/opt/bin/hyperkube kubelet \
+    --config=/var/lib/kubelet/config/kubelet \
+    --cloud-provider=external`,
+				},
+				hostnamectlUnitOption,
+			}
 
-				if cloudProvider != "" {
-					newUnitOptions[0].Value += ` \
-    --cloud-provider=` + cloudProvider
-
-					if cloudProvider != "external" {
-						newUnitOptions[0].Value += ` \
-    --cloud-config=/var/lib/kubelet/cloudprovider.conf`
-					}
-				}
-
-				opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, gctx, kubeletVersion, oldUnitOptions, nil)
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(opts).To(Equal(newUnitOptions))
-			},
-
-			Entry("kubelet version >= 1.24", dummyContext, semver.MustParse("1.25.0"), "external"),
-		)
+			opts, err := ensurer.EnsureKubeletServiceUnitOptions(ctx, nil, nil, oldUnitOptions, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(opts).To(Equal(newUnitOptions))
+		})
 	})
 
 	Describe("#EnsureKubeletConfiguration", func() {

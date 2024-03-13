@@ -15,9 +15,3 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
     verbs: ["get", "list", "watch", "update"]
-{{- if not .Values.pspDisabled }}
-  - apiGroups: ["policy", "extensions"]
-    resourceNames: ["{{ include "csi-driver-node.extensionsGroup" . }}.{{ include "csi-driver-node.name" . }}.csi-driver-manila-node"]
-    resources: ["podsecuritypolicies"]
-    verbs: ["use"]
-{{- end }}

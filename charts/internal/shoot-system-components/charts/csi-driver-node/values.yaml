@@ -32,8 +32,6 @@ resources:
       cpu: 11m
       memory: 32Mi
 
-pspDisabled: false
-
 vpa:
   resourcePolicy:
     driver:

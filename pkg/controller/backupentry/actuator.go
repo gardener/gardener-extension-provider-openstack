@@ -17,9 +17,11 @@ package backupentry
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,6 +52,6 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, be *extensionsv1al
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
-
-	return util.DetermineError(openstackClient.DeleteObjectsWithPrefix(ctx, be.Spec.BucketName, fmt.Sprintf("%s/", be.Name)), helper.KnownCodes)
+	entryName := strings.TrimPrefix(be.Name, v1beta1constants.BackupSourcePrefix+"-")
+	return util.DetermineError(openstackClient.DeleteObjectsWithPrefix(ctx, be.Spec.BucketName, fmt.Sprintf("%s/", entryName)), helper.KnownCodes)
 }

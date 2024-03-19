@@ -6,6 +6,9 @@ monitor-timeout="{{ .Values.monitorTimeout }}"
 monitor-max-retries={{ .Values.monitorMaxRetries }}
 lb-version="v2"
 lb-provider="{{ .Values.lbProvider }}"
+{{- if eq .Values.lbProvider "ovn" }}
+lb-method="SOURCE_IP_PORT"
+{{- end }}
 floating-network-id="{{ .Values.floatingNetworkID }}"
 use-octavia="{{ .Values.useOctavia }}"
 {{- if .Values.floatingSubnetID }}

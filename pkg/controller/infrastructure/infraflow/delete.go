@@ -33,6 +33,7 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 	g := flow.NewGraph("Openstack infrastructure destruction")
 
 	needToDeleteNetwork := c.config.Networks.ID == nil
+	needToDeleteSubnet := c.config.Networks.SubnetID == nil
 	needToDeleteRouter := c.config.Networks.Router == nil
 
 	_ = c.AddTask(g, "delete ssh key pair",
@@ -73,11 +74,10 @@ func (c *FlowContext) buildDeleteGraph() *flow.Graph {
 		Timeout(defaultTimeout), Dependencies(recoverSubnetID))
 	deleteRouterInterface := c.AddTask(g, "delete router interface",
 		c.deleteRouterInterface,
-		Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID, k8sRoutes))
-	// subnet deletion only needed if network is given by spec
+		DoIf(needToDeleteSubnet || needToDeleteRouter), Timeout(defaultTimeout), Dependencies(recoverRouterID, recoverSubnetID, k8sRoutes))
 	_ = c.AddTask(g, "delete subnet",
 		c.deleteSubnet,
-		DoIf(!needToDeleteNetwork), Timeout(defaultTimeout), Dependencies(deleteRouterInterface, k8sLoadBalancers))
+		DoIf(needToDeleteSubnet), Timeout(defaultTimeout), Dependencies(deleteRouterInterface, k8sLoadBalancers))
 	_ = c.AddTask(g, "delete network",
 		c.deleteNetwork,
 		DoIf(needToDeleteNetwork), Timeout(defaultTimeout), Dependencies(deleteRouterInterface))

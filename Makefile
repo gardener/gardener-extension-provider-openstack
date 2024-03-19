@@ -107,7 +107,7 @@ docker-image-admission:
 	@docker buildx build --platform $(PLATFORM) --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):$(VERSION) -t $(IMAGE_PREFIX)/$(ADMISSION_NAME):latest -f Dockerfile -m 6g --target $(EXTENSION_PREFIX)-$(ADMISSION_NAME) .
 
 .PHONY: docker-images
-docker-images: docker-images-provider docker-images-admission
+docker-images: docker-image-provider docker-image-admission
 
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #

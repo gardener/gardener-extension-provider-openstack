@@ -7,10 +7,10 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,7 +85,7 @@ func (c *configValidator) validateFloatingPoolName(ctx context.Context, networki
 	}
 
 	// Check if floatingPoolName is contained in the list of external network names
-	if !utils.ValueExists(floatingPoolName, externalNetworkNames) {
+	if !slices.Contains(externalNetworkNames, floatingPoolName) {
 		allErrs = append(allErrs, field.NotFound(fldPath, floatingPoolName))
 	}
 

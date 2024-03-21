@@ -387,6 +387,10 @@ var _ = Describe("Machines", func() {
 						"secret": map[string]interface{}{
 							"cloudConfig": string(userData),
 						},
+						"operatingSystem": map[string]interface{}{
+							"operatingSystemName":    machineImageName,
+							"operatingSystemVersion": machineImageVersion,
+						},
 					}
 					if imageID == "" {
 						defaultMachineClass["imageName"] = name

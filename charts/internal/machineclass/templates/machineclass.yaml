@@ -18,10 +18,13 @@ kind: MachineClass
 metadata:
   name: {{ $machineClass.name }}
   namespace: {{ $.Release.Namespace }}
-{{- if $machineClass.labels }}
   labels:
-  {{ toYaml $machineClass.labels | indent 4 }}
-{{- end }}
+    {{- if $machineClass.labels }}
+{{ toYaml $machineClass.labels | indent 4 }}
+    {{- end }}
+    {{- if $machineClass.operatingSystem }}
+{{ toYaml $machineClass.operatingSystem | indent 4 }}
+    {{- end }}
 provider: "OpenStack"
 {{- if $machineClass.nodeTemplate }}
 nodeTemplate:

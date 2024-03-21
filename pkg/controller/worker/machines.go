@@ -223,6 +223,13 @@ func (w *workerDelegate) generateMachineConfig() error {
 				v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass,
 			}
 
+			if pool.MachineImage.Name != "" && pool.MachineImage.Version != "" {
+				machineClassSpec["operatingSystem"] = map[string]interface{}{
+					"operatingSystemName":    pool.MachineImage.Name,
+					"operatingSystemVersion": pool.MachineImage.Version,
+				}
+			}
+
 			machineClasses = append(machineClasses, machineClassSpec)
 		}
 	}

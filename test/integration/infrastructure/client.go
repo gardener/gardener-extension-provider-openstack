@@ -14,8 +14,7 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
-// OpenstackClient used to perform openstack operations
-type OpenstackClient struct {
+type OpenstackClientOpts struct {
 	AuthURL          string
 	DomainName       string
 	FloatingPoolName string
@@ -23,6 +22,14 @@ type OpenstackClient struct {
 	Region           string
 	TenantName       string
 	UserName         string
+	AppID            string
+	AppName          string
+	AppSecret        string
+}
+
+// OpenstackClient used to perform openstack operations
+type OpenstackClient struct {
+	OpenstackClientOpts
 	ProviderClient   *gophercloud.ProviderClient
 	ComputeClient    *gophercloud.ServiceClient
 	NetworkingClient *gophercloud.ServiceClient
@@ -30,65 +37,53 @@ type OpenstackClient struct {
 }
 
 // NewOpenstackClient creates an openstack struct
-func NewOpenstackClient(authURL, domainName, floatingPoolName, password, region, tenantName, username string) (*OpenstackClient, error) {
+func NewOpenstackClient(opts OpenstackClientOpts) (*OpenstackClient, error) {
+	openstackClient := &OpenstackClient{OpenstackClientOpts: opts}
 
-	openstackClient := &OpenstackClient{
-		AuthURL:          authURL,
-		DomainName:       domainName,
-		FloatingPoolName: floatingPoolName,
-		Password:         password,
-		Region:           region,
-		TenantName:       tenantName,
-		UserName:         username,
-	}
-
-	providerClient, err := openstackClient.createProviderClient()
+	err := openstackClient.setProviderClient()
 	if err != nil {
 		return nil, err
 	}
 
-	openstackClient.ProviderClient = providerClient
-
-	computeClient, err := openstackClient.createComputeClient()
+	err = openstackClient.setComputeClient()
 	if err != nil {
 		return nil, err
 	}
 
-	networkingClient, err := openstackClient.createNetworkingClient()
+	err = openstackClient.setNetworkingClient()
 	if err != nil {
 		return nil, err
 	}
 
-	identityClient, err := openstackClient.createIdentityClient()
+	err = openstackClient.setIdentityClient()
 	if err != nil {
 		return nil, err
 	}
-
-	openstackClient.ComputeClient = computeClient
-	openstackClient.NetworkingClient = networkingClient
-	openstackClient.IdentityClient = identityClient
 
 	return openstackClient, nil
 }
 
 // createOpenStackClient creates and authenticates a base OpenStack client
-func (o *OpenstackClient) createProviderClient() (*gophercloud.ProviderClient, error) {
+func (o *OpenstackClient) setProviderClient() error {
 	config := &tls.Config{}
 	config.InsecureSkipVerify = false
 
 	opts := &clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     strings.TrimSpace(string(o.AuthURL)),
-			Username:    strings.TrimSpace(string(o.UserName)),
-			Password:    strings.TrimSpace(string(o.Password)),
-			DomainName:  strings.TrimSpace(string(o.DomainName)),
-			ProjectName: strings.TrimSpace(string(o.TenantName)),
+			AuthURL:                     strings.TrimSpace(string(o.AuthURL)),
+			DomainName:                  strings.TrimSpace(string(o.DomainName)),
+			ProjectName:                 strings.TrimSpace(string(o.TenantName)),
+			Username:                    strings.TrimSpace(string(o.UserName)),
+			Password:                    strings.TrimSpace(string(o.Password)),
+			ApplicationCredentialID:     strings.TrimSpace(string(o.AppID)),
+			ApplicationCredentialName:   strings.TrimSpace(string(o.AppName)),
+			ApplicationCredentialSecret: strings.TrimSpace(string(o.AppSecret)),
 		},
 		RegionName: strings.TrimSpace(string(o.Region)),
 	}
 	authOpts, err := clientconfig.AuthOptions(opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// AllowReauth should be set to true if you grant permission for Gophercloud to
@@ -98,8 +93,7 @@ func (o *OpenstackClient) createProviderClient() (*gophercloud.ProviderClient, e
 
 	provider, err := openstack.AuthenticatedClient(*authOpts)
 	if err != nil {
-		return nil, err
-
+		return err
 	}
 
 	// Set UserAgent
@@ -110,29 +104,43 @@ func (o *OpenstackClient) createProviderClient() (*gophercloud.ProviderClient, e
 		Transport: transport,
 	}
 
-	return provider, nil
+	o.ProviderClient = provider
+
+	return nil
 }
 
 // createComputeClient is used to create a compute client
-func (o *OpenstackClient) createComputeClient() (*gophercloud.ServiceClient, error) {
-	return openstack.NewComputeV2(o.ProviderClient, gophercloud.EndpointOpts{
+func (o *OpenstackClient) setComputeClient() error {
+	computeClient, err := openstack.NewComputeV2(o.ProviderClient, gophercloud.EndpointOpts{
 		Region:       strings.TrimSpace(o.Region),
 		Availability: gophercloud.AvailabilityPublic,
 	})
+
+	o.ComputeClient = computeClient
+
+	return err
 }
 
 // createNetworkingClient is used to create a networking client
-func (o *OpenstackClient) createNetworkingClient() (*gophercloud.ServiceClient, error) {
-	return openstack.NewNetworkV2(o.ProviderClient, gophercloud.EndpointOpts{
+func (o *OpenstackClient) setNetworkingClient() error {
+	networkingClient, err := openstack.NewNetworkV2(o.ProviderClient, gophercloud.EndpointOpts{
 		Region:       o.Region,
 		Availability: gophercloud.AvailabilityPublic,
 	})
+
+	o.NetworkingClient = networkingClient
+
+	return err
 }
 
 // createIdentityClient is used to create a networking client
-func (o *OpenstackClient) createIdentityClient() (*gophercloud.ServiceClient, error) {
-	return openstack.NewIdentityV2(o.ProviderClient, gophercloud.EndpointOpts{
+func (o *OpenstackClient) setIdentityClient() error {
+	identityClient, err := openstack.NewIdentityV2(o.ProviderClient, gophercloud.EndpointOpts{
 		Region:       o.Region,
 		Availability: gophercloud.AvailabilityPublic,
 	})
+
+	o.IdentityClient = identityClient
+
+	return err
 }

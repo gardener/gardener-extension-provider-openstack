@@ -32,9 +32,27 @@ REGION             := .kube-secrets/openstack/region.secret
 AUTH_URL           := .kube-secrets/openstack/auth_url.secret
 DOMAIN_NAME        := .kube-secrets/openstack/domain_name.secret
 FLOATING_POOL_NAME := .kube-secrets/openstack/floating_pool_name.secret
-PASSWORD           := .kube-secrets/openstack/password.secret
 TENANT_NAME        := .kube-secrets/openstack/tenant_name.secret
+# either authenticate with username/password credentials
 USER_NAME          := .kube-secrets/openstack/user_name.secret
+PASSWORD           := .kube-secrets/openstack/password.secret
+# or application credentials
+APP_ID             := .kube-secrets/openstack/app_id.secret
+APP_NAME           := .kube-secrets/openstack/app_name.secret
+APP_SECRET         := .kube-secrets/openstack/app_secret.secret
+
+INFRA_TEST_FLAGS   := --v -ginkgo.v -ginkgo.progress \
+                      --kubeconfig=${KUBECONFIG} \
+                      --auth-url='$(shell cat $(AUTH_URL))' \
+                      --domain-name='$(shell cat $(DOMAIN_NAME))' \
+                      --floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
+                      --password='$(shell cat $(PASSWORD))' \
+                      --tenant-name='$(shell cat $(TENANT_NAME))' \
+                      --user-name='$(shell cat $(USER_NAME))' \
+                      --region='$(shell cat $(REGION))' \
+                      --app-id='$(shell cat $(APP_ID))' \
+                      --app-name='$(shell cat $(APP_NAME))' \
+                      --app-secret='$(shell cat $(APP_SECRET))'
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -163,26 +181,8 @@ verify-extended: check-generate check format test-cov test-clean
 
 .PHONY: integration-test-infra
 integration-test-infra:
-	@go test -timeout=0 ./test/integration/infrastructure \
-		--v -ginkgo.v -ginkgo.progress \
-		--kubeconfig=${KUBECONFIG} \
-		--auth-url='$(shell cat $(AUTH_URL))' \
-		--domain-name='$(shell cat $(DOMAIN_NAME))' \
-		--floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
-		--password='$(shell cat $(PASSWORD))' \
-		--tenant-name='$(shell cat $(TENANT_NAME))' \
-		--user-name='$(shell cat $(USER_NAME))' \
-		--region='$(shell cat $(REGION))'
+	@go test -timeout=0 ./test/integration/infrastructure $(INFRA_TEST_FLAGS)
 
 .PHONY: integration-test-bastion
 integration-test-bastion:
-	@go test -timeout=0 ./test/integration/bastion \
-		--v -ginkgo.v -ginkgo.progress \
-		--kubeconfig=${KUBECONFIG} \
-		--auth-url='$(shell cat $(AUTH_URL))' \
-		--domain-name='$(shell cat $(DOMAIN_NAME))' \
-		--floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
-		--password='$(shell cat $(PASSWORD))' \
-		--tenant-name='$(shell cat $(TENANT_NAME))' \
-		--user-name='$(shell cat $(USER_NAME))' \
-		--region='$(shell cat $(REGION))'
+	@go test -timeout=0 ./test/integration/bastion $(INFRA_TEST_FLAGS)

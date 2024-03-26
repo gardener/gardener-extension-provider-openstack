@@ -79,23 +79,9 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 	authURL := getOptional(secret, AuthURL, altAuthURLKey)
 	caCert := getOptional(secret, CACert, altCABundleKey)
 
-	if password != "" {
-		if applicationCredentialSecret != "" {
-			return nil, fmt.Errorf("cannot specify both '%s' and '%s' in secret %s/%s", Password, ApplicationCredentialSecret, secret.Namespace, secret.Name)
-		}
-		if userName == "" {
-			return nil, fmt.Errorf("'%s' is required if '%s' is given in %s/%s", UserName, Password, secret.Namespace, secret.Name)
-		}
-	} else {
-		if applicationCredentialSecret == "" {
-			return nil, fmt.Errorf("must either specify '%s' or '%s' in secret %s/%s", Password, ApplicationCredentialSecret, secret.Namespace, secret.Name)
-		}
-		if applicationCredentialID == "" {
-			if userName == "" || applicationCredentialName == "" {
-				return nil, fmt.Errorf("'%s' and '%s' are required if application credentials are used without '%s' in secret %s/%s", ApplicationCredentialName, UserName,
-					ApplicationCredentialID, secret.Namespace, secret.Name)
-			}
-		}
+	err = ValidateSecrets(userName, password, applicationCredentialID, applicationCredentialName, applicationCredentialSecret)
+	if err != nil {
+		return nil, fmt.Errorf("%w in secret %s/%s", err, secret.Namespace, secret.Name)
 	}
 
 	return &Credentials{
@@ -110,6 +96,28 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 		CACert:                      caCert,
 		Insecure:                    strings.ToLower(strings.TrimSpace(string(secret.Data[Insecure]))) == "true",
 	}, nil
+}
+
+// ValidateSecrets checks if either basic auth or application credentials are completely provided
+func ValidateSecrets(userName, password, appID, appName, appSecret string) error {
+	if password != "" {
+		if appSecret != "" {
+			return fmt.Errorf("cannot specify both '%s' and '%s'", Password, ApplicationCredentialSecret)
+		}
+		if userName == "" {
+			return fmt.Errorf("'%s' is required if '%s' is given", UserName, Password)
+		}
+	} else {
+		if appSecret == "" {
+			return fmt.Errorf("must either specify '%s' or '%s'", Password, ApplicationCredentialSecret)
+		}
+		if appID == "" && (userName == "" || appName == "") {
+			return fmt.Errorf("'%s' and '%s' are required if application credentials are used without '%s'",
+				ApplicationCredentialName, UserName, ApplicationCredentialID)
+		}
+	}
+
+	return nil
 }
 
 // getOptional returns optional value for a corresponding key or empty string

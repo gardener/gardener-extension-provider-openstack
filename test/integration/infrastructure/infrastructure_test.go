@@ -64,10 +64,13 @@ var (
 	authURL          = flag.String("auth-url", "", "Authorization URL for openstack")
 	domainName       = flag.String("domain-name", "", "Domain name for openstack")
 	floatingPoolName = flag.String("floating-pool-name", "", "Floating pool name for creating router")
-	password         = flag.String("password", "", "Password for openstack")
 	region           = flag.String("region", "", "Openstack region")
 	tenantName       = flag.String("tenant-name", "", "Tenant name for openstack")
 	userName         = flag.String("user-name", "", "User name for openstack")
+	password         = flag.String("password", "", "Password for openstack")
+	appID            = flag.String("app-id", "", "Application Credential ID for openstack")
+	appName          = flag.String("app-name", "", "Application Credential Name for openstack")
+	appSecret        = flag.String("app-secret", "", "Application Credential Secret for openstack")
 
 	floatingPoolID string
 )
@@ -82,17 +85,15 @@ func validateFlags() {
 	if len(*floatingPoolName) == 0 {
 		panic("--floating-pool-name is not specified")
 	}
-	if len(*password) == 0 {
-		panic("--password flag is not specified")
-	}
 	if len(*region) == 0 {
 		panic("--region flag is not specified")
 	}
 	if len(*tenantName) == 0 {
 		panic("--tenant-name flag is not specified")
 	}
-	if len(*userName) == 0 {
-		panic("--user-name flag is not specified")
+	err := openstack.ValidateSecrets(*userName, *password, *appID, *appName, *appSecret)
+	if err != nil {
+		panic(fmt.Errorf("flag error: %w", err))
 	}
 }
 
@@ -177,7 +178,18 @@ var _ = BeforeSuite(func() {
 
 	decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 
-	openstackClient, err = NewOpenstackClient(*authURL, *domainName, *floatingPoolName, *password, *region, *tenantName, *userName)
+	openstackClient, err = NewOpenstackClient(OpenstackClientOpts{
+		AuthURL:          *authURL,
+		DomainName:       *domainName,
+		FloatingPoolName: *floatingPoolName,
+		Password:         *password,
+		Region:           *region,
+		TenantName:       *tenantName,
+		UserName:         *userName,
+		AppID:            *appID,
+		AppName:          *appName,
+		AppSecret:        *appSecret,
+	})
 	Expect(err).NotTo(HaveOccurred())
 
 	// Retrieve FloatingPoolNetworkID
@@ -533,12 +545,15 @@ func runTest(
 			Namespace: namespaceName,
 		},
 		Data: map[string][]byte{
-			openstack.AuthURL:    []byte(*authURL),
-			openstack.DomainName: []byte(*domainName),
-			openstack.Password:   []byte(*password),
-			openstack.Region:     []byte(*region),
-			openstack.TenantName: []byte(*tenantName),
-			openstack.UserName:   []byte(*userName),
+			openstack.AuthURL:                     []byte(*authURL),
+			openstack.DomainName:                  []byte(*domainName),
+			openstack.Password:                    []byte(*password),
+			openstack.Region:                      []byte(*region),
+			openstack.TenantName:                  []byte(*tenantName),
+			openstack.UserName:                    []byte(*userName),
+			openstack.ApplicationCredentialID:     []byte(*appID),
+			openstack.ApplicationCredentialName:   []byte(*appName),
+			openstack.ApplicationCredentialSecret: []byte(*appSecret),
 		},
 	}
 	if err := c.Create(ctx, secret); err != nil {

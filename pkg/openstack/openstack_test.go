@@ -31,11 +31,11 @@ var _ = Describe("Openstack", func() {
 		})
 		It("should be successful if only basic auth credentials are provided", func() {
 			err := openstack.ValidateSecrets(testUser, testPassword, "", "", "")
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(Succeed())
 		})
 		It("should be successful if only app credentials are provided", func() {
 			err := openstack.ValidateSecrets("", "", testAppID, testAppName, testAppSecret)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(Succeed())
 		})
 	})
 })

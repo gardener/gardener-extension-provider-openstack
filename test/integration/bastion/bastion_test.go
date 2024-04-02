@@ -109,9 +109,9 @@ var (
 	bastion           *extensionsv1alpha1.Bastion
 	secret            *corev1.Secret
 
-	mgrCancel      context.CancelFunc
-	c              client.Client
-	bastionCluster string
+	mgrCancel   context.CancelFunc
+	c           client.Client
+	bastionName string
 
 	openstackClient *OpenstackClient
 )
@@ -176,15 +176,15 @@ var _ = BeforeSuite(func() {
 	randString, err := randomString()
 	Expect(err).NotTo(HaveOccurred())
 
-	bastionCluster = fmt.Sprintf("openstack-it-bastion-%s", randString)
+	bastionName = fmt.Sprintf("openstack-it-bastion-%s", randString)
 
-	extensionscluster, controllercluster = createClusters(bastionCluster)
-	bastion, options = createBastion(controllercluster, bastionCluster)
+	extensionscluster, controllercluster = createClusters(bastionName)
+	bastion, options = createBastion(controllercluster, bastionName)
 
 	secret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cloudprovider",
-			Namespace: bastionCluster,
+			Namespace: bastionName,
 		},
 		Data: map[string][]byte{
 			openstack.AuthURL:                     []byte(*authURL),
@@ -227,55 +227,47 @@ var _ = AfterSuite(func() {
 
 var _ = Describe("Bastion tests", func() {
 	It("should successfully create and delete", func() {
-		cloudRouterName := bastionCluster + "-cloud-router"
-		subnetName := bastionCluster + "-subnet"
+		cloudRouterName := bastionName + "-cloud-router"
+		subnetName := bastionName + "-subnet"
 
 		By("setup Infrastructure ")
-		shootSecurityGroupID, err := prepareShootSecurityGroup(log, bastionCluster, openstackClient)
-		Expect(err).NotTo(HaveOccurred())
-
-		networkID, err := prepareNewNetwork(log, bastionCluster, openstackClient)
-		Expect(err).NotTo(HaveOccurred())
-
-		subNetID, err := prepareSubNet(log, subnetName, networkID, openstackClient)
-		Expect(err).NotTo(HaveOccurred())
-
-		routerID, externalNetworkID, err := prepareNewRouter(log, cloudRouterName, subNetID, openstackClient)
+		shootSecurityGroupID, err := prepareShootSecurityGroup(bastionName)
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
 			By("Tearing down Shoot Security Group")
-			err = teardownShootSecurityGroup(log, shootSecurityGroupID, openstackClient)
+			err = teardownShootSecurityGroup(shootSecurityGroupID)
 			Expect(err).NotTo(HaveOccurred())
+		})
 
+		networkID, err := prepareNewNetwork(bastionName)
+		Expect(err).NotTo(HaveOccurred())
+
+		subNetID, err := prepareSubNet(subnetName, networkID)
+		Expect(err).NotTo(HaveOccurred())
+
+		routerID, externalNetworkID, err := prepareNewRouter(cloudRouterName, subNetID)
+		Expect(err).NotTo(HaveOccurred())
+
+		framework.AddCleanupAction(func() {
 			By("Tearing down network")
-			err := teardownNetwork(log, networkID, routerID, subNetID, openstackClient)
+			err := teardownNetwork(networkID, routerID, subNetID)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Tearing down router")
-			err = teardownRouter(log, routerID, openstackClient)
+			err = teardownRouter(routerID)
 			Expect(err).NotTo(HaveOccurred())
-
 		})
 
-		By("create namespace for test execution")
-		setupEnvironmentObjects(ctx, c, namespace(bastionCluster), secret, extensionscluster)
-		framework.AddCleanupAction(func() {
-			teardownShootEnvironment(ctx, c, namespace(bastionCluster), secret, extensionscluster)
-		})
+		infraStatus := createInfrastructureStatus(shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
+		worker, err := createWorker(bastionName, infraStatus)
+		Expect(err).NotTo(HaveOccurred())
 
-		By("create worker")
-		worker := createWorker(bastionCluster, shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
-		Expect(c.Create(ctx, worker)).To(Succeed())
+		By("create namespace, cluster, secret, worker")
+		setupEnvironmentObjects(ctx, c, namespace(bastionName), secret, extensionscluster, worker)
 
 		framework.AddCleanupAction(func() {
-			By("Tearing down worker")
-
-			workerCopy := worker.DeepCopy()
-			metav1.SetMetaDataAnnotation(&worker.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
-			Expect(c.Patch(ctx, worker, client.MergeFrom(workerCopy))).To(Succeed())
-
-			Expect(client.IgnoreNotFound(c.Delete(ctx, worker))).To(Succeed())
+			teardownShootEnvironment(ctx, c, namespace(bastionName), secret, extensionscluster, worker)
 		})
 
 		By("setup bastion")
@@ -283,10 +275,10 @@ var _ = Describe("Bastion tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
-			teardownBastion(ctx, log, c, bastion)
-
+			By("Tearing down bastion")
+			teardownBastion(ctx, c, bastion)
 			By("verify bastion deletion")
-			verifyDeletion(openstackClient, bastionCluster)
+			verifyDeletion(openstackClient, bastionName)
 		})
 
 		By("wait until bastion is reconciled")
@@ -302,7 +294,7 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(7 * time.Minute)
 		verifyPort22IsOpen(ctx, c, bastion)
 		verifyPort42IsClosed(ctx, c, bastion)
 
@@ -345,7 +337,7 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 	Expect(conn).To(BeNil())
 }
 
-func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackClient *OpenstackClient) (routerID, floatingPoolID string, err error) {
+func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID string, err error) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
 	allPages, err := networks.List(openstackClient.NetworkingClient, external.ListOptsExt{
@@ -379,7 +371,7 @@ func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackCli
 	return router.ID, externalNetworks[0].ID, nil
 }
 
-func teardownRouter(log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
+func teardownRouter(routerID string) error {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
@@ -389,7 +381,7 @@ func teardownRouter(log logr.Logger, routerID string, openstackClient *Openstack
 	return nil
 }
 
-func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (string, error) {
+func prepareNewNetwork(networkName string) (string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
 	opts := networks.CreateOpts{
@@ -402,7 +394,7 @@ func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *Ope
 	return network.ID, nil
 }
 
-func prepareSubNet(log logr.Logger, subnetName, networkID string, openstackClient *OpenstackClient) (string, error) {
+func prepareSubNet(subnetName, networkID string) (string, error) {
 	log.Info("Waiting until Subnet is created", "subnetName", subnetName)
 
 	createOpts := subnets.CreateOpts{
@@ -425,7 +417,7 @@ func prepareSubNet(log logr.Logger, subnetName, networkID string, openstackClien
 }
 
 // prepareShootSecurityGroup create fake shoot security group which will be used in EgressAllowSSHToWorker remoteGroupID
-func prepareShootSecurityGroup(log logr.Logger, shootSgName string, openstackClient *OpenstackClient) (string, error) {
+func prepareShootSecurityGroup(shootSgName string) (string, error) {
 	log.Info("Waiting until Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 
 	opts := groups.CreateOpts{
@@ -437,14 +429,14 @@ func prepareShootSecurityGroup(log logr.Logger, shootSgName string, openstackCli
 	return sgroups.ID, nil
 }
 
-func teardownShootSecurityGroup(log logr.Logger, groupID string, openstackClient *OpenstackClient) error {
+func teardownShootSecurityGroup(groupID string) error {
 	err := groups.Delete(openstackClient.NetworkingClient, groupID).ExtractErr()
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is deleted", "shootSecurityGroupID", groupID)
 	return nil
 }
 
-func teardownNetwork(log logr.Logger, networkID, routerID, subnetID string, openstackClient *OpenstackClient) error {
+func teardownNetwork(networkID, routerID, subnetID string) error {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	_, err := routers.RemoveInterface(openstackClient.NetworkingClient, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID}).Extract()
@@ -457,13 +449,19 @@ func teardownNetwork(log logr.Logger, networkID, routerID, subnetID string, open
 	return nil
 }
 
-func setupEnvironmentObjects(ctx context.Context, c client.Client, namespace *corev1.Namespace, secret *corev1.Secret, cluster *extensionsv1alpha1.Cluster) {
+func setupEnvironmentObjects(ctx context.Context, c client.Client, namespace *corev1.Namespace, secret *corev1.Secret, cluster *extensionsv1alpha1.Cluster, worker *extensionsv1alpha1.Worker) {
 	Expect(c.Create(ctx, namespace)).To(Succeed())
 	Expect(c.Create(ctx, cluster)).To(Succeed())
 	Expect(c.Create(ctx, secret)).To(Succeed())
+	Expect(c.Create(ctx, worker)).To(Succeed())
 }
 
-func teardownShootEnvironment(ctx context.Context, c client.Client, namespace *corev1.Namespace, secret *corev1.Secret, cluster *extensionsv1alpha1.Cluster) {
+func teardownShootEnvironment(ctx context.Context, c client.Client, namespace *corev1.Namespace, secret *corev1.Secret, cluster *extensionsv1alpha1.Cluster, worker *extensionsv1alpha1.Worker) {
+	workerCopy := worker.DeepCopy()
+	metav1.SetMetaDataAnnotation(&worker.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
+	Expect(c.Patch(ctx, worker, client.MergeFrom(workerCopy))).To(Succeed())
+
+	Expect(client.IgnoreNotFound(c.Delete(ctx, worker))).To(Succeed())
 	Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
 	Expect(client.IgnoreNotFound(c.Delete(ctx, cluster))).To(Succeed())
 	Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
@@ -518,9 +516,11 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 	return extensionscluster, cluster
 }
 
-func createWorker(name, securityGroupID, networkID, routerID, externalNetworkID, subnetID string) *extensionsv1alpha1.Worker {
-	infrastructureStatus := createInfrastructureStatus(securityGroupID, networkID, routerID, externalNetworkID, subnetID)
-	infrastructureStatusJSON, _ := json.Marshal(&infrastructureStatus)
+func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStatus) (*extensionsv1alpha1.Worker, error) {
+	infrastructureStatusJSON, err := json.Marshal(&infraStatus)
+	if err != nil {
+		return nil, err
+	}
 
 	return &extensionsv1alpha1.Worker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -541,7 +541,7 @@ func createWorker(name, securityGroupID, networkID, routerID, externalNetworkID,
 				Namespace: name,
 			},
 		},
-	}
+	}, nil
 }
 
 func createInfrastructureConfig() *openstackv1alpha1.InfrastructureConfig {
@@ -598,7 +598,7 @@ func createSeed() *gardencorev1beta1.Seed {
 func createShoot(infrastructureConfig []byte) *gardencorev1beta1.Shoot {
 	return &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: bastionCluster,
+			Name: bastionName,
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "core.gardener.cloud/v1beta1",
@@ -649,7 +649,7 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 	return bastion, options
 }
 
-func teardownBastion(ctx context.Context, log logr.Logger, c client.Client, bastion *extensionsv1alpha1.Bastion) {
+func teardownBastion(ctx context.Context, c client.Client, bastion *extensionsv1alpha1.Bastion) {
 	By("delete bastion")
 	Expect(client.IgnoreNotFound(c.Delete(ctx, bastion))).To(Succeed())
 

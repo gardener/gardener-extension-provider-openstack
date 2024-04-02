@@ -33,6 +33,9 @@ AUTH_URL           := .kube-secrets/openstack/auth_url.secret
 DOMAIN_NAME        := .kube-secrets/openstack/domain_name.secret
 FLOATING_POOL_NAME := .kube-secrets/openstack/floating_pool_name.secret
 TENANT_NAME        := .kube-secrets/openstack/tenant_name.secret
+# for bastion test
+IMAGE_REF          := gardenlinux-318.9
+FLAVOR_REF         := g_c2_m4
 # either authenticate with username/password credentials
 USER_NAME          := .kube-secrets/openstack/user_name.secret
 PASSWORD           := .kube-secrets/openstack/password.secret
@@ -185,4 +188,6 @@ integration-test-infra:
 
 .PHONY: integration-test-bastion
 integration-test-bastion:
-	@go test -timeout=0 ./test/integration/bastion $(INFRA_TEST_FLAGS)
+	@go test -timeout=0 ./test/integration/bastion $(INFRA_TEST_FLAGS) \
+		--flavor-ref='$(FLAVOR_REF)' \
+		--image-ref='$(IMAGE_REF)'

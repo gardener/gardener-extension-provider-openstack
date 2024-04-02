@@ -23,7 +23,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -32,6 +31,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -199,16 +199,19 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	openstackClient, err = NewOpenstackClient(gophercloud.AuthOptions{
-		IdentityEndpoint:            *authURL,
-		Username:                    *userName,
-		Password:                    *password,
-		DomainName:                  *domainName,
-		TenantName:                  *tenantName,
-		ApplicationCredentialID:     *appID,
-		ApplicationCredentialName:   *appName,
-		ApplicationCredentialSecret: *appSecret,
-	}, *region)
+	openstackClient, err = NewOpenstackClient(&clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:                     *authURL,
+			Username:                    *userName,
+			Password:                    *password,
+			DomainName:                  *domainName,
+			ProjectName:                 *tenantName,
+			ApplicationCredentialID:     *appID,
+			ApplicationCredentialName:   *appName,
+			ApplicationCredentialSecret: *appSecret,
+		},
+		RegionName: *region,
+	})
 	Expect(err).NotTo(HaveOccurred())
 })
 

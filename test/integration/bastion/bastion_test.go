@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -22,6 +23,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -33,6 +35,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -54,11 +57,17 @@ var (
 	authURL          = flag.String("auth-url", "", "Authorization URL for openstack")
 	domainName       = flag.String("domain-name", "", "Domain name for openstack")
 	floatingPoolName = flag.String("floating-pool-name", "", "Floating pool name for creating router")
-	password         = flag.String("password", "", "Password for openstack")
 	region           = flag.String("region", "", "Openstack region")
 	tenantName       = flag.String("tenant-name", "", "Tenant name for openstack")
 	userName         = flag.String("user-name", "", "User name for openstack")
-	userDataConst    = "IyEvYmluL2Jhc2ggLWV1CmlkIGdhcmRlbmVyIHx8IHVzZXJhZGQgZ2FyZGVuZXIgLW1VCm1rZGlyIC1wIC9ob21lL2dhcmRlbmVyLy5zc2gKZWNobyAic3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCQVFDazYyeDZrN2orc0lkWG9TN25ITzRrRmM3R0wzU0E2UmtMNEt4VmE5MUQ5RmxhcmtoRzFpeU85WGNNQzZqYnh4SzN3aWt0M3kwVTBkR2h0cFl6Vjh3YmV3Z3RLMWJBWnl1QXJMaUhqbnJnTFVTRDBQazNvWGh6RkpKN0MvRkxNY0tJZFN5bG4vMENKVkVscENIZlU5Y3dqQlVUeHdVQ2pnVXRSYjdZWHN6N1Y5dllIVkdJKzRLaURCd3JzOWtVaTc3QWMyRHQ1UzBJcit5dGN4b0p0bU5tMWgxTjNnNzdlbU8rWXhtWEo4MzFXOThoVFVTeFljTjNXRkhZejR5MWhrRDB2WHE1R1ZXUUtUQ3NzRE1wcnJtN0FjQTBCcVRsQ0xWdWl3dXVmTEJLWGhuRHZRUEQrQ2Jhbk03bUZXRXdLV0xXelZHME45Z1VVMXE1T3hhMzhvODUgbWVAbWFjIiA+IC9ob21lL2dhcmRlbmVyLy5zc2gvYXV0aG9yaXplZF9rZXlzCmNob3duIGdhcmRlbmVyOmdhcmRlbmVyIC9ob21lL2dhcmRlbmVyLy5zc2gvYXV0aG9yaXplZF9rZXlzCmVjaG8gImdhcmRlbmVyIEFMTD0oQUxMKSBOT1BBU1NXRDpBTEwiID4vZXRjL3N1ZG9lcnMuZC85OS1nYXJkZW5lci11c2VyCg=="
+	password         = flag.String("password", "", "Password for openstack")
+	appID            = flag.String("app-id", "", "ApplicationCredentialID for openstack")
+	appName          = flag.String("app-name", "", "ApplicationCredentialName for openstack")
+	appSecret        = flag.String("app-secret", "", "ApplicationCredentialSecret for openstack")
+	flavorRef        = flag.String("flavor-ref", "", "Operating System flavour reference for openstack")
+	imageRef         = flag.String("image-ref", "", "Image reference for openstack")
+
+	userDataConst = "IyEvYmluL2Jhc2ggLWV1CmlkIGdhcmRlbmVyIHx8IHVzZXJhZGQgZ2FyZGVuZXIgLW1VCm1rZGlyIC1wIC9ob21lL2dhcmRlbmVyLy5zc2gKZWNobyAic3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCQVFDazYyeDZrN2orc0lkWG9TN25ITzRrRmM3R0wzU0E2UmtMNEt4VmE5MUQ5RmxhcmtoRzFpeU85WGNNQzZqYnh4SzN3aWt0M3kwVTBkR2h0cFl6Vjh3YmV3Z3RLMWJBWnl1QXJMaUhqbnJnTFVTRDBQazNvWGh6RkpKN0MvRkxNY0tJZFN5bG4vMENKVkVscENIZlU5Y3dqQlVUeHdVQ2pnVXRSYjdZWHN6N1Y5dllIVkdJKzRLaURCd3JzOWtVaTc3QWMyRHQ1UzBJcit5dGN4b0p0bU5tMWgxTjNnNzdlbU8rWXhtWEo4MzFXOThoVFVTeFljTjNXRkhZejR5MWhrRDB2WHE1R1ZXUUtUQ3NzRE1wcnJtN0FjQTBCcVRsQ0xWdWl3dXVmTEJLWGhuRHZRUEQrQ2Jhbk03bUZXRXdLV0xXelZHME45Z1VVMXE1T3hhMzhvODUgbWVAbWFjIiA+IC9ob21lL2dhcmRlbmVyLy5zc2gvYXV0aG9yaXplZF9rZXlzCmNob3duIGdhcmRlbmVyOmdhcmRlbmVyIC9ob21lL2dhcmRlbmVyLy5zc2gvYXV0aG9yaXplZF9rZXlzCmVjaG8gImdhcmRlbmVyIEFMTD0oQUxMKSBOT1BBU1NXRDpBTEwiID4vZXRjL3N1ZG9lcnMuZC85OS1nYXJkZW5lci11c2VyCg=="
 )
 
 func validateFlags() {
@@ -71,166 +80,202 @@ func validateFlags() {
 	if len(*floatingPoolName) == 0 {
 		panic("--floating-pool-name is not specified")
 	}
-	if len(*password) == 0 {
-		panic("--password flag is not specified")
-	}
 	if len(*region) == 0 {
 		panic("--region flag is not specified")
 	}
 	if len(*tenantName) == 0 {
 		panic("--tenant-name flag is not specified")
 	}
-	if len(*userName) == 0 {
-		panic("--user-name flag is not specified")
+	if len(*flavorRef) == 0 {
+		panic("--flavorRef flag is not specified")
+	}
+	if len(*imageRef) == 0 {
+		panic("--imageRef flag is not specified")
+	}
+	err := openstack.ValidateSecrets(*userName, *password, *appID, *appName, *appSecret)
+	if err != nil {
+		panic(fmt.Errorf("flag error: %w", err))
 	}
 }
 
-var _ = Describe("Bastion tests", func() {
-	var (
-		ctx = context.Background()
-		log logr.Logger
+var (
+	ctx     = context.Background()
+	log     logr.Logger
+	testEnv *envtest.Environment
 
-		extensionscluster *extensionsv1alpha1.Cluster
-		controllercluster *controller.Cluster
-		options           *bastionctrl.Options
-		bastion           *extensionsv1alpha1.Bastion
-		secret            *corev1.Secret
+	extensionscluster *extensionsv1alpha1.Cluster
+	controllercluster *controller.Cluster
+	options           *bastionctrl.Options
+	bastion           *extensionsv1alpha1.Bastion
+	secret            *corev1.Secret
 
-		testEnv   *envtest.Environment
-		mgrCancel context.CancelFunc
-		c         client.Client
+	mgrCancel      context.CancelFunc
+	c              client.Client
+	bastionCluster string
 
-		openstackClient *OpenstackClient
-	)
+	openstackClient *OpenstackClient
+)
+
+var _ = BeforeSuite(func() {
+	flag.Parse()
+	validateFlags()
+
+	repoRoot := filepath.Join("..", "..", "..")
+
+	// enable manager logs
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+
+	log = logf.Log.WithName("bastion-test")
+
+	By("starting test environment")
+	testEnv = &envtest.Environment{
+		UseExistingCluster: pointer.Bool(true),
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_clusters.yaml"),
+				filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_bastions.yaml"),
+				filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_workers.yaml"),
+			},
+		},
+	}
+
+	cfg, err := testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(cfg).NotTo(BeNil())
+
+	By("setup manager")
+	mgr, err := manager.New(cfg, manager.Options{
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
+	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
+
+	Expect(bastionctrl.AddToManagerWithOptions(mgr, bastionctrl.AddOptions{
+		BastionConfig: config.BastionConfig{
+			ImageRef:  *imageRef,
+			FlavorRef: *flavorRef,
+		},
+	})).To(Succeed())
+
+	var mgrContext context.Context
+	mgrContext, mgrCancel = context.WithCancel(ctx)
+
+	By("start manager")
+	go func() {
+		err := mgr.Start(mgrContext)
+		Expect(err).NotTo(HaveOccurred())
+	}()
+
+	c = mgr.GetClient()
+	Expect(c).NotTo(BeNil())
 
 	randString, err := randomString()
 	Expect(err).NotTo(HaveOccurred())
 
-	// bastion name prefix
-	name := fmt.Sprintf("openstack-it-bastion-%s", randString)
+	bastionCluster = fmt.Sprintf("openstack-it-bastion-%s", randString)
 
-	BeforeSuite(func() {
-		flag.Parse()
-		validateFlags()
+	extensionscluster, controllercluster = createClusters(bastionCluster)
+	bastion, options = createBastion(controllercluster, bastionCluster)
 
-		repoRoot := filepath.Join("..", "..", "..")
+	secret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cloudprovider",
+			Namespace: bastionCluster,
+		},
+		Data: map[string][]byte{
+			openstack.AuthURL:                     []byte(*authURL),
+			openstack.DomainName:                  []byte(*domainName),
+			openstack.Region:                      []byte(*region),
+			openstack.TenantName:                  []byte(*tenantName),
+			openstack.UserName:                    []byte(*userName),
+			openstack.Password:                    []byte(*password),
+			openstack.ApplicationCredentialID:     []byte(*appID),
+			openstack.ApplicationCredentialName:   []byte(*appName),
+			openstack.ApplicationCredentialSecret: []byte(*appSecret),
+		},
+	}
 
-		// enable manager logs
-		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	openstackClient, err = NewOpenstackClient(gophercloud.AuthOptions{
+		IdentityEndpoint:            *authURL,
+		Username:                    *userName,
+		Password:                    *password,
+		DomainName:                  *domainName,
+		TenantName:                  *tenantName,
+		ApplicationCredentialID:     *appID,
+		ApplicationCredentialName:   *appName,
+		ApplicationCredentialSecret: *appSecret,
+	}, *region)
+	Expect(err).NotTo(HaveOccurred())
+})
 
-		log = logf.Log.WithName("bastion-test")
+var _ = AfterSuite(func() {
+	defer func() {
+		By("stopping manager")
+		mgrCancel()
+	}()
 
-		By("starting test environment")
-		testEnv = &envtest.Environment{
-			UseExistingCluster: pointer.Bool(true),
-			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{
-					filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_clusters.yaml"),
-					filepath.Join(repoRoot, "example", "20-crd-extensions.gardener.cloud_bastions.yaml"),
-				},
-			},
-		}
+	By("running cleanup actions")
+	framework.RunCleanupActions()
 
-		cfg, err := testEnv.Start()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cfg).NotTo(BeNil())
+	By("stopping test environment")
+	Expect(testEnv.Stop()).To(Succeed())
+})
 
-		By("setup manager")
-		mgr, err := manager.New(cfg, manager.Options{
-			Metrics: metricsserver.Options{
-				BindAddress: "0",
-			},
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
-		Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
-
-		Expect(bastionctrl.AddToManager(ctx, mgr)).To(Succeed())
-
-		var mgrContext context.Context
-		mgrContext, mgrCancel = context.WithCancel(ctx)
-
-		By("start manager")
-		go func() {
-			err := mgr.Start(mgrContext)
-			Expect(err).NotTo(HaveOccurred())
-		}()
-
-		c = mgr.GetClient()
-		Expect(c).NotTo(BeNil())
-
-		extensionscluster, controllercluster = createClusters(name)
-		bastion, options = createBastion(controllercluster, name)
-
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cloudprovider",
-				Namespace: name,
-			},
-			Data: map[string][]byte{
-				openstack.AuthURL:    []byte(*authURL),
-				openstack.DomainName: []byte(*domainName),
-				openstack.Password:   []byte(*password),
-				openstack.Region:     []byte(*region),
-				openstack.TenantName: []byte(*tenantName),
-				openstack.UserName:   []byte(*userName),
-			},
-		}
-
-		openstackClient, err = NewOpenstackClient(*authURL, *domainName, *password, *region, *tenantName, *userName)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		defer func() {
-			By("stopping manager")
-			mgrCancel()
-		}()
-
-		By("running cleanup actions")
-		framework.RunCleanupActions()
-
-		By("stopping test environment")
-		Expect(testEnv.Stop()).To(Succeed())
-	})
-
+var _ = Describe("Bastion tests", func() {
 	It("should successfully create and delete", func() {
-		cloudRouterName := name + "-cloud-router"
-		subnetName := name + "-subnet"
+		cloudRouterName := bastionCluster + "-cloud-router"
+		subnetName := bastionCluster + "-subnet"
 
 		By("setup Infrastructure ")
-		shootSecurityGroupID, err := prepareShootSecurityGroup(log, name, openstackClient)
+		shootSecurityGroupID, err := prepareShootSecurityGroup(log, bastionCluster, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		networkID, err := prepareNewNetwork(log, name, openstackClient)
+		networkID, err := prepareNewNetwork(log, bastionCluster, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		subNetID, err := prepareSubNet(log, subnetName, *networkID, openstackClient)
+		subNetID, err := prepareSubNet(log, subnetName, networkID, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		routerID, err := prepareNewRouter(log, cloudRouterName, *subNetID, openstackClient)
+		routerID, externalNetworkID, err := prepareNewRouter(log, cloudRouterName, subNetID, openstackClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
 			By("Tearing down Shoot Security Group")
-			err = teardownShootSecurityGroup(log, *shootSecurityGroupID, openstackClient)
+			err = teardownShootSecurityGroup(log, shootSecurityGroupID, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Tearing down network")
-			err := teardownNetwork(log, *networkID, *routerID, *subNetID, openstackClient)
+			err := teardownNetwork(log, networkID, routerID, subNetID, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Tearing down router")
-			err = teardownRouter(log, *routerID, openstackClient)
+			err = teardownRouter(log, routerID, openstackClient)
 			Expect(err).NotTo(HaveOccurred())
 
 		})
 
 		By("create namespace for test execution")
-		setupEnvironmentObjects(ctx, c, namespace(name), secret, extensionscluster)
+		setupEnvironmentObjects(ctx, c, namespace(bastionCluster), secret, extensionscluster)
 		framework.AddCleanupAction(func() {
-			teardownShootEnvironment(ctx, c, namespace(name), secret, extensionscluster)
+			teardownShootEnvironment(ctx, c, namespace(bastionCluster), secret, extensionscluster)
+		})
+
+		By("create worker")
+		worker := createWorker(bastionCluster, shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
+		Expect(c.Create(ctx, worker)).To(Succeed())
+
+		framework.AddCleanupAction(func() {
+			By("Tearing down worker")
+
+			workerCopy := worker.DeepCopy()
+			metav1.SetMetaDataAnnotation(&worker.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
+			Expect(c.Patch(ctx, worker, client.MergeFrom(workerCopy))).To(Succeed())
+
+			Expect(client.IgnoreNotFound(c.Delete(ctx, worker))).To(Succeed())
 		})
 
 		By("setup bastion")
@@ -241,7 +286,7 @@ var _ = Describe("Bastion tests", func() {
 			teardownBastion(ctx, log, c, bastion)
 
 			By("verify bastion deletion")
-			verifyDeletion(openstackClient, name)
+			verifyDeletion(openstackClient, bastionCluster)
 		})
 
 		By("wait until bastion is reconciled")
@@ -300,12 +345,13 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 	Expect(conn).To(BeNil())
 }
 
-func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackClient *OpenstackClient) (*string, error) {
+func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackClient *OpenstackClient) (routerID, floatingPoolID string, err error) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
 	allPages, err := networks.List(openstackClient.NetworkingClient, external.ListOptsExt{
 		ListOptsBuilder: networks.ListOpts{
-			Name: "FloatingIP-external-monsoon3-02"},
+			Name: *floatingPoolName,
+		},
 		External: pointer.Bool(true),
 	}).AllPages()
 	Expect(err).NotTo(HaveOccurred())
@@ -330,7 +376,7 @@ func prepareNewRouter(log logr.Logger, routerName, subnetID string, openstackCli
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is created", "routerName", routerName)
-	return &router.ID, nil
+	return router.ID, externalNetworks[0].ID, nil
 }
 
 func teardownRouter(log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
@@ -343,22 +389,25 @@ func teardownRouter(log logr.Logger, routerID string, openstackClient *Openstack
 	return nil
 }
 
-func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
+func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
-	network, err := networks.Create(openstackClient.NetworkingClient, networks.CreateOpts{Name: networkName}).Extract()
+	opts := networks.CreateOpts{
+		Name: networkName,
+	}
+	network, err := networks.Create(openstackClient.NetworkingClient, opts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is created", "networkName", networkName)
-	return &network.ID, nil
+	return network.ID, nil
 }
 
-func prepareSubNet(log logr.Logger, subnetName, networkid string, openstackClient *OpenstackClient) (*string, error) {
+func prepareSubNet(log logr.Logger, subnetName, networkID string, openstackClient *OpenstackClient) (string, error) {
 	log.Info("Waiting until Subnet is created", "subnetName", subnetName)
 
 	createOpts := subnets.CreateOpts{
 		Name:      subnetName,
-		NetworkID: networkid,
+		NetworkID: networkID,
 		IPVersion: 4,
 		CIDR:      "10.180.0.0/16",
 		GatewayIP: pointer.String("10.180.0.1"),
@@ -372,17 +421,20 @@ func prepareSubNet(log logr.Logger, subnetName, networkid string, openstackClien
 	subnet, err := subnets.Create(openstackClient.NetworkingClient, createOpts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Subnet is created", "subnetName", subnetName)
-	return &subnet.ID, nil
+	return subnet.ID, nil
 }
 
 // prepareShootSecurityGroup create fake shoot security group which will be used in EgressAllowSSHToWorker remoteGroupID
-func prepareShootSecurityGroup(log logr.Logger, shootSgName string, openstackClient *OpenstackClient) (*string, error) {
+func prepareShootSecurityGroup(log logr.Logger, shootSgName string, openstackClient *OpenstackClient) (string, error) {
 	log.Info("Waiting until Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 
-	sgroups, err := groups.Create(openstackClient.NetworkingClient, groups.CreateOpts{Name: shootSgName, Description: shootSgName}).Extract()
+	opts := groups.CreateOpts{
+		Name: shootSgName,
+	}
+	sgroups, err := groups.Create(openstackClient.NetworkingClient, opts).Extract()
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
-	return &sgroups.ID, nil
+	return sgroups.ID, nil
 }
 
 func teardownShootSecurityGroup(log logr.Logger, groupID string, openstackClient *OpenstackClient) error {
@@ -432,6 +484,9 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 	shoot := createShoot(infrastructureConfigJSON)
 	shootJSON, _ := json.Marshal(shoot)
 
+	seed := createSeed()
+	seedJSON, _ := json.Marshal(seed)
+
 	cloudProfile := createCloudProfile()
 	cloudProfileJSON, _ := json.Marshal(cloudProfile)
 
@@ -448,6 +503,10 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 				Object: shoot,
 				Raw:    shootJSON,
 			},
+			Seed: runtime.RawExtension{
+				Object: seed,
+				Raw:    seedJSON,
+			},
 		},
 	}
 
@@ -459,18 +518,88 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 	return extensionscluster, cluster
 }
 
+func createWorker(name, securityGroupID, networkID, routerID, externalNetworkID, subnetID string) *extensionsv1alpha1.Worker {
+	infrastructureStatus := createInfrastructureStatus(securityGroupID, networkID, routerID, externalNetworkID, subnetID)
+	infrastructureStatusJSON, _ := json.Marshal(&infrastructureStatus)
+
+	return &extensionsv1alpha1.Worker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: name,
+		},
+		Spec: extensionsv1alpha1.WorkerSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: openstack.Type,
+			},
+			Pools: []extensionsv1alpha1.WorkerPool{},
+			InfrastructureProviderStatus: &runtime.RawExtension{
+				Raw: infrastructureStatusJSON,
+			},
+			Region: *region,
+			SecretRef: corev1.SecretReference{
+				Name:      name,
+				Namespace: name,
+			},
+		},
+	}
+}
+
 func createInfrastructureConfig() *openstackv1alpha1.InfrastructureConfig {
 	return &openstackv1alpha1.InfrastructureConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "InfrastructureConfig",
 		},
-		FloatingPoolSubnetName: pointer.String("FloatingIP-external-monsoon3-02"),
+		FloatingPoolSubnetName: pointer.String(*floatingPoolName),
+	}
+}
+
+func createInfrastructureStatus(securityGroupID, networkID, routerID, externalNetworkID, subnetID string) *openstackv1alpha1.InfrastructureStatus {
+	return &openstackv1alpha1.InfrastructureStatus{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "InfrastructureStatus",
+		},
+		SecurityGroups: []openstackv1alpha1.SecurityGroup{
+			{
+				Purpose: openstackv1alpha1.PurposeNodes,
+				ID:      securityGroupID,
+			},
+		},
+		Networks: openstackv1alpha1.NetworkStatus{
+			ID: networkID,
+			FloatingPool: openstackv1alpha1.FloatingPoolStatus{
+				ID:   externalNetworkID,
+				Name: *floatingPoolName,
+			},
+			Router: openstackv1alpha1.RouterStatus{
+				ID: routerID,
+			},
+			Subnets: []openstackv1alpha1.Subnet{
+				{
+					ID:      subnetID,
+					Purpose: openstackv1alpha1.PurposeNodes,
+				},
+			},
+		},
+	}
+}
+
+func createSeed() *gardencorev1beta1.Seed {
+	return &gardencorev1beta1.Seed{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "core.gardener.cloud/v1beta1",
+			Kind:       "Seed",
+		},
+		Spec: gardencorev1beta1.SeedSpec{},
 	}
 }
 
 func createShoot(infrastructureConfig []byte) *gardencorev1beta1.Shoot {
 	return &gardencorev1beta1.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: bastionCluster,
+		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "core.gardener.cloud/v1beta1",
 			Kind:       "Shoot",
@@ -504,6 +633,13 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 				Type: openstack.Type,
 			},
 			UserData: []byte(userDataConst),
+			Ingress: []extensionsv1alpha1.BastionIngressPolicy{
+				{
+					IPBlock: networkingv1.IPBlock{
+						CIDR: "0.0.0.0/0",
+					},
+				},
+			},
 		},
 	}
 

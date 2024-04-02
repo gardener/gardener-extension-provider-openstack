@@ -18,16 +18,9 @@ type OpenstackClient struct {
 }
 
 // NewOpenstackClient creates an openstack struct
-func NewOpenstackClient(authURL, domainName, password, region, tenantName, username string) (*OpenstackClient, error) {
+func NewOpenstackClient(opts gophercloud.AuthOptions, region string) (*OpenstackClient, error) {
 	openstackClient := &OpenstackClient{
-		Regionopts: gophercloud.EndpointOpts{Region: region}}
-
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: authURL,
-		Username:         username,
-		Password:         password,
-		DomainName:       domainName,
-		TenantName:       tenantName,
+		Regionopts: gophercloud.EndpointOpts{Region: region},
 	}
 
 	providerClient, err := openstack.AuthenticatedClient(opts)
@@ -37,26 +30,27 @@ func NewOpenstackClient(authURL, domainName, password, region, tenantName, usern
 
 	openstackClient.ProviderClient = providerClient
 
-	computeClient, err := openstackClient.createComputeClient()
+	err = openstackClient.setComputeClient()
 	if err != nil {
 		return nil, err
 	}
 
-	networkingClient, err := openstackClient.createNetworkingClient()
+	err = openstackClient.setNetworkingClient()
 	if err != nil {
 		return nil, err
 	}
-
-	openstackClient.ComputeClient = computeClient
-	openstackClient.NetworkingClient = networkingClient
 
 	return openstackClient, nil
 }
 
-func (o *OpenstackClient) createComputeClient() (*gophercloud.ServiceClient, error) {
-	return openstack.NewComputeV2(o.ProviderClient, o.Regionopts)
+func (o *OpenstackClient) setComputeClient() error {
+	computeClient, err := openstack.NewComputeV2(o.ProviderClient, o.Regionopts)
+	o.ComputeClient = computeClient
+	return err
 }
 
-func (o *OpenstackClient) createNetworkingClient() (*gophercloud.ServiceClient, error) {
-	return openstack.NewNetworkV2(o.ProviderClient, o.Regionopts)
+func (o *OpenstackClient) setNetworkingClient() error {
+	networkingClient, err := openstack.NewNetworkV2(o.ProviderClient, o.Regionopts)
+	o.NetworkingClient = networkingClient
+	return err
 }

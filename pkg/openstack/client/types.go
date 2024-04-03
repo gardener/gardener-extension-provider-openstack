@@ -98,6 +98,7 @@ type Compute interface {
 
 	FindFlavorID(name string) (string, error)
 	FindImages(name string) ([]images.Image, error)
+	FindImageByID(name string) (*images.Image, error)
 	ListImages(listOpts images.ListOpts) ([]images.Image, error)
 
 	// KeyPairs

@@ -297,7 +297,6 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		time.Sleep(7 * time.Minute)
 		verifyPort22IsOpen(ctx, c, bastion)
 		verifyPort42IsClosed(ctx, c, bastion)
 
@@ -317,6 +316,7 @@ func randomString() (string, error) {
 
 func verifyPort22IsOpen(ctx context.Context, c client.Client, bastion *extensionsv1alpha1.Bastion) {
 	By("check connection to port 22 open should not error")
+	time.Sleep(30 * time.Second) // sometimes VM takes very long to become ready
 	bastionUpdated := &extensionsv1alpha1.Bastion{}
 	Expect(c.Get(ctx, client.ObjectKey{Namespace: bastion.Namespace, Name: bastion.Name}, bastionUpdated)).To(Succeed())
 

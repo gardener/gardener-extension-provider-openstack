@@ -9,8 +9,8 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/gardener/etcd-druid v0.21.0
 	github.com/gardener/gardener v1.86.0
-	github.com/gardener/machine-controller-manager v0.50.0
-	github.com/go-logr/logr v1.2.4
+	github.com/gardener/machine-controller-manager v0.52.0
+	github.com/go-logr/logr v1.3.0
 	github.com/google/uuid v1.3.0
 	github.com/gophercloud/gophercloud v1.8.0
 	github.com/gophercloud/utils v0.0.0-20221207145018-e8fba78967ca
@@ -20,7 +20,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	go.uber.org/atomic v1.10.0
 	go.uber.org/mock v0.2.0
-	golang.org/x/tools v0.13.0
+	golang.org/x/tools v0.14.0
 	k8s.io/api v0.28.3
 	k8s.io/apiextensions-apiserver v0.28.3
 	k8s.io/apimachinery v0.28.3
@@ -109,10 +109,10 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
-	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

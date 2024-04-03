@@ -1,0 +1,21 @@
+# see https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+- package-ecosystem: "gomod"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  groups:
+  # Group all version-updates, except Gardener. Gardener-components should receive their own PR this way. Security updates will
+  # also receive their own individual PRs.
+    all-dependencies:
+      applies-to: "version-updates"
+      patterns:
+      - "*"
+      exclude-patterns:
+      - "github.com/gardener*"
+- package-ecosystem: "docker"
+  directory: "/"
+  schedule:
+    interval: "weekly"

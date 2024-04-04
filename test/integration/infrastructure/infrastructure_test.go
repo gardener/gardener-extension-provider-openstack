@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	gardenerv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -25,6 +26,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -45,6 +47,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/test/integration"
 )
 
 type flowUsage int
@@ -106,7 +109,7 @@ var (
 	c         client.Client
 
 	decoder         runtime.Decoder
-	openstackClient *OpenstackClient
+	openstackClient *integration.OpenstackClient
 )
 
 var _ = BeforeSuite(func() {
@@ -178,17 +181,18 @@ var _ = BeforeSuite(func() {
 
 	decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 
-	openstackClient, err = NewOpenstackClient(OpenstackClientOpts{
-		AuthURL:          *authURL,
-		DomainName:       *domainName,
-		FloatingPoolName: *floatingPoolName,
-		Password:         *password,
-		Region:           *region,
-		TenantName:       *tenantName,
-		UserName:         *userName,
-		AppID:            *appID,
-		AppName:          *appName,
-		AppSecret:        *appSecret,
+	openstackClient, err = integration.NewOSClientWithIdentity(&clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:                     *authURL,
+			DomainName:                  *domainName,
+			ProjectName:                 *tenantName,
+			Username:                    *userName,
+			Password:                    *password,
+			ApplicationCredentialID:     *appID,
+			ApplicationCredentialName:   *appName,
+			ApplicationCredentialSecret: *appSecret,
+		},
+		RegionName: strings.TrimSpace(*region),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -221,7 +225,7 @@ var _ = Describe("Infrastructure tests", func() {
 
 		It("should successfully create and delete (flow)", func() {
 			providerConfig := newProviderConfig("", nil)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -232,7 +236,7 @@ var _ = Describe("Infrastructure tests", func() {
 
 		It("should successfully create and delete (migration)", func() {
 			providerConfig := newProviderConfig("", nil)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -243,7 +247,7 @@ var _ = Describe("Infrastructure tests", func() {
 
 		It("should successfully create and delete (terraformer)", func() {
 			providerConfig := newProviderConfig("", nil)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 			namespace, err := generateNamespaceName()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -276,7 +280,7 @@ var _ = Describe("Infrastructure tests", func() {
 			})
 
 			providerConfig := newProviderConfig(*routerID, nil)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlow)
 			Expect(err).NotTo(HaveOccurred())
@@ -300,7 +304,7 @@ var _ = Describe("Infrastructure tests", func() {
 			})
 
 			providerConfig := newProviderConfig(*routerID, nil)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 			Expect(err).NotTo(HaveOccurred())
@@ -330,7 +334,7 @@ var _ = Describe("Infrastructure tests", func() {
 			})
 
 			providerConfig := newProviderConfig("", networkID)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlow)
 
@@ -355,7 +359,7 @@ var _ = Describe("Infrastructure tests", func() {
 			})
 
 			providerConfig := newProviderConfig("", networkID)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 
@@ -394,7 +398,7 @@ var _ = Describe("Infrastructure tests", func() {
 			})
 
 			providerConfig := newProviderConfig(*routerID, networkID)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseFlowRecoverState)
 
@@ -428,7 +432,7 @@ var _ = Describe("Infrastructure tests", func() {
 			})
 
 			providerConfig := newProviderConfig(*routerID, networkID)
-			cloudProfileConfig := newCloudProfileConfig(openstackClient.Region, openstackClient.AuthURL)
+			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 			err = runTest(ctx, log, c, namespace, providerConfig, decoder, openstackClient, cloudProfileConfig, fuUseTerraformer)
 
@@ -445,7 +449,7 @@ func runTest(
 	namespaceName string,
 	providerConfig *openstackv1alpha1.InfrastructureConfig,
 	decoder runtime.Decoder,
-	openstackClient *OpenstackClient,
+	openstackClient *integration.OpenstackClient,
 	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
 	flow flowUsage,
 ) error {
@@ -784,7 +788,7 @@ func generateNamespaceName() (string, error) {
 	return "openstack--infra-it--" + suffix, nil
 }
 
-func prepareNewRouter(log logr.Logger, routerName string, openstackClient *OpenstackClient) (*string, error) {
+func prepareNewRouter(log logr.Logger, routerName string, openstackClient *integration.OpenstackClient) (*string, error) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
 	createOpts := routers.CreateOpts{
@@ -800,7 +804,7 @@ func prepareNewRouter(log logr.Logger, routerName string, openstackClient *Opens
 	return &router.ID, nil
 }
 
-func teardownRouter(log logr.Logger, routerID string, openstackClient *OpenstackClient) error {
+func teardownRouter(log logr.Logger, routerID string, openstackClient *integration.OpenstackClient) error {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
@@ -810,7 +814,7 @@ func teardownRouter(log logr.Logger, routerID string, openstackClient *Openstack
 	return nil
 }
 
-func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *OpenstackClient) (*string, error) {
+func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *integration.OpenstackClient) (*string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
 	createOpts := networks.CreateOpts{
@@ -823,7 +827,7 @@ func prepareNewNetwork(log logr.Logger, networkName string, openstackClient *Ope
 	return &network.ID, nil
 }
 
-func teardownNetwork(log logr.Logger, networkID string, openstackClient *OpenstackClient) error {
+func teardownNetwork(log logr.Logger, networkID string, openstackClient *integration.OpenstackClient) error {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	err := networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
@@ -841,7 +845,7 @@ type infrastructureIdentifiers struct {
 	routerID   *string
 }
 
-func verifyCreation(openstackClient *OpenstackClient, infraStatus *openstackv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers) {
+func verifyCreation(openstackClient *integration.OpenstackClient, infraStatus *openstackv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers) {
 	// router exists
 	router, err := routers.Get(openstackClient.NetworkingClient, infraStatus.Networks.Router.ID).Extract()
 	Expect(err).NotTo(HaveOccurred())
@@ -881,7 +885,7 @@ func verifyCreation(openstackClient *OpenstackClient, infraStatus *openstackv1al
 	return infrastructureIdentifier
 }
 
-func verifyDeletion(openstackClient *OpenstackClient, infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {
+func verifyDeletion(openstackClient *integration.OpenstackClient, infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {
 	// keypair doesn't exist
 	_, err := keypairs.Get(openstackClient.ComputeClient, *infrastructureIdentifier.keyPair, nil).Extract()
 	Expect(err).To(HaveOccurred())

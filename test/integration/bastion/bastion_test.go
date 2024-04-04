@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -46,11 +45,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	"github.com/gardener/gardener-extension-provider-openstack/test/integration"
 )
 
 var (
@@ -113,7 +114,7 @@ var (
 	c           client.Client
 	bastionName string
 
-	openstackClient *OpenstackClient
+	openstackClient *integration.OpenstackClient
 )
 
 var _ = BeforeSuite(func() {
@@ -199,7 +200,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	openstackClient, err = NewOpenstackClient(&clientconfig.ClientOpts{
+	openstackClient, err = integration.NewOSClient(&clientconfig.ClientOpts{
 		AuthInfo: &clientconfig.AuthInfo{
 			AuthURL:                     *authURL,
 			Username:                    *userName,
@@ -297,7 +298,10 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		verifyPort22IsOpen(ctx, c, bastion)
+		err = retry(6, 5*time.Second, func() error {
+			return verifyPort22IsOpen(ctx, c, bastion)
+		})
+		Expect(err).NotTo(HaveOccurred())
 		verifyPort42IsClosed(ctx, c, bastion)
 
 		By("verify cloud resources")
@@ -314,17 +318,21 @@ func randomString() (string, error) {
 	return suffix, nil
 }
 
-func verifyPort22IsOpen(ctx context.Context, c client.Client, bastion *extensionsv1alpha1.Bastion) {
+func verifyPort22IsOpen(ctx context.Context, c client.Client, bastion *extensionsv1alpha1.Bastion) error {
 	By("check connection to port 22 open should not error")
-	time.Sleep(30 * time.Second) // sometimes VM takes very long to become ready
 	bastionUpdated := &extensionsv1alpha1.Bastion{}
 	Expect(c.Get(ctx, client.ObjectKey{Namespace: bastion.Namespace, Name: bastion.Name}, bastionUpdated)).To(Succeed())
 
 	ipAddress := bastionUpdated.Status.Ingress.IP
 	address := net.JoinHostPort(ipAddress, "22")
 	conn, err := net.DialTimeout("tcp4", address, 60*time.Second)
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(conn).NotTo(BeNil())
+	if err != nil {
+		return err
+	}
+	if conn == nil {
+		return fmt.Errorf("connection should not be nil")
+	}
+	return nil
 }
 
 func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensionsv1alpha1.Bastion) {
@@ -661,7 +669,7 @@ func teardownBastion(ctx context.Context, c client.Client, bastion *extensionsv1
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func verifyDeletion(openstackClient *OpenstackClient, name string) {
+func verifyDeletion(openstackClient *integration.OpenstackClient, name string) {
 	// bastion public ip should be gone
 	_, err := floatingips.List(openstackClient.NetworkingClient, floatingips.ListOpts{Description: name}).AllPages()
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
@@ -675,7 +683,7 @@ func verifyDeletion(openstackClient *OpenstackClient, name string) {
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
 }
 
-func checkSecurityRulesExists(openstackClient *OpenstackClient, securityRuleName string) {
+func checkSecurityRulesExists(openstackClient *integration.OpenstackClient, securityRuleName string) {
 	allPages, err := rules.List(openstackClient.NetworkingClient, rules.ListOpts{Description: securityRuleName}).AllPages()
 	Expect(err).NotTo(HaveOccurred())
 	rule, err := rules.ExtractRules(allPages)
@@ -683,7 +691,7 @@ func checkSecurityRulesExists(openstackClient *OpenstackClient, securityRuleName
 	Expect(rule[0].Description).To(Equal(securityRuleName))
 }
 
-func verifyCreation(openstackClient *OpenstackClient, options *bastionctrl.Options) {
+func verifyCreation(openstackClient *integration.OpenstackClient, options *bastionctrl.Options) {
 	By("checkSecurityGroupExists")
 	allPages, err := groups.List(openstackClient.NetworkingClient, groups.ListOpts{Name: options.SecurityGroup}).AllPages()
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
@@ -707,4 +715,18 @@ func verifyCreation(openstackClient *OpenstackClient, options *bastionctrl.Optio
 	Expect(err).To(Succeed())
 	Expect(privateIP).NotTo(BeNil())
 	Expect(externalIP).NotTo(BeNil())
+}
+
+// retry performs a function with retries, delay, and a max number of attempts
+func retry(maxRetries int, delay time.Duration, fn func() error) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+		log.Info("Attempt %d failed, retrying in %v: %v", i+1, delay, err)
+		time.Sleep(delay)
+	}
+	return err
 }

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package bastion
+package integration
 
 import (
 	"crypto/tls"
@@ -19,37 +19,53 @@ type OpenstackClient struct {
 	ProviderClient   *gophercloud.ProviderClient
 	ComputeClient    *gophercloud.ServiceClient
 	NetworkingClient *gophercloud.ServiceClient
+	IdentityClient   *gophercloud.ServiceClient
 }
 
-// NewOpenstackClient creates an openstack struct
-func NewOpenstackClient(opts *clientconfig.ClientOpts) (*OpenstackClient, error) {
-	openstackClient := &OpenstackClient{
-		Regionopts: gophercloud.EndpointOpts{Region: opts.RegionName},
+// NewOSClient creates an openstack struct
+func NewOSClient(opts *clientconfig.ClientOpts) (*OpenstackClient, error) {
+	osClient := &OpenstackClient{
+		Regionopts: gophercloud.EndpointOpts{
+			Region:       opts.RegionName,
+			Availability: gophercloud.AvailabilityPublic,
+		},
 	}
 
-	err := openstackClient.setProviderClient(opts)
+	err := osClient.setProviderClient(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	err = openstackClient.setComputeClient()
+	err = osClient.setComputeClient()
 	if err != nil {
 		return nil, err
 	}
 
-	err = openstackClient.setNetworkingClient()
+	err = osClient.setNetworkingClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return openstackClient, nil
+	return osClient, nil
+}
+
+// NewOSClientWithIdentity creates an openstack struct
+func NewOSClientWithIdentity(opts *clientconfig.ClientOpts) (*OpenstackClient, error) {
+	osClient, err := NewOSClient(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	err = osClient.setIdentityClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return osClient, nil
 }
 
 // createOpenStackClient creates and authenticates a base OpenStack client
 func (o *OpenstackClient) setProviderClient(opts *clientconfig.ClientOpts) error {
-	config := &tls.Config{}
-	config.InsecureSkipVerify = false
-
 	authOpts, err := clientconfig.AuthOptions(opts)
 	if err != nil {
 		return err
@@ -68,6 +84,8 @@ func (o *OpenstackClient) setProviderClient(opts *clientconfig.ClientOpts) error
 	// Set UserAgent
 	provider.UserAgent.Prepend("Bastion Test Controller")
 
+	config := &tls.Config{}
+	config.InsecureSkipVerify = false
 	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: config}
 	provider.HTTPClient = http.Client{
 		Transport: transport,
@@ -87,5 +105,12 @@ func (o *OpenstackClient) setComputeClient() error {
 func (o *OpenstackClient) setNetworkingClient() error {
 	networkingClient, err := openstack.NewNetworkV2(o.ProviderClient, o.Regionopts)
 	o.NetworkingClient = networkingClient
+	return err
+}
+
+// createIdentityClient is used to create a networking client
+func (o *OpenstackClient) setIdentityClient() error {
+	identityClient, err := openstack.NewIdentityV2(o.ProviderClient, o.Regionopts)
+	o.IdentityClient = identityClient
 	return err
 }

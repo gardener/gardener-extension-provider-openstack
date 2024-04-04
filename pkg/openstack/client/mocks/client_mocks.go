@@ -356,6 +356,21 @@ func (mr *MockComputeMockRecorder) FindFloatingIDByInstanceID(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFloatingIDByInstanceID", reflect.TypeOf((*MockCompute)(nil).FindFloatingIDByInstanceID), arg0)
 }
 
+// FindImageByID mocks base method.
+func (m *MockCompute) FindImageByID(arg0 string) (*images.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindImageByID", arg0)
+	ret0, _ := ret[0].(*images.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindImageByID indicates an expected call of FindImageByID.
+func (mr *MockComputeMockRecorder) FindImageByID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindImageByID", reflect.TypeOf((*MockCompute)(nil).FindImageByID), arg0)
+}
+
 // FindImages mocks base method.
 func (m *MockCompute) FindImages(arg0 string) ([]images.Image, error) {
 	m.ctrl.T.Helper()

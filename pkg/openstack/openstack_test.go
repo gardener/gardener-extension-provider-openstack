@@ -5,9 +5,10 @@
 package openstack_test
 
 import (
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var _ = Describe("Openstack", func() {

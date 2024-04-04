@@ -124,6 +124,7 @@ type Networking interface {
 	ListNetwork(listOpts networks.ListOpts) ([]networks.Network, error)
 	UpdateNetwork(networkID string, opts networks.UpdateOpts) (*networks.Network, error)
 	GetNetworkByName(name string) ([]networks.Network, error)
+	GetNetworkByID(id string) (*networks.Network, error)
 	DeleteNetwork(networkID string) error
 	// FloatingIP
 	CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error)
@@ -151,6 +152,7 @@ type Networking interface {
 	RemoveRouterInterface(routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error)
 	// Subnets
 	CreateSubnet(createOpts subnets.CreateOpts) (*subnets.Subnet, error)
+	GetSubnetByID(id string) (*subnets.Subnet, error)
 	ListSubnets(listOpts subnets.ListOpts) ([]subnets.Subnet, error)
 	UpdateSubnet(subnetID string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error)
 	DeleteSubnet(subnetID string) error

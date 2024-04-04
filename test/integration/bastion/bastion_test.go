@@ -22,15 +22,11 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	"github.com/gophercloud/utils/openstack/clientconfig"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +47,6 @@ import (
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/gardener/gardener-extension-provider-openstack/test/integration"
 )
 
 var (
@@ -114,7 +109,9 @@ var (
 	c           client.Client
 	bastionName string
 
-	openstackClient *integration.OpenstackClient
+	openstackClient openstackclient.Factory
+	networkClient   openstackclient.Networking
+	computeClient   openstackclient.Compute
 )
 
 var _ = BeforeSuite(func() {
@@ -200,19 +197,22 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	openstackClient, err = integration.NewOSClient(&clientconfig.ClientOpts{
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:                     *authURL,
-			Username:                    *userName,
-			Password:                    *password,
-			DomainName:                  *domainName,
-			ProjectName:                 *tenantName,
-			ApplicationCredentialID:     *appID,
-			ApplicationCredentialName:   *appName,
-			ApplicationCredentialSecret: *appSecret,
-		},
-		RegionName: *region,
+	openstackClient, err = openstackclient.NewOpenstackClientFromCredentials(&openstack.Credentials{
+		AuthURL:                     *authURL,
+		Username:                    *userName,
+		Password:                    *password,
+		DomainName:                  *domainName,
+		TenantName:                  *tenantName,
+		ApplicationCredentialID:     *appID,
+		ApplicationCredentialName:   *appName,
+		ApplicationCredentialSecret: *appSecret,
 	})
+	Expect(err).NotTo(HaveOccurred())
+
+	opts := openstackclient.WithRegion(*region)
+	networkClient, err = openstackClient.Networking(opts)
+	Expect(err).NotTo(HaveOccurred())
+	computeClient, err = openstackClient.Compute(opts)
 	Expect(err).NotTo(HaveOccurred())
 })
 
@@ -282,7 +282,7 @@ var _ = Describe("Bastion tests", func() {
 			By("Tearing down bastion")
 			teardownBastion(ctx, c, bastion)
 			By("verify bastion deletion")
-			verifyDeletion(openstackClient, bastionName)
+			verifyDeletion(bastionName)
 		})
 
 		By("wait until bastion is reconciled")
@@ -298,14 +298,14 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		err = retry(6, 5*time.Second, func() error {
+		err = retry(3, 5*time.Second, func() error {
 			return verifyPort22IsOpen(ctx, c, bastion)
 		})
 		Expect(err).NotTo(HaveOccurred())
 		verifyPort42IsClosed(ctx, c, bastion)
 
 		By("verify cloud resources")
-		verifyCreation(openstackClient, options)
+		verifyCreation(options)
 	})
 })
 
@@ -325,7 +325,7 @@ func verifyPort22IsOpen(ctx context.Context, c client.Client, bastion *extension
 
 	ipAddress := bastionUpdated.Status.Ingress.IP
 	address := net.JoinHostPort(ipAddress, "22")
-	conn, err := net.DialTimeout("tcp4", address, 60*time.Second)
+	conn, err := net.DialTimeout("tcp4", address, 10*time.Second)
 	if err != nil {
 		return err
 	}
@@ -351,41 +351,33 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID string, err error) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
-	allPages, err := networks.List(openstackClient.NetworkingClient, external.ListOptsExt{
-		ListOptsBuilder: networks.ListOpts{
-			Name: *floatingPoolName,
-		},
-		External: pointer.Bool(true),
-	}).AllPages()
-	Expect(err).NotTo(HaveOccurred())
-
-	externalNetworks, err := networks.ExtractNetworks(allPages)
+	externalNetwork, err := networkClient.GetExternalNetworkByName(*floatingPoolName)
 	Expect(err).NotTo(HaveOccurred())
 
 	createOpts := routers.CreateOpts{
 		Name:         routerName,
 		AdminStateUp: pointer.Bool(true),
 		GatewayInfo: &routers.GatewayInfo{
-			NetworkID: externalNetworks[0].ID,
+			NetworkID: externalNetwork.ID,
 		},
 	}
-	router, err := routers.Create(openstackClient.NetworkingClient, createOpts).Extract()
+	router, err := networkClient.CreateRouter(createOpts)
 	Expect(err).NotTo(HaveOccurred())
 
 	intOpts := routers.AddInterfaceOpts{
 		SubnetID: subnetID,
 	}
-	_, err = routers.AddInterface(openstackClient.NetworkingClient, router.ID, intOpts).Extract()
+	_, err = networkClient.AddRouterInterface(router.ID, intOpts)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is created", "routerName", routerName)
-	return router.ID, externalNetworks[0].ID, nil
+	return router.ID, externalNetwork.ID, nil
 }
 
 func teardownRouter(routerID string) error {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
-	err := routers.Delete(openstackClient.NetworkingClient, routerID).ExtractErr()
+	err := networkClient.DeleteRouter(routerID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is deleted", "routerID", routerID)
@@ -395,10 +387,9 @@ func teardownRouter(routerID string) error {
 func prepareNewNetwork(networkName string) (string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
-	opts := networks.CreateOpts{
+	network, err := networkClient.CreateNetwork(networks.CreateOpts{
 		Name: networkName,
-	}
-	network, err := networks.Create(openstackClient.NetworkingClient, opts).Extract()
+	})
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is created", "networkName", networkName)
@@ -421,7 +412,7 @@ func prepareSubNet(subnetName, networkID string) (string, error) {
 			},
 		},
 	}
-	subnet, err := subnets.Create(openstackClient.NetworkingClient, createOpts).Extract()
+	subnet, err := networkClient.CreateSubnet(createOpts)
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Subnet is created", "subnetName", subnetName)
 	return subnet.ID, nil
@@ -431,17 +422,16 @@ func prepareSubNet(subnetName, networkID string) (string, error) {
 func prepareShootSecurityGroup(shootSgName string) (string, error) {
 	log.Info("Waiting until Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 
-	opts := groups.CreateOpts{
+	sGroup, err := networkClient.CreateSecurityGroup(groups.CreateOpts{
 		Name: shootSgName,
-	}
-	sgroups, err := groups.Create(openstackClient.NetworkingClient, opts).Extract()
+	})
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
-	return sgroups.ID, nil
+	return sGroup.ID, nil
 }
 
 func teardownShootSecurityGroup(groupID string) error {
-	err := groups.Delete(openstackClient.NetworkingClient, groupID).ExtractErr()
+	err := networkClient.DeleteSecurityGroup(groupID)
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is deleted", "shootSecurityGroupID", groupID)
 	return nil
@@ -450,10 +440,10 @@ func teardownShootSecurityGroup(groupID string) error {
 func teardownNetwork(networkID, routerID, subnetID string) error {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
-	_, err := routers.RemoveInterface(openstackClient.NetworkingClient, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID}).Extract()
+	_, err := networkClient.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = networks.Delete(openstackClient.NetworkingClient, networkID).ExtractErr()
+	err = networkClient.DeleteNetwork(networkID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)
@@ -561,7 +551,7 @@ func createInfrastructureConfig() *openstackv1alpha1.InfrastructureConfig {
 			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "InfrastructureConfig",
 		},
-		FloatingPoolSubnetName: pointer.String(*floatingPoolName),
+		FloatingPoolSubnetName: floatingPoolName,
 	}
 }
 
@@ -669,49 +659,44 @@ func teardownBastion(ctx context.Context, c client.Client, bastion *extensionsv1
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func verifyDeletion(openstackClient *integration.OpenstackClient, name string) {
+func verifyDeletion(name string) {
 	// bastion public ip should be gone
-	_, err := floatingips.List(openstackClient.NetworkingClient, floatingips.ListOpts{Description: name}).AllPages()
+	fIPs, err := networkClient.GetFipByName(name)
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
+	Expect(fIPs).To(BeEmpty())
 
 	// bastion Security group should be gone
-	_, err = groups.List(openstackClient.NetworkingClient, groups.ListOpts{Name: fmt.Sprintf("%s-sg", name)}).AllPages()
+	sGroups, err := networkClient.GetSecurityGroupByName(fmt.Sprintf("%s-sg", name))
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
+	Expect(sGroups).To(BeEmpty())
 
 	// bastion instance should be terminated and not found
-	_, err = servers.List(openstackClient.NetworkingClient, servers.ListOpts{Name: name}).AllPages()
+	servers, err := computeClient.FindServersByName(name)
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
+	Expect(servers).To(BeEmpty())
 }
 
-func checkSecurityRulesExists(openstackClient *integration.OpenstackClient, securityRuleName string) {
-	allPages, err := rules.List(openstackClient.NetworkingClient, rules.ListOpts{Description: securityRuleName}).AllPages()
-	Expect(err).NotTo(HaveOccurred())
-	rule, err := rules.ExtractRules(allPages)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(rule[0].Description).To(Equal(securityRuleName))
-}
-
-func verifyCreation(openstackClient *integration.OpenstackClient, options *bastionctrl.Options) {
+func verifyCreation(options *bastionctrl.Options) {
 	By("checkSecurityGroupExists")
-	allPages, err := groups.List(openstackClient.NetworkingClient, groups.ListOpts{Name: options.SecurityGroup}).AllPages()
-	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
-
-	securityGroup, err := groups.ExtractGroups(allPages)
-	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
-	Expect(securityGroup[0].Description).To(Equal(options.SecurityGroup))
+	sGroups, err := networkClient.GetSecurityGroupByName(options.SecurityGroup)
+	Expect(err).To(Succeed())
+	Expect(sGroups).ToNot(BeEmpty())
+	Expect(sGroups[0].Description).To(Equal(options.SecurityGroup))
 
 	By("checkNSGExists")
-	checkSecurityRulesExists(openstackClient, bastionctrl.IngressAllowSSH(options, "", "", "", "").Description)
+	securityRuleName := bastionctrl.IngressAllowSSH(options, "", "", "", "").Description
+	rules, err := networkClient.ListRules(rules.ListOpts{Description: securityRuleName})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(rules).ToNot(BeEmpty())
+	Expect(rules[0].Description).To(Equal(securityRuleName))
 
 	By("checking bastion instance")
-	allPages, err = servers.List(openstackClient.ComputeClient, servers.ListOpts{Name: options.BastionInstanceName}).AllPages()
+	servers, err := computeClient.FindServersByName(options.BastionInstanceName)
 	Expect(err).To(Succeed())
-	allServers, err := servers.ExtractServers(allPages)
-	Expect(err).To(Succeed())
-	Expect(allServers[0].Name).To(Equal(options.BastionInstanceName))
+	Expect(servers[0].Name).To(Equal(options.BastionInstanceName))
 
 	By("checking bastion ingress IPs exist")
-	privateIP, externalIP, err := bastionctrl.GetIPs(&allServers[0], options)
+	privateIP, externalIP, err := bastionctrl.GetIPs(&servers[0], options)
 	Expect(err).To(Succeed())
 	Expect(privateIP).NotTo(BeNil())
 	Expect(externalIP).NotTo(BeNil())
@@ -725,7 +710,7 @@ func retry(maxRetries int, delay time.Duration, fn func() error) error {
 		if err == nil {
 			return nil
 		}
-		log.Info("Attempt %d failed, retrying in %v: %v", i+1, delay, err)
+		log.Info(fmt.Sprintf("Attempt %d failed, retrying in %v: %v", i+1, delay, err))
 		time.Sleep(delay)
 	}
 	return err

@@ -142,6 +142,12 @@ func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, er
 	return images.ExtractImages(allPages)
 }
 
+// FindImageByID returns the image with the given ID. It returns nil if the image is not found.
+func (c *ComputeClient) FindImageByID(id string) (*images.Image, error) {
+	image, err := images.Get(c.client, id).Extract()
+	return image, IgnoreNotFoundError(err)
+}
+
 // CreateKeyPair creates an SSH key pair
 func (c *ComputeClient) CreateKeyPair(name, publicKey string) (*keypairs.KeyPair, error) {
 	opts := keypairs.CreateOpts{

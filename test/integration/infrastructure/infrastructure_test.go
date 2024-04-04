@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"time"
 
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	gardenerv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -45,6 +44,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 type flowUsage int

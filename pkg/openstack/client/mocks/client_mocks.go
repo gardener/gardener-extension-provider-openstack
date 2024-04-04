@@ -784,6 +784,21 @@ func (mr *MockNetworkingMockRecorder) GetFipByName(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFipByName", reflect.TypeOf((*MockNetworking)(nil).GetFipByName), arg0)
 }
 
+// GetNetworkByID mocks base method.
+func (m *MockNetworking) GetNetworkByID(arg0 string) (*networks.Network, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNetworkByID", arg0)
+	ret0, _ := ret[0].(*networks.Network)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNetworkByID indicates an expected call of GetNetworkByID.
+func (mr *MockNetworkingMockRecorder) GetNetworkByID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkByID", reflect.TypeOf((*MockNetworking)(nil).GetNetworkByID), arg0)
+}
+
 // GetNetworkByName mocks base method.
 func (m *MockNetworking) GetNetworkByName(arg0 string) ([]networks.Network, error) {
 	m.ctrl.T.Helper()
@@ -872,6 +887,21 @@ func (m *MockNetworking) GetSecurityGroupByName(arg0 string) ([]groups.SecGroup,
 func (mr *MockNetworkingMockRecorder) GetSecurityGroupByName(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupByName", reflect.TypeOf((*MockNetworking)(nil).GetSecurityGroupByName), arg0)
+}
+
+// GetSubnetByID mocks base method.
+func (m *MockNetworking) GetSubnetByID(arg0 string) (*subnets.Subnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubnetByID", arg0)
+	ret0, _ := ret[0].(*subnets.Subnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSubnetByID indicates an expected call of GetSubnetByID.
+func (mr *MockNetworkingMockRecorder) GetSubnetByID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubnetByID", reflect.TypeOf((*MockNetworking)(nil).GetSubnetByID), arg0)
 }
 
 // ListFip mocks base method.

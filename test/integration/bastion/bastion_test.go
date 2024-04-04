@@ -109,9 +109,8 @@ var (
 	c           client.Client
 	bastionName string
 
-	openstackClient openstackclient.Factory
-	networkClient   openstackclient.Networking
-	computeClient   openstackclient.Compute
+	networkClient openstackclient.Networking
+	computeClient openstackclient.Compute
 )
 
 var _ = BeforeSuite(func() {
@@ -197,7 +196,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	openstackClient, err = openstackclient.NewOpenstackClientFromCredentials(&openstack.Credentials{
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(&openstack.Credentials{
 		AuthURL:                     *authURL,
 		Username:                    *userName,
 		Password:                    *password,

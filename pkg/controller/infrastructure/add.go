@@ -7,6 +7,7 @@ package infrastructure
 import (
 	"context"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -41,6 +42,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, options A
 		ControllerOptions: options.Controller,
 		Predicates:        infrastructure.DefaultPredicates(ctx, mgr, options.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
+		KnownCodes:        helper.KnownCodes,
 	})
 }
 

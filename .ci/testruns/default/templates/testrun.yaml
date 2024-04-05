@@ -7,12 +7,12 @@ spec:
   ttlSecondsAfterFinished: 172800 # 2 days
   {{- if .Values.revision }}
   locationSets:
-  - default: true
-    name: provider-openstack
-    locations:
-    - type: git
-      repo: https://github.com/gardener/gardener-extension-provider-openstack.git
-      revision: {{ .Values.revision }}
+    - default: true
+      name: provider-openstack
+      locations:
+        - type: git
+          repo: https://github.com/gardener/gardener-extension-provider-openstack.git
+          revision: {{ .Values.revision }}
   {{- end }}
 
   config:
@@ -20,69 +20,69 @@ spec:
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: domainName
     - name: TENANT_NAME
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: tenantName
     - name: AUTH_URL
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: authURL
     - name: FLOATING_POOL_NAME
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: floatingPoolName
     - name: APPLICATION_CREDENTIAL_ID
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: applicationCredentialID
     - name: APPLICATION_CREDENTIAL_NAME
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: applicationCredentialName
     - name: APPLICATION_CREDENTIAL_SECRET
       type: env
       valueFrom:
         secretKeyRef:
-          name: shoot-operator-converged-cloud-cp-eu-nl-1
+          name: shoot-operator-ccee-cp-eu-de-1
           key: applicationCredentialSecret
+    - name: FLOATING_POOL_NAME
+      type: env
+      valueFrom:
+        secretKeyRef:
+          name: shoot-operator-ccee-cp-eu-de-1
+          key: floatingPoolName
 
   testflow:
-  - name: infrastructure-test
-    definition:
-      name: infrastructure-test
-      config:
-      - name: REGION
-        type: env
-        value: europe-west1
-      - name: FLOATING_POOL_NAME
-        type: env
-        value: FloatingIP-external-cp
-  - name: bastion-test
-    definition:
-      name: bastion-test
-      config:
-      - name: REGION
-        type: env
-        value: europe-west1
-      - name: FLOATING_POOL_NAME
-        type: env
-        value: FloatingIP-external-cp
-      - name: FLAVOR_REF
-        type: env
-        value: g_c2_m4
-      - name: IMAGE_REF
-        type: env
-        value: 68e60d5b-2f6c-43d0-a8b2-d820fe84e3aa # id of gardenlinux-1312.3
+    - name: infrastructure-test
+      definition:
+        name: infrastructure-test
+        config:
+          - name: REGION
+            type: env
+            value: europe-west1
+    - name: bastion-test
+      definition:
+        name: bastion-test
+        config:
+          - name: REGION
+            type: env
+            value: europe-west1
+          - name: FLAVOR_REF
+            type: env
+            value: g_c2_m4
+          - name: IMAGE_REF
+            type: env
+            value: 68e60d5b-2f6c-43d0-a8b2-d820fe84e3aa # id of gardenlinux-1312.3

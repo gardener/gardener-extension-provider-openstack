@@ -5,14 +5,15 @@
 package validation_test
 
 import (
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
 
 var _ = Describe("ControlPlaneConfig validation", func() {

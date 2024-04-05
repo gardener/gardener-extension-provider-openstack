@@ -5,10 +5,11 @@
 package openstack_test
 
 import (
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
+
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 var _ = Describe("LoadBalancerClass", func() {

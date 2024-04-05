@@ -7,8 +7,6 @@ package validation_test
 import (
 	"strings"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,6 +14,9 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
 
 var _ = Describe("InfrastructureConfig validation", func() {

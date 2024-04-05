@@ -5,10 +5,11 @@
 package utils_test
 
 import (
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
+
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 var _ = Describe("Utils", func() {

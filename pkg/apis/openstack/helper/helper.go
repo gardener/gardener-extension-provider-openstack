@@ -7,10 +7,11 @@ package helper
 import (
 	"fmt"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"k8s.io/utils/ptr"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 // FindSubnetByPurpose takes a list of subnets and tries to find the first entry

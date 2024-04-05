@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/mutator"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -21,6 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/mutator"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var _ = Describe("Shoot mutator", func() {

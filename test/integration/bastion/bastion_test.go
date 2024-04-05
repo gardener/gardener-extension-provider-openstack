@@ -684,10 +684,10 @@ func verifyCreation(options *bastionctrl.Options) {
 
 	By("checkNSGExists")
 	securityRuleName := bastionctrl.IngressAllowSSH(options, "", "", "", "").Description
-	rules, err := networkClient.ListRules(rules.ListOpts{Description: securityRuleName})
+	sRules, err := networkClient.ListRules(rules.ListOpts{Description: securityRuleName})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(rules).ToNot(BeEmpty())
-	Expect(rules[0].Description).To(Equal(securityRuleName))
+	Expect(sRules).ToNot(BeEmpty())
+	Expect(sRules[0].Description).To(Equal(securityRuleName))
 
 	By("checking bastion instance")
 	servers, err := computeClient.FindServersByName(options.BastionInstanceName)

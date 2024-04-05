@@ -7,6 +7,10 @@ package validation_test
 import (
 	"encoding/json"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,12 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
-
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("Shoot validation", func() {
@@ -31,7 +30,7 @@ var _ = Describe("Shoot validation", func() {
 
 		It("should return no error because nodes CIDR was provided", func() {
 			networking := &core.Networking{
-				Nodes: pointer.String("1.2.3.4/5"),
+				Nodes: ptr.To("1.2.3.4/5"),
 			}
 
 			errorList := ValidateNetworking(networking, networkingPath)
@@ -63,7 +62,7 @@ var _ = Describe("Shoot validation", func() {
 				{
 					Name: "worker1",
 					Volume: &core.Volume{
-						Type:       pointer.String("Volume"),
+						Type:       ptr.To("Volume"),
 						VolumeSize: "30G",
 					},
 					Minimum: 1,
@@ -73,7 +72,7 @@ var _ = Describe("Shoot validation", func() {
 				{
 					Name: "worker2",
 					Volume: &core.Volume{
-						Type:       pointer.String("Volume"),
+						Type:       ptr.To("Volume"),
 						VolumeSize: "20G",
 					},
 					Minimum: 1,
@@ -105,7 +104,7 @@ var _ = Describe("Shoot validation", func() {
 
 			It("should forbid specifying volume type without size", func() {
 				workers[0].Volume = &core.Volume{
-					Type: pointer.String("standard"),
+					Type: ptr.To("standard"),
 				}
 
 				errorList := ValidateWorkers(workers, nil, nilPath)

@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -524,7 +524,7 @@ var _ = Describe("Machines", func() {
 								Name:         machineImageName,
 								Version:      machineImageVersion,
 								Image:        machineImage,
-								Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+								Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 							},
 						},
 					}
@@ -551,7 +551,7 @@ var _ = Describe("Machines", func() {
 				It("should return the expected machine deployments for profile image types with id", func() {
 					setup(regionWithImages, "", machineImageID)
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithRegion, clusterWithRegion, nil)
-					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.Bool(true)}
+					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
 
 					// Test workerDelegate.DeployMachineClasses()
 
@@ -581,7 +581,7 @@ var _ = Describe("Machines", func() {
 								Name:         machineImageName,
 								Version:      machineImageVersion,
 								ID:           machineImageID,
-								Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+								Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 							},
 						},
 					}
@@ -821,8 +821,8 @@ var _ = Describe("Machines", func() {
 						Expect(className3).NotTo(Equal(className4))
 
 						By("with server group policy")
-						policy1 := pointer.String("soft-anti-affinity")
-						policy2 := pointer.String("foo")
+						policy1 := ptr.To("soft-anti-affinity")
+						policy2 := ptr.To("foo")
 						classNamePolicy01 := applyLabelsAndPolicy(nil, policy1)
 						classNamePolicy02 := applyLabelsAndPolicy(nil, policy2)
 						classNamePolicy11 := applyLabelsAndPolicy([]apiv1alpha1.MachineLabel{

@@ -14,7 +14,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
@@ -459,8 +459,8 @@ func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	}
 
 	log := c.LogFromContext(ctx)
-	networkID := pointer.StringDeref(c.state.Get(IdentifierNetwork), "")
-	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
+	networkID := ptr.Deref(c.state.Get(IdentifierNetwork), "")
+	subnetID := ptr.Deref(c.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
 		c.namespace,
 		c.sharedFilesystem.GetShareNetwork,

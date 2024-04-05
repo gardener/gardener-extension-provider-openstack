@@ -7,11 +7,10 @@ package helper
 import (
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"k8s.io/utils/pointer"
-
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"k8s.io/utils/ptr"
 )
 
 // FindSubnetByPurpose takes a list of subnets and tries to find the first entry
@@ -66,7 +65,7 @@ func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, image
 					continue
 				}
 				for _, region := range version.Regions {
-					if regionName == region.Name && architecture == pointer.StringDeref(region.Architecture, v1beta1constants.ArchitectureAMD64) {
+					if regionName == region.Name && architecture == ptr.ToDeref(region.Architecture, v1beta1constants.ArchitectureAMD64) {
 						return &api.MachineImage{
 							Name:         imageName,
 							Version:      imageVersion,
@@ -86,7 +85,7 @@ func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, image
 					return &api.MachineImage{
 						Name:         imageName,
 						Version:      imageVersion,
-						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image:        version.Image,
 					}, nil
 				}

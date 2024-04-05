@@ -7,6 +7,7 @@ package bastion
 import (
 	"testing"
 
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -19,9 +20,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-
-	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	"k8s.io/utils/ptr"
 )
 
 func TestBastion(t *testing.T) {
@@ -237,7 +236,7 @@ func createShootTestStruct() *gardencorev1beta1.Shoot {
 	return &gardencorev1beta1.Shoot{
 		Spec: gardencorev1beta1.ShootSpec{
 			Region:            "eu-nl-1",
-			SecretBindingName: pointer.String(v1beta1constants.SecretNameCloudProvider),
+			SecretBindingName: ptr.To(v1beta1constants.SecretNameCloudProvider),
 			Provider: gardencorev1beta1.Provider{
 				InfrastructureConfig: &runtime.RawExtension{
 					Object: &openstackv1alpha1.InfrastructureConfig{

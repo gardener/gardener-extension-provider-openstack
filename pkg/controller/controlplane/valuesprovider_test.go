@@ -26,7 +26,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -44,7 +44,7 @@ const (
 )
 
 var (
-	dhcpDomain     = pointer.String("dhcp-domain")
+	dhcpDomain     = ptr.To("dhcp-domain")
 	requestTimeout = &metav1.Duration{
 		Duration: func() time.Duration { d, _ := time.ParseDuration("5m"); return d }(),
 	}
@@ -145,10 +145,10 @@ var _ = Describe("ValuesProvider", func() {
 			KeyStoneURL:                authURL,
 			DHCPDomain:                 dhcpDomain,
 			RequestTimeout:             requestTimeout,
-			UseOctavia:                 pointer.Bool(useOctavia),
-			RescanBlockStorageOnResize: pointer.Bool(rescanBlockStorageOnResize),
-			IgnoreVolumeAZ:             pointer.Bool(ignoreVolumeAZ),
-			NodeVolumeAttachLimit:      pointer.Int32(nodeVoluemAttachLimit),
+			UseOctavia:                 ptr.To(useOctavia),
+			RescanBlockStorageOnResize: ptr.To(rescanBlockStorageOnResize),
+			IgnoreVolumeAZ:             ptr.To(ignoreVolumeAZ),
+			NodeVolumeAttachLimit:      ptr.To[int32](nodeVoluemAttachLimit),
 		}
 		cloudProfileConfigJSON, _ = json.Marshal(cloudProfileConfig)
 
@@ -218,7 +218,7 @@ var _ = Describe("ValuesProvider", func() {
 			Shoot: &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String("calico"),
+						Type: ptr.To("calico"),
 						ProviderConfig: &runtime.RawExtension{
 							Raw: []byte(`{"overlay":{"enabled": false}}`),
 						},
@@ -325,7 +325,7 @@ var _ = Describe("ValuesProvider", func() {
 			"useOctavia":                  useOctavia,
 			"rescanBlockStorageOnResize":  rescanBlockStorageOnResize,
 			"ignoreVolumeAZ":              ignoreVolumeAZ,
-			"nodeVolumeAttachLimit":       pointer.Int32(nodeVoluemAttachLimit),
+			"nodeVolumeAttachLimit":       ptr.To[int32](nodeVoluemAttachLimit),
 			"applicationCredentialID":     "",
 			"applicationCredentialSecret": "",
 			"applicationCredentialName":   "",
@@ -444,12 +444,12 @@ var _ = Describe("ValuesProvider", func() {
 						LoadBalancerClasses: []api.LoadBalancerClass{
 							{
 								Name:             "default",
-								FloatingSubnetID: pointer.String("fip-subnet-1"),
+								FloatingSubnetID: ptr.To("fip-subnet-1"),
 							},
 							{
 								Name:             "real-default",
-								FloatingSubnetID: pointer.String("fip-subnet-2"),
-								Purpose:          pointer.String("default"),
+								FloatingSubnetID: ptr.To("fip-subnet-2"),
+								Purpose:          ptr.To("default"),
 							},
 						},
 						CloudControllerManager: &api.CloudControllerManagerConfig{

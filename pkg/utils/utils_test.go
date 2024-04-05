@@ -5,11 +5,10 @@
 package utils_test
 
 import (
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
-
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("Utils", func() {
@@ -41,7 +40,7 @@ var _ = Describe("Utils", func() {
 		Expect(IsStringPtrValueEqual(a, b)).To(Equal(expected))
 	},
 		Entry("should be false as pointer points to nil", nil, "test", false),
-		Entry("should be false as pointer value is different", pointer.String("different"), "test", false),
-		Entry("should be true as pointer value is equal", pointer.String("test"), "test", true),
+		Entry("should be false as pointer value is different", ptr.To("different"), "test", false),
+		Entry("should be true as pointer value is equal", ptr.To("test"), "test", true),
 	)
 })

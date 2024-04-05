@@ -5,15 +5,14 @@
 package validation_test
 
 import (
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
-
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ControlPlaneConfig validation", func() {
@@ -124,9 +123,9 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 
 			loadBalancerClass = api.LoadBalancerClass{
 				Name:              "LBCLass",
-				FloatingSubnetID:  pointer.String("1"),
-				FloatingNetworkID: pointer.String("1"),
-				SubnetID:          pointer.String("1"),
+				FloatingSubnetID:  ptr.To("1"),
+				FloatingNetworkID: ptr.To("1"),
+				SubnetID:          ptr.To("1"),
 			}
 
 			cloudProfileConfig = &api.CloudProfileConfig{

@@ -13,7 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
@@ -116,7 +116,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 				if len(region.ID) == 0 {
 					allErrs = append(allErrs, field.Required(kdxPath.Child("id"), "must provide an image ID"))
 				}
-				if !slices.Contains(v1beta1constants.ValidArchitectures, pointer.StringDeref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
+				if !slices.Contains(v1beta1constants.ValidArchitectures, ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
 					allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), *region.Architecture, v1beta1constants.ValidArchitectures))
 				}
 			}

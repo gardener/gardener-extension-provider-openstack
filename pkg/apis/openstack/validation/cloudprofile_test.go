@@ -5,14 +5,13 @@
 package validation_test
 
 import (
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
-
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("CloudProfileConfig validation", func() {
@@ -68,8 +67,8 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.FloatingPools = []api.FloatingPool{
 					{
 						Name:   "",
-						Region: pointer.String(""),
-						Domain: pointer.String(""),
+						Region: ptr.To(""),
+						Domain: ptr.To(""),
 					},
 				}
 
@@ -91,29 +90,29 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.FloatingPools = []api.FloatingPool{
 					{
 						Name:   "foo",
-						Region: pointer.String("rfoo"),
+						Region: ptr.To("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Region: pointer.String("rfoo"),
+						Region: ptr.To("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: pointer.String("dfoo"),
+						Domain: ptr.To("dfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: pointer.String("dfoo"),
+						Domain: ptr.To("dfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: pointer.String("dfoo"),
-						Region: pointer.String("rfoo"),
+						Domain: ptr.To("dfoo"),
+						Region: ptr.To("rfoo"),
 					},
 					{
 						Name:   "foo",
-						Domain: pointer.String("dfoo"),
-						Region: pointer.String("rfoo"),
+						Domain: ptr.To("dfoo"),
+						Region: ptr.To("rfoo"),
 					},
 				}
 
@@ -154,7 +153,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
 					{
 						Name:   "",
-						Region: pointer.String(""),
+						Region: ptr.To(""),
 					},
 				}
 
@@ -173,11 +172,11 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
 					{
 						Name:   "foo",
-						Region: pointer.String("foo"),
+						Region: ptr.To("foo"),
 					},
 					{
 						Name:   "foo",
-						Region: pointer.String("foo"),
+						Region: ptr.To("foo"),
 					},
 				}
 
@@ -241,7 +240,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		})
 
 		It("should forbid invalid keystone CA Certs", func() {
-			cloudProfileConfig.KeyStoneCACert = pointer.String("foo")
+			cloudProfileConfig.KeyStoneCACert = ptr.To("foo")
 
 			errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -266,7 +265,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 		Context("dhcp domain validation", func() {
 			It("should forbid not specifying a value when the key is present", func() {
-				cloudProfileConfig.DHCPDomain = pointer.String("")
+				cloudProfileConfig.DHCPDomain = ptr.To("")
 
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
 
@@ -372,17 +371,17 @@ var _ = Describe("CloudProfileConfig validation", func() {
 									{
 										Name:         "eu01",
 										ID:           "abc_foo_amd64",
-										Architecture: pointer.String("amd64"),
+										Architecture: ptr.To("amd64"),
 									},
 									{
 										Name:         "eu01",
 										ID:           "abc_foo_arm64",
-										Architecture: pointer.String("arm64"),
+										Architecture: ptr.To("arm64"),
 									},
 									{
 										Name:         "eu01",
 										ID:           "abc_foo_ppc64",
-										Architecture: pointer.String("ppc64"),
+										Architecture: ptr.To("ppc64"),
 									},
 								},
 							}},
@@ -438,7 +437,7 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass has an invalid purpose", func() {
-			loadBalancerClasses[0].Purpose = pointer.String("invalid")
+			loadBalancerClasses[0].Purpose = ptr.To("invalid")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -448,9 +447,9 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by id, name and tags in parallel", func() {
-			loadBalancerClasses[0].FloatingSubnetID = pointer.String("floating-subnet-id")
-			loadBalancerClasses[0].FloatingSubnetName = pointer.String("floating-subnet-name")
-			loadBalancerClasses[0].FloatingSubnetTags = pointer.String("floating-subnet-tags")
+			loadBalancerClasses[0].FloatingSubnetID = ptr.To("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetName = ptr.To("floating-subnet-name")
+			loadBalancerClasses[0].FloatingSubnetTags = ptr.To("floating-subnet-tags")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -460,8 +459,8 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by id and name", func() {
-			loadBalancerClasses[0].FloatingSubnetID = pointer.String("floating-subnet-id")
-			loadBalancerClasses[0].FloatingSubnetName = pointer.String("floating-subnet-name")
+			loadBalancerClasses[0].FloatingSubnetID = ptr.To("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetName = ptr.To("floating-subnet-name")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -471,8 +470,8 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by id and tags", func() {
-			loadBalancerClasses[0].FloatingSubnetID = pointer.String("floating-subnet-id")
-			loadBalancerClasses[0].FloatingSubnetTags = pointer.String("floating-subnet-tags")
+			loadBalancerClasses[0].FloatingSubnetID = ptr.To("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetTags = ptr.To("floating-subnet-tags")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -482,8 +481,8 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by name and tags", func() {
-			loadBalancerClasses[0].FloatingSubnetName = pointer.String("floating-subnet-name")
-			loadBalancerClasses[0].FloatingSubnetTags = pointer.String("floating-subnet-tags")
+			loadBalancerClasses[0].FloatingSubnetName = ptr.To("floating-subnet-name")
+			loadBalancerClasses[0].FloatingSubnetTags = ptr.To("floating-subnet-tags")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -518,8 +517,8 @@ var _ = Describe("LoadBalancerClass validation", func() {
 
 		Context("Default LoadBalancerClasses", func() {
 			It("should fail as there are multiple LoadBalancerClasses with purpose default", func() {
-				loadBalancerClasses[0].Purpose = pointer.String("default")
-				loadBalancerClasses[1].Purpose = pointer.String("default")
+				loadBalancerClasses[0].Purpose = ptr.To("default")
+				loadBalancerClasses[1].Purpose = ptr.To("default")
 
 				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -529,7 +528,7 @@ var _ = Describe("LoadBalancerClass validation", func() {
 			})
 
 			It("should fail as there are multiple default LoadBalancerClasses", func() {
-				loadBalancerClasses[0].Purpose = pointer.String("default")
+				loadBalancerClasses[0].Purpose = ptr.To("default")
 				loadBalancerClasses[1].Name = "default"
 
 				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
@@ -542,8 +541,8 @@ var _ = Describe("LoadBalancerClass validation", func() {
 
 		Context("Private LoadBalancerClasses", func() {
 			It("should fail as there are multiple LoadBalancerClasses with purpose private", func() {
-				loadBalancerClasses[0].Purpose = pointer.String("private")
-				loadBalancerClasses[1].Purpose = pointer.String("private")
+				loadBalancerClasses[0].Purpose = ptr.To("private")
+				loadBalancerClasses[1].Purpose = ptr.To("private")
 
 				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -553,7 +552,7 @@ var _ = Describe("LoadBalancerClass validation", func() {
 			})
 
 			It("should fail as there are multiple private LoadBalancerClasses", func() {
-				loadBalancerClasses[0].Purpose = pointer.String("private")
+				loadBalancerClasses[0].Purpose = ptr.To("private")
 				loadBalancerClasses[1].Name = "private"
 
 				errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)

@@ -11,7 +11,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -70,7 +70,7 @@ func (w *workerDelegate) findMachineImage(name, version, architecture string) (*
 }
 
 func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage) []api.MachineImage {
-	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version, pointer.StringDeref(machineImage.Architecture, v1beta1constants.ArchitectureAMD64)); err != nil {
+	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version, ptr.Deref(machineImage.Architecture, v1beta1constants.ArchitectureAMD64)); err != nil {
 		return append(machineImages, machineImage)
 	}
 	return machineImages

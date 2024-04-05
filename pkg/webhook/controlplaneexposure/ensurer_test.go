@@ -16,7 +16,6 @@ import (
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
@@ -30,7 +29,7 @@ func TestController(t *testing.T) {
 var _ = Describe("Ensurer", func() {
 	var (
 		etcdStorage = &config.ETCDStorage{
-			ClassName: pointer.String("gardener.cloud-fast"),
+			ClassName: ptr.To("gardener.cloud-fast"),
 			Capacity:  ptr.To(resource.MustParse("25Gi")),
 		}
 

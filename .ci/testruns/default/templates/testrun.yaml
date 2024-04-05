@@ -64,22 +64,18 @@ spec:
         secretKeyRef:
           name: shoot-operator-ccee-cp-eu-de-1
           key: floatingPoolName
+    - name: REGION
+      type: env
+      value: eu-nl-1
 
   testflow:
     - name: infrastructure-test
       definition:
         name: infrastructure-test
-        config:
-          - name: REGION
-            type: env
-            value: europe-west1
     - name: bastion-test
       definition:
         name: bastion-test
         config:
-          - name: REGION
-            type: env
-            value: europe-west1
           - name: FLAVOR_REF
             type: env
             value: g_c2_m4

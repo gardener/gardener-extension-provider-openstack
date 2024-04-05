@@ -9,14 +9,15 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 ./test/integration/infrastructure
+    go test -timeout=0 ./test/integration/bastion
     --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     --kubeconfig=$TM_KUBECONFIG_PATH/testmachinery.config
+    --region="$REGION"
     --auth-url="$AUTH_URL"
     --domain-name="$DOMAIN_NAME"
     --floating-pool-name="$FLOATING_POOL_NAME"
-    --password="$PASSWORD"
-    --region="$REGION"
     --tenant-name="$TENANT_NAME"
-    --user-name="$USER_NAME"
+    --app-id="$APPLICATION_CREDENTIAL_ID"
+    --app-name="$APPLICATION_CREDENTIAL_NAME"
+    --app-secret="$APPLICATION_CREDENTIAL_SECRET"
   image: golang:1.21.1

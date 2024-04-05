@@ -66,7 +66,7 @@ func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, image
 					continue
 				}
 				for _, region := range version.Regions {
-					if regionName == region.Name && architecture == ptr.ToDeref(region.Architecture, v1beta1constants.ArchitectureAMD64) {
+					if regionName == region.Name && architecture == ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64) {
 						return &api.MachineImage{
 							Name:         imageName,
 							Version:      imageVersion,

@@ -42,7 +42,7 @@ var _ = Describe("BasicFlowContext", func() {
 			forceTask3Error     = false
 			persistedData       shared.FlatMap
 			persistCallCount    = 0
-			persistor           = func(ctx context.Context, data shared.FlatMap) error {
+			persistor           = func(_ context.Context, data shared.FlatMap) error {
 				if forcePersistorError {
 					return fmt.Errorf("forced persistor error")
 				}
@@ -98,7 +98,7 @@ var _ = Describe("BasicFlowContext", func() {
 		By("logs with context", func() {
 			g := flow.NewGraph("test")
 			task1 := c.AddTask(g, "task1",
-				func(ctx context.Context) error {
+				func(_ context.Context) error {
 					c.state.Set("task1", "done")
 					return nil
 				},
@@ -112,7 +112,7 @@ var _ = Describe("BasicFlowContext", func() {
 				},
 				shared.Dependencies(task1))
 			_ = c.AddTask(g, "task3",
-				func(ctx context.Context) error {
+				func(_ context.Context) error {
 					c.state.SetPtr("afterTask2", c.state.Get("task2"))
 					time.Sleep(c.PersistInterval)
 					c.state.Set("task3", "done")

@@ -1,2 +1,4 @@
-test-single:
-  testrunPath: .ci/testruns/default.yaml
+test:
+  default:
+    testrunPath: .ci/testruns/default/templates/testrun.yaml
+    template: true

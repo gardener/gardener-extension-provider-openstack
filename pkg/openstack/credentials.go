@@ -11,7 +11,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -49,15 +49,15 @@ func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials,
 	var altDomainNameKey, altTenantNameKey, altUserNameKey, altPasswordKey, altAuthURLKey, altCABundleKey *string
 	var altApplicationCredentialID, altApplicationCredentialName, altApplicationCredentialSecret *string
 	if allowDNSKeys {
-		altDomainNameKey = pointer.String(DNSDomainName)
-		altTenantNameKey = pointer.String(DNSTenantName)
-		altUserNameKey = pointer.String(DNSUserName)
-		altPasswordKey = pointer.String(DNSPassword)
-		altApplicationCredentialID = pointer.String(DNSApplicationCredentialID)
-		altApplicationCredentialName = pointer.String(DNSApplicationCredentialName)
-		altApplicationCredentialSecret = pointer.String(DNSApplicationCredentialSecret)
-		altAuthURLKey = pointer.String(DNSAuthURL)
-		altCABundleKey = pointer.String(DNS_CA_Bundle)
+		altDomainNameKey = ptr.To(DNSDomainName)
+		altTenantNameKey = ptr.To(DNSTenantName)
+		altUserNameKey = ptr.To(DNSUserName)
+		altPasswordKey = ptr.To(DNSPassword)
+		altApplicationCredentialID = ptr.To(DNSApplicationCredentialID)
+		altApplicationCredentialName = ptr.To(DNSApplicationCredentialName)
+		altApplicationCredentialSecret = ptr.To(DNSApplicationCredentialSecret)
+		altAuthURLKey = ptr.To(DNSAuthURL)
+		altCABundleKey = ptr.To(DNS_CA_Bundle)
 	}
 
 	if secret.Data == nil {

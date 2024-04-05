@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
@@ -443,8 +443,8 @@ var _ = Describe("Ensurer", func() {
 					FeatureGates: map[string]bool{
 						"Foo": true,
 					},
-					ResolverConfig:               pointer.String("/etc/resolv-for-kubelet.conf"),
-					EnableControllerAttachDetach: pointer.Bool(true),
+					ResolverConfig:               ptr.To("/etc/resolv-for-kubelet.conf"),
+					EnableControllerAttachDetach: ptr.To(true),
 				}
 
 				for _, featureGate := range featureGates {
@@ -593,7 +593,7 @@ WantedBy=multi-user.target
 			DeferCleanup(testutils.WithVar(&ImageVector, imagevector.ImageVector{{
 				Name:       "machine-controller-manager-provider-openstack",
 				Repository: "foo",
-				Tag:        pointer.String("bar"),
+				Tag:        ptr.To("bar"),
 			}}))
 		})
 

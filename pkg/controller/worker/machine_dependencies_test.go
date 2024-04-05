@@ -15,7 +15,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	k8smocks "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	k8smocks "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

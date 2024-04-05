@@ -18,7 +18,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -34,8 +34,8 @@ var (
 		HealthCheckConfig: healthcheckconfig.HealthCheckConfig{
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			ShootRESTOptions: &healthcheckconfig.RESTOptions{
-				QPS:   pointer.Float32(100),
-				Burst: pointer.Int(130),
+				QPS:   ptr.To[float32](100),
+				Burst: ptr.To(130),
 			},
 		},
 	}

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -35,7 +35,7 @@ func Timeout(timeout time.Duration) TaskOption {
 
 // DoIf creates a TaskOption for DoIf
 func DoIf(condition bool) TaskOption {
-	return TaskOption{DoIf: pointer.Bool(condition)}
+	return TaskOption{DoIf: ptr.To(condition)}
 }
 
 // FlowStatePersistor persists the flat map to the provider status
@@ -121,7 +121,7 @@ func (c *BasicFlowContext) AddTask(g *flow.Graph, name string, fn flow.TaskFn, o
 				condition = *allOptions.DoIf
 			}
 			condition = condition && *opt.DoIf
-			allOptions.DoIf = pointer.Bool(condition)
+			allOptions.DoIf = ptr.To(condition)
 		}
 	}
 

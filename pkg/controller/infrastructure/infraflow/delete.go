@@ -9,7 +9,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
@@ -229,12 +229,12 @@ func (c *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 
 func (c *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	log := c.LogFromContext(ctx)
-	networkID := pointer.StringDeref(c.state.Get(IdentifierNetwork), "")
-	subnetID := pointer.StringDeref(c.state.Get(IdentifierSubnet), "")
+	networkID := ptr.Deref(c.state.Get(IdentifierNetwork), "")
+	subnetID := ptr.Deref(c.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
 		c.namespace,
 		c.sharedFilesystem.GetShareNetwork,
-		func(name string) ([]*sharenetworks.ShareNetwork, error) {
+		func(_ string) ([]*sharenetworks.ShareNetwork, error) {
 			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
 				AllTenants:      false,
 				NeutronNetID:    networkID,

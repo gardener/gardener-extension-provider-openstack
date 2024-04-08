@@ -10,7 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -192,7 +192,7 @@ func (w *whiteboard) Set(key, id string) {
 }
 
 func (w *whiteboard) SetPtr(key string, id *string) {
-	w.Set(key, pointer.StringDeref(id, ""))
+	w.Set(key, ptr.Deref(id, ""))
 }
 
 func (w *whiteboard) IsAlreadyDeleted(key string) bool {

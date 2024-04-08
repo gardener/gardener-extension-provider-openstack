@@ -9,16 +9,16 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -143,9 +143,9 @@ var _ = Describe("Actuator", func() {
 			dnsClient.EXPECT().GetZones(ctx).Return(zones, nil)
 			dnsClient.EXPECT().CreateOrUpdateRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA), []string{address}, 120).Return(nil)
 			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, obj *extensionsv1alpha1.DNSRecord, _ client.Patch, opts ...client.PatchOption) error {
+				func(_ context.Context, obj *extensionsv1alpha1.DNSRecord, _ client.Patch, _ ...client.PatchOption) error {
 					Expect(obj.Status).To(Equal(extensionsv1alpha1.DNSRecordStatus{
-						Zone: pointer.String(zone),
+						Zone: ptr.To(zone),
 					}))
 					return nil
 				},
@@ -158,7 +158,7 @@ var _ = Describe("Actuator", func() {
 
 	Describe("#Delete", func() {
 		It("should delete the DNSRecord", func() {
-			dns.Status.Zone = pointer.String(zone)
+			dns.Status.Zone = ptr.To(zone)
 
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {

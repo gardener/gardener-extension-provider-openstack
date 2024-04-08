@@ -145,7 +145,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: fmt.Sprintf("%s-controller-manager", openstack.Name),
 
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			verflag.PrintAndExitIfRequested()
 
 			if err := aggOption.Complete(); err != nil {

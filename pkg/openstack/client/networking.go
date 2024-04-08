@@ -16,7 +16,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type networkWithExternalExt struct {
@@ -41,7 +41,7 @@ func (c *NetworkingClient) GetExternalNetworkNames(_ context.Context) ([]string,
 func (c *NetworkingClient) listExternalNetworks(listOpts networks.ListOptsBuilder) ([]networkWithExternalExt, error) {
 	allPages, err := networks.List(c.client, external.ListOptsExt{
 		ListOptsBuilder: listOpts,
-		External:        pointer.Bool(true),
+		External:        ptr.To(true),
 	}).AllPages()
 	if err != nil {
 		return nil, err

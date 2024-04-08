@@ -14,7 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
@@ -42,7 +42,7 @@ var _ = Describe("BasicFlowContext", func() {
 			forceTask3Error     = false
 			persistedData       shared.FlatMap
 			persistCallCount    = 0
-			persistor           = func(ctx context.Context, data shared.FlatMap) error {
+			persistor           = func(_ context.Context, data shared.FlatMap) error {
 				if forcePersistorError {
 					return fmt.Errorf("forced persistor error")
 				}
@@ -98,7 +98,7 @@ var _ = Describe("BasicFlowContext", func() {
 		By("logs with context", func() {
 			g := flow.NewGraph("test")
 			task1 := c.AddTask(g, "task1",
-				func(ctx context.Context) error {
+				func(_ context.Context) error {
 					c.state.Set("task1", "done")
 					return nil
 				},
@@ -112,7 +112,7 @@ var _ = Describe("BasicFlowContext", func() {
 				},
 				shared.Dependencies(task1))
 			_ = c.AddTask(g, "task3",
-				func(ctx context.Context) error {
+				func(_ context.Context) error {
 					c.state.SetPtr("afterTask2", c.state.Get("task2"))
 					time.Sleep(c.PersistInterval)
 					c.state.Set("task3", "done")
@@ -132,9 +132,9 @@ var _ = Describe("BasicFlowContext", func() {
 			Expect(err.Error()).To(ContainSubstring(`flow "test" encountered task errors: [task "task3" failed: forced persistor error]`))
 
 			Expect(c.state.Get("task1")).To(BeNil())
-			Expect(c.state.Get("task2")).To(Equal(pointer.String("done")))
+			Expect(c.state.Get("task2")).To(Equal(ptr.To("done")))
 			Expect(c.state.Get("afterTask2")).To(Equal(c.state.Get("task2")))
-			Expect(c.state.Get("task3")).To(Equal(pointer.String("done")))
+			Expect(c.state.Get("task3")).To(Equal(ptr.To("done")))
 			Expect(logBuffer.String()).To(ContainSubstring(`"task":"task2"`))
 			Expect(logBuffer.String()).To(ContainSubstring(`"msg":"message from task2"`))
 			Expect(logBuffer.String()).To(ContainSubstring(`"task":"task3"`))

@@ -8,7 +8,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 )
@@ -31,13 +31,13 @@ var _ = Describe("TerraformState", func() {
 		Expect(len(tables)).To(Equal(2))
 
 		Expect(tf.GetManagedResourceInstanceID("aws_route_table", "routetable_private_utility_z0")).
-			To(Equal(pointer.String("rtb-77777")))
+			To(Equal(ptr.To("rtb-77777")))
 
 		Expect(tf.GetManagedResourceInstanceName("aws_iam_role", "nodes")).
-			To(Equal(pointer.String("shoot--foo--bar-nodes")))
+			To(Equal(ptr.To("shoot--foo--bar-nodes")))
 
 		Expect(tf.GetManagedResourceInstanceAttribute("aws_nat_gateway", "natgw_z0", "private_ip")).
-			To(Equal(pointer.String("10.180.46.81")))
+			To(Equal(ptr.To("10.180.46.81")))
 
 		Expect(tf.GetManagedResourceInstanceAttribute("aws_nat_gateway", "natgw_z0", "foobar")).
 			To(BeNil())

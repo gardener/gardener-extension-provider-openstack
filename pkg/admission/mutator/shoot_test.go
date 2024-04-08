@@ -11,14 +11,14 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/mutator"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -55,7 +55,7 @@ var _ = Describe("Shoot mutator", func() {
 					Namespace: namespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: pointer.String("openstack"),
+					SeedName: ptr.To("openstack"),
 					Provider: gardencorev1beta1.Provider{
 						Type: openstack.Type,
 						Workers: []gardencorev1beta1.Worker{
@@ -66,8 +66,8 @@ var _ = Describe("Shoot mutator", func() {
 					},
 					Region: "eu-fr-1",
 					Networking: &gardencorev1beta1.Networking{
-						Nodes: pointer.String("10.250.0.0/16"),
-						Type:  pointer.String("calico"),
+						Nodes: ptr.To("10.250.0.0/16"),
+						Type:  ptr.To("calico"),
 					},
 				},
 			}
@@ -78,14 +78,14 @@ var _ = Describe("Shoot mutator", func() {
 					Namespace: namespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: pointer.String("openstack"),
+					SeedName: ptr.To("openstack"),
 					Provider: gardencorev1beta1.Provider{
 						Type: openstack.Type,
 					},
 					Region: "eu-fr-1",
 					Networking: &gardencorev1beta1.Networking{
-						Nodes: pointer.String("10.250.0.0/16"),
-						Type:  pointer.String("calico"),
+						Nodes: ptr.To("10.250.0.0/16"),
+						Type:  ptr.To("calico"),
 					},
 				},
 			}
@@ -100,7 +100,7 @@ var _ = Describe("Shoot mutator", func() {
 					Type:           gardencorev1beta1.LastOperationTypeReconcile,
 					State:          gardencorev1beta1.LastOperationStateProcessing,
 				}
-				shoot.Status.SeedName = pointer.String("aws")
+				shoot.Status.SeedName = ptr.To("aws")
 				shootExpected := shoot.DeepCopy()
 				err := shootMutator.Mutate(ctx, shoot, nil)
 				Expect(err).NotTo(HaveOccurred())
@@ -115,7 +115,7 @@ var _ = Describe("Shoot mutator", func() {
 					Type:           gardencorev1beta1.LastOperationTypeMigrate,
 					State:          gardencorev1beta1.LastOperationStateProcessing,
 				}
-				shoot.Status.SeedName = pointer.String("openstack")
+				shoot.Status.SeedName = ptr.To("openstack")
 				shootExpected := shoot.DeepCopy()
 				err := shootMutator.Mutate(ctx, shoot, shoot)
 				Expect(err).NotTo(HaveOccurred())
@@ -194,8 +194,8 @@ var _ = Describe("Shoot mutator", func() {
 
 		Context("Mutate shoot networking providerconfig for type cilium", func() {
 			BeforeEach(func() {
-				shoot.Spec.Networking.Type = pointer.String("cilium")
-				oldShoot.Spec.Networking.Type = pointer.String("cilium")
+				shoot.Spec.Networking.Type = ptr.To("cilium")
+				oldShoot.Spec.Networking.Type = ptr.To("cilium")
 			})
 
 			It("should return without mutation when shoot is in scheduled to new seed phase", func() {
@@ -206,7 +206,7 @@ var _ = Describe("Shoot mutator", func() {
 					Type:           gardencorev1beta1.LastOperationTypeReconcile,
 					State:          gardencorev1beta1.LastOperationStateProcessing,
 				}
-				shoot.Status.SeedName = pointer.String("aws")
+				shoot.Status.SeedName = ptr.To("aws")
 				shootExpected := shoot.DeepCopy()
 				err := shootMutator.Mutate(ctx, shoot, nil)
 				Expect(err).NotTo(HaveOccurred())
@@ -221,7 +221,7 @@ var _ = Describe("Shoot mutator", func() {
 					Type:           gardencorev1beta1.LastOperationTypeMigrate,
 					State:          gardencorev1beta1.LastOperationStateProcessing,
 				}
-				shoot.Status.SeedName = pointer.String("openstack")
+				shoot.Status.SeedName = ptr.To("openstack")
 				shootExpected := shoot.DeepCopy()
 				err := shootMutator.Mutate(ctx, shoot, shoot)
 				Expect(err).NotTo(HaveOccurred())

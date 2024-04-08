@@ -33,7 +33,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -355,7 +355,7 @@ func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID str
 
 	createOpts := routers.CreateOpts{
 		Name:         routerName,
-		AdminStateUp: pointer.Bool(true),
+		AdminStateUp: ptr.To(true),
 		GatewayInfo: &routers.GatewayInfo{
 			NetworkID: externalNetwork.ID,
 		},
@@ -403,7 +403,7 @@ func prepareSubNet(subnetName, networkID string) (string, error) {
 		NetworkID: networkID,
 		IPVersion: 4,
 		CIDR:      "10.180.0.0/16",
-		GatewayIP: pointer.String("10.180.0.1"),
+		GatewayIP: ptr.To("10.180.0.1"),
 		AllocationPools: []subnets.AllocationPool{
 			{
 				Start: "10.180.0.2",
@@ -606,7 +606,7 @@ func createShoot(infrastructureConfig []byte) *gardencorev1beta1.Shoot {
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			Region:            *region,
-			SecretBindingName: pointer.String(v1beta1constants.SecretNameCloudProvider),
+			SecretBindingName: ptr.To(v1beta1constants.SecretNameCloudProvider),
 			Provider: gardencorev1beta1.Provider{
 				InfrastructureConfig: &runtime.RawExtension{
 					Raw: infrastructureConfig,

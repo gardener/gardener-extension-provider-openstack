@@ -7,7 +7,7 @@ package shared_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 )
@@ -45,10 +45,10 @@ var _ = Describe("Whiteboard", func() {
 		Expect(*w.Get("key2")).To(Equal("id2"))
 		Expect(w.Get("child1")).To(BeNil())
 		Expect(w.GetChild("child1").IsEmpty()).To(BeFalse())
-		Expect(w.GetChild("child1").GetChild("subchild1").Get("key1")).To(Equal(pointer.String("id111")))
-		Expect(w.GetChild("child1").GetChild("subchild2").Get("key1")).To(Equal(pointer.String("id121")))
+		Expect(w.GetChild("child1").GetChild("subchild1").Get("key1")).To(Equal(ptr.To("id111")))
+		Expect(w.GetChild("child1").GetChild("subchild2").Get("key1")).To(Equal(ptr.To("id121")))
 		Expect(w.GetChild("child2").IsEmpty()).To(BeFalse())
-		Expect(w.GetChild("child2").Get("key2")).To(Equal(pointer.String("id22")))
+		Expect(w.GetChild("child2").Get("key2")).To(Equal(ptr.To("id22")))
 		Expect(w.GetChild("child3").IsEmpty()).To(BeTrue())
 		generation1 := w.CurrentGeneration()
 		w.Set("key2", "id2")
@@ -72,7 +72,7 @@ var _ = Describe("Whiteboard", func() {
 		Expect(w.IsAlreadyDeleted("key1")).To(BeTrue())
 
 		Expect(w.Get("key3")).To(BeNil())
-		w.SetPtr("key3", pointer.String("id3"))
+		w.SetPtr("key3", ptr.To("id3"))
 		Expect(w.Get("key3")).NotTo(BeNil())
 
 		Expect(w.HasChild("child1")).To(BeTrue())

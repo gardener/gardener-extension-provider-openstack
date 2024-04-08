@@ -450,10 +450,10 @@ func runTest(
 	flow flowUsage,
 ) error {
 	var (
-		namespace                 *corev1.Namespace
-		cluster                   *extensionsv1alpha1.Cluster
-		infra                     *extensionsv1alpha1.Infrastructure
-		infrastructureIdentifiers infrastructureIdentifiers
+		namespace        *corev1.Namespace
+		cluster          *extensionsv1alpha1.Cluster
+		infra            *extensionsv1alpha1.Infrastructure
+		infraIdentifiers infrastructureIdentifiers
 	)
 
 	var cleanupHandle framework.CleanupActionHandle
@@ -474,7 +474,7 @@ func runTest(
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verify infrastructure deletion")
-		verifyDeletion(infrastructureIdentifiers, providerConfig)
+		verifyDeletion(infraIdentifiers, providerConfig)
 
 		Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, cluster))).To(Succeed())
@@ -596,7 +596,7 @@ func runTest(
 	}
 
 	By("verify infrastructure creation")
-	infrastructureIdentifiers = verifyCreation(providerStatus, providerConfig)
+	infraIdentifiers = verifyCreation(providerStatus, providerConfig)
 
 	oldState := infra.Status.State
 	if flow == fuUseFlowRecoverState {

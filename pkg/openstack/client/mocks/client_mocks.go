@@ -799,7 +799,7 @@ func (m *MockNetworking) GetNetworkByID(arg0 string) (*networks.Network, error) 
 }
 
 // GetNetworkByID indicates an expected call of GetNetworkByID.
-func (mr *MockNetworkingMockRecorder) GetNetworkByID(arg0 interface{}) *gomock.Call {
+func (mr *MockNetworkingMockRecorder) GetNetworkByID(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkByID", reflect.TypeOf((*MockNetworking)(nil).GetNetworkByID), arg0)
 }
@@ -904,7 +904,7 @@ func (m *MockNetworking) GetSubnetByID(arg0 string) (*subnets.Subnet, error) {
 }
 
 // GetSubnetByID indicates an expected call of GetSubnetByID.
-func (mr *MockNetworkingMockRecorder) GetSubnetByID(arg0 interface{}) *gomock.Call {
+func (mr *MockNetworkingMockRecorder) GetSubnetByID(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubnetByID", reflect.TypeOf((*MockNetworking)(nil).GetSubnetByID), arg0)
 }

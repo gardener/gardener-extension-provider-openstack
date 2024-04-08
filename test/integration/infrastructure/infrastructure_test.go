@@ -885,29 +885,33 @@ func verifyCreation(infraStatus *openstackv1alpha1.InfrastructureStatus, provide
 
 func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {
 	// keypair doesn't exist
-	keyPair, _ := computeClient.GetKeyPair(*infrastructureIdentifier.keyPair)
+	keyPair, _ := computeClient.GetKeyPair(ptr.Deref(infrastructureIdentifier.keyPair, ""))
 	Expect(keyPair).To(BeNil())
 
 	if providerConfig.Networks.ID == nil {
 		// make sure network doesn't exist, if it wasn't present before
-		networks, err := networkClient.ListNetwork(networks.ListOpts{ID: *infrastructureIdentifier.networkID})
+		opts := networks.ListOpts{ID: ptr.Deref(infrastructureIdentifier.networkID, "")}
+		networks, err := networkClient.ListNetwork(opts)
 		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 		Expect(networks).To(BeEmpty())
 	}
 
 	// subnet doesn't exist
-	subnets, err := networkClient.ListSubnets(subnets.ListOpts{ID: *infrastructureIdentifier.subnetID})
+	subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
+	subnets, err := networkClient.ListSubnets(subnetsOpts)
 	Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 	Expect(subnets).To(BeEmpty())
 
 	// security group doesn't exist
-	sGroups, err := networkClient.ListSecurityGroup(groups.ListOpts{ID: *infrastructureIdentifier.secGroupID})
+	sGroupsOpts := groups.ListOpts{ID: ptr.Deref(infrastructureIdentifier.secGroupID, "")}
+	sGroups, err := networkClient.ListSecurityGroup(sGroupsOpts)
 	Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 	Expect(sGroups).To(BeEmpty())
 
 	if providerConfig.Networks.Router == nil {
 		// make sure router doesn't exist, if it wasn't present in the start of test
-		routers, err := networkClient.ListRouters(routers.ListOpts{ID: *infrastructureIdentifier.routerID})
+		opts := routers.ListOpts{ID: ptr.Deref(infrastructureIdentifier.routerID, "")}
+		routers, err := networkClient.ListRouters(opts)
 		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 		Expect(routers).To(BeEmpty())
 	}

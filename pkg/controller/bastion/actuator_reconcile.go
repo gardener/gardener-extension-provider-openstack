@@ -242,7 +242,7 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imag
 	if len(imageRes) == 0 {
 		imageRes, err = imageClient.ListImages(images.ListOpts{
 			Name:       bastionConfig.ImageRef,
-			Visibility: images.ImageVisibility("all"),
+			Visibility: "all",
 		})
 		if err != nil {
 			return nil, err
@@ -251,7 +251,7 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imag
 	if len(imageRes) == 0 {
 		return nil, errors.New("imageID not found")
 	}
-	image = &imageRes[0]
+	image := &imageRes[0]
 
 	createOpts := servers.CreateOpts{
 		Name:           opt.BastionInstanceName,

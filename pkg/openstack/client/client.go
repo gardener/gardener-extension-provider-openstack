@@ -209,6 +209,7 @@ func (oc *OpenstackClientFactory) SharedFilesystem(options ...Option) (SharedFil
 	}, nil
 }
 
+// Images creates a Images client
 func (oc *OpenstackClientFactory) Images(options ...Option) (Images, error) {
 	eo := gophercloud.EndpointOpts{}
 	for _, opt := range options {

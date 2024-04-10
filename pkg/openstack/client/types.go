@@ -62,6 +62,7 @@ type SharedFilesystemClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// ImageClient is a client for images
 type ImageClient struct {
 	client *gophercloud.ServiceClient
 }
@@ -186,6 +187,7 @@ type FactoryFactory interface {
 	NewFactory(credentials *openstack.Credentials) (Factory, error)
 }
 
+// Images describes the operations of a client interacting with images
 type Images interface {
 	ListImages(opts images.ListOpts) ([]images.Image, error)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 )
 
-// CreateShareNetwork creates the share network.
+// ListImages lists all images filtered by listOpts
 func (c *ImageClient) ListImages(listOpts images.ListOpts) ([]images.Image, error) {
 	pages, err := images.List(c.client, listOpts).AllPages()
 	if err != nil {

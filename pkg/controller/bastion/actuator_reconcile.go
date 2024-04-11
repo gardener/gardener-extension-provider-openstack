@@ -233,10 +233,11 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imag
 	}
 
 	imageRes, err := imageClient.ListImages(images.ListOpts{
-		ID: bastionConfig.ImageRef,
+		ID:         bastionConfig.ImageRef,
+		Visibility: "all",
 	})
 	if err != nil {
-		return nil, err
+		log.Info("image not found by id")
 	}
 	// we didn't find any image by ID. We will try to find by name.
 	if len(imageRes) == 0 {
@@ -249,7 +250,7 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imag
 		}
 	}
 	if len(imageRes) == 0 {
-		return nil, errors.New("imageID not found")
+		return nil, fmt.Errorf("imageRef: '%s' not found neither by id or name", bastionConfig.ImageRef)
 	}
 	image := &imageRes[0]
 

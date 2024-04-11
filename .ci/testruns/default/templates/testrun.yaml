@@ -81,4 +81,4 @@ spec:
             value: g_c2_m4
           - name: IMAGE_REF
             type: env
-            value: 74301b75-3f16-4ab1-a03d-3865165ebc7c # id of gardenlinux-1312.3 in region eu-de-1
+            value: gardenlinux-1312.3

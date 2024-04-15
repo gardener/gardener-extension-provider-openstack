@@ -5,6 +5,12 @@ gardener-extension-provider-openstack:
         preprocess: 'inject-commit-hash'
       component_descriptor:
         ocm_repository: europe-docker.pkg.dev/gardener-project/snapshots
+        component_labels:
+        - name: 'cloud.gardener.cnudie/responsibles'
+          value:
+          - type: 'githubTeam'
+            teamname: 'gardener/gardener-extension-provider-openstack-maintainers'
+            github_hostname: 'github.com'
       publish:
         oci-builder: 'docker-buildx'
         dockerimages:
@@ -13,12 +19,6 @@ gardener-extension-provider-openstack:
             dockerfile: 'Dockerfile'
             target: gardener-extension-provider-openstack
             resource_labels:
-            - name: 'cloud.gardener.cnudie/responsibles'
-              value:
-              - type: 'githubUser'
-                username: 'dkistner'
-              - type: 'githubUser'
-                username: 'kon-angelo'
             - name: 'gardener.cloud/cve-categorisation'
               value:
                 network_exposure: 'protected'
@@ -32,12 +32,6 @@ gardener-extension-provider-openstack:
             dockerfile: 'Dockerfile'
             target: gardener-extension-admission-openstack
             resource_labels:
-            - name: 'cloud.gardener.cnudie/responsibles'
-              value:
-              - type: 'githubUser'
-                username: 'dkistner'
-              - type: 'githubUser'
-                username: 'kon-angelo'
             - name: 'gardener.cloud/cve-categorisation'
               value:
                 network_exposure: 'protected'

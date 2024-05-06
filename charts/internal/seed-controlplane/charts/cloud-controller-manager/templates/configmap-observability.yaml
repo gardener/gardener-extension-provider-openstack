@@ -1,3 +1,4 @@
+{{- if not .Values.gep19Monitoring }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -49,10 +50,6 @@ data:
             type: seed
             visibility: all
           annotations:
-            description: All infrastruture specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
+            description: All infrastructure specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
             summary: Cloud controller manager is down.
-
-  observedComponents: |
-    observedPods:
-    - podPrefix: cloud-controller-manager
-      isExposedToUser: true
+{{- end }}

@@ -62,6 +62,7 @@ rules:
   - admissionregistration.k8s.io
   - apiextensions.k8s.io
   - networking.k8s.io
+  - monitoring.coreos.com
   resources:
   - namespaces
   - namespaces/finalizers
@@ -83,6 +84,9 @@ rules:
   - mutatingwebhookconfigurations
   - customresourcedefinitions
   - networkpolicies
+  - servicemonitors
+  - prometheusrules
+  - statefulsets # TODO(rfranzke): Remove this after August 2024.
   verbs:
   - "*"
 - apiGroups:

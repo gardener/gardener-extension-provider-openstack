@@ -22,3 +22,6 @@ vpa:
     maxAllowed:
       cpu: 4
       memory: 10G
+
+# TODO(rfranzke): Remove this field after August 2024.
+gep19Monitoring: false

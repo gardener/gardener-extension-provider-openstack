@@ -92,6 +92,12 @@ func (c *NetworkingClient) GetNetworkByName(name string) ([]networks.Network, er
 	return c.ListNetwork(listOpts)
 }
 
+// GetNetworkByID return a network info by id
+func (c *NetworkingClient) GetNetworkByID(id string) (*networks.Network, error) {
+	network, err := networks.Get(c.client, id).Extract()
+	return network, IgnoreNotFoundError(err)
+}
+
 // CreateNetwork creates a network
 func (c *NetworkingClient) CreateNetwork(opts networks.CreateOpts) (*networks.Network, error) {
 	return networks.Create(c.client, opts).Extract()
@@ -232,6 +238,12 @@ func (c *NetworkingClient) RemoveRouterInterface(routerID string, removeOpts rou
 // CreateSubnet creates a subnet
 func (c *NetworkingClient) CreateSubnet(createOpts subnets.CreateOpts) (*subnets.Subnet, error) {
 	return subnets.Create(c.client, createOpts).Extract()
+}
+
+// GetSubnetByID return a subnet info by id
+func (c *NetworkingClient) GetSubnetByID(id string) (*subnets.Subnet, error) {
+	subnet, err := subnets.Get(c.client, id).Extract()
+	return subnet, IgnoreNotFoundError(err)
 }
 
 // ListSubnets returns a list of subnets

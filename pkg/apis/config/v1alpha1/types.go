@@ -59,7 +59,7 @@ type ETCDBackup struct {
 
 // BastionConfig is the config for the Bastion
 type BastionConfig struct {
-	// ImageRef is the openstack image reference
+	// ImageRef is the openstack image reference (name or id)
 	ImageRef string `json:"imageRef,omitempty"`
 	// FlavorRef is the openstack flavorRef reference
 	FlavorRef string `json:"flavorRef,omitempty"`

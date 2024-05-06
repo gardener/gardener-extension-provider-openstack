@@ -66,7 +66,7 @@ spec:
           key: floatingPoolName
     - name: REGION
       type: env
-      value: eu-nl-1
+      value: eu-de-1
 
   testflow:
     - name: infrastructure-test
@@ -81,4 +81,4 @@ spec:
             value: g_c2_m4
           - name: IMAGE_REF
             type: env
-            value: 68e60d5b-2f6c-43d0-a8b2-d820fe84e3aa # id of gardenlinux-1312.3
+            value: gardenlinux-1312.3

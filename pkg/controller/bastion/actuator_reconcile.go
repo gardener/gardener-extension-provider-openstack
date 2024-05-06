@@ -18,6 +18,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -72,6 +73,11 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
+	imageClient, err := openstackClientFactory.Images()
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
+
 	networkingClient, err := openstackClientFactory.Networking()
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
@@ -97,7 +103,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	instance, err := ensureComputeInstance(log, computeClient, a.bastionConfig, infraStatus, opt)
+	instance, err := ensureComputeInstance(log, computeClient, imageClient, a.bastionConfig, infraStatus, opt)
 	if err != nil || instance == nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -201,7 +207,7 @@ func ensurePublicIPAddress(opt *Options, log logr.Logger, client openstackclient
 	return fip, nil
 }
 
-func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
+func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imageClient openstackclient.Images, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
 	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return nil, err
@@ -226,23 +232,27 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, bast
 		return nil, errors.New("flavorID not found")
 	}
 
-	image, err := client.FindImageByID(bastionConfig.ImageRef)
+	imageRes, err := imageClient.ListImages(images.ListOpts{
+		ID:         bastionConfig.ImageRef,
+		Visibility: "all",
+	})
 	if err != nil {
-		return nil, err
+		log.Info("image not found by id")
 	}
-	// image not found case
-	if image == nil {
-		images, err := client.FindImages(bastionConfig.ImageRef)
+	// we didn't find any image by ID. We will try to find by name.
+	if len(imageRes) == 0 {
+		imageRes, err = imageClient.ListImages(images.ListOpts{
+			Name:       bastionConfig.ImageRef,
+			Visibility: "all",
+		})
 		if err != nil {
 			return nil, err
 		}
-
-		if len(images) == 0 {
-			return nil, errors.New("imageID not found")
-		}
-
-		image = &images[0]
 	}
+	if len(imageRes) == 0 {
+		return nil, fmt.Errorf("imageRef: '%s' not found neither by id or name", bastionConfig.ImageRef)
+	}
+	image := &imageRes[0]
 
 	createOpts := servers.CreateOpts{
 		Name:           opt.BastionInstanceName,

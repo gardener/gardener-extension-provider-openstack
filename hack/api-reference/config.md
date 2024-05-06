@@ -125,7 +125,7 @@ string
 </em>
 </td>
 <td>
-<p>ImageRef is the openstack image reference</p>
+<p>ImageRef is the openstack image reference (name or id)</p>
 </td>
 </tr>
 <tr>

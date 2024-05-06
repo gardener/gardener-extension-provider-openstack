@@ -12,8 +12,8 @@ import (
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -62,6 +62,11 @@ type SharedFilesystemClient struct {
 	client *gophercloud.ServiceClient
 }
 
+// ImageClient is a client for images
+type ImageClient struct {
+	client *gophercloud.ServiceClient
+}
+
 // Option can be passed to Factory implementations to modify the produced clients.
 type Option func(opts gophercloud.EndpointOpts) gophercloud.EndpointOpts
 
@@ -73,6 +78,7 @@ type Factory interface {
 	Networking(options ...Option) (Networking, error)
 	Loadbalancing(options ...Option) (Loadbalancing, error)
 	SharedFilesystem(options ...Option) (SharedFilesystem, error)
+	Images(options ...Option) (Images, error)
 }
 
 // Storage describes the operations of a client interacting with OpenStack's ObjectStorage service.
@@ -96,10 +102,8 @@ type Compute interface {
 	// FloatingID
 	FindFloatingIDByInstanceID(id string) (string, error)
 
+	// Flavor
 	FindFlavorID(name string) (string, error)
-	FindImages(name string) ([]images.Image, error)
-	FindImageByID(name string) (*images.Image, error)
-	ListImages(listOpts images.ListOpts) ([]images.Image, error)
 
 	// KeyPairs
 	CreateKeyPair(name, publicKey string) (*keypairs.KeyPair, error)
@@ -124,6 +128,7 @@ type Networking interface {
 	ListNetwork(listOpts networks.ListOpts) ([]networks.Network, error)
 	UpdateNetwork(networkID string, opts networks.UpdateOpts) (*networks.Network, error)
 	GetNetworkByName(name string) ([]networks.Network, error)
+	GetNetworkByID(id string) (*networks.Network, error)
 	DeleteNetwork(networkID string) error
 	// FloatingIP
 	CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error)
@@ -151,6 +156,7 @@ type Networking interface {
 	RemoveRouterInterface(routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error)
 	// Subnets
 	CreateSubnet(createOpts subnets.CreateOpts) (*subnets.Subnet, error)
+	GetSubnetByID(id string) (*subnets.Subnet, error)
 	ListSubnets(listOpts subnets.ListOpts) ([]subnets.Subnet, error)
 	UpdateSubnet(subnetID string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error)
 	DeleteSubnet(subnetID string) error
@@ -179,6 +185,11 @@ type SharedFilesystem interface {
 type FactoryFactory interface {
 	// NewFactory creates a new instance of Factory for the given Openstack credentials.
 	NewFactory(credentials *openstack.Credentials) (Factory, error)
+}
+
+// Images describes the operations of a client interacting with images
+type Images interface {
+	ListImages(opts images.ListOpts) ([]images.Image, error)
 }
 
 // FactoryFactoryFunc is a function that implements FactoryFactory.

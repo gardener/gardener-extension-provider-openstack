@@ -679,8 +679,8 @@ func runTest(
 			return err
 		}
 		Expect(infra.Status.State).To(Equal(oldState))
-		newProviderStatus := &openstackv1alpha1.InfrastructureStatus{}
-		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, newProviderStatus); err != nil {
+		newProviderStatus := openstackv1alpha1.InfrastructureStatus{}
+		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &newProviderStatus); err != nil {
 			return err
 		}
 		Expect(newProviderStatus).To(Equal(providerStatus))
@@ -835,8 +835,8 @@ type infrastructureIdentifiers struct {
 	routerID   *string
 }
 
-func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers, providerStatus *openstackv1alpha1.InfrastructureStatus) {
-	_, _, err := decoder.Decode(infraStatus.ProviderStatus.Raw, nil, providerStatus)
+func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers, providerStatus openstackv1alpha1.InfrastructureStatus) {
+	_, _, err := decoder.Decode(infraStatus.ProviderStatus.Raw, nil, &providerStatus)
 	Expect(err).NotTo(HaveOccurred())
 
 	// router exists

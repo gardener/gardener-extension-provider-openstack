@@ -73,11 +73,11 @@ func (a *actuator) updateProviderStatus(
 	status *openstackv1alpha1.InfrastructureStatus,
 	stateBytes []byte,
 ) error {
-	if status != nil && status.Networks.Router.IP != "" {
-		infra.Status.EgressCIDRs = []string{fmt.Sprintf("%s/32", status.Networks.Router.IP)}
-	}
 	patch := client.MergeFrom(infra.DeepCopy())
 	infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
 	infra.Status.State = &runtime.RawExtension{Raw: stateBytes}
+	if status != nil && status.Networks.Router.IP != "" {
+		infra.Status.EgressCIDRs = []string{fmt.Sprintf("%s/32", status.Networks.Router.IP)}
+	}
 	return a.client.Status().Patch(ctx, infra, patch)
 }

@@ -585,18 +585,12 @@ func runTest(
 		return err
 	}
 
-	By("decode infrastucture status")
+	By("verify infrastructure creation")
 	if err := c.Get(ctx, client.ObjectKey{Namespace: infra.Namespace, Name: infra.Name}, infra); err != nil {
 		return err
 	}
 
-	providerStatus := &openstackv1alpha1.InfrastructureStatus{}
-	if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, providerStatus); err != nil {
-		return err
-	}
-
-	By("verify infrastructure creation")
-	infraIdentifiers = verifyCreation(providerStatus, providerConfig)
+	infraIdentifiers, providerStatus := verifyCreation(infra.Status, providerConfig)
 
 	oldState := infra.Status.State
 	if flow == fuUseFlowRecoverState {
@@ -685,8 +679,8 @@ func runTest(
 			return err
 		}
 		Expect(infra.Status.State).To(Equal(oldState))
-		newProviderStatus := &openstackv1alpha1.InfrastructureStatus{}
-		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, newProviderStatus); err != nil {
+		newProviderStatus := openstackv1alpha1.InfrastructureStatus{}
+		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &newProviderStatus); err != nil {
 			return err
 		}
 		Expect(newProviderStatus).To(Equal(providerStatus))
@@ -841,20 +835,22 @@ type infrastructureIdentifiers struct {
 	routerID   *string
 }
 
-func verifyCreation(infraStatus *openstackv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers) {
-	// router exists
-	router, err := networkClient.GetRouterByID(infraStatus.Networks.Router.ID)
+func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers, providerStatus openstackv1alpha1.InfrastructureStatus) {
+	_, _, err := decoder.Decode(infraStatus.ProviderStatus.Raw, nil, &providerStatus)
+	Expect(err).NotTo(HaveOccurred())
 
+	// router exists
+	router, err := networkClient.GetRouterByID(providerStatus.Networks.Router.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(router.Status).To(Equal("ACTIVE"))
 	infrastructureIdentifier.routerID = &router.ID
 
 	// verify router ip in status
 	Expect(router.GatewayInfo.ExternalFixedIPs).NotTo(BeEmpty())
-	Expect(infraStatus.Networks.Router.IP).To(Equal(router.GatewayInfo.ExternalFixedIPs[0].IPAddress))
+	Expect(providerStatus.Networks.Router.IP).To(Equal(router.GatewayInfo.ExternalFixedIPs[0].IPAddress))
 
 	// network is created
-	net, err := networkClient.GetNetworkByID(infraStatus.Networks.ID)
+	net, err := networkClient.GetNetworkByID(providerStatus.Networks.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(net).NotTo(BeNil())
 
@@ -864,23 +860,27 @@ func verifyCreation(infraStatus *openstackv1alpha1.InfrastructureStatus, provide
 	infrastructureIdentifier.networkID = &net.ID
 
 	// subnet is created
-	subnet, err := networkClient.GetSubnetByID(infraStatus.Networks.Subnets[0].ID)
+	subnet, err := networkClient.GetSubnetByID(providerStatus.Networks.Subnets[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
 	infrastructureIdentifier.subnetID = &subnet.ID
 
 	// security group is created
-	secGroup, err := networkClient.GetSecurityGroup(infraStatus.SecurityGroups[0].ID)
+	secGroup, err := networkClient.GetSecurityGroup(providerStatus.SecurityGroups[0].ID)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(secGroup.Name).To(Equal(infraStatus.SecurityGroups[0].Name))
+	Expect(secGroup.Name).To(Equal(providerStatus.SecurityGroups[0].Name))
 	infrastructureIdentifier.secGroupID = &secGroup.ID
 
 	// keypair is created
-	keyPair, err := computeClient.GetKeyPair(infraStatus.Node.KeyName)
+	keyPair, err := computeClient.GetKeyPair(providerStatus.Node.KeyName)
 	Expect(err).NotTo(HaveOccurred())
 	infrastructureIdentifier.keyPair = &keyPair.Name
 
-	return infrastructureIdentifier
+	// verify egressCIDRs
+	expectedCIDRDs := []string{providerStatus.Networks.Router.IP + "/32"}
+	Expect(infraStatus.EgressCIDRs).To(Equal(expectedCIDRDs))
+
+	return infrastructureIdentifier, providerStatus
 }
 
 func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {

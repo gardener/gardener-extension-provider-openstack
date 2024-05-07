@@ -146,10 +146,7 @@ func (a *actuator) createFlowContext(ctx context.Context, log logr.Logger,
 }
 
 func (a *actuator) updateStatusState(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, state *infraflow.PersistentState) error {
-	status, err := computeProviderStatusFromFlowState(state)
-	if err != nil {
-		return err
-	}
+	status := computeProviderStatusFromFlowState(state)
 
 	stateBytes, err := state.ToJSON()
 	if err != nil {
@@ -208,9 +205,9 @@ func (a *actuator) reconcileWithTerraformer(ctx context.Context, log logr.Logger
 	return a.updateProviderStatusWithTerraformer(ctx, tf, infra, config)
 }
 
-func computeProviderStatusFromFlowState(state *infraflow.PersistentState) (*openstackv1alpha1.InfrastructureStatus, error) {
+func computeProviderStatusFromFlowState(state *infraflow.PersistentState) *openstackv1alpha1.InfrastructureStatus {
 	if len(state.Data) == 0 {
-		return nil, nil
+		return nil
 	}
 	status := &openstackv1alpha1.InfrastructureStatus{
 		TypeMeta: metav1.TypeMeta{
@@ -255,5 +252,5 @@ func computeProviderStatusFromFlowState(state *infraflow.PersistentState) (*open
 
 	status.Node.KeyName = shared.ValidValue(state.Data[infraflow.NameKeyPair])
 
-	return status, nil
+	return status
 }

@@ -877,7 +877,8 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	infrastructureIdentifier.keyPair = &keyPair.Name
 
 	// verify egressCIDRs
-	Expect(infraStatus.EgressCIDRs).To(Equal(providerStatus.Networks.Router.IP + "/32"))
+	expectedCIDRDs := []string{providerStatus.Networks.Router.IP + "/32"}
+	Expect(infraStatus.EgressCIDRs).To(Equal(expectedCIDRDs))
 
 	return infrastructureIdentifier, providerStatus
 }

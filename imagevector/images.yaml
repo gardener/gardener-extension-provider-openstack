@@ -73,7 +73,21 @@ images:
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
   tag: "v1.29.0"
-  targetVersion: ">= 1.29"
+  targetVersion: "1.29.x"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'protected'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
+      availability_requirement: 'low'
+- name: cloud-controller-manager
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
+  tag: "v1.30.0"
+  targetVersion: ">= 1.30"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

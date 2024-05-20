@@ -59,7 +59,7 @@ func defaultControlPlaneWithManila(csiManila bool) *extensionsv1alpha1.ControlPl
 		LoadBalancerProvider: "load-balancer-provider",
 		CloudControllerManager: &api.CloudControllerManagerConfig{
 			FeatureGates: map[string]bool{
-				"RotateKubeletServerCertificate": true,
+				"SomeKubernetesFeature": true,
 			},
 		},
 	}
@@ -387,7 +387,7 @@ var _ = Describe("ValuesProvider", func() {
 						},
 						CloudControllerManager: &api.CloudControllerManagerConfig{
 							FeatureGates: map[string]bool{
-								"RotateKubeletServerCertificate": true,
+								"SomeKubernetesFeature": true,
 							},
 						},
 					},
@@ -454,7 +454,7 @@ var _ = Describe("ValuesProvider", func() {
 						},
 						CloudControllerManager: &api.CloudControllerManagerConfig{
 							FeatureGates: map[string]bool{
-								"RotateKubeletServerCertificate": true,
+								"SomeKubernetesFeature": true,
 							},
 						},
 					},
@@ -544,7 +544,7 @@ var _ = Describe("ValuesProvider", func() {
 				"maintenance.gardener.cloud/restart": "true",
 			},
 			"featureGates": map[string]bool{
-				"RotateKubeletServerCertificate": true,
+				"SomeKubernetesFeature": true,
 			},
 			"tlsCipherSuites": []string{
 				"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",

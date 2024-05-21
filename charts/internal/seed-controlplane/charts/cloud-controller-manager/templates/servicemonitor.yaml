@@ -26,7 +26,7 @@ spec:
     credentials:
       name: shoot-access-prometheus-shoot
       key: token
-  scheme: HTTPS
+  scheme: https
   tlsConfig:
     insecureSkipVerify: true
 {{- end }}

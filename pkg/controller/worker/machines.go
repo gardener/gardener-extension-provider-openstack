@@ -48,7 +48,7 @@ func (w *workerDelegate) MachineClassList() client.ObjectList {
 // DeployMachineClasses generates and creates the OpenStack specific machine classes.
 func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	if w.machineClasses == nil {
-		if err := w.generateMachineConfig(); err != nil {
+		if err := w.generateMachineConfig(ctx); err != nil {
 			return err
 		}
 	}
@@ -57,16 +57,16 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 }
 
 // GenerateMachineDeployments generates the configuration for the desired machine deployments.
-func (w *workerDelegate) GenerateMachineDeployments(_ context.Context) (worker.MachineDeployments, error) {
+func (w *workerDelegate) GenerateMachineDeployments(ctx context.Context) (worker.MachineDeployments, error) {
 	if w.machineDeployments == nil {
-		if err := w.generateMachineConfig(); err != nil {
+		if err := w.generateMachineConfig(ctx); err != nil {
 			return nil, err
 		}
 	}
 	return w.machineDeployments, nil
 }
 
-func (w *workerDelegate) generateMachineConfig() error {
+func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineDeployments = worker.MachineDeployments{}
 		machineClasses     []map[string]interface{}
@@ -136,6 +136,11 @@ func (w *workerDelegate) generateMachineConfig() error {
 			machineLabels[pair.Name] = pair.Value
 		}
 
+		userData, err := worker.FetchUserData(ctx, w.seedClient, w.worker.Namespace, pool)
+		if err != nil {
+			return err
+		}
+
 		for zoneIndex, zone := range pool.Zones {
 			zoneIdx := int32(zoneIndex)
 			machineClassSpec := map[string]interface{}{
@@ -159,7 +164,7 @@ func (w *workerDelegate) generateMachineConfig() error {
 					"namespace": w.worker.Spec.SecretRef.Namespace,
 				},
 				"secret": map[string]interface{}{
-					"cloudConfig": string(pool.UserData),
+					"cloudConfig": string(userData),
 				},
 			}
 

@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -42,6 +43,8 @@ import (
 
 var _ = Describe("Machines", func() {
 	var (
+		ctx = context.Background()
+
 		ctrl         *gomock.Controller
 		c            *mockclient.MockClient
 		statusWriter *mockclient.MockStatusWriter
@@ -104,13 +107,15 @@ var _ = Describe("Machines", func() {
 				machineImage        string
 				machineImageID      string
 
-				keyName           string
-				machineType       string
-				userData          []byte
-				networkID         string
-				podCIDR           string
-				subnetID          string
-				securityGroupName string
+				keyName               string
+				machineType           string
+				userData              []byte
+				userDataSecretName    string
+				userDataSecretDataKey string
+				networkID             string
+				podCIDR               string
+				subnetID              string
+				securityGroupName     string
 
 				namePool1           string
 				minPool1            int32
@@ -161,6 +166,8 @@ var _ = Describe("Machines", func() {
 				keyName = "key-name"
 				machineType = "large"
 				userData = []byte("some-user-data")
+				userDataSecretName = "userdata-secret-name"
+				userDataSecretDataKey = "userdata-secret-key"
 				networkID = "network-id"
 				podCIDR = "1.2.3.4/5"
 				subnetID = "subnetID"
@@ -316,7 +323,10 @@ var _ = Describe("Machines", func() {
 								NodeTemplate: &extensionsv1alpha1.NodeTemplate{
 									Capacity: nodeCapacity,
 								},
-								UserData: userData,
+								UserDataSecretRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: userDataSecretName},
+									Key:                  userDataSecretDataKey,
+								},
 								Zones: []string{
 									zone1,
 									zone2,
@@ -336,6 +346,8 @@ var _ = Describe("Machines", func() {
 								NodeTemplate: &extensionsv1alpha1.NodeTemplate{
 									Capacity: nodeCapacity,
 								},
+								// TODO: Use UserDataSecretRef like in first pool once this field got removed from the
+								//  API.
 								UserData: userData,
 								Zones: []string{
 									zone1,
@@ -351,6 +363,15 @@ var _ = Describe("Machines", func() {
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
 			})
+
+			expectedUserDataSecretRefRead := func() {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: userDataSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+						secret.Data = map[string][]byte{userDataSecretDataKey: userData}
+						return nil
+					},
+				)
+			}
 
 			Describe("machine images", func() {
 				var (
@@ -501,10 +522,12 @@ var _ = Describe("Machines", func() {
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
 					// Test workerDelegate.DeployMachineClasses()
+					expectedUserDataSecretRefRead()
+
 					chartApplier.
 						EXPECT().
 						ApplyFromEmbeddedFS(
-							context.TODO(),
+							ctx,
 							charts.InternalChart,
 							filepath.Join("internal", "machineclass"),
 							namespace,
@@ -513,7 +536,7 @@ var _ = Describe("Machines", func() {
 						).
 						Return(nil)
 
-					err := workerDelegate.DeployMachineClasses(context.TODO())
+					err := workerDelegate.DeployMachineClasses(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.UpdateMachineDeployments()
@@ -538,7 +561,6 @@ var _ = Describe("Machines", func() {
 						Object: expectedImages,
 					}
 
-					ctx := context.TODO()
 					c.EXPECT().Status().Return(statusWriter)
 					statusWriter.EXPECT().Patch(ctx, workerWithExpectedImages, gomock.Any()).Return(nil)
 
@@ -547,7 +569,7 @@ var _ = Describe("Machines", func() {
 
 					// Test workerDelegate.GenerateMachineDeployments()
 
-					result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+					result, err := workerDelegate.GenerateMachineDeployments(ctx)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(Equal(machineDeployments))
 				})
@@ -558,11 +580,12 @@ var _ = Describe("Machines", func() {
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
 
 					// Test workerDelegate.DeployMachineClasses()
+					expectedUserDataSecretRefRead()
 
 					chartApplier.
 						EXPECT().
 						ApplyFromEmbeddedFS(
-							context.TODO(),
+							ctx,
 							charts.InternalChart,
 							filepath.Join("internal", "machineclass"),
 							namespace,
@@ -571,7 +594,7 @@ var _ = Describe("Machines", func() {
 						).
 						Return(nil)
 
-					err := workerDelegate.DeployMachineClasses(context.TODO())
+					err := workerDelegate.DeployMachineClasses(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.GetMachineImages()
@@ -595,7 +618,7 @@ var _ = Describe("Machines", func() {
 						Object: expectedImages,
 					}
 
-					ctx := context.TODO()
+					ctx := ctx
 					c.EXPECT().Status().Return(statusWriter)
 					statusWriter.EXPECT().Patch(ctx, workerWithExpectedImages, gomock.Any()).Return(nil)
 
@@ -708,10 +731,12 @@ var _ = Describe("Machines", func() {
 							machineClassPool2Zone2,
 						}}
 
+						expectedUserDataSecretRefRead()
+
 						chartApplier.
 							EXPECT().
 							ApplyFromEmbeddedFS(
-								context.TODO(),
+								ctx,
 								charts.InternalChart,
 								filepath.Join("internal", "machineclass"),
 								namespace,
@@ -720,7 +745,7 @@ var _ = Describe("Machines", func() {
 							).
 							Return(nil)
 
-						err := workerDelegate.DeployMachineClasses(context.TODO())
+						err := workerDelegate.DeployMachineClasses(ctx)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -741,7 +766,7 @@ var _ = Describe("Machines", func() {
 						}
 
 						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithServerGroup, cluster, nil)
-						err := workerDelegate.DeployMachineClasses(context.TODO())
+						err := workerDelegate.DeployMachineClasses(ctx)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal(`server group is required for pool "pool-1", but no server group dependency found`))
 					})
@@ -782,7 +807,10 @@ var _ = Describe("Machines", func() {
 								Raw: encode(workerConfig),
 							}
 							workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
-							result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+
+							expectedUserDataSecretRefRead()
+
+							result, err := workerDelegate.GenerateMachineDeployments(ctx)
 							Expect(err).NotTo(HaveOccurred())
 							Expect(result[0].Labels).To(HaveKeyWithValue("k1", "v1"))
 							return result[0].ClassName
@@ -862,7 +890,7 @@ var _ = Describe("Machines", func() {
 				clusterWithoutImages.Shoot.Spec.Kubernetes.Version = "invalid"
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
-				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
@@ -872,7 +900,7 @@ var _ = Describe("Machines", func() {
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
-				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
@@ -884,7 +912,7 @@ var _ = Describe("Machines", func() {
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
-				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
@@ -894,7 +922,7 @@ var _ = Describe("Machines", func() {
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
 
-				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
@@ -915,7 +943,9 @@ var _ = Describe("Machines", func() {
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
-				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+				expectedUserDataSecretRefRead()
+
+				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				resultSettings := result[0].MachineConfiguration
 				resultNodeConditions := strings.Join(testNodeConditions, ",")
 
@@ -938,8 +968,9 @@ var _ = Describe("Machines", func() {
 				w.Spec.Pools[1].ClusterAutoscaler = nil
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
-				result, err := workerDelegate.GenerateMachineDeployments(context.TODO())
+				expectedUserDataSecretRefRead()
 
+				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 

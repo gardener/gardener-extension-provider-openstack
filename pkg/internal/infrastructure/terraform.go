@@ -52,7 +52,7 @@ const (
 	MaxApiCallRetries = "10"
 )
 
-// StatusTypeMeta is the TypeMeta of the GCP InfrastructureStatus
+// StatusTypeMeta is the TypeMeta of the InfrastructureStatus
 var StatusTypeMeta = metav1.TypeMeta{
 	APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 	Kind:       "InfrastructureStatus",

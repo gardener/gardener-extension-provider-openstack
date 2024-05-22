@@ -1,0 +1,24 @@
+{{- if .Values.gep19Monitoring }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shoot-cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    prometheus: shoot
+spec:
+  groups:
+  - name: cloud-controller-manager.rules
+    rules:
+    - alert: CloudControllerManagerDown
+      expr: absent(up{job="cloud-controller-manager"} == 1)
+      for: 15m
+      labels:
+        service: cloud-controller-manager
+        severity: critical
+        type: seed
+        visibility: all
+      annotations:
+        description: All infrastructure specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
+        summary: Cloud controller manager is down.
+{{- end }}

@@ -1,0 +1,32 @@
+{{- if .Values.gep19Monitoring }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shoot-cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    prometheus: shoot
+spec:
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: cloud-controller-manager
+  endpoints:
+  - port: metrics
+    relabelings:
+    - action: labelmap
+      regex: __meta_kubernetes_service_label_(.+)
+    metricRelabelings:
+    - sourceLabels:
+      - __name__
+      action: keep
+      regex: ^(rest_client_requests_total|process_max_fds|process_open_fds)$
+  honorLabels: false
+  authorization:
+    credentials:
+      name: shoot-access-prometheus-shoot
+      key: token
+  scheme: https
+  tlsConfig:
+    insecureSkipVerify: true
+{{- end }}

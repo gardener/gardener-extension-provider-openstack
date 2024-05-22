@@ -109,12 +109,12 @@ loadBalancerClasses:
 - name: lbclass-3
   purpose: private
   subnetID: internal-id
-cloudControllerManager:
-  featureGates:
-    RotateKubeletServerCertificate: true
-#storage:
-#  csiManila:
-#    enabled: true
+# cloudControllerManager:
+#   featureGates:
+#     SomeKubernetesFeature: true
+# storage:
+#   csiManila:
+#     enabled: true
 ```
 
 The `loadBalancerProvider` is the provider name you want to use for load balancers in your shoot.

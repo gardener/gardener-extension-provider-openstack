@@ -5,8 +5,6 @@ podNetwork: 192.168.0.0/16
 podAnnotations: {}
 podLabels: {}
 featureGates: {}
-  # CustomResourceValidation: true
-  # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository:image-tag
 userAgentHeaders: []

@@ -66,9 +66,9 @@ spec:
     apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
     kind: ControlPlaneConfig
     loadBalancerProvider: provider
-    cloudControllerManager:
-      featureGates:
-        RotateKubeletServerCertificate: true
+  # cloudControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
   infrastructureProviderStatus:
     apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
     kind: InfrastructureStatus

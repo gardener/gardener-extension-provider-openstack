@@ -81,4 +81,4 @@ spec:
             value: g_c2_m4
           - name: IMAGE_REF
             type: env
-            value: gardenlinux-1312.3
+            value: gardenlinux-1443.3

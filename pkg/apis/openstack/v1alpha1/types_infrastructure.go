@@ -37,7 +37,7 @@ type Networks struct {
 	// ID is the ID of an existing private network.
 	// +optional
 	ID *string `json:"id,omitempty"`
-	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
+	// ShareNetwork holds information about the share network (used for shared2 file systems like NFS)
 	// +optional
 	ShareNetwork *ShareNetwork `json:"shareNetwork,omitempty"`
 }
@@ -48,7 +48,7 @@ type Router struct {
 	ID string `json:"id"`
 }
 
-// ShareNetwork holds information about the share network (used for shared file systems like NFS)
+// ShareNetwork holds information about the share network (used for shared2 file systems like NFS)
 type ShareNetwork struct {
 	// Enabled is the switch to enable the creation of a share network
 	Enabled bool `json:"enabled"`
@@ -138,4 +138,13 @@ type SecurityGroup struct {
 	ID string `json:"id"`
 	// Name is the security group name.
 	Name string `json:"name"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// InfrastructureState is the state which is persisted as part of the infrastructure status.
+type InfrastructureState struct {
+	metav1.TypeMeta
+
+	Data map[string]string `json:"data"`
 }

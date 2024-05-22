@@ -6,11 +6,10 @@ package infraflow
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/go-logr/logr"
-	"go.uber.org/atomic"
 )
+
+// ErrorMultipleMatches is returned when the findExisting finds multiple resources matching a name.
+var ErrorMultipleMatches = fmt.Errorf("error multiple matches")
 
 func findExisting[T any](id *string, name string,
 	getter func(id string) (*T, error),
@@ -34,6 +33,12 @@ func findExisting[T any](id *string, name string,
 	if len(found) == 0 {
 		return nil, nil
 	}
+
+	// TODO: check if this makes sense
+	if len(found) > 1 {
+		return nil, ErrorMultipleMatches
+	}
+
 	if len(selector) > 0 {
 		for _, item := range found {
 			if selector[0](item) {
@@ -43,55 +48,6 @@ func findExisting[T any](id *string, name string,
 		return nil, nil
 	}
 	return found[0], nil
-}
-
-type waiter struct {
-	log           logr.Logger
-	start         time.Time
-	period        time.Duration
-	message       atomic.String
-	keysAndValues []any
-	done          chan struct{}
-}
-
-func informOnWaiting(log logr.Logger, period time.Duration, message string, keysAndValues ...any) *waiter {
-	w := &waiter{
-		log:           log,
-		start:         time.Now(),
-		period:        period,
-		keysAndValues: keysAndValues,
-		done:          make(chan struct{}),
-	}
-	w.message.Store(message)
-	go w.run()
-	return w
-}
-
-func (w *waiter) UpdateMessage(message string) {
-	w.message.Store(message)
-}
-
-func (w *waiter) run() {
-	ticker := time.NewTicker(w.period)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-w.done:
-			return
-		case <-ticker.C:
-			delta := int(time.Since(w.start).Seconds())
-			w.log.Info(fmt.Sprintf("%s [%ds]", w.message.Load(), delta), w.keysAndValues...)
-		}
-	}
-}
-
-func (w *waiter) Done(err error) {
-	w.done <- struct{}{}
-	if err != nil {
-		w.log.Info("failed: " + err.Error())
-	} else {
-		w.log.Info("succeeded")
-	}
 }
 
 func copyMap(src map[string]string) map[string]string {
@@ -111,4 +67,54 @@ func sliceToPtr[T any](slice []T) []*T {
 		res = append(res, &t)
 	}
 	return res
+}
+
+func (fctx *FlowContext) defaultRouterName() string {
+	return fctx.infra.Namespace
+}
+
+func (fctx *FlowContext) defaultSSHKeypairName() string {
+	return fctx.infra.Namespace
+}
+
+func (fctx *FlowContext) defaultNetworkName() string {
+	return fctx.infra.Namespace
+}
+
+func (fctx *FlowContext) defaultSubnetName() string {
+	return fctx.infra.Namespace
+}
+
+func (fctx *FlowContext) defaultSecurityGroupName() string {
+	return fctx.infra.Namespace
+}
+
+func (fctx *FlowContext) defaultSharedNetworkName() string {
+	return fctx.infra.Namespace
+}
+
+func (fctx *FlowContext) workerCIDR() string {
+	s := fctx.config.Networks.Worker
+	if workers := fctx.config.Networks.Workers; workers != "" {
+		s = workers
+	}
+
+	return s
+}
+
+type notFoundError struct {
+	msg string
+}
+
+var _ error = &notFoundError{}
+
+func (e *notFoundError) Error() string {
+	return e.msg
+}
+
+func ignoreNotFound(err error) error {
+	if _, ok := err.(*notFoundError); ok {
+		return nil
+	}
+	return err
 }

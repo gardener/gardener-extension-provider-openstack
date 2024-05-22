@@ -6,6 +6,7 @@ package infraflow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,7 +19,8 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
+	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
 
 const (
@@ -27,260 +29,274 @@ const (
 )
 
 // Reconcile creates and runs the flow to reconcile the AWS infrastructure.
-func (c *FlowContext) Reconcile(ctx context.Context) error {
-	g := c.buildReconcileGraph()
+func (fctx *FlowContext) Reconcile(ctx context.Context) error {
+	fctx.BasicFlowContext = shared.NewBasicFlowContext().WithSpan().WithLogger(fctx.log).WithPersist(fctx.persistState)
+	g := fctx.buildReconcileGraph()
 	f := g.Compile()
-	if err := f.Run(ctx, flow.Opts{Log: c.Log}); err != nil {
-		return flow.Causes(err)
+	if err := f.Run(ctx, flow.Opts{Log: fctx.log}); err != nil {
+		fctx.log.Error(err, "flow reconciliation failed")
+		return errors.Join(flow.Causes(err), fctx.persistState(ctx))
 	}
-	return nil
+
+	status := fctx.computeInfrastructureStatus()
+	state := fctx.computeInfrastructureState()
+	return infrainternal.PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, status, state)
 }
 
-func (c *FlowContext) buildReconcileGraph() *flow.Graph {
+func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 	g := flow.NewGraph("Openstack infrastructure reconciliation")
 
-	ensureExternalNetwork := c.AddTask(g, "ensure external network",
-		c.ensureExternalNetwork,
-		Timeout(defaultTimeout))
+	ensureExternalNetwork := fctx.AddTask(g, "ensure external network",
+		fctx.ensureExternalNetwork,
+		shared.Timeout(defaultTimeout))
 
-	ensureRouter := c.AddTask(g, "ensure router",
-		c.ensureRouter,
-		Timeout(defaultTimeout), Dependencies(ensureExternalNetwork))
+	ensureRouter := fctx.AddTask(g, "ensure router",
+		fctx.ensureRouter,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureExternalNetwork))
 
-	ensureNetwork := c.AddTask(g, "ensure network",
-		c.ensureNetwork,
-		Timeout(defaultTimeout))
+	ensureNetwork := fctx.AddTask(g, "ensure network",
+		fctx.ensureNetwork,
+		shared.Timeout(defaultTimeout))
 
-	ensureSubnet := c.AddTask(g, "ensure subnet",
-		c.ensureSubnet,
-		Timeout(defaultTimeout), Dependencies(ensureNetwork))
+	ensureSubnet := fctx.AddTask(g, "ensure subnet",
+		fctx.ensureSubnet,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork))
 
-	_ = c.AddTask(g, "ensure router interface",
-		c.ensureRouterInterface,
-		Timeout(defaultTimeout), Dependencies(ensureRouter, ensureSubnet))
+	_ = fctx.AddTask(g, "ensure router interface",
+		fctx.ensureRouterInterface,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnet))
 
-	ensureSecGroup := c.AddTask(g, "ensure security group",
-		c.ensureSecGroup,
-		Timeout(defaultTimeout), Dependencies(ensureRouter))
+	ensureSecGroup := fctx.AddTask(g, "ensure security group",
+		fctx.ensureSecGroup,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter))
 
-	_ = c.AddTask(g, "ensure security group rules",
-		c.ensureSecGroupRules,
-		Timeout(defaultTimeout), Dependencies(ensureSecGroup))
+	_ = fctx.AddTask(g, "ensure security group rules",
+		fctx.ensureSecGroupRules,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureSecGroup))
 
-	_ = c.AddTask(g, "ensure ssh key pair",
-		c.ensureSSHKeyPair,
-		Timeout(defaultTimeout), Dependencies(ensureRouter))
+	_ = fctx.AddTask(g, "ensure ssh key pair",
+		fctx.ensureSSHKeyPair,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter))
 
-	_ = c.AddTask(g, "ensure share network",
-		c.ensureShareNetwork,
-		Timeout(defaultTimeout), Dependencies(ensureSubnet),
+	_ = fctx.AddTask(g, "ensure share network",
+		fctx.ensureShareNetwork,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureSubnet),
 	)
 
 	return g
 }
 
-func (c *FlowContext) ensureExternalNetwork(_ context.Context) error {
-	externalNetwork, err := c.networking.GetExternalNetworkByName(c.config.FloatingPoolName)
+func (fctx *FlowContext) ensureExternalNetwork(_ context.Context) error {
+	externalNetwork, err := fctx.networking.GetExternalNetworkByName(fctx.config.FloatingPoolName)
 	if err != nil {
 		return err
 	}
 	if externalNetwork == nil {
-		return fmt.Errorf("external network for floating pool name %s not found", c.config.FloatingPoolName)
+		return fmt.Errorf("external network for floating pool name %s not found", fctx.config.FloatingPoolName)
 	}
-	c.state.Set(IdentifierFloatingNetwork, externalNetwork.ID)
-	c.state.Set(NameFloatingNetwork, externalNetwork.Name)
+	fctx.state.Set(IdentifierFloatingNetwork, externalNetwork.ID)
+	fctx.state.Set(NameFloatingNetwork, externalNetwork.Name)
 	return nil
 }
 
-func (c *FlowContext) ensureRouter(ctx context.Context) error {
-	externalNetworkID := c.state.Get(IdentifierFloatingNetwork)
+func (fctx *FlowContext) ensureRouter(ctx context.Context) error {
+	externalNetworkID := fctx.state.Get(IdentifierFloatingNetwork)
 	if externalNetworkID == nil {
 		return fmt.Errorf("missing external network ID")
 	}
 
-	if c.config.Networks.Router != nil {
-		return c.ensureConfiguredRouter(ctx)
+	if fctx.config.Networks.Router != nil {
+		return fctx.ensureConfiguredRouter(ctx)
 	}
-	return c.ensureNewRouter(ctx, *externalNetworkID)
+	return fctx.ensureNewRouter(ctx, *externalNetworkID)
 }
 
-func (c *FlowContext) ensureConfiguredRouter(_ context.Context) error {
-	router, err := c.access.GetRouterByID(c.config.Networks.Router.ID)
+func (fctx *FlowContext) ensureConfiguredRouter(_ context.Context) error {
+	router, err := fctx.access.GetRouterByID(fctx.config.Networks.Router.ID)
 	if err != nil {
-		c.state.Set(IdentifierRouter, "")
+		// todo: Remove ?
+		fctx.state.Set(IdentifierRouter, "")
+		fctx.state.Set(RouterIP, "")
 		return err
 	}
-	c.state.Set(IdentifierRouter, c.config.Networks.Router.ID)
-	c.state.Set(RouterIP, router.ExternalFixedIPs[0].IPAddress)
+	if router == nil {
+		return fmt.Errorf("missing expected router %s", fctx.config.Networks.Router.ID)
+	}
+	fctx.state.Set(IdentifierRouter, fctx.config.Networks.Router.ID)
+	if len(router.ExternalFixedIPs) < 1 {
+		return fmt.Errorf("expected at least one external fixed ip")
+	}
+	fctx.state.Set(RouterIP, router.ExternalFixedIPs[0].IPAddress)
 	return nil
 }
 
-func (c *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID string) error {
-	log := c.LogFromContext(ctx)
+func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID string) error {
+	log := shared.LogFromContext(ctx)
 
 	desired := &access.Router{
-		Name:              c.namespace,
+		Name:              fctx.defaultRouterName(),
 		ExternalNetworkID: externalNetworkID,
-		EnableSNAT:        c.cloudProfileConfig.UseSNAT,
+		EnableSNAT:        fctx.cloudProfileConfig.UseSNAT,
 	}
-	current, err := c.findExistingRouter()
+	current, err := fctx.findExistingRouter()
 	if err != nil {
 		return err
 	}
 	if current != nil {
-		c.state.Set(IdentifierRouter, current.ID)
-		c.state.Set(RouterIP, current.ExternalFixedIPs[0].IPAddress)
-		_, err := c.access.UpdateRouter(desired, current)
+		fctx.state.Set(IdentifierRouter, current.ID)
+		fctx.state.Set(RouterIP, current.ExternalFixedIPs[0].IPAddress)
+		_, err := fctx.access.UpdateRouter(desired, current)
 		return err
 	}
 
-	floatingPoolSubnetName := c.findFloatingPoolSubnetName()
-	c.state.SetPtr(NameFloatingPoolSubnet, floatingPoolSubnetName)
+	floatingPoolSubnetName := fctx.findFloatingPoolSubnetName()
+	fctx.state.SetPtr(NameFloatingPoolSubnet, floatingPoolSubnetName)
 	if floatingPoolSubnetName != nil {
 		log.Info("looking up floating pool subnets...")
-		desired.ExternalSubnetIDs, err = c.access.LookupFloatingPoolSubnetIDs(externalNetworkID, *floatingPoolSubnetName)
+		desired.ExternalSubnetIDs, err = fctx.access.LookupFloatingPoolSubnetIDs(externalNetworkID, *floatingPoolSubnetName)
 		if err != nil {
 			return err
 		}
 	}
 	log.Info("creating...")
-	created, err := c.access.CreateRouter(desired)
+	// TODO: add tags to created resources
+	created, err := fctx.access.CreateRouter(desired)
 	if err != nil {
 		return err
 	}
-	c.state.Set(IdentifierRouter, created.ID)
-	c.state.Set(RouterIP, created.ExternalFixedIPs[0].IPAddress)
+	fctx.state.Set(IdentifierRouter, created.ID)
+	fctx.state.Set(RouterIP, created.ExternalFixedIPs[0].IPAddress)
 
 	return nil
 }
 
-func (c *FlowContext) findExistingRouter() (*access.Router, error) {
-	return findExisting(c.state.Get(IdentifierRouter), c.namespace, c.access.GetRouterByID, c.access.GetRouterByName)
+func (fctx *FlowContext) findExistingRouter() (*access.Router, error) {
+	return findExisting(fctx.state.Get(IdentifierRouter), fctx.defaultRouterName(), fctx.access.GetRouterByID, fctx.access.GetRouterByName)
 }
 
-func (c *FlowContext) findFloatingPoolSubnetName() *string {
-	if c.config.FloatingPoolSubnetName != nil {
-		return c.config.FloatingPoolSubnetName
+func (fctx *FlowContext) findFloatingPoolSubnetName() *string {
+	if fctx.config.FloatingPoolSubnetName != nil {
+		return fctx.config.FloatingPoolSubnetName
 	}
 
 	// Second: Check if the CloudProfile contains a default floating subnet and use it.
-	if floatingPool, err := helper.FindFloatingPool(c.cloudProfileConfig.Constraints.FloatingPools, c.config.FloatingPoolName, c.infraSpec.Region, nil); err == nil && floatingPool.DefaultFloatingSubnet != nil {
+	if floatingPool, err := helper.FindFloatingPool(fctx.cloudProfileConfig.Constraints.FloatingPools, fctx.config.FloatingPoolName, fctx.infra.Spec.Region, nil); err == nil && floatingPool.DefaultFloatingSubnet != nil {
 		return floatingPool.DefaultFloatingSubnet
 	}
 
 	return nil
 }
 
-func (c *FlowContext) ensureNetwork(ctx context.Context) error {
-	if c.config.Networks.ID != nil {
-		return c.ensureConfiguredNetwork(ctx)
+func (fctx *FlowContext) ensureNetwork(ctx context.Context) error {
+	if fctx.config.Networks.ID != nil {
+		return fctx.ensureConfiguredNetwork(ctx)
 	}
-	return c.ensureNewNetwork(ctx)
+	return fctx.ensureNewNetwork(ctx)
 }
 
-func (c *FlowContext) ensureConfiguredNetwork(_ context.Context) error {
-	network, err := c.access.GetNetworkByID(*c.config.Networks.ID)
+func (fctx *FlowContext) ensureConfiguredNetwork(_ context.Context) error {
+	network, err := fctx.access.GetNetworkByID(*fctx.config.Networks.ID)
 	if err != nil {
-		c.state.Set(IdentifierNetwork, "")
-		c.state.Set(NameNetwork, "")
+		fctx.state.Set(IdentifierNetwork, "")
+		fctx.state.Set(NameNetwork, "")
 		return err
 	}
-	c.state.Set(IdentifierNetwork, *c.config.Networks.ID)
-	c.state.Set(NameNetwork, network.Name)
+	fctx.state.Set(IdentifierNetwork, *fctx.config.Networks.ID)
+	fctx.state.Set(NameNetwork, network.Name)
 	return nil
 }
 
-func (c *FlowContext) ensureNewNetwork(ctx context.Context) error {
-	log := c.LogFromContext(ctx)
+func (fctx *FlowContext) ensureNewNetwork(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
 
 	desired := &access.Network{
-		Name:         c.namespace,
+		Name:         fctx.defaultNetworkName(),
 		AdminStateUp: true,
 	}
-	current, err := c.findExistingNetwork()
+	current, err := fctx.findExistingNetwork()
 	if err != nil {
 		return err
 	}
 	if current != nil {
-		c.state.Set(IdentifierNetwork, current.ID)
-		c.state.Set(NameNetwork, current.Name)
-		if _, err := c.access.UpdateNetwork(desired, current); err != nil {
+		fctx.state.Set(IdentifierNetwork, current.ID)
+		fctx.state.Set(NameNetwork, current.Name)
+		if _, err := fctx.access.UpdateNetwork(desired, current); err != nil {
 			return err
 		}
 	} else {
 		log.Info("creating...")
-		created, err := c.access.CreateNetwork(desired)
+		created, err := fctx.access.CreateNetwork(desired)
 		if err != nil {
 			return err
 		}
-		c.state.Set(IdentifierNetwork, created.ID)
-		c.state.Set(NameNetwork, created.Name)
+		fctx.state.Set(IdentifierNetwork, created.ID)
+		fctx.state.Set(NameNetwork, created.Name)
 	}
 
 	return nil
 }
 
-func (c *FlowContext) findExistingNetwork() (*access.Network, error) {
-	return findExisting(c.state.Get(IdentifierNetwork), c.namespace, c.access.GetNetworkByID, c.access.GetNetworkByName)
+func (fctx *FlowContext) findExistingNetwork() (*access.Network, error) {
+	return findExisting(fctx.state.Get(IdentifierNetwork), fctx.defaultNetworkName(), fctx.access.GetNetworkByID, fctx.access.GetNetworkByName)
 }
 
-func (c *FlowContext) getNetworkID() (*string, error) {
-	if c.config.Networks.ID != nil {
-		return c.config.Networks.ID, nil
+func (fctx *FlowContext) getNetworkID() (*string, error) {
+	if fctx.config.Networks.ID != nil {
+		return fctx.config.Networks.ID, nil
 	}
-	networkID := c.state.Get(IdentifierNetwork)
+	networkID := fctx.state.Get(IdentifierNetwork)
 	if networkID != nil {
 		return networkID, nil
 	}
-	network, err := c.findExistingNetwork()
+	network, err := fctx.findExistingNetwork()
 	if err != nil {
 		return nil, err
 	}
 	if network != nil {
-		c.state.Set(IdentifierNetwork, network.ID)
+		fctx.state.Set(IdentifierNetwork, network.ID)
 		return &network.ID, nil
 	}
 	return nil, nil
 }
 
-func (c *FlowContext) ensureSubnet(ctx context.Context) error {
-	log := c.LogFromContext(ctx)
+func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
 
-	networkID := *c.state.Get(IdentifierNetwork)
-	workersCIDR := c.config.Networks.Workers
+	if fctx.state.Get(IdentifierNetwork) == nil {
+		return fmt.Errorf("missing cluster network ID")
+	}
+	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	// Backwards compatibility - remove this code in a future version.
-	if workersCIDR == "" {
-		workersCIDR = c.config.Networks.Worker
-	}
 	desired := &subnets.Subnet{
-		Name:           c.namespace,
+		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
-		CIDR:           workersCIDR,
+		CIDR:           fctx.workerCIDR(),
 		IPVersion:      4,
-		DNSNameservers: c.cloudProfileConfig.DNSServers,
+		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
 	}
-	current, err := c.findExistingSubnet()
+	current, err := fctx.findExistingSubnet()
 	if err != nil {
 		return err
 	}
 	if current != nil {
-		c.state.Set(IdentifierSubnet, current.ID)
-		if _, err := c.access.UpdateSubnet(desired, current); err != nil {
+		fctx.state.Set(IdentifierSubnet, current.ID)
+		log.Info("updating...")
+		if _, err := fctx.access.UpdateSubnet(desired, current); err != nil {
 			return err
 		}
 	} else {
 		log.Info("creating...")
-		created, err := c.access.CreateSubnet(desired)
+		created, err := fctx.access.CreateSubnet(desired)
 		if err != nil {
 			return err
 		}
-		c.state.Set(IdentifierSubnet, created.ID)
+		fctx.state.Set(IdentifierSubnet, created.ID)
 	}
 	return nil
 }
 
-func (c *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
-	networkID, err := c.getNetworkID()
+func (fctx *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
+	networkID, err := fctx.getNetworkID()
 	if err != nil {
 		return nil, err
 	}
@@ -288,40 +304,23 @@ func (c *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
 		return nil, fmt.Errorf("network not found")
 	}
 	getByName := func(name string) ([]*subnets.Subnet, error) {
-		return c.access.GetSubnetByName(*networkID, name)
+		return fctx.access.GetSubnetByName(*networkID, name)
 	}
-	return findExisting(c.state.Get(IdentifierSubnet), c.namespace, c.access.GetSubnetByID, getByName)
+	return findExisting(fctx.state.Get(IdentifierSubnet), fctx.defaultSubnetName(), fctx.access.GetSubnetByID, getByName)
 }
 
-type notFoundError struct {
-	msg string
-}
+func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
 
-var _ error = &notFoundError{}
-
-func (e *notFoundError) Error() string {
-	return e.msg
-}
-
-func ignoreNotFound(err error) error {
-	if _, ok := err.(*notFoundError); ok {
-		return nil
-	}
-	return err
-}
-
-func (c *FlowContext) ensureRouterInterface(ctx context.Context) error {
-	log := c.LogFromContext(ctx)
-
-	routerID := c.state.Get(IdentifierRouter)
+	routerID := fctx.state.Get(IdentifierRouter)
 	if routerID == nil {
 		return fmt.Errorf("internal error: missing routerID")
 	}
-	subnetID := c.state.Get(IdentifierSubnet)
+	subnetID := fctx.state.Get(IdentifierSubnet)
 	if subnetID == nil {
 		return fmt.Errorf("internal error: missing subnetID")
 	}
-	portID, err := c.access.GetRouterInterfacePortID(*routerID, *subnetID)
+	portID, err := fctx.access.GetRouterInterfacePortID(*routerID, *subnetID)
 	if err != nil {
 		return err
 	}
@@ -329,42 +328,43 @@ func (c *FlowContext) ensureRouterInterface(ctx context.Context) error {
 		return nil
 	}
 	log.Info("creating...")
-	return c.access.AddRouterInterfaceAndWait(ctx, *routerID, *subnetID)
+	return fctx.access.AddRouterInterfaceAndWait(ctx, *routerID, *subnetID)
 }
 
-func (c *FlowContext) ensureSecGroup(ctx context.Context) error {
-	log := c.LogFromContext(ctx)
+func (fctx *FlowContext) ensureSecGroup(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
 
 	desired := &groups.SecGroup{
-		Name:        c.namespace,
+		Name:        fctx.defaultSecurityGroupName(),
 		Description: "Cluster Nodes",
 	}
-	current, err := findExisting(c.state.Get(IdentifierSecGroup), c.namespace, c.access.GetSecurityGroupByID, c.access.GetSecurityGroupByName)
+	current, err := findExisting(fctx.state.Get(IdentifierSecGroup), fctx.defaultSecurityGroupName(), fctx.access.GetSecurityGroupByID, fctx.access.GetSecurityGroupByName)
 	if err != nil {
 		return err
 	}
+
 	if current != nil {
-		c.state.Set(IdentifierSecGroup, current.ID)
-		c.state.Set(NameSecGroup, current.Name)
-		c.state.SetObject(ObjectSecGroup, current)
+		fctx.state.Set(IdentifierSecGroup, current.ID)
+		fctx.state.Set(NameSecGroup, current.Name)
+		fctx.state.SetObject(ObjectSecGroup, current)
 		return nil
 	}
 
 	log.Info("creating...")
-	created, err := c.access.CreateSecurityGroup(desired)
+	created, err := fctx.access.CreateSecurityGroup(desired)
 	if err != nil {
 		return err
 	}
-	c.state.Set(IdentifierSecGroup, created.ID)
-	c.state.Set(NameSecGroup, created.Name)
-	c.state.SetObject(ObjectSecGroup, created)
+	fctx.state.Set(IdentifierSecGroup, created.ID)
+	fctx.state.Set(NameSecGroup, created.Name)
+	fctx.state.SetObject(ObjectSecGroup, created)
 	return nil
 }
 
-func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
-	log := c.LogFromContext(ctx)
+func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
 
-	obj := c.state.GetObject(ObjectSecGroup)
+	obj := fctx.state.GetObject(ObjectSecGroup)
 	if obj == nil {
 		return fmt.Errorf("internal error: security group object not found")
 	}
@@ -410,7 +410,7 @@ func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 		},
 	}
 
-	if modified, err := c.access.UpdateSecurityGroupRules(group, desiredRules, func(_ *rules.SecGroupRule) bool {
+	if modified, err := fctx.access.UpdateSecurityGroupRules(group, desiredRules, func(_ *rules.SecGroupRule) bool {
 		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
 		// As we don't store the role ids in the state, this function needs to be adjusted
 		// if values in existing rules are changed to identify them for update by replacement.
@@ -423,49 +423,60 @@ func (c *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 	return nil
 }
 
-func (c *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
-	log := c.LogFromContext(ctx)
+func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
 
-	keyPair, err := c.compute.GetKeyPair(c.namespace)
+	if fctx.infra.Spec.SSHPublicKey == nil {
+		log.Info("SSH is disabled. Deleting SSH Keypair...")
+		err := fctx.compute.DeleteKeyPair(fctx.defaultSSHKeypairName())
+		if err != nil {
+			return err
+		}
+		fctx.state.Set(NameKeyPair, "")
+		return nil
+	}
+
+	keyPair, err := fctx.compute.GetKeyPair(fctx.defaultSSHKeypairName())
 	if err != nil {
 		return err
 	}
 	if keyPair != nil {
-		if keyPair.PublicKey == string(c.infraSpec.SSHPublicKey) {
-			c.state.Set(NameKeyPair, keyPair.Name)
+		if keyPair.PublicKey == string(fctx.infra.Spec.SSHPublicKey) {
+			fctx.state.Set(NameKeyPair, keyPair.Name)
 			return nil
 		}
+
 		log.Info("replacing SSH key pair")
-		if err := c.compute.DeleteKeyPair(c.namespace); err != nil {
+		if err := fctx.compute.DeleteKeyPair(fctx.defaultSSHKeypairName()); err != nil {
 			return err
 		}
 		keyPair = nil
+		fctx.state.Set(NameKeyPair, "")
 	}
 
 	if keyPair == nil {
-		c.state.Set(NameKeyPair, "")
 		log.Info("creating SSH key pair")
-		if keyPair, err = c.compute.CreateKeyPair(c.namespace, string(c.infraSpec.SSHPublicKey)); err != nil {
+		if keyPair, err = fctx.compute.CreateKeyPair(fctx.defaultSSHKeypairName(), string(fctx.infra.Spec.SSHPublicKey)); err != nil {
 			return err
 		}
 	}
-	c.state.Set(NameKeyPair, keyPair.Name)
+	fctx.state.Set(NameKeyPair, keyPair.Name)
 	return nil
 }
 
-func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
-	if c.config.Networks.ShareNetwork == nil || !c.config.Networks.ShareNetwork.Enabled {
-		return c.deleteShareNetwork(ctx)
+func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
+	if fctx.config.Networks.ShareNetwork == nil || !fctx.config.Networks.ShareNetwork.Enabled {
+		return fctx.deleteShareNetwork(ctx)
 	}
 
-	log := c.LogFromContext(ctx)
-	networkID := ptr.Deref(c.state.Get(IdentifierNetwork), "")
-	subnetID := ptr.Deref(c.state.Get(IdentifierSubnet), "")
-	current, err := findExisting(c.state.Get(IdentifierShareNetwork),
-		c.namespace,
-		c.sharedFilesystem.GetShareNetwork,
+	log := shared.LogFromContext(ctx)
+	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
+	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")
+	current, err := findExisting(fctx.state.Get(IdentifierShareNetwork),
+		fctx.defaultSharedNetworkName(),
+		fctx.sharedFilesystem.GetShareNetwork,
 		func(name string) ([]*sharenetworks.ShareNetwork, error) {
-			list, err := c.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+			list, err := fctx.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
 				Name:            name,
 				NeutronNetID:    networkID,
 				NeutronSubnetID: subnetID,
@@ -481,21 +492,21 @@ func (c *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	}
 
 	if current != nil {
-		c.state.Set(IdentifierShareNetwork, current.ID)
-		c.state.Set(NameShareNetwork, current.Name)
+		fctx.state.Set(IdentifierShareNetwork, current.ID)
+		fctx.state.Set(NameShareNetwork, current.Name)
 		return nil
 	}
 
 	log.Info("creating...")
-	created, err := c.sharedFilesystem.CreateShareNetwork(sharenetworks.CreateOpts{
+	created, err := fctx.sharedFilesystem.CreateShareNetwork(sharenetworks.CreateOpts{
 		NeutronNetID:    networkID,
 		NeutronSubnetID: subnetID,
-		Name:            c.namespace,
+		Name:            fctx.defaultSharedNetworkName(),
 	})
 	if err != nil {
 		return err
 	}
-	c.state.Set(IdentifierShareNetwork, created.ID)
-	c.state.Set(NameShareNetwork, created.Name)
+	fctx.state.Set(IdentifierShareNetwork, created.ID)
+	fctx.state.Set(NameShareNetwork, created.Name)
 	return nil
 }

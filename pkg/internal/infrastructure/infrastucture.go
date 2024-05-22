@@ -13,12 +13,16 @@ import (
 	"sync"
 	"time"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -141,4 +145,43 @@ func WorkersCIDR(config *openstack.InfrastructureConfig) string {
 	}
 
 	return workersCIDR
+}
+
+// PatchProviderStatusAndState patches the infrastructure status with the given provider specific status and state.
+func PatchProviderStatusAndState(
+	ctx context.Context,
+	runtimeClient client.Client,
+	infra *extensionsv1alpha1.Infrastructure,
+	status *openstackv1alpha1.InfrastructureStatus,
+	state *runtime.RawExtension,
+) error {
+
+	// infraObjectKey := client.ObjectKey{
+	// 	Namespace: infra.Namespace,
+	// 	Name:      infra.Name,
+	// }
+	// if err := runtimeClient.Get(ctx, infraObjectKey, infra); err != nil {
+	// 	return err
+	// }
+
+	patch := client.MergeFrom(infra.DeepCopy())
+	if status != nil {
+		infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
+		if status.Networks.Router.IP != "" {
+			infra.Status.EgressCIDRs = []string{fmt.Sprintf("%s/32", status.Networks.Router.IP)}
+		}
+	}
+
+	if state != nil {
+		infra.Status.State = state
+	}
+
+	// do not make a patch request if nothing has changed.
+	if data, err := patch.Data(infra); err != nil {
+		return fmt.Errorf("failed getting patch data for infra %s: %w", infra.Name, err)
+	} else if string(data) == `{}` {
+		return nil
+	}
+
+	return runtimeClient.Status().Patch(ctx, infra, patch)
 }

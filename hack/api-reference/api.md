@@ -1410,7 +1410,7 @@ ShareNetwork
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShareNetwork holds information about the share network (used for shared file systems like NFS)</p>
+<p>ShareNetwork holds information about the share network (used for shared2 file systems like NFS)</p>
 </td>
 </tr>
 </tbody>
@@ -1723,7 +1723,7 @@ string
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks</a>)
 </p>
 <p>
-<p>ShareNetwork holds information about the share network (used for shared file systems like NFS)</p>
+<p>ShareNetwork holds information about the share network (used for shared2 file systems like NFS)</p>
 </p>
 <table>
 <thead>

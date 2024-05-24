@@ -9,7 +9,7 @@ updates:
   groups:
   # Group all version-updates, except Gardener. Gardener-components should receive their own PR this way. Security updates will
   # also receive their own individual PRs.
-    all-dependencies:
+    non-gardener-dependencies:
       applies-to: "version-updates"
       patterns:
       - "*"

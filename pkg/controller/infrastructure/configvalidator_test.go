@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -281,6 +282,26 @@ var _ = Describe("ConfigValidator", func() {
 					"Field": Equal("networks.router.id"),
 				}))
 			})
+
+			It("should fail with NotFound if no router interface for the subnet is found", func() {
+				subnetID := "subnetID"
+				routerID := "routerID"
+				config.Networks.ID = pointer.String(id)
+				config.Networks.SubnetID = pointer.String(subnetID)
+				config.Networks.Router = &apisopenstack.Router{ID: routerID}
+				infra.Spec.ProviderConfig.Raw = encode(config)
+
+				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
+				networkingClient.EXPECT().ListSubnets(gomock.Any()).Return([]subnets.Subnet{{ID: subnetID, NetworkID: id}}, nil)
+				networkingClient.EXPECT().ListRouters(gomock.Any()).Return([]routers.Router{{ID: routerID}}, nil)
+				networkingClient.EXPECT().GetRouterInterfacePort(routerID, subnetID).Return(nil, nil)
+
+				errorList := cv.Validate(ctx, infra)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("networks.router"),
+				}))
+			})
 		})
 
 		Context("happy path", func() {
@@ -303,6 +324,7 @@ var _ = Describe("ConfigValidator", func() {
 				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: id}}, nil)
 				networkingClient.EXPECT().ListSubnets(gomock.Any()).Return([]subnets.Subnet{{NetworkID: id}}, nil)
 				networkingClient.EXPECT().ListRouters(gomock.Any()).Return([]routers.Router{{ID: id}}, nil)
+				networkingClient.EXPECT().GetRouterInterfacePort(id, id).Return(&ports.Port{ID: "portID"}, nil)
 
 				errorList := cv.Validate(ctx, infra)
 				Expect(errorList).To(BeEmpty())

@@ -16,6 +16,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -81,6 +82,9 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 	}
 	if config.Networks.Router != nil && config.Networks.Router.ID != "" {
 		allErrs = append(allErrs, c.validateRouter(ctx, networkingClient, config.Networks.Router.ID, field.NewPath("networks.router.id"))...)
+		if isValidString(config.Networks.SubnetID) {
+			allErrs = append(allErrs, c.validateRouterInterface(ctx, networkingClient, config.Networks.Router.ID, *config.Networks.SubnetID, field.NewPath("networks.router"))...)
+		}
 	}
 
 	return allErrs
@@ -153,5 +157,26 @@ func (c *configValidator) validateRouter(ctx context.Context, networkingClient o
 		allErrs = append(allErrs, field.NotFound(fldPath, routerID))
 		return allErrs
 	}
+
 	return allErrs
+}
+
+func (c *configValidator) validateRouterInterface(ctx context.Context, networkingClient openstackclient.Networking, routerID, subnetID string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	port, err := networkingClient.GetRouterInterfacePort(routerID, subnetID)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, fmt.Errorf("could not get router interface: %w", err)))
+		return allErrs
+	}
+
+	if port == nil {
+		allErrs = append(allErrs, field.Required(fldPath, fmt.Sprintf("could not get router interface for router [%s] and subnet [%s]", routerID, subnetID)))
+	}
+
+	return allErrs
+}
+
+func isValidString(s *string) bool {
+	return len(ptr.Deref(s, "")) > 0
 }

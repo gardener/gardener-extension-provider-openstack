@@ -667,7 +667,7 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	router, err := networkClient.GetRouterByID(providerStatus.Networks.Router.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(router.Status).To(Equal("ACTIVE"))
-	infrastructureIdentifier.routerID = &router.ID
+	infrastructureIdentifier.routerID = ptr.To(router.ID)
 
 	// verify router ip in status
 	Expect(router.GatewayInfo.ExternalFixedIPs).NotTo(BeEmpty())
@@ -681,24 +681,24 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	if providerConfig.Networks.ID != nil {
 		Expect(net.ID).To(Equal(*providerConfig.Networks.ID))
 	}
-	infrastructureIdentifier.networkID = &net.ID
+	infrastructureIdentifier.networkID = ptr.To(net.ID)
 
 	// subnet is created
 	subnet, err := networkClient.GetSubnetByID(providerStatus.Networks.Subnets[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
-	infrastructureIdentifier.subnetID = &subnet.ID
+	infrastructureIdentifier.subnetID = ptr.To(subnet.ID)
 
 	// security group is created
 	secGroup, err := networkClient.GetSecurityGroup(providerStatus.SecurityGroups[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(secGroup.Name).To(Equal(providerStatus.SecurityGroups[0].Name))
-	infrastructureIdentifier.secGroupID = &secGroup.ID
+	infrastructureIdentifier.secGroupID = ptr.To(secGroup.ID)
 
 	// keypair is created
 	keyPair, err := computeClient.GetKeyPair(providerStatus.Node.KeyName)
 	Expect(err).NotTo(HaveOccurred())
-	infrastructureIdentifier.keyPair = &keyPair.Name
+	infrastructureIdentifier.keyPair = ptr.To(keyPair.Name)
 
 	// verify egressCIDRs
 	expectedCIDRDs := []string{providerStatus.Networks.Router.IP + "/32"}

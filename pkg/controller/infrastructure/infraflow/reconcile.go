@@ -120,6 +120,8 @@ func (fctx *FlowContext) ensureConfiguredRouter(_ context.Context) error {
 		return err
 	}
 	if router == nil {
+		fctx.state.Set(IdentifierRouter, "")
+		fctx.state.Set(RouterIP, "")
 		return fmt.Errorf("missing expected router %s", fctx.config.Networks.Router.ID)
 	}
 	fctx.state.Set(IdentifierRouter, fctx.config.Networks.Router.ID)

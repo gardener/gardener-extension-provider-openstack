@@ -143,6 +143,9 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 		return err
 	}
 	if current != nil {
+		if len(current.ExternalFixedIPs) < 1 {
+			return fmt.Errorf("expected at least one external fixed ip")
+		}
 		fctx.state.Set(IdentifierRouter, current.ID)
 		fctx.state.Set(RouterIP, current.ExternalFixedIPs[0].IPAddress)
 		_, err := fctx.access.UpdateRouter(desired, current)

@@ -5,6 +5,8 @@ spec:
   owner: gardener-oq@listserv.sap.com
   description: Integration test for infrastructure creation and deletion
   activeDeadlineSeconds: 1800
+  behavior:
+    - serial
 
   command: [bash, -c]
   args:

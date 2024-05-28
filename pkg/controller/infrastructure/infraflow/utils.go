@@ -101,20 +101,3 @@ func (fctx *FlowContext) workerCIDR() string {
 
 	return s
 }
-
-type notFoundError struct {
-	msg string
-}
-
-var _ error = &notFoundError{}
-
-func (e *notFoundError) Error() string {
-	return e.msg
-}
-
-func ignoreNotFound(err error) error {
-	if _, ok := err.(*notFoundError); ok {
-		return nil
-	}
-	return err
-}

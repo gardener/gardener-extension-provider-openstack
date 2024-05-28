@@ -207,9 +207,16 @@ func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, router
 		if err != nil {
 			return err
 		}
+
+		if port == nil {
+			return fmt.Errorf("port was not found ")
+
+		}
+
 		switch port.Status {
 		case "BUILD", "PENDING_CREATE", "PENDING_UPDATE", "DOWN":
 			time.Sleep(3 * time.Second)
+			a.log.V(1).Info("port %s still in state: %s", info.PortID, port.Status)
 			continue
 		case "ACTIVE":
 			return nil

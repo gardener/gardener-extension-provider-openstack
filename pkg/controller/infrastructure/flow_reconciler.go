@@ -88,7 +88,7 @@ func (f *FlowReconciler) Reconcile(ctx context.Context, infra *extensionsv1alpha
 		Client:         f.client,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create flow context: %v", err)
+		return fmt.Errorf("failed to create flow context: %w", err)
 	}
 
 	return fctx.Reconcile(ctx)
@@ -119,7 +119,7 @@ func (f *FlowReconciler) Delete(ctx context.Context, infra *extensionsv1alpha1.I
 		Client:         f.client,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create flow context: %v", err)
+		return fmt.Errorf("failed to create flow context: %w", err)
 	}
 	err = fctx.Delete(ctx)
 	if err != nil {

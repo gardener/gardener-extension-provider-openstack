@@ -26,7 +26,7 @@ type waiter struct {
 	ticker *time.Ticker
 }
 
-// InformOnWaiting does
+// InformOnWaiting periodically prints a message until stopped.
 func InformOnWaiting(log logr.Logger, period time.Duration, message string, keysAndValues ...any) *waiter {
 	w := &waiter{
 		log:           log,

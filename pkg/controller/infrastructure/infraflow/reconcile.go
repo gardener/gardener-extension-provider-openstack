@@ -274,6 +274,23 @@ func (fctx *FlowContext) getNetworkID() (*string, error) {
 }
 
 func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
+	if fctx.config.Networks.SubnetID != nil {
+		return fctx.ensureConfiguredSubnet(ctx)
+	}
+	return fctx.ensureNewSubnet(ctx)
+}
+
+func (fctx *FlowContext) ensureConfiguredSubnet(_ context.Context) error {
+	_, err := fctx.access.GetSubnetByID(*fctx.config.Networks.SubnetID)
+	if err != nil {
+		fctx.state.Set(IdentifierSubnet, "")
+		return err
+	}
+	fctx.state.Set(IdentifierSubnet, *fctx.config.Networks.SubnetID)
+	return nil
+}
+
+func (fctx *FlowContext) ensureNewSubnet(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 
 	if fctx.state.Get(IdentifierNetwork) == nil {

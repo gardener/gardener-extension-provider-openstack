@@ -272,10 +272,7 @@ func StatusFromTerraformState(state *TerraformState) *apiv1alpha1.Infrastructure
 		}
 	}
 	return &apiv1alpha1.InfrastructureStatus{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "InfrastructureStatus",
-		},
+		TypeMeta: StatusTypeMeta,
 		Networks: apiv1alpha1.NetworkStatus{
 			ID:   state.NetworkID,
 			Name: state.NetworkName,

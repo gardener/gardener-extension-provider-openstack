@@ -50,7 +50,7 @@ const (
 	NameKeyPair = "KeyPair"
 	// NameSecGroup is the name of the security group
 	NameSecGroup = "SecurityGroupName"
-	// NameShareNetwork is the name of the shared2 network
+	// NameShareNetwork is the name of the shared network
 	NameShareNetwork = "ShareNetworkName"
 
 	// RouterIP is the key for the router IP address
@@ -161,10 +161,7 @@ func (fctx *FlowContext) computeInfrastructureState() *runtime.RawExtension {
 
 func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.InfrastructureStatus {
 	status := &openstackv1alpha1.InfrastructureStatus{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "InfrastructureStatus",
-		},
+		TypeMeta: infrainternal.StatusTypeMeta,
 	}
 
 	status.Networks.FloatingPool.ID = ptr.Deref(fctx.state.Get(IdentifierFloatingNetwork), "")

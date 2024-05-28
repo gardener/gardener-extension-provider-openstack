@@ -155,15 +155,6 @@ func PatchProviderStatusAndState(
 	status *openstackv1alpha1.InfrastructureStatus,
 	state *runtime.RawExtension,
 ) error {
-
-	// infraObjectKey := client.ObjectKey{
-	// 	Namespace: infra.Namespace,
-	// 	Name:      infra.Name,
-	// }
-	// if err := runtimeClient.Get(ctx, infraObjectKey, infra); err != nil {
-	// 	return err
-	// }
-
 	patch := client.MergeFrom(infra.DeepCopy())
 	if status != nil {
 		infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}

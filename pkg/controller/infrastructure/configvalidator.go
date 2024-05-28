@@ -108,7 +108,7 @@ func (c *configValidator) validateFloatingPoolName(ctx context.Context, networki
 	return allErrs
 }
 
-func (c *configValidator) validateNetwork(ctx context.Context, networkingClient openstackclient.Networking, networkID string, fldPath *field.Path) field.ErrorList {
+func (c *configValidator) validateNetwork(_ context.Context, networkingClient openstackclient.Networking, networkID string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	networks, err := networkingClient.ListNetwork(networks.ListOpts{ID: networkID})
@@ -123,7 +123,7 @@ func (c *configValidator) validateNetwork(ctx context.Context, networkingClient 
 	return allErrs
 }
 
-func (c *configValidator) validateSubnet(ctx context.Context, networkingClient openstackclient.Networking, subnetID, networkID string, fldPath *field.Path) field.ErrorList {
+func (c *configValidator) validateSubnet(_ context.Context, networkingClient openstackclient.Networking, subnetID, networkID string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// validate subnet existence
@@ -145,7 +145,7 @@ func (c *configValidator) validateSubnet(ctx context.Context, networkingClient o
 	return allErrs
 }
 
-func (c *configValidator) validateRouter(ctx context.Context, networkingClient openstackclient.Networking, routerID string, fldPath *field.Path) field.ErrorList {
+func (c *configValidator) validateRouter(_ context.Context, networkingClient openstackclient.Networking, routerID string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	routers, err := networkingClient.ListRouters(routers.ListOpts{ID: routerID})
@@ -161,7 +161,7 @@ func (c *configValidator) validateRouter(ctx context.Context, networkingClient o
 	return allErrs
 }
 
-func (c *configValidator) validateRouterInterface(ctx context.Context, networkingClient openstackclient.Networking, routerID, subnetID string, fldPath *field.Path) field.ErrorList {
+func (c *configValidator) validateRouterInterface(_ context.Context, networkingClient openstackclient.Networking, routerID, subnetID string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	port, err := networkingClient.GetRouterInterfacePort(routerID, subnetID)

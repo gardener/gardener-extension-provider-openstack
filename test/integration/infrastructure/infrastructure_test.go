@@ -712,32 +712,40 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 	keyPair, _ := computeClient.GetKeyPair(ptr.Deref(infrastructureIdentifier.keyPair, ""))
 	Expect(keyPair).To(BeNil())
 
-	if providerConfig.Networks.ID == nil {
-		// make sure network doesn't exist, if it wasn't present before
-		opts := networks.ListOpts{ID: ptr.Deref(infrastructureIdentifier.networkID, "")}
-		networks, err := networkClient.ListNetwork(opts)
+	if infrastructureIdentifier.subnetID != nil {
+		// subnet doesn't exist
+		subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
+		subnets, err := networkClient.ListSubnets(subnetsOpts)
 		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-		Expect(networks).To(BeEmpty())
+		Expect(subnets).To(BeEmpty())
 	}
 
-	// subnet doesn't exist
-	subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
-	subnets, err := networkClient.ListSubnets(subnetsOpts)
-	Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-	Expect(subnets).To(BeEmpty())
+	if infrastructureIdentifier.networkID != nil {
+		if providerConfig.Networks.ID == nil {
+			// make sure network doesn't exist, if it wasn't present before
+			opts := networks.ListOpts{ID: ptr.Deref(infrastructureIdentifier.networkID, "")}
+			networks, err := networkClient.ListNetwork(opts)
+			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+			Expect(networks).To(BeEmpty())
+		}
+	}
 
-	// security group doesn't exist
-	sGroupsOpts := groups.ListOpts{ID: ptr.Deref(infrastructureIdentifier.secGroupID, "")}
-	sGroups, err := networkClient.ListSecurityGroup(sGroupsOpts)
-	Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-	Expect(sGroups).To(BeEmpty())
-
-	if providerConfig.Networks.Router == nil {
-		// make sure router doesn't exist, if it wasn't present in the start of test
-		opts := routers.ListOpts{ID: ptr.Deref(infrastructureIdentifier.routerID, "")}
-		routers, err := networkClient.ListRouters(opts)
+	if infrastructureIdentifier.secGroupID != nil {
+		// security group doesn't exist
+		sGroupsOpts := groups.ListOpts{ID: ptr.Deref(infrastructureIdentifier.secGroupID, "")}
+		sGroups, err := networkClient.ListSecurityGroup(sGroupsOpts)
 		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-		Expect(routers).To(BeEmpty())
+		Expect(sGroups).To(BeEmpty())
+	}
+
+	if infrastructureIdentifier.routerID != nil {
+		if providerConfig.Networks.Router == nil {
+			// make sure router doesn't exist, if it wasn't present in the start of test
+			opts := routers.ListOpts{ID: ptr.Deref(infrastructureIdentifier.routerID, "")}
+			routers, err := networkClient.ListRouters(opts)
+			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+			Expect(routers).To(BeEmpty())
+		}
 	}
 }
 

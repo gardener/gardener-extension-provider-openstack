@@ -104,7 +104,7 @@ func (a *networkingAccess) CreateRouter(desired *Router) (router *Router, err er
 	// create router in first available subnet
 	for _, subnetID := range desired.ExternalSubnetIDs {
 		router, err = a.tryCreateRouter(desired, &subnetID)
-		// if there is an error, then we keep trying along the available list of subnets for the first successful operation.
+		// if there is retryable error, then we keep trying along the available list of subnets for the first successful operation.
 		if err != nil && !retryOnError(a.log, err) {
 			return
 		}

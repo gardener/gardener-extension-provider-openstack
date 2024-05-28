@@ -15,7 +15,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
-// Reconcile implements infrastructure.Actuator.
+// Reconcile the Infrastructure config.
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *controller.Cluster) error {
 	return util.DetermineError(a.reconcile(ctx, log, OnReconcile, infra, cluster), helper.KnownCodes)
 }

@@ -90,7 +90,7 @@ func (t *TerraformReconciler) reconcile(ctx context.Context, infra *extensionsv1
 
 	tf, err := internal.NewTerraformerWithAuth(log, t.restConfig, infrastructure.TerraformerPurpose, infra, credentials, t.disableProjectedTokenMount)
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 
 	if err := tf.
@@ -115,7 +115,7 @@ func (t *TerraformReconciler) Delete(ctx context.Context, infra *extensionsv1alp
 func (t *TerraformReconciler) delete(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *extensions.Cluster) error {
 	tf, err := internal.NewTerraformer(t.log, t.restConfig, infrastructure.TerraformerPurpose, infra, t.disableProjectedTokenMount)
 	if err != nil {
-		return util.DetermineError(fmt.Errorf("could not create the Terraformer: %+v", err), helper.KnownCodes)
+		return fmt.Errorf("could not create the Terraformer: %+v", err)
 	}
 
 	// terraform pod from previous reconciliation might still be running, ensure they are gone before doing any operations
@@ -144,21 +144,21 @@ func (t *TerraformReconciler) delete(ctx context.Context, infra *extensionsv1alp
 	// need to know if application credentials are used
 	credentials, err := openstack.GetCredentials(ctx, t.client, infra.Spec.SecretRef, false)
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 
 	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 
 	networkingClient, err := openstackClient.Networking()
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 	loadbalancerClient, err := openstackClient.Loadbalancing()
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 
 	stateInitializer := terraformer.StateConfigMapInitializerFunc(terraformer.CreateState)
@@ -166,12 +166,12 @@ func (t *TerraformReconciler) delete(ctx context.Context, infra *extensionsv1alp
 
 	configExists, err := tf.ConfigExists(ctx)
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 
 	vars, err := tf.GetStateOutputVariables(ctx, infrastructure.TerraformOutputKeyRouterID)
 	if err != nil && !terraformer.IsVariablesNotFoundError(err) {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 
 	var (
@@ -200,10 +200,7 @@ func (t *TerraformReconciler) delete(ctx context.Context, infra *extensionsv1alp
 		f = g.Compile()
 	)
 
-	if err := f.Run(ctx, flow.Opts{}); err != nil {
-		return util.DetermineError(flow.Errors(err), helper.KnownCodes)
-	}
-	return nil
+	return f.Run(ctx, flow.Opts{Log: t.log})
 }
 
 func (t *TerraformReconciler) computeTerraformStatusState(

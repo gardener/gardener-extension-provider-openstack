@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -44,10 +43,7 @@ type ReconcilerFactoryImpl struct {
 // Build builds the Reconciler according to the arguments.
 func (f ReconcilerFactoryImpl) Build(useFlow bool) (Reconciler, error) {
 	if useFlow {
-		reconciler, err := NewFlowReconciler(f.a.client, f.a.restConfig, f.log, f.a.disableProjectedTokenMount)
-		if err != nil {
-			return nil, fmt.Errorf("failed to init flow reconciler: %w", err)
-		}
+		reconciler := NewFlowReconciler(f.a.client, f.a.restConfig, f.log, f.a.disableProjectedTokenMount)
 		return reconciler, nil
 	}
 

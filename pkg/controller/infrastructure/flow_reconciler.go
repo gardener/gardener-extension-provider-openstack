@@ -33,16 +33,16 @@ type FlowReconciler struct {
 }
 
 // NewFlowReconciler creates a new flow reconciler.
-func NewFlowReconciler(client client.Client, restConfig *rest.Config, log logr.Logger, projToken bool) (Reconciler, error) {
+func NewFlowReconciler(client client.Client, restConfig *rest.Config, log logr.Logger, projToken bool) Reconciler {
 	return &FlowReconciler{
 		client:                     client,
 		restConfig:                 restConfig,
 		log:                        log,
 		disableProjectedTokenMount: projToken,
-	}, nil
+	}
 }
 
-// Reconcile reconciles the infrastructure and returns the status (state of the world), the state (input for the next loops) and any errors that occurred.
+// Reconcile reconciles the infrastructure and updates the Infrastructure status (state of the world), the state (input for the next loops) or reports any errors that occurred.
 func (f *FlowReconciler) Reconcile(ctx context.Context, infra *extensionsv1alpha1.Infrastructure, cluster *controller.Cluster) error {
 	var (
 		infraState *openstack.InfrastructureState
@@ -164,8 +164,9 @@ func (f *FlowReconciler) migrateFromTerraform(ctx context.Context, infra *extens
 			Data: map[string]string{},
 		}
 	)
-	// we want to prevent allowing the deletion of infrastructure if there may be still resources in the cloudprovider. We will initialize the data
-	// with a specific "marker" so that the deletion
+	// we want to prevent the deletion of Infrastructure CR if there may be still resources in the cloudprovider. We will initialize the data
+	// with a specific "marker" so that deletion attempts will not skip the deletion if we are certain that terraform had created infra resources
+	// in past reconciliation.
 	tf, err := internal.NewTerraformer(f.log, f.restConfig, infrainternal.TerraformerPurpose, infra, f.disableProjectedTokenMount)
 	if err != nil {
 		return nil, err

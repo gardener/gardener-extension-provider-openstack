@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -188,7 +188,7 @@ var _ = Describe("ConfigValidator", func() {
 			})
 
 			It("should fail with InternalError if getting network failed", func() {
-				config.Networks.ID = pointer.String(id)
+				config.Networks.ID = ptr.To(id)
 				infra.Spec.ProviderConfig.Raw = encode(config)
 
 				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return(nil, errors.New("test"))
@@ -201,7 +201,7 @@ var _ = Describe("ConfigValidator", func() {
 			})
 
 			It("should fail with NotFound if no network found", func() {
-				config.Networks.ID = pointer.String("nonexisting")
+				config.Networks.ID = ptr.To("nonexisting")
 				infra.Spec.ProviderConfig.Raw = encode(config)
 
 				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{}, nil)
@@ -214,8 +214,8 @@ var _ = Describe("ConfigValidator", func() {
 			})
 
 			It("should fail with InternalError if getting subnet failed", func() {
-				config.Networks.ID = pointer.String(id)
-				config.Networks.SubnetID = pointer.String(id)
+				config.Networks.ID = ptr.To(id)
+				config.Networks.SubnetID = ptr.To(id)
 				infra.Spec.ProviderConfig.Raw = encode(config)
 
 				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
@@ -229,8 +229,8 @@ var _ = Describe("ConfigValidator", func() {
 			})
 
 			It("should fail with NotFound if no subnet found", func() {
-				config.Networks.ID = pointer.String(id)
-				config.Networks.SubnetID = pointer.String("nonexisting")
+				config.Networks.ID = ptr.To(id)
+				config.Networks.SubnetID = ptr.To("nonexisting")
 				infra.Spec.ProviderConfig.Raw = encode(config)
 
 				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
@@ -244,8 +244,8 @@ var _ = Describe("ConfigValidator", func() {
 			})
 
 			It("should fail with Invalid if subnet isn't child of specified network", func() {
-				config.Networks.ID = pointer.String(id)
-				config.Networks.SubnetID = pointer.String("subnetID")
+				config.Networks.ID = ptr.To(id)
+				config.Networks.SubnetID = ptr.To("subnetID")
 				infra.Spec.ProviderConfig.Raw = encode(config)
 
 				networkingClient.EXPECT().ListNetwork(gomock.Any()).Return([]networks.Network{{ID: "id"}}, nil)
@@ -287,8 +287,8 @@ var _ = Describe("ConfigValidator", func() {
 			It("should fail with NotFound if no router interface for the subnet is found", func() {
 				subnetID := "subnetID"
 				routerID := "routerID"
-				config.Networks.ID = pointer.String(id)
-				config.Networks.SubnetID = pointer.String(subnetID)
+				config.Networks.ID = ptr.To(id)
+				config.Networks.SubnetID = ptr.To(subnetID)
 				config.Networks.Router = &apisopenstack.Router{ID: routerID}
 				infra.Spec.ProviderConfig.Raw = encode(config)
 

@@ -79,7 +79,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 
 		It("should forbid subnet id when network id is unspecified", func() {
-			infrastructureConfig.Networks.SubnetID = pointer.String(uuid.NewString())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.NewString())
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
@@ -91,8 +91,8 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 
 		It("should forbid an invalid subnet id", func() {
-			infrastructureConfig.Networks.ID = pointer.String(uuid.NewString())
-			infrastructureConfig.Networks.SubnetID = pointer.String("thisiswrong")
+			infrastructureConfig.Networks.ID = ptr.To(uuid.NewString())
+			infrastructureConfig.Networks.SubnetID = ptr.To("thisiswrong")
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
@@ -104,8 +104,8 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 
 		It("should allow an valid OpenStack UUID as subnet ID", func() {
-			infrastructureConfig.Networks.ID = pointer.String(uuid.NewString())
-			infrastructureConfig.Networks.SubnetID = pointer.String(uuid.NewString())
+			infrastructureConfig.Networks.ID = ptr.To(uuid.NewString())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.NewString())
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 

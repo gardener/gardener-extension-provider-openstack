@@ -431,16 +431,6 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 
-	if fctx.infra.Spec.SSHPublicKey == nil {
-		log.Info("SSH is disabled. Deleting SSH Keypair...")
-		err := fctx.compute.DeleteKeyPair(fctx.defaultSSHKeypairName())
-		if err != nil {
-			return err
-		}
-		fctx.state.Set(NameKeyPair, "")
-		return nil
-	}
-
 	keyPair, err := fctx.compute.GetKeyPair(fctx.defaultSSHKeypairName())
 	if err != nil {
 		return err

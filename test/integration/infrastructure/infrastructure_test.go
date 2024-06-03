@@ -20,6 +20,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -249,7 +250,7 @@ var _ = Describe("Infrastructure tests", func() {
 	})
 
 	It("minimum configuration infrastructure", func() {
-		providerConfig := newProviderConfig("", nil)
+		providerConfig := newProviderConfig("", nil, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 		namespace, err := generateNamespaceName()
 		Expect(err).NotTo(HaveOccurred())
@@ -276,7 +277,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig(*routerID, nil)
+		providerConfig := newProviderConfig(*routerID, nil, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -300,7 +301,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig("", networkID)
+		providerConfig := newProviderConfig("", networkID, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -333,7 +334,82 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig(*routerID, networkID)
+		providerConfig := newProviderConfig(*routerID, networkID, nil)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("with infrastructure that uses existing network, subnet and router", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		networkID, err := prepareNewNetwork(log, networkName)
+		Expect(err).NotTo(HaveOccurred())
+
+		subnetName := namespace + "-subnet"
+		subnetID, err := prepareNewSubnet(log, subnetName, *networkID)
+		Expect(err).NotTo(HaveOccurred())
+
+		routerName := namespace + "-router"
+		routerID, err := prepareNewRouter(log, routerName)
+		Expect(err).NotTo(HaveOccurred())
+
+		routerInterfacePortID, err := prepareNewRouterInterface(log, *routerID, *subnetID)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			By("Tearing down router interface")
+			err := teardownRouterInterface(log, *routerID, *subnetID, *routerInterfacePortID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down router")
+			err = teardownRouter(log, *routerID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down subnet")
+			err = teardownSubnet(log, *subnetID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down network")
+			err = teardownNetwork(log, *networkID)
+			Expect(err).NotTo(HaveOccurred())
+
+			framework.RemoveCleanupAction(cleanupHandle)
+		})
+
+		providerConfig := newProviderConfig(*routerID, subnetID, networkID)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	FIt("with infrastructure that uses existing network and subnet", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		networkID, err := prepareNewNetwork(log, networkName)
+		Expect(err).NotTo(HaveOccurred())
+
+		subnetName := namespace + "-subnet"
+		subnetID, err := prepareNewSubnet(log, subnetName, *networkID)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			By("Tearing down subnet")
+			err := teardownSubnet(log, *subnetID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down network")
+			err = teardownNetwork(log, *networkID)
+			Expect(err).NotTo(HaveOccurred())
+
+			framework.RemoveCleanupAction(cleanupHandle)
+		})
+
+		providerConfig := newProviderConfig("", subnetID, networkID)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -540,7 +616,7 @@ func runTest(
 // newProviderConfig creates a providerConfig with the network and router details.
 // If routerID is set to "", it requests a new router creation.
 // Else it reuses the supplied routerID.
-func newProviderConfig(routerID string, networkID *string) *openstackv1alpha1.InfrastructureConfig {
+func newProviderConfig(routerID string, networkID *string, subnetID *string) *openstackv1alpha1.InfrastructureConfig {
 	var router *openstackv1alpha1.Router
 
 	if routerID != "" {
@@ -554,9 +630,10 @@ func newProviderConfig(routerID string, networkID *string) *openstackv1alpha1.In
 		},
 		FloatingPoolName: *floatingPoolName,
 		Networks: openstackv1alpha1.Networks{
-			ID:      networkID,
-			Router:  router,
-			Workers: vpcCIDR,
+			ID:       networkID,
+			Router:   router,
+			Workers:  vpcCIDR,
+			SubnetID: subnetID,
 		},
 	}
 }
@@ -648,6 +725,32 @@ func teardownRouter(log logr.Logger, routerID string) error {
 	return nil
 }
 
+func prepareNewSubnet(log logr.Logger, subnetName string, networkID string) (*string, error) {
+	log.Info("Waiting until subnet is created", "subnetName", subnetName)
+
+	createOpts := subnets.CreateOpts{
+		Name:      subnetName,
+		NetworkID: networkID,
+		IPVersion: gophercloud.IPv4,
+		CIDR:      vpcCIDR,
+	}
+	subnet, err := networkClient.CreateSubnet(createOpts)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet is created", "subnetName", subnet)
+	return &subnet.ID, nil
+}
+
+func teardownSubnet(log logr.Logger, subnetID string) error {
+	log.Info("Waiting until subnet is deleted", "subnetID", subnetID)
+
+	err := networkClient.DeleteSubnet(subnetID)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet is deleted", "subnetID", subnetID)
+	return nil
+}
+
 func prepareNewNetwork(log logr.Logger, networkName string) (*string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
@@ -668,6 +771,26 @@ func teardownNetwork(log logr.Logger, networkID string) error {
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)
+	return nil
+}
+
+func prepareNewRouterInterface(log logr.Logger, routerID, subnetID string) (*string, error) {
+	log.Info("Waiting until router interface is created", "routerID", routerID, "subnetID", subnetID)
+
+	routerInterface, err := networkClient.AddRouterInterface(routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Router interface is created", "interfaceID", routerInterface.ID)
+	return &routerInterface.PortID, nil
+}
+
+func teardownRouterInterface(log logr.Logger, routerID, subnetID, portID string) error {
+	log.Info("Waiting until router interface is deleted", "routerID", routerID, "subnetID", subnetID, "portID", portID)
+
+	_, err := networkClient.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID, PortID: portID})
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Router interface is deleted", "routerID", routerID)
 	return nil
 }
 
@@ -703,11 +826,16 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	}
 	infrastructureIdentifier.networkID = ptr.To(net.ID)
 
-	// subnet is created
+	// subnet exists
 	subnet, err := networkClient.GetSubnetByID(providerStatus.Networks.Subnets[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
 	infrastructureIdentifier.subnetID = ptr.To(subnet.ID)
+
+	// router interface exists
+	port, err := networkClient.GetRouterInterfacePort(router.ID, subnet.ID)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(port).NotTo(BeNil())
 
 	// security group is created
 	secGroup, err := networkClient.GetSecurityGroup(providerStatus.SecurityGroups[0].ID)
@@ -736,8 +864,15 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 		// subnet doesn't exist
 		subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
 		subnets, err := networkClient.ListSubnets(subnetsOpts)
-		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-		Expect(subnets).To(BeEmpty())
+
+		if providerConfig.Networks.SubnetID != nil {
+			Expect(subnets).To(HaveLen(1))
+			Expect(subnets[0].ID).To(Equal(*providerConfig.Networks.SubnetID))
+
+		} else {
+			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+			Expect(subnets).To(BeEmpty())
+		}
 	}
 
 	if infrastructureIdentifier.networkID != nil {

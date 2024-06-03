@@ -5,6 +5,7 @@
 **/dev
 /bin
 hack/tools/bin
+/.run
 
 *.coverprofile
 *.html

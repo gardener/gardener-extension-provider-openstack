@@ -21,12 +21,12 @@ spec:
       - __name__
       action: keep
       regex: ^(rest_client_requests_total|process_max_fds|process_open_fds)$
-  honorLabels: false
-  authorization:
-    credentials:
-      name: shoot-access-prometheus-shoot
-      key: token
-  scheme: https
-  tlsConfig:
-    insecureSkipVerify: true
+    honorLabels: false
+    authorization:
+      credentials:
+        name: shoot-access-prometheus-shoot
+        key: token
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
 {{- end }}

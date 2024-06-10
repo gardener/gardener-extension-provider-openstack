@@ -11,19 +11,14 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-)
-
-const (
-	// AnnotationKeyUseFlow is the annotation key used to enable reconciliation with flow instead of terraformer.
-	AnnotationKeyUseFlow = "openstack.provider.extensions.gardener.cloud/use-flow"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 type actuator struct {
@@ -43,41 +38,27 @@ func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastru
 
 // Helper functions
 
-func (a *actuator) updateProviderStatusWithTerraformer(
-	ctx context.Context,
-	tf terraformer.Terraformer,
-	infra *extensionsv1alpha1.Infrastructure,
-	config *api.InfrastructureConfig,
-) error {
-	status, err := infrainternal.ComputeStatus(ctx, tf, config)
+func (a *actuator) cleanupTerraformerResources(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure) error {
+	credentials, err := openstack.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
 	if err != nil {
 		return err
 	}
 
-	state, err := tf.GetRawState(ctx)
+	tf, err := internal.NewTerraformerWithAuth(log, a.restConfig, infrainternal.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create terraformer object: %w", err)
 	}
 
-	stateBytes, err := state.Marshal()
-	if err != nil {
-		return err
-	}
-
-	return a.updateProviderStatus(ctx, infra, status, stateBytes)
+	return CleanupTerraformerResources(ctx, tf)
 }
 
-func (a *actuator) updateProviderStatus(
-	ctx context.Context,
-	infra *extensionsv1alpha1.Infrastructure,
-	status *openstackv1alpha1.InfrastructureStatus,
-	stateBytes []byte,
-) error {
-	patch := client.MergeFrom(infra.DeepCopy())
-	infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
-	infra.Status.State = &runtime.RawExtension{Raw: stateBytes}
-	if status != nil && status.Networks.Router.IP != "" {
-		infra.Status.EgressCIDRs = []string{fmt.Sprintf("%s/32", status.Networks.Router.IP)}
+// CleanupTerraformerResources deletes terraformer artifacts (config, state, secrets).
+func CleanupTerraformerResources(ctx context.Context, tf terraformer.Terraformer) error {
+	if err := tf.EnsureCleanedUp(ctx); err != nil {
+		return nil
 	}
-	return a.client.Status().Patch(ctx, infra, patch)
+	if err := tf.CleanupConfiguration(ctx); err != nil {
+		return err
+	}
+	return tf.RemoveTerraformerFinalizerFromConfig(ctx)
 }

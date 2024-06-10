@@ -5,14 +5,23 @@
 package infraflow
 
 import (
+	"context"
 	"fmt"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
+	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
+	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	osclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -50,18 +59,26 @@ const (
 	// ObjectSecGroup is the key for the cached security group
 	ObjectSecGroup = "SecurityGroup"
 
-	// MarkerMigratedFromTerraform is the key for marking the state for successful state migration from Terraformer
-	MarkerMigratedFromTerraform = "MigratedFromTerraform"
-	// MarkerTerraformCleanedUp is the key for marking the state for successful cleanup of Terraformer resources.
-	MarkerTerraformCleanedUp = "TerraformCleanedUp"
+	// CreatedResourcesExistKey marks that there are infrastructure resources created by Gardener.
+	CreatedResourcesExistKey = "resource_exist"
 )
 
-// FlowContext contains the logic to reconcile or delete the AWS infrastructure.
+// Opts contain options to initiliaze a FlowContext
+type Opts struct {
+	Log            logr.Logger
+	ClientFactory  osclient.Factory
+	Infrastructure *extensionsv1alpha1.Infrastructure
+	Cluster        *extensionscontroller.Cluster
+	State          *openstackapi.InfrastructureState
+	Client         client.Client
+}
+
+// FlowContext contains the logic to reconcile or delete the infrastructure.
 type FlowContext struct {
-	shared.BasicFlowContext
 	state              shared.Whiteboard
-	namespace          string
-	infraSpec          extensionsv1alpha1.InfrastructureSpec
+	client             client.Client
+	log                logr.Logger
+	infra              *extensionsv1alpha1.Infrastructure
 	config             *openstackapi.InfrastructureConfig
 	cloudProfileConfig *openstackapi.CloudProfileConfig
 	networking         osclient.Networking
@@ -69,57 +86,120 @@ type FlowContext struct {
 	sharedFilesystem   osclient.SharedFilesystem
 	access             access.NetworkingAccess
 	compute            osclient.Compute
+
+	*shared.BasicFlowContext
 }
 
 // NewFlowContext creates a new FlowContext object
-func NewFlowContext(log logr.Logger, clientFactory osclient.Factory,
-	infra *extensionsv1alpha1.Infrastructure, config *openstackapi.InfrastructureConfig,
-	cloudProfileConfig *openstackapi.CloudProfileConfig,
-	oldState shared.FlatMap, persistor shared.FlowStatePersistor) (*FlowContext, error) {
-
+func NewFlowContext(opts Opts) (*FlowContext, error) {
 	whiteboard := shared.NewWhiteboard()
-	if oldState != nil {
-		whiteboard.ImportFromFlatMap(oldState)
+	if opts.State != nil {
+		whiteboard.ImportFromFlatMap(opts.State.Data)
 	}
 
-	networking, err := clientFactory.Networking(osclient.WithRegion(infra.Spec.Region))
+	networking, err := opts.ClientFactory.Networking(osclient.WithRegion(opts.Infrastructure.Spec.Region))
 	if err != nil {
 		return nil, fmt.Errorf("creating networking client failed: %w", err)
 	}
-	access, err := access.NewNetworkingAccess(networking, log)
+	access, err := access.NewNetworkingAccess(networking, opts.Log)
 	if err != nil {
 		return nil, fmt.Errorf("creating networking access failed: %w", err)
 	}
-	compute, err := clientFactory.Compute(osclient.WithRegion(infra.Spec.Region))
+	compute, err := opts.ClientFactory.Compute(osclient.WithRegion(opts.Infrastructure.Spec.Region))
 	if err != nil {
 		return nil, fmt.Errorf("creating compute client failed: %w", err)
 	}
-	loadbalancing, err := clientFactory.Loadbalancing(osclient.WithRegion(infra.Spec.Region))
+	loadbalancing, err := opts.ClientFactory.Loadbalancing(osclient.WithRegion(opts.Infrastructure.Spec.Region))
 	if err != nil {
 		return nil, err
 	}
-	sharedFilesytem, err := clientFactory.SharedFilesystem(osclient.WithRegion(infra.Spec.Region))
+	sharedFilesytem, err := opts.ClientFactory.SharedFilesystem(osclient.WithRegion(opts.Infrastructure.Spec.Region))
+	if err != nil {
+		return nil, err
+	}
+
+	infraConfig, err := helper.InfrastructureConfigFromInfrastructure(opts.Infrastructure)
+	if err != nil {
+		return nil, err
+	}
+	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(opts.Cluster)
 	if err != nil {
 		return nil, err
 	}
 
 	flowContext := &FlowContext{
-		BasicFlowContext:   *shared.NewBasicFlowContext(log, whiteboard, persistor),
 		state:              whiteboard,
-		namespace:          infra.Namespace,
-		infraSpec:          infra.Spec,
-		config:             config,
+		infra:              opts.Infrastructure,
+		config:             infraConfig,
 		cloudProfileConfig: cloudProfileConfig,
 		networking:         networking,
 		loadbalancing:      loadbalancing,
 		access:             access,
 		compute:            compute,
 		sharedFilesystem:   sharedFilesytem,
+		log:                opts.Log,
+		client:             opts.Client,
 	}
 	return flowContext, nil
 }
 
-// GetInfrastructureConfig returns the InfrastructureConfig object
-func (c *FlowContext) GetInfrastructureConfig() *openstackapi.InfrastructureConfig {
-	return c.config
+func (fctx *FlowContext) persistState(ctx context.Context) error {
+	return infrainternal.PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, nil, fctx.computeInfrastructureState())
+}
+
+func (fctx *FlowContext) computeInfrastructureState() *runtime.RawExtension {
+	return &runtime.RawExtension{
+		Object: &openstackv1alpha1.InfrastructureState{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureState",
+			},
+			Data: fctx.state.ExportAsFlatMap(),
+		},
+	}
+}
+
+func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.InfrastructureStatus {
+	status := &openstackv1alpha1.InfrastructureStatus{
+		TypeMeta: infrainternal.StatusTypeMeta,
+	}
+
+	status.Networks.FloatingPool.ID = ptr.Deref(fctx.state.Get(IdentifierFloatingNetwork), "")
+	status.Networks.FloatingPool.Name = ptr.Deref(fctx.state.Get(NameFloatingNetwork), "")
+
+	status.Networks.ID = ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
+	status.Networks.Name = ptr.Deref(fctx.state.Get(NameNetwork), "")
+
+	status.Networks.Router.ID = ptr.Deref(fctx.state.Get(IdentifierRouter), "")
+	status.Networks.Router.IP = ptr.Deref(fctx.state.Get(RouterIP), "")
+
+	status.Node.KeyName = ptr.Deref(fctx.state.Get(NameKeyPair), "")
+
+	if v := fctx.state.Get(IdentifierShareNetwork); v != nil {
+		status.Networks.ShareNetwork = &openstackv1alpha1.ShareNetworkStatus{
+			ID:   *v,
+			Name: ptr.Deref(fctx.state.Get(NameShareNetwork), ""),
+		}
+	}
+
+	if v := fctx.state.Get(IdentifierSubnet); v != nil {
+		status.Networks.Subnets = []openstackv1alpha1.Subnet{
+			{
+				Purpose: openstackv1alpha1.PurposeNodes,
+				ID:      *v,
+			},
+		}
+	}
+
+	if v := fctx.state.Get(IdentifierSecGroup); v != nil {
+		status.SecurityGroups = []openstackv1alpha1.SecurityGroup{
+			{
+				Purpose: openstackv1alpha1.PurposeNodes,
+				ID:      *v,
+				Name:    ptr.Deref(fctx.state.Get(NameSecGroup), ""),
+			},
+		}
+	}
+
+	return status
 }

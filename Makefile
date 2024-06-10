@@ -18,6 +18,7 @@ LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
 PLATFORM 					:= linux/amd64
 EXTENSION_NAMESPACE			:= garden
+TEST_RECONCILER             := tf
 
 WEBHOOK_CONFIG_PORT	:= 8443
 WEBHOOK_CONFIG_MODE	:= url
@@ -184,10 +185,14 @@ verify-extended: check-generate check format test-cov test-clean
 
 .PHONY: integration-test-infra
 integration-test-infra:
-	@go test -timeout=0 ./test/integration/infrastructure $(INFRA_TEST_FLAGS)
+	@go test -timeout=0 ./test/integration/infrastructure \
+		--reconciler='$(TEST_RECONCILER)' \
+		$(INFRA_TEST_FLAGS)
 
 .PHONY: integration-test-bastion
 integration-test-bastion:
-	@go test -timeout=0 ./test/integration/bastion $(INFRA_TEST_FLAGS) \
+	@go test -timeout=0 ./test/integration/bastion \
 		--flavor-ref='$(FLAVOR_REF)' \
-		--image-ref='$(IMAGE_REF)'
+		--image-ref='$(IMAGE_REF)' \
+		$(INFRA_TEST_FLAGS)
+

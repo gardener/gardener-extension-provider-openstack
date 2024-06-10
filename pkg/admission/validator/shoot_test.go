@@ -61,7 +61,7 @@ var _ = Describe("Shoot validator", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName: "cloudProfile",
 					Provider: core.Provider{
-						Type:    "gcp",
+						Type:    "openstack",
 						Workers: []core.Worker{},
 					},
 					Region: "us-west",

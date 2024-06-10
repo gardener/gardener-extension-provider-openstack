@@ -33,6 +33,8 @@ type Networks struct {
 	Workers string
 	// ID is the ID of an existing private network.
 	ID *string
+	// SubnetID is the ID of an existing subnet.
+	SubnetID *string
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	ShareNetwork *ShareNetwork
 }
@@ -132,4 +134,13 @@ type SecurityGroup struct {
 	ID string
 	// Name is the security group name.
 	Name string
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// InfrastructureState is the state which is persisted as part of the infrastructure status.
+type InfrastructureState struct {
+	metav1.TypeMeta
+
+	Data map[string]string
 }

@@ -20,6 +20,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -42,7 +44,6 @@ import (
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -50,10 +51,10 @@ import (
 type flowUsage int
 
 const (
-	fuUseTerraformer flowUsage = iota
-	fuMigrateFromTerraformer
-	fuUseFlow
-	fuUseFlowRecoverState
+	reconcilerUseTF        string = "tf"
+	reconcilerMigrateTF    string = "migrate"
+	reconcilerUseFlow      string = "flow"
+	reconcilerRecoverState string = "recover"
 )
 
 const (
@@ -71,6 +72,7 @@ var (
 	appID            = flag.String("app-id", "", "Application Credential ID for openstack")
 	appName          = flag.String("app-name", "", "Application Credential Name for openstack")
 	appSecret        = flag.String("app-secret", "", "Application Credential Secret for openstack")
+	reconciler       = flag.String("reconciler", reconcilerUseTF, "Set annotation to use flow for reconciliation")
 
 	floatingPoolID string
 )
@@ -91,6 +93,7 @@ func validateFlags() {
 	if len(*tenantName) == 0 {
 		panic("--tenant-name flag is not specified")
 	}
+
 	err := openstack.ValidateSecrets(*userName, *password, *appID, *appName, *appSecret)
 	if err != nil {
 		panic(fmt.Errorf("flag error: %w", err))
@@ -164,6 +167,9 @@ var _ = BeforeSuite(func() {
 		// During testing in testmachinery cluster, there is no gardener-resource-manager to inject the volume mount.
 		// Hence, we need to run without projected token mount.
 		DisableProjectedTokenMount: true,
+		Controller: controller.Options{
+			MaxConcurrentReconciles: 5,
+		},
 	})).To(Succeed())
 
 	var mgrContext context.Context
@@ -215,227 +221,175 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = Describe("Infrastructure tests", func() {
-	Context("with infrastructure that requests new private network", func() {
-		AfterEach(func() {
-			framework.RunCleanupActions()
-		})
-
-		It("should successfully create and delete (flow)", func() {
-			providerConfig := newProviderConfig("", nil)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseFlow)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should successfully create and delete (migration)", func() {
-			providerConfig := newProviderConfig("", nil)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuMigrateFromTerraformer)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should successfully create and delete (terraformer)", func() {
-			providerConfig := newProviderConfig("", nil)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseTerraformer)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
+	AfterEach(func() {
+		framework.RunCleanupActions()
 	})
 
-	Context("with infrastructure that uses existing router", func() {
-		AfterEach(func() {
-			framework.RunCleanupActions()
-		})
+	It("minimum configuration infrastructure", func() {
+		providerConfig := newProviderConfig(nil, nil, nil)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
 
-		It("should successfully create and delete (flow)", func() {
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
 
-			cloudRouterName := namespace + "-cloud-router"
-
-			routerID, err := prepareNewRouter(log, cloudRouterName)
-			Expect(err).NotTo(HaveOccurred())
-
-			var cleanupHandle framework.CleanupActionHandle
-			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownRouter(log, *routerID)
-				Expect(err).NotTo(HaveOccurred())
-
-				framework.RemoveCleanupAction(cleanupHandle)
-			})
-
-			providerConfig := newProviderConfig(*routerID, nil)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseFlow)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should successfully create and delete (terraformer)", func() {
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
-
-			cloudRouterName := namespace + "-cloud-router"
-
-			routerID, err := prepareNewRouter(log, cloudRouterName)
-			Expect(err).NotTo(HaveOccurred())
-
-			var cleanupHandle framework.CleanupActionHandle
-			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownRouter(log, *routerID)
-				Expect(err).NotTo(HaveOccurred())
-
-				framework.RemoveCleanupAction(cleanupHandle)
-			})
-
-			providerConfig := newProviderConfig(*routerID, nil)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseTerraformer)
-			Expect(err).NotTo(HaveOccurred())
-		})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("with infrastructure that uses existing network", func() {
-		AfterEach(func() {
-			framework.RunCleanupActions()
+	It("with infrastructure that uses existing router", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		cloudRouterName := namespace + "-cloud-router"
+
+		routerID, err := prepareNewRouter(log, cloudRouterName)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			err := teardownRouter(log, *routerID)
+			Expect(err).NotTo(HaveOccurred())
+
+			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		It("should successfully create and delete (flow)", func() {
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
+		providerConfig := newProviderConfig(routerID, nil, nil)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
-			networkName := namespace + "-network"
-
-			networkID, err := prepareNewNetwork(log, networkName)
-			Expect(err).NotTo(HaveOccurred())
-
-			var cleanupHandle framework.CleanupActionHandle
-			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownNetwork(log, *networkID)
-				Expect(err).NotTo(HaveOccurred())
-
-				framework.RemoveCleanupAction(cleanupHandle)
-			})
-
-			providerConfig := newProviderConfig("", networkID)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseFlow)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should successfully create and delete (terraformer)", func() {
-			namespace, err := generateNamespaceName()
-			Expect(err).NotTo(HaveOccurred())
-
-			networkName := namespace + "-network"
-
-			networkID, err := prepareNewNetwork(log, networkName)
-			Expect(err).NotTo(HaveOccurred())
-
-			var cleanupHandle framework.CleanupActionHandle
-			cleanupHandle = framework.AddCleanupAction(func() {
-				err := teardownNetwork(log, *networkID)
-				Expect(err).NotTo(HaveOccurred())
-
-				framework.RemoveCleanupAction(cleanupHandle)
-			})
-
-			providerConfig := newProviderConfig("", networkID)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseTerraformer)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("with infrastructure that uses existing network and router", func() {
-		AfterEach(func() {
-			framework.RunCleanupActions()
+	It("with infrastructure that uses existing network", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+
+		networkID, err := prepareNewNetwork(log, networkName)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			err := teardownNetwork(log, *networkID)
+			Expect(err).NotTo(HaveOccurred())
+
+			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		It("should successfully create and delete (flow)", func() {
-			namespace, err := generateNamespaceName()
+		providerConfig := newProviderConfig(nil, networkID, nil)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("with infrastructure that uses existing network and router", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		cloudRouterName := namespace + "-cloud-router"
+
+		networkID, err := prepareNewNetwork(log, networkName)
+		Expect(err).NotTo(HaveOccurred())
+		routerID, err := prepareNewRouter(log, cloudRouterName)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			By("Tearing down network")
+			err := teardownNetwork(log, *networkID)
 			Expect(err).NotTo(HaveOccurred())
 
-			networkName := namespace + "-network"
-			cloudRouterName := namespace + "-cloud-router"
-
-			networkID, err := prepareNewNetwork(log, networkName)
-			Expect(err).NotTo(HaveOccurred())
-			routerID, err := prepareNewRouter(log, cloudRouterName)
+			By("Tearing down router")
+			err = teardownRouter(log, *routerID)
 			Expect(err).NotTo(HaveOccurred())
 
-			var cleanupHandle framework.CleanupActionHandle
-			cleanupHandle = framework.AddCleanupAction(func() {
-				By("Tearing down network")
-				err := teardownNetwork(log, *networkID)
-				Expect(err).NotTo(HaveOccurred())
-
-				By("Tearing down router")
-				err = teardownRouter(log, *routerID)
-				Expect(err).NotTo(HaveOccurred())
-
-				framework.RemoveCleanupAction(cleanupHandle)
-			})
-
-			providerConfig := newProviderConfig(*routerID, networkID)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseFlowRecoverState)
-
-			Expect(err).NotTo(HaveOccurred())
-
+			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		It("should successfully create and delete (terraformer)", func() {
-			namespace, err := generateNamespaceName()
+		providerConfig := newProviderConfig(routerID, networkID, nil)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("with infrastructure that uses existing network, subnet and router", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		networkID, err := prepareNewNetwork(log, networkName)
+		Expect(err).NotTo(HaveOccurred())
+
+		subnetName := namespace + "-subnet"
+		subnetID, err := prepareNewSubnet(log, subnetName, *networkID)
+		Expect(err).NotTo(HaveOccurred())
+
+		routerName := namespace + "-router"
+		routerID, err := prepareNewRouter(log, routerName)
+		Expect(err).NotTo(HaveOccurred())
+
+		routerInterfacePortID, err := prepareNewRouterInterface(log, *routerID, *subnetID)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			By("Tearing down router interface")
+			err := teardownRouterInterface(log, *routerID, *subnetID, *routerInterfacePortID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down router")
+			err = teardownRouter(log, *routerID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down subnet")
+			err = teardownSubnet(log, *subnetID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down network")
+			err = teardownNetwork(log, *networkID)
 			Expect(err).NotTo(HaveOccurred())
 
-			networkName := namespace + "-network"
-			cloudRouterName := namespace + "-cloud-router"
-
-			networkID, err := prepareNewNetwork(log, networkName)
-			Expect(err).NotTo(HaveOccurred())
-			routerID, err := prepareNewRouter(log, cloudRouterName)
-			Expect(err).NotTo(HaveOccurred())
-
-			var cleanupHandle framework.CleanupActionHandle
-			cleanupHandle = framework.AddCleanupAction(func() {
-				By("Tearing down network")
-				err := teardownNetwork(log, *networkID)
-				Expect(err).NotTo(HaveOccurred())
-
-				By("Tearing down router")
-				err = teardownRouter(log, *routerID)
-				Expect(err).NotTo(HaveOccurred())
-
-				framework.RemoveCleanupAction(cleanupHandle)
-			})
-
-			providerConfig := newProviderConfig(*routerID, networkID)
-			cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
-
-			err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig, fuUseTerraformer)
-
-			Expect(err).NotTo(HaveOccurred())
-
+			framework.RemoveCleanupAction(cleanupHandle)
 		})
+
+		providerConfig := newProviderConfig(routerID, networkID, subnetID)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("with infrastructure that uses existing network and subnet", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		networkID, err := prepareNewNetwork(log, networkName)
+		Expect(err).NotTo(HaveOccurred())
+
+		subnetName := namespace + "-subnet"
+		subnetID, err := prepareNewSubnet(log, subnetName, *networkID)
+		Expect(err).NotTo(HaveOccurred())
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			By("Tearing down subnet")
+			err := teardownSubnet(log, *subnetID)
+			Expect(err).NotTo(HaveOccurred())
+			By("Tearing down network")
+			err = teardownNetwork(log, *networkID)
+			Expect(err).NotTo(HaveOccurred())
+
+			framework.RemoveCleanupAction(cleanupHandle)
+		})
+
+		providerConfig := newProviderConfig(nil, networkID, subnetID)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
 
@@ -447,7 +401,6 @@ func runTest(
 	providerConfig *openstackv1alpha1.InfrastructureConfig,
 	decoder runtime.Decoder,
 	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
-	flow flowUsage,
 ) error {
 	var (
 		namespace        *corev1.Namespace
@@ -561,7 +514,7 @@ func runTest(
 	}
 
 	By("create infrastructure")
-	infra, err = newInfrastructure(namespaceName, providerConfig, flow == fuUseFlow || flow == fuUseFlowRecoverState)
+	infra, err = newInfrastructure(namespaceName, providerConfig)
 	if err != nil {
 		return err
 	}
@@ -571,55 +524,45 @@ func runTest(
 	}
 
 	By("wait until infrastructure is created")
-	if err := extensions.WaitUntilExtensionObjectReady(
+	Expect(extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c,
 		log,
 		infra,
-		extensionsv1alpha1.InfrastructureResource,
+		"Infrastucture",
 		10*time.Second,
 		30*time.Second,
 		16*time.Minute,
 		nil,
-	); err != nil {
-		return err
-	}
+	)).To(Succeed())
 
-	By("verify infrastructure creation")
-	if err := c.Get(ctx, client.ObjectKey{Namespace: infra.Namespace, Name: infra.Name}, infra); err != nil {
-		return err
-	}
-
-	infraIdentifiers, providerStatus := verifyCreation(infra.Status, providerConfig)
-
-	oldState := infra.Status.State
-	if flow == fuUseFlowRecoverState {
-		By("drop state for testing recover")
+	// Update the infra resource to trigger a migration.
+	oldState := infra.Status.State.DeepCopy()
+	if *reconciler == reconcilerMigrateTF {
+		By("verifying terraform migration")
 		patch := client.MergeFrom(infra.DeepCopy())
+		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, openstack.AnnotationKeyUseFlow, "true")
+		Expect(c.Patch(ctx, infra, patch)).To(Succeed())
+	} else if *reconciler == reconcilerRecoverState {
+		By("drop state for testing recovery")
+
+		patch := client.MergeFrom(infra.DeepCopy())
+		infra.Status.LastOperation = nil
 		infra.Status.ProviderStatus = nil
-		state, err := infraflow.NewPersistentState().ToJSON()
-		Expect(err).To(Succeed())
-		infra.Status.State = &runtime.RawExtension{Raw: state}
-		err = c.Status().Patch(ctx, infra, patch)
+		infra.Status.State = nil
+		Expect(c.Status().Patch(ctx, infra, patch)).To(Succeed())
+
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: infra.Namespace, Name: infra.Name}, infra)).To(Succeed())
+
+		patch = client.MergeFrom(infra.DeepCopy())
+		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		err = c.Patch(ctx, infra, patch)
 		Expect(err).To(Succeed())
 	}
 
 	By("wait until infrastructure is reconciled")
-	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
-		ctx,
-		c,
-		log,
-		checkOperationAnnotationRemoved,
-		infra,
-		"Infrastucture",
-		10*time.Second,
-		30*time.Second,
-		5*time.Minute,
-		nil,
-	); err != nil {
-		Expect(err).To(Succeed())
-	}
-	if err := extensions.WaitUntilExtensionObjectReady(
+	Expect(extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c,
 		log,
@@ -629,55 +572,12 @@ func runTest(
 		30*time.Second,
 		16*time.Minute,
 		nil,
-	); err != nil {
-		Expect(err).To(Succeed())
-	}
+	)).To(Succeed())
 
-	By("triggering infrastructure reconciliation")
-	infraCopy := infra.DeepCopy()
-	metav1.SetMetaDataAnnotation(&infra.ObjectMeta, "gardener.cloud/operation", "reconcile")
-	if flow == fuMigrateFromTerraformer {
-		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, infrastructure.AnnotationKeyUseFlow, "true")
-	}
-	Expect(c.Patch(ctx, infra, client.MergeFrom(infraCopy))).To(Succeed())
-	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
-		ctx,
-		c,
-		log,
-		func(obj client.Object) error {
-			if obj.GetResourceVersion() == infraCopy.ResourceVersion {
-				return fmt.Errorf("cache not updated yet")
-			}
-			return checkOperationAnnotationRemoved(obj)
-		},
-		infra,
-		"Infrastucture",
-		10*time.Second,
-		30*time.Second,
-		5*time.Minute,
-		nil,
-	); err != nil {
-		Expect(err).To(Succeed())
-	}
-	if err := extensions.WaitUntilExtensionObjectReady(
-		ctx,
-		c,
-		log,
-		infra,
-		"Infrastucture",
-		10*time.Second,
-		30*time.Second,
-		16*time.Minute,
-		nil,
-	); err != nil {
-		Expect(err).To(Succeed())
-	}
+	infraIdentifiers, providerStatus := verifyCreation(infra.Status, providerConfig)
 
-	if flow == fuUseFlowRecoverState {
+	if *reconciler == reconcilerRecoverState {
 		By("check state recovery")
-		if err := c.Get(ctx, client.ObjectKey{Namespace: infra.Namespace, Name: infra.Name}, infra); err != nil {
-			return err
-		}
 		Expect(infra.Status.State).To(Equal(oldState))
 		newProviderStatus := openstackv1alpha1.InfrastructureStatus{}
 		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &newProviderStatus); err != nil {
@@ -699,11 +599,11 @@ func checkOperationAnnotationRemoved(obj client.Object) error {
 // newProviderConfig creates a providerConfig with the network and router details.
 // If routerID is set to "", it requests a new router creation.
 // Else it reuses the supplied routerID.
-func newProviderConfig(routerID string, networkID *string) *openstackv1alpha1.InfrastructureConfig {
+func newProviderConfig(routerID *string, networkID *string, subnetID *string) *openstackv1alpha1.InfrastructureConfig {
 	var router *openstackv1alpha1.Router
 
-	if routerID != "" {
-		router = &openstackv1alpha1.Router{ID: routerID}
+	if routerID != nil {
+		router = &openstackv1alpha1.Router{ID: *routerID}
 	}
 
 	return &openstackv1alpha1.InfrastructureConfig{
@@ -713,9 +613,10 @@ func newProviderConfig(routerID string, networkID *string) *openstackv1alpha1.In
 		},
 		FloatingPoolName: *floatingPoolName,
 		Networks: openstackv1alpha1.Networks{
-			ID:      networkID,
-			Router:  router,
-			Workers: vpcCIDR,
+			ID:       networkID,
+			Router:   router,
+			Workers:  vpcCIDR,
+			SubnetID: subnetID,
 		},
 	}
 }
@@ -735,7 +636,7 @@ func newCloudProfileConfig(region string, authURL string) *openstackv1alpha1.Clo
 	}
 }
 
-func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.InfrastructureConfig, useFlow bool) (*extensionsv1alpha1.Infrastructure, error) {
+func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.InfrastructureConfig) (*extensionsv1alpha1.Infrastructure, error) {
 	const sshPublicKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDcSZKq0lM9w+ElLp9I9jFvqEFbOV1+iOBX7WEe66GvPLOWl9ul03ecjhOf06+FhPsWFac1yaxo2xj+SJ+FVZ3DdSn4fjTpS9NGyQVPInSZveetRw0TV0rbYCFBTJuVqUFu6yPEgdcWq8dlUjLqnRNwlelHRcJeBfACBZDLNSxjj0oUz7ANRNCEne1ecySwuJUAz3IlNLPXFexRT0alV7Nl9hmJke3dD73nbeGbQtwvtu8GNFEoO4Eu3xOCKsLw6ILLo4FBiFcYQOZqvYZgCb4ncKM52bnABagG54upgBMZBRzOJvWp0ol+jK3Em7Vb6ufDTTVNiQY78U6BAlNZ8Xg+LUVeyk1C6vWjzAQf02eRvMdfnRCFvmwUpzbHWaVMsQm8gf3AgnTUuDR0ev1nQH/5892wZA86uLYW/wLiiSbvQsqtY1jSn9BAGFGdhXgWLAkGsd/E1vOT+vDcor6/6KjHBm0rG697A3TDBRkbXQ/1oFxcM9m17RteCaXuTiAYWMqGKDoJvTMDc4L+Uvy544pEfbOH39zfkIYE76WLAFPFsUWX6lXFjQrX3O7vEV73bCHoJnwzaNd03PSdJOw+LCzrTmxVezwli3F9wUDiBRB0HkQxIXQmncc1HSecCKALkogIK+1e1OumoWh6gPdkF4PlTMUxRitrwPWSaiUIlPfCpQ== your_email@example.com"
 
 	providerConfigJSON, err := json.Marshal(&providerConfig)
@@ -763,8 +664,8 @@ func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.Infra
 			SSHPublicKey: []byte(sshPublicKey),
 		},
 	}
-	if useFlow {
-		infra.Annotations = map[string]string{infrastructure.AnnotationKeyUseFlow: "true"}
+	if usesFlow(reconciler) {
+		infra.Annotations = map[string]string{openstack.AnnotationKeyUseFlow: "true"}
 	}
 	return infra, nil
 }
@@ -804,6 +705,32 @@ func teardownRouter(log logr.Logger, routerID string) error {
 	return nil
 }
 
+func prepareNewSubnet(log logr.Logger, subnetName string, networkID string) (*string, error) {
+	log.Info("Waiting until subnet is created", "subnetName", subnetName)
+
+	createOpts := subnets.CreateOpts{
+		Name:      subnetName,
+		NetworkID: networkID,
+		IPVersion: gophercloud.IPv4,
+		CIDR:      vpcCIDR,
+	}
+	subnet, err := networkClient.CreateSubnet(createOpts)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet is created", "subnetName", subnet)
+	return &subnet.ID, nil
+}
+
+func teardownSubnet(log logr.Logger, subnetID string) error {
+	log.Info("Waiting until subnet is deleted", "subnetID", subnetID)
+
+	err := networkClient.DeleteSubnet(subnetID)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet is deleted", "subnetID", subnetID)
+	return nil
+}
+
 func prepareNewNetwork(log logr.Logger, networkName string) (*string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
@@ -827,6 +754,26 @@ func teardownNetwork(log logr.Logger, networkID string) error {
 	return nil
 }
 
+func prepareNewRouterInterface(log logr.Logger, routerID, subnetID string) (*string, error) {
+	log.Info("Waiting until router interface is created", "routerID", routerID, "subnetID", subnetID)
+
+	routerInterface, err := networkClient.AddRouterInterface(routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Router interface is created", "interfaceID", routerInterface.ID)
+	return &routerInterface.PortID, nil
+}
+
+func teardownRouterInterface(log logr.Logger, routerID, subnetID, portID string) error {
+	log.Info("Waiting until router interface is deleted", "routerID", routerID, "subnetID", subnetID, "portID", portID)
+
+	_, err := networkClient.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID, PortID: portID})
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Router interface is deleted", "routerID", routerID)
+	return nil
+}
+
 type infrastructureIdentifiers struct {
 	networkID  *string
 	keyPair    *string
@@ -843,7 +790,7 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	router, err := networkClient.GetRouterByID(providerStatus.Networks.Router.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(router.Status).To(Equal("ACTIVE"))
-	infrastructureIdentifier.routerID = &router.ID
+	infrastructureIdentifier.routerID = ptr.To(router.ID)
 
 	// verify router ip in status
 	Expect(router.GatewayInfo.ExternalFixedIPs).NotTo(BeEmpty())
@@ -857,24 +804,29 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	if providerConfig.Networks.ID != nil {
 		Expect(net.ID).To(Equal(*providerConfig.Networks.ID))
 	}
-	infrastructureIdentifier.networkID = &net.ID
+	infrastructureIdentifier.networkID = ptr.To(net.ID)
 
-	// subnet is created
+	// subnet exists
 	subnet, err := networkClient.GetSubnetByID(providerStatus.Networks.Subnets[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
-	infrastructureIdentifier.subnetID = &subnet.ID
+	infrastructureIdentifier.subnetID = ptr.To(subnet.ID)
+
+	// router interface exists
+	port, err := networkClient.GetRouterInterfacePort(router.ID, subnet.ID)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(port).NotTo(BeNil())
 
 	// security group is created
 	secGroup, err := networkClient.GetSecurityGroup(providerStatus.SecurityGroups[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(secGroup.Name).To(Equal(providerStatus.SecurityGroups[0].Name))
-	infrastructureIdentifier.secGroupID = &secGroup.ID
+	infrastructureIdentifier.secGroupID = ptr.To(secGroup.ID)
 
 	// keypair is created
 	keyPair, err := computeClient.GetKeyPair(providerStatus.Node.KeyName)
 	Expect(err).NotTo(HaveOccurred())
-	infrastructureIdentifier.keyPair = &keyPair.Name
+	infrastructureIdentifier.keyPair = ptr.To(keyPair.Name)
 
 	// verify egressCIDRs
 	expectedCIDRDs := []string{providerStatus.Networks.Router.IP + "/32"}
@@ -888,31 +840,54 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 	keyPair, _ := computeClient.GetKeyPair(ptr.Deref(infrastructureIdentifier.keyPair, ""))
 	Expect(keyPair).To(BeNil())
 
-	if providerConfig.Networks.ID == nil {
-		// make sure network doesn't exist, if it wasn't present before
-		opts := networks.ListOpts{ID: ptr.Deref(infrastructureIdentifier.networkID, "")}
-		networks, err := networkClient.ListNetwork(opts)
-		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-		Expect(networks).To(BeEmpty())
+	if infrastructureIdentifier.subnetID != nil {
+		// subnet doesn't exist
+		subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
+		subnets, err := networkClient.ListSubnets(subnetsOpts)
+
+		if providerConfig.Networks.SubnetID != nil {
+			Expect(subnets).To(HaveLen(1))
+			Expect(subnets[0].ID).To(Equal(*providerConfig.Networks.SubnetID))
+
+		} else {
+			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+			Expect(subnets).To(BeEmpty())
+		}
 	}
 
-	// subnet doesn't exist
-	subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
-	subnets, err := networkClient.ListSubnets(subnetsOpts)
-	Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-	Expect(subnets).To(BeEmpty())
-
-	// security group doesn't exist
-	sGroupsOpts := groups.ListOpts{ID: ptr.Deref(infrastructureIdentifier.secGroupID, "")}
-	sGroups, err := networkClient.ListSecurityGroup(sGroupsOpts)
-	Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-	Expect(sGroups).To(BeEmpty())
-
-	if providerConfig.Networks.Router == nil {
-		// make sure router doesn't exist, if it wasn't present in the start of test
-		opts := routers.ListOpts{ID: ptr.Deref(infrastructureIdentifier.routerID, "")}
-		routers, err := networkClient.ListRouters(opts)
-		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
-		Expect(routers).To(BeEmpty())
+	if infrastructureIdentifier.networkID != nil {
+		if providerConfig.Networks.ID == nil {
+			// make sure network doesn't exist, if it wasn't present before
+			opts := networks.ListOpts{ID: ptr.Deref(infrastructureIdentifier.networkID, "")}
+			networks, err := networkClient.ListNetwork(opts)
+			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+			Expect(networks).To(BeEmpty())
+		}
 	}
+
+	if infrastructureIdentifier.secGroupID != nil {
+		// security group doesn't exist
+		sGroupsOpts := groups.ListOpts{ID: ptr.Deref(infrastructureIdentifier.secGroupID, "")}
+		sGroups, err := networkClient.ListSecurityGroup(sGroupsOpts)
+		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+		Expect(sGroups).To(BeEmpty())
+	}
+
+	if infrastructureIdentifier.routerID != nil {
+		if providerConfig.Networks.Router == nil {
+			// make sure router doesn't exist, if it wasn't present in the start of test
+			opts := routers.ListOpts{ID: ptr.Deref(infrastructureIdentifier.routerID, "")}
+			routers, err := networkClient.ListRouters(opts)
+			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
+			Expect(routers).To(BeEmpty())
+		}
+	}
+}
+
+func usesFlow(reconciler *string) bool {
+	if rec := ptr.Deref(reconciler, reconcilerUseTF); rec == reconcilerUseTF || rec == reconcilerMigrateTF {
+		return false
+	}
+
+	return true
 }

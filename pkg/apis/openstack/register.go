@@ -38,6 +38,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CloudProfileConfig{},
 		&InfrastructureConfig{},
 		&InfrastructureStatus{},
+		&InfrastructureState{},
 		&ControlPlaneConfig{},
 		&WorkerStatus{},
 		&WorkerConfig{},

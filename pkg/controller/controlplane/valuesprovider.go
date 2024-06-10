@@ -44,7 +44,6 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
@@ -952,10 +951,6 @@ func (vp *valuesProvider) addCSIManilaValues(
 		"clusterID": cp.Namespace,
 	}
 
-	infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
-	if err != nil {
-		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", kutil.ObjectName(cp), err)
-	}
 	infraStatus, err := vp.getInfrastructureStatus(cp)
 	if err != nil {
 		return err
@@ -984,7 +979,6 @@ func (vp *valuesProvider) addCSIManilaValues(
 	values["openstack"] = map[string]interface{}{
 		"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
 		"shareNetworkID":              shareNetworkID,
-		"shareClient":                 infrastructure.WorkersCIDR(infraConfig),
 		"authURL":                     authURL,
 		"region":                      cp.Spec.Region,
 		"domainName":                  domainName,

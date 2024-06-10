@@ -52,7 +52,7 @@ const (
 	MaxApiCallRetries = "10"
 )
 
-// StatusTypeMeta is the TypeMeta of the GCP InfrastructureStatus
+// StatusTypeMeta is the TypeMeta of the InfrastructureStatus
 var StatusTypeMeta = metav1.TypeMeta{
 	APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 	Kind:       "InfrastructureStatus",
@@ -66,6 +66,7 @@ func ComputeTerraformerTemplateValues(
 ) (map[string]interface{}, error) {
 	var (
 		createRouter  = true
+		createSubnet  = true
 		createNetwork = true
 		useCACert     = false
 		routerConfig  = map[string]interface{}{
@@ -126,6 +127,11 @@ func ComputeTerraformerTemplateValues(
 		outputKeysConfig["shareNetworkName"] = TerraformOutputKeyShareNetworkName
 	}
 
+	if config.Networks.SubnetID != nil {
+		createSubnet = false
+		networksConfig["subnet"] = *config.Networks.SubnetID
+	}
+
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
 			"maxApiCallRetries": MaxApiCallRetries,
@@ -137,6 +143,7 @@ func ComputeTerraformerTemplateValues(
 		},
 		"create": map[string]interface{}{
 			"router":       createRouter,
+			"subnet":       createSubnet,
 			"network":      createNetwork,
 			"shareNetwork": createShareNetwork,
 		},
@@ -272,10 +279,7 @@ func StatusFromTerraformState(state *TerraformState) *apiv1alpha1.Infrastructure
 		}
 	}
 	return &apiv1alpha1.InfrastructureStatus{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "InfrastructureStatus",
-		},
+		TypeMeta: StatusTypeMeta,
 		Networks: apiv1alpha1.NetworkStatus{
 			ID:   state.NetworkID,
 			Name: state.NetworkName,

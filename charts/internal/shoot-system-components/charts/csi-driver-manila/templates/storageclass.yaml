@@ -15,7 +15,9 @@ mountOptions:
 parameters:
   type: default
   shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
+  {{- if $.Values.openstack.shareClient}}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
+  {{- end }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
   csi.storage.k8s.io/node-stage-secret-name: manila-csi-plugin
@@ -43,7 +45,9 @@ parameters:
   type: default
   autoTopology: "true"
   shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
+  {{- if $.Values.openstack.shareClient}}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
+  {{- end }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
   csi.storage.k8s.io/node-stage-secret-name: manila-csi-plugin
@@ -72,7 +76,9 @@ parameters:
   type: default
   availability: {{ required "openstack.availabilityZones needs to be set" . }}
   shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
+  {{- if $.Values.openstack.shareClient}}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
+  {{- end }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
   csi.storage.k8s.io/node-stage-secret-name: manila-csi-plugin
@@ -107,7 +113,9 @@ parameters:
   type: default
   availability: {{ required "openstack.availabilityZones needs to be set" . }}
   shareNetworkID: {{ $.Values.openstack.shareNetworkID }}
+  {{- if $.Values.openstack.shareClient}}
   nfs-shareClient: {{ required "openstack.shareClient needs to be set" $.Values.openstack.shareClient }}
+  {{- end }}
   csi.storage.k8s.io/provisioner-secret-name: manila-csi-plugin
   csi.storage.k8s.io/provisioner-secret-namespace: {{ $.Release.Namespace }}
   csi.storage.k8s.io/node-stage-secret-name: manila-csi-plugin

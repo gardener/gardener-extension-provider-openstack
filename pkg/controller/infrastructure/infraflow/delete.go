@@ -38,7 +38,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 	needToDeleteNetwork := fctx.config.Networks.ID == nil
 	needToDeleteRouter := fctx.config.Networks.Router == nil
 	// skip deletion of the subnet if we need to delete the network (it will be deleted anyway), or if the subnet is user provided.
-	needToDeleteSubnet := !needToDeleteNetwork && fctx.config.Networks.SubnetID == nil
+	needToDeleteSubnet := fctx.config.Networks.SubnetID == nil
 
 	_ = fctx.AddTask(g, "delete ssh key pair",
 		fctx.deleteSSHKeyPair,
@@ -63,8 +63,13 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 			if routerID == nil {
 				return nil
 			}
-			return infrastructure.CleanupKubernetesRoutes(ctx, fctx.networking, *routerID, infrastructure.WorkersCIDR(fctx.config))
+			subnetID := fctx.state.Get(IdentifierSubnet)
+			if subnetID == nil {
+				return nil
+			}
+			return infrastructure.CleanupKubernetesRoutes(ctx, fctx.networking, *routerID, *subnetID)
 		},
+		shared.DoIf(needToDeleteRouter || needToDeleteSubnet),
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(recoverIDs),
 	)
@@ -90,7 +95,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 	// subnet deletion only needed if network is given by spec
 	_ = fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
-		shared.DoIf(needToDeleteSubnet), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
+		shared.DoIf(!needToDeleteNetwork && needToDeleteSubnet), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
 	_ = fctx.AddTask(g, "delete network",
 		fctx.deleteNetwork,
 		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface))

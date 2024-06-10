@@ -250,7 +250,7 @@ var _ = Describe("Infrastructure tests", func() {
 	})
 
 	It("minimum configuration infrastructure", func() {
-		providerConfig := newProviderConfig("", nil, nil)
+		providerConfig := newProviderConfig(nil, nil, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 		namespace, err := generateNamespaceName()
 		Expect(err).NotTo(HaveOccurred())
@@ -277,7 +277,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig(*routerID, nil, nil)
+		providerConfig := newProviderConfig(routerID, nil, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -301,7 +301,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig("", networkID, nil)
+		providerConfig := newProviderConfig(nil, networkID, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -334,7 +334,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig(*routerID, networkID, nil)
+		providerConfig := newProviderConfig(routerID, networkID, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -378,14 +378,14 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig(*routerID, subnetID, networkID)
+		providerConfig := newProviderConfig(routerID, networkID, subnetID)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	FIt("with infrastructure that uses existing network and subnet", func() {
+	It("with infrastructure that uses existing network and subnet", func() {
 		namespace, err := generateNamespaceName()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -409,7 +409,7 @@ var _ = Describe("Infrastructure tests", func() {
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
-		providerConfig := newProviderConfig("", subnetID, networkID)
+		providerConfig := newProviderConfig(nil, networkID, subnetID)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
 		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
@@ -616,11 +616,11 @@ func runTest(
 // newProviderConfig creates a providerConfig with the network and router details.
 // If routerID is set to "", it requests a new router creation.
 // Else it reuses the supplied routerID.
-func newProviderConfig(routerID string, networkID *string, subnetID *string) *openstackv1alpha1.InfrastructureConfig {
+func newProviderConfig(routerID *string, networkID *string, subnetID *string) *openstackv1alpha1.InfrastructureConfig {
 	var router *openstackv1alpha1.Router
 
-	if routerID != "" {
-		router = &openstackv1alpha1.Router{ID: routerID}
+	if routerID != nil {
+		router = &openstackv1alpha1.Router{ID: *routerID}
 	}
 
 	return &openstackv1alpha1.InfrastructureConfig{

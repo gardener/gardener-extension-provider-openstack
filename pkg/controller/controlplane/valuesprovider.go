@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
@@ -990,7 +989,6 @@ func (vp *valuesProvider) addCSIManilaValues(
 	values["openstack"] = map[string]interface{}{
 		"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
 		"shareNetworkID":              shareNetworkID,
-		"shareClient":                 infrastructure.WorkersCIDR(infraConfig),
 		"authURL":                     authURL,
 		"region":                      cp.Spec.Region,
 		"domainName":                  domainName,

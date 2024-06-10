@@ -67,6 +67,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "ensure router interface",
 		fctx.ensureRouterInterface,
+		shared.DoIf(fctx.config.Networks.SubnetID == nil || fctx.config.Networks.Router == nil),
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnet))
 
 	ensureSecGroup := fctx.AddTask(g, "ensure security group",
@@ -301,7 +302,7 @@ func (fctx *FlowContext) ensureNewSubnet(ctx context.Context) error {
 	desired := &subnets.Subnet{
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
-		CIDR:           fctx.workerCIDR(),
+		CIDR:           infrainternal.WorkersCIDR(fctx.config),
 		IPVersion:      4,
 		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
 	}

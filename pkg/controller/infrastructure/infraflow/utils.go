@@ -6,6 +6,7 @@ package infraflow
 
 import (
 	"fmt"
+	"reflect"
 )
 
 // ErrorMultipleMatches is returned when the findExisting finds multiple resources matching a name.
@@ -36,7 +37,7 @@ func findExisting[T any](id *string, name string,
 
 	// TODO: check if this makes sense
 	if len(found) > 1 {
-		return nil, ErrorMultipleMatches
+		return nil, fmt.Errorf("error finding existing %s: %w", reflect.TypeFor[T]().Name(), ErrorMultipleMatches)
 	}
 
 	if len(selector) > 0 {
@@ -91,13 +92,4 @@ func (fctx *FlowContext) defaultSecurityGroupName() string {
 
 func (fctx *FlowContext) defaultSharedNetworkName() string {
 	return fctx.infra.Namespace
-}
-
-func (fctx *FlowContext) workerCIDR() string {
-	s := fctx.config.Networks.Worker
-	if workers := fctx.config.Networks.Workers; workers != "" {
-		s = workers
-	}
-
-	return s
 }

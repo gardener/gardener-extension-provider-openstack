@@ -186,9 +186,9 @@ func (t *TerraformReconciler) delete(ctx context.Context, infra *extensionsv1alp
 		destroyKubernetesRoutes = g.Add(flow.Task{
 			Name: "Destroying Kubernetes route entries",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return t.cleanupKubernetesRoutes(ctx, config, networkingClient, vars[infrastructure.TerraformOutputKeyRouterID])
+				return t.cleanupKubernetesRoutes(ctx, config, networkingClient, vars[infrastructure.TerraformOutputKeyRouterID], vars[infrastructure.TerraformOutputKeySubnetID])
 			}).RetryUntilTimeout(10*time.Second, 5*time.Minute),
-			SkipIf: !configExists,
+			SkipIf: !configExists || (config.Networks.SubnetID != nil && config.Networks.Router != nil),
 		})
 
 		_ = g.Add(flow.Task{
@@ -231,6 +231,7 @@ func (t *TerraformReconciler) cleanupKubernetesRoutes(
 	config *api.InfrastructureConfig,
 	client openstackclient.Networking,
 	routerID string,
+	subnetID string,
 ) error {
 	if routerID == "" {
 		return nil
@@ -239,7 +240,7 @@ func (t *TerraformReconciler) cleanupKubernetesRoutes(
 	if workesCIDR == "" {
 		return nil
 	}
-	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, workesCIDR)
+	return infrastructure.CleanupKubernetesRoutes(ctx, client, routerID, subnetID)
 }
 
 func (t *TerraformReconciler) cleanupKubernetesLoadbalancers(

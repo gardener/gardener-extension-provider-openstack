@@ -33,7 +33,7 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 	}
 
 	networksPath := fldPath.Child("networks")
-	if len(infra.Networks.Worker) == 0 && len(infra.Networks.Workers) == 0 {
+	if len(infra.Networks.Worker) == 0 && len(infra.Networks.Workers) == 0 && infra.Networks.SubnetID == nil {
 		allErrs = append(allErrs, field.Required(networksPath.Child("workers"), "must specify the network range for the worker network"))
 	}
 

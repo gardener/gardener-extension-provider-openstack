@@ -34,7 +34,6 @@ func findExisting[T any](id *string, name string,
 		return nil, nil
 	}
 
-	// TODO: check if this makes sense
 	if len(found) > 1 {
 		return nil, ErrorMultipleMatches
 	}
@@ -48,17 +47,6 @@ func findExisting[T any](id *string, name string,
 		return nil, nil
 	}
 	return found[0], nil
-}
-
-func copyMap(src map[string]string) map[string]string {
-	if src == nil {
-		return nil
-	}
-	dst := map[string]string{}
-	for k, v := range src {
-		dst[k] = v
-	}
-	return dst
 }
 
 func sliceToPtr[T any](slice []T) []*T {

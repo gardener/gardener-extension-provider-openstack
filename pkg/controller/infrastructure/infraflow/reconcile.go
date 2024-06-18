@@ -114,7 +114,6 @@ func (fctx *FlowContext) ensureRouter(ctx context.Context) error {
 func (fctx *FlowContext) ensureConfiguredRouter(_ context.Context) error {
 	router, err := fctx.access.GetRouterByID(fctx.config.Networks.Router.ID)
 	if err != nil {
-		// todo: Remove ?
 		fctx.state.Set(IdentifierRouter, "")
 		fctx.state.Set(RouterIP, "")
 		return err

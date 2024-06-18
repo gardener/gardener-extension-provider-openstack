@@ -435,6 +435,7 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 		return err
 	}
 	if keyPair != nil {
+		// if the public keys are matching then return early. In all other cases we should be creating (or replacing) the keypair with a new one.
 		if keyPair.PublicKey == string(fctx.infra.Spec.SSHPublicKey) {
 			fctx.state.Set(NameKeyPair, keyPair.Name)
 			return nil
@@ -448,11 +449,9 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 		fctx.state.Set(NameKeyPair, "")
 	}
 
-	if keyPair == nil {
-		log.Info("creating SSH key pair")
-		if keyPair, err = fctx.compute.CreateKeyPair(fctx.defaultSSHKeypairName(), string(fctx.infra.Spec.SSHPublicKey)); err != nil {
-			return err
-		}
+	log.Info("creating SSH key pair")
+	if keyPair, err = fctx.compute.CreateKeyPair(fctx.defaultSSHKeypairName(), string(fctx.infra.Spec.SSHPublicKey)); err != nil {
+		return err
 	}
 	fctx.state.Set(NameKeyPair, keyPair.Name)
 	return nil

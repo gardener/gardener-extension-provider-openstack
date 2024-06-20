@@ -29,7 +29,7 @@ func retryOnError(log logr.Logger, err error) bool {
 		neutronError, e := decodeNeutronError(err.ErrUnexpectedResponseCode.Body)
 		if e != nil {
 			// retry, when error type cannot be detected
-			log.V(4).Info("[DEBUG] failed to decode a neutron error", "error", e)
+			log.V(1).Info("[DEBUG] failed to decode a neutron error", "error", e)
 			return true
 		}
 		if neutronError.Type == "IpAddressGenerationFailure" {
@@ -42,7 +42,7 @@ func retryOnError(log logr.Logger, err error) bool {
 		neutronError, e := decodeNeutronError(err.ErrUnexpectedResponseCode.Body)
 		if e != nil {
 			// retry, when error type cannot be detected
-			log.V(4).Info("[DEBUG] failed to decode a neutron error", "error", e)
+			log.V(1).Info("[DEBUG] failed to decode a neutron error", "error", e)
 			return true
 		}
 		if neutronError.Type == "ExternalIpAddressExhausted" {

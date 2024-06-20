@@ -72,6 +72,27 @@ spec:
     - name: infrastructure-test
       definition:
         name: infrastructure-test
+    - name: infrastructure-test-flow
+      definition:
+        name: infrastructure-test
+        config:
+          - name: RECONCILER
+            type: env
+            value: flow
+    - name: infrastructure-test-migrate
+      definition:
+        name: infrastructure-test
+        config:
+          - name: RECONCILER
+            type: env
+            value: migrate
+    - name: infrastructure-test-recover
+      definition:
+        name: infrastructure-test
+        config:
+          - name: RECONCILER
+            type: env
+            value: recover
     - name: bastion-test
       definition:
         name: bastion-test

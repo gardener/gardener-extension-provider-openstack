@@ -1,0 +1,19 @@
+apiVersion: testmachinery.sapcloud.io
+kind: TestDefinition
+metadata:
+  name: apply-flow-openstack
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Adds the use-flow annotation and triggers shoot maintenance to apply the changes.
+
+  activeDeadlineSeconds: 4200
+
+  command: [bash, -c]
+  args:
+    - >-
+      go test -timeout=0 ./test/tm/apply_flow
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
+      --shoot-name=$SHOOT_NAME
+      --project-namespace=$PROJECT_NAMESPACE
+      --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
+  image: golang:1.22.1

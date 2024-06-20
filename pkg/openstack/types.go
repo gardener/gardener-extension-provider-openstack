@@ -142,9 +142,23 @@ const (
 	// Deprecated: It is only introduced to ease the transition to the new hash calculation.
 	// TODO(KA): Remove in release v1.36
 	PreserveWorkerHashAnnotation = "openstack.provider.extensions.gardener.cloud/worker-preserve-hash"
+
+	// AnnotationKeyUseFlow is the annotation key used to enable reconciliation with flow instead of terraformer.
+	AnnotationKeyUseFlow = "openstack.provider.extensions.gardener.cloud/use-flow"
+	// GlobalAnnotationKeyUseFlow is the annotation key used to enable reconciliation with flow instead of terraformer.
+	GlobalAnnotationKeyUseFlow = "provider.extensions.gardener.cloud/use-flow"
+
+	// SeedAnnotationKeyUseFlow is the label for seeds to enable flow reconciliation for all of its shoots if value is `true`
+	// or for new shoots only with value `new`
+	SeedAnnotationKeyUseFlow = AnnotationKeyUseFlow
+	// SeedAnnotationUseFlowValueNew is the value to restrict flow reconciliation to new shoot clusters
+	SeedAnnotationUseFlowValueNew = "new"
 )
 
 var (
 	// UsernamePrefix is a constant for the username prefix of components deployed by OpenStack.
 	UsernamePrefix = extensionsv1alpha1.SchemeGroupVersion.Group + ":" + Name + ":"
+
+	// ValidFlowAnnotations is a list of all the available annotations to indicate the use of the flow reconciler.
+	ValidFlowAnnotations = []string{AnnotationKeyUseFlow, GlobalAnnotationKeyUseFlow}
 )

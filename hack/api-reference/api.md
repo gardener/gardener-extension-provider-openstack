@@ -212,7 +212,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>UseOctavia specifies whether the OpenStack Octavia network load balancing is used.</p>
+<p>UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
+Deprecated: This field will be removed in future release.</p>
 </td>
 </tr>
 <tr>
@@ -733,6 +734,31 @@ string
 </td>
 <td>
 <p>Name is the floating pool name.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureState">InfrastructureState
+</h3>
+<p>
+<p>InfrastructureState is the state which is persisted as part of the infrastructure status.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>data</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>

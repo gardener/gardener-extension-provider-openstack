@@ -104,6 +104,7 @@ func (a *networkingAccess) CreateRouter(desired *Router) (router *Router, err er
 	// create router in first available subnet
 	for _, subnetID := range desired.ExternalSubnetIDs {
 		router, err = a.tryCreateRouter(desired, &subnetID)
+		// if there is retryable error, then we keep trying along the available list of subnets for the first successful operation.
 		if err != nil && !retryOnError(a.log, err) {
 			return
 		}
@@ -206,9 +207,16 @@ func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, router
 		if err != nil {
 			return err
 		}
+
+		if port == nil {
+			return fmt.Errorf("port was not found ")
+
+		}
+
 		switch port.Status {
 		case "BUILD", "PENDING_CREATE", "PENDING_UPDATE", "DOWN":
 			time.Sleep(3 * time.Second)
+			a.log.V(1).Info("port %s still in state: %s", info.PortID, port.Status)
 			continue
 		case "ACTIVE":
 			return nil
@@ -277,7 +285,7 @@ func (a *networkingAccess) LookupFloatingPoolSubnetIDs(networkID, floatingPoolSu
 		// subnet name. No name means nothing to attempt a match against,
 		// therefore we are skipping such subnet.
 		if subnet.Name == "" {
-			a.log.V(2).Info("[WARN] Unable to find subnet name to match against for subnet ID, nothing to do.",
+			a.log.V(1).Info("[WARN] Unable to find subnet name to match against for subnet ID, nothing to do.",
 				"subnetID", subnet.ID)
 			continue
 		}

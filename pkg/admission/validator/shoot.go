@@ -185,7 +185,8 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 	}
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := c.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+
+	if err := c.Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
 		return nil, err
 	}
 
@@ -209,7 +210,7 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.Shoot) (*corev1.Secret, error) {
 	var (
 		secretBinding    = &gardencorev1beta1.SecretBinding{}
-		secretBindingKey = kutil.Key(shoot.Namespace, *shoot.Spec.SecretBindingName)
+		secretBindingKey = client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}
 	)
 	if err := kutil.LookupObject(ctx, s.client, s.apiReader, secretBindingKey, secretBinding); err != nil {
 		return nil, err
@@ -217,7 +218,7 @@ func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.
 
 	var (
 		secret    = &corev1.Secret{}
-		secretKey = kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
+		secretKey = client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}
 	)
 	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets
 	// under the hood. The latter increases the memory usage of the component.

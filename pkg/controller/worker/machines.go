@@ -233,7 +233,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			if pool.MachineImage.Name != "" && pool.MachineImage.Version != "" {
 				machineClassSpec["operatingSystem"] = map[string]interface{}{
 					"operatingSystemName":    pool.MachineImage.Name,
-					"operatingSystemVersion": pool.MachineImage.Version,
+					"operatingSystemVersion": strings.Replace(pool.MachineImage.Version, "+", "_", -1),
 				}
 			}
 

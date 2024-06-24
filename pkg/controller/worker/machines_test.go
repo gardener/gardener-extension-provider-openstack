@@ -159,7 +159,7 @@ var _ = Describe("Machines", func() {
 				openstackAuthURL = "auth-url"
 
 				machineImageName = "my-os"
-				machineImageVersion = "123"
+				machineImageVersion = "123.4.5-foo+bar123"
 				machineImage = "my-image-in-glance"
 				machineImageID = "my-image-id"
 
@@ -410,7 +410,7 @@ var _ = Describe("Machines", func() {
 						},
 						"operatingSystem": map[string]interface{}{
 							"operatingSystemName":    machineImageName,
-							"operatingSystemVersion": machineImageVersion,
+							"operatingSystemVersion": strings.Replace(machineImageVersion, "+", "_", -1),
 						},
 					}
 					if imageID == "" {

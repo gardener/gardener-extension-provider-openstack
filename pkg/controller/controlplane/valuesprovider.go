@@ -384,14 +384,15 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	}
 
 	cpConfigSecret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderConfigName), cpConfigSecret); err != nil {
+
+	if err := vp.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderConfigName}, cpConfigSecret); err != nil {
 		return nil, err
 	}
 	checksums[openstack.CloudProviderConfigName] = gardenerutils.ComputeChecksum(cpConfigSecret.Data)
 
 	var userAgentHeaders []string
 	cpDiskConfigSecret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), cpDiskConfigSecret); err != nil {
+	if err := vp.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, cpDiskConfigSecret); err != nil {
 		return nil, err
 	}
 	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(cpDiskConfigSecret.Data)
@@ -843,7 +844,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	)
 
 	secret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, kutil.Key(cp.Namespace, openstack.CloudProviderCSIDiskConfigName), secret); err != nil {
+	if err := vp.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, secret); err != nil {
 		return nil, err
 	}
 

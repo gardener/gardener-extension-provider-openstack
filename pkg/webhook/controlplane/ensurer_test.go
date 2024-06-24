@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	testutils "github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -31,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
@@ -600,44 +600,8 @@ WantedBy=multi-user.target
 		It("should inject the sidecar container", func() {
 			Expect(deployment.Spec.Template.Spec.Containers).To(BeEmpty())
 			Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), nil, deployment, nil)).To(BeNil())
-			Expect(deployment.Spec.Template.Spec.Containers).To(ConsistOf(corev1.Container{
-				Name:            "machine-controller-manager-provider-openstack",
-				Image:           "foo:bar",
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command: []string{
-					"./machine-controller",
-					"--control-kubeconfig=inClusterConfig",
-					"--machine-creation-timeout=20m",
-					"--machine-drain-timeout=2h",
-					"--machine-health-timeout=10m",
-					"--machine-safety-apiserver-statuscheck-timeout=30s",
-					"--machine-safety-apiserver-statuscheck-period=1m",
-					"--machine-safety-orphan-vms-period=30m",
-					"--namespace=" + deployment.Namespace,
-					"--port=10259",
-					"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-					"--v=3",
-				},
-				LivenessProbe: &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path:   "/healthz",
-							Port:   intstr.FromInt(10259),
-							Scheme: "HTTP",
-						},
-					},
-					InitialDelaySeconds: 30,
-					TimeoutSeconds:      5,
-					PeriodSeconds:       10,
-					SuccessThreshold:    1,
-					FailureThreshold:    3,
-				},
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "kubeconfig",
-					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-					ReadOnly:  true,
-				}},
-			}))
+			expectedContainer := machinecontrollermanager.ProviderSidecarContainer(deployment.Namespace, "provider-openstack", "foo:bar")
+			Expect(deployment.Spec.Template.Spec.Containers).To(ConsistOf(expectedContainer))
 		})
 	})
 

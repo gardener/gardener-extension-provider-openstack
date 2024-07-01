@@ -6,19 +6,12 @@ package infrastructure
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
-	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 type actuator struct {
@@ -34,22 +27,6 @@ func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastru
 		client:                     mgr.GetClient(),
 		restConfig:                 mgr.GetConfig(),
 	}
-}
-
-// Helper functions
-
-func (a *actuator) cleanupTerraformerResources(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure) error {
-	credentials, err := openstack.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
-	if err != nil {
-		return err
-	}
-
-	tf, err := internal.NewTerraformerWithAuth(log, a.restConfig, infrainternal.TerraformerPurpose, infra, credentials, a.disableProjectedTokenMount)
-	if err != nil {
-		return fmt.Errorf("could not create terraformer object: %w", err)
-	}
-
-	return CleanupTerraformerResources(ctx, tf)
 }
 
 // CleanupTerraformerResources deletes terraformer artifacts (config, state, secrets).

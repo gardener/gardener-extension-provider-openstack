@@ -117,7 +117,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, dns *extensionsv
 	return nil
 }
 
-// Delete forcefully deletes the DNSRecord.
+// ForceDelete forcefully deletes the DNSRecord.
 func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, dns *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
 	return a.Delete(ctx, log, dns, cluster)
 }

@@ -226,7 +226,7 @@ func createOpenstackTestCluster() *extensions.Cluster {
 		CloudProfile: &gardencorev1beta1.CloudProfile{
 			Spec: gardencorev1beta1.CloudProfileSpec{
 				Regions: []gardencorev1beta1.Region{
-					{Name: ("eu-nl-1")},
+					{Name: "eu-nl-1"},
 				},
 			},
 		},

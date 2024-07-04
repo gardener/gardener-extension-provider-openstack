@@ -18,14 +18,6 @@ func IsStringPtrValueEqual(a *string, b string) bool {
 	return a != nil && *a == b
 }
 
-// StringValue returns an empty string (value/ptr)
-func StringValue(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
 // StringEqual compares to strings
 func StringEqual(a, b *string) bool {
 	return a == b || (a != nil && b != nil && *a == *b)

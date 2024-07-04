@@ -47,8 +47,6 @@ import (
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
-type flowUsage int
-
 const (
 	reconcilerUseTF        string = "tf"
 	reconcilerMigrateTF    string = "migrate"
@@ -511,13 +509,6 @@ func runTest(
 	}
 
 	return nil
-}
-
-func checkOperationAnnotationRemoved(obj client.Object) error {
-	if annots := obj.GetAnnotations(); annots["gardener.cloud/operation"] == "" {
-		return nil
-	}
-	return fmt.Errorf("reconciliation not started yet")
 }
 
 // newProviderConfig creates a providerConfig with the network and router details.

@@ -71,3 +71,17 @@ func (w *waiter) Done() {
 }
 
 type contextKey struct{}
+
+// FromContext retrieves a waiter from the current context or returns nil if there is none.
+func FromContext(ctx context.Context) *waiter {
+	v := ctx.Value(contextKey{})
+	if v == nil {
+		return nil
+	}
+
+	w, ok := v.(*waiter)
+	if !ok {
+		return nil
+	}
+	return w
+}

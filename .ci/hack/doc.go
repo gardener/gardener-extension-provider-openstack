@@ -4,5 +4,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Package ci imports CI related scripts - it is to force `go mod` to see them as dependencies.
+// This package imports CI related scripts - it is to force `go mod` to see them as dependencies.
 package ci

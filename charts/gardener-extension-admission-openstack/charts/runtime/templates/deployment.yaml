@@ -24,6 +24,9 @@ spec:
         networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
 {{ include "labels" . | indent 8 }}
     spec:
+      {{- if .Values.global.priorityClassName }}
+      priorityClassName: {{ .Values.global.priorityClassName }}
+      {{- end }}
       serviceAccountName: {{ include "name" . }}
       {{- if .Values.global.kubeconfig }}
       automountServiceAccountToken: false

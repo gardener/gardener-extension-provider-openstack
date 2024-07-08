@@ -7,6 +7,7 @@ global:
     repository: europe-docker.pkg.dev/gardener-project/public/gardener/extensions/admission-openstack
     tag: latest
     pullPolicy: IfNotPresent
+# priorityClassName: gardener-garden-system-400
   replicaCount: 1
   resources: {}
   metricsPort: 8080

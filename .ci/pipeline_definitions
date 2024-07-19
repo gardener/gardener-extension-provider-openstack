@@ -1,4 +1,25 @@
 gardener-extension-provider-openstack:
+  templates: 
+    helmcharts:
+    - &provider-openstack
+      name: provider-openstack
+      dir: charts/gardener-extension-provider-openstack
+      registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
+      mappings:
+      - ref: ocm-resource:gardener-extension-provider-openstack.repository
+        attribute: image.repository
+      - ref: ocm-resource:gardener-extension-provider-openstack.tag
+        attribute: image.tag
+    - &admission-openstack
+      name: admission-openstack
+      dir: charts/gardener-extension-admission-openstack
+      registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
+      mappings:
+      - ref: ocm-resource:gardener-extension-admission-openstack.repository
+        attribute: global.image.repository
+      - ref: ocm-resource:gardener-extension-admission-openstack.tag
+        attribute: global.image.tag
+
   base_definition:
     traits:
       version:
@@ -50,6 +71,10 @@ gardener-extension-provider-openstack:
         draft_release: ~
         options:
           public_build_logs: true
+        publish:
+          helmcharts:
+          - *provider-openstack
+          - *admission-openstack
     pull-request:
       traits:
         pull-request: ~
@@ -58,6 +83,10 @@ gardener-extension-provider-openstack:
             - repository: europe-docker.pkg.dev/gardener-project/releases
         options:
           public_build_logs: true
+        publish:
+          helmcharts:
+          - *provider-openstack
+          - *admission-openstack
     release:
       traits:
         version:
@@ -83,3 +112,8 @@ gardener-extension-provider-openstack:
             gardener-extension-admission-openstack:
               image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/admission-openstack
               tag_as_latest: true
+          helmcharts:
+          - <<: *provider-openstack
+            registry: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions
+          - <<: *admission-openstack
+            registry: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions

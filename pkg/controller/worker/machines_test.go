@@ -358,8 +358,8 @@ var _ = Describe("Machines", func() {
 					},
 				}
 
-				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{}, []string{})
-				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, []string{}, []string{})
+				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil)
+				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
 			})

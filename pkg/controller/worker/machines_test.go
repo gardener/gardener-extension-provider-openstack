@@ -358,8 +358,8 @@ var _ = Describe("Machines", func() {
 					},
 				}
 
-				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster)
-				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster)
+				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil)
+				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
 			})
@@ -690,8 +690,8 @@ var _ = Describe("Machines", func() {
 						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithServerGroup, cluster, nil)
 
 						// Test workerDelegate.DeployMachineClasses()
-						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, serverGroupID1)
-						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, serverGroupID2)
+						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, []string{serverGroupID1})
+						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, []string{serverGroupID2}, []string{serverGroupID2})
 						machineClassPool1Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
 							"availabilityZone": zone1,
 							"serverGroupID":    serverGroupID1,

@@ -27,7 +27,7 @@ func init() {
 }
 
 // AddToManager creates the cloudprovider webhook and adds it to the manager.
-func AddToManager(gardenerVersion *string) func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
+func AddToManager(_ *string) func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	return func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		logger.Info("adding webhook to manager")
 		return cloudprovider.New(mgr, cloudprovider.Args{

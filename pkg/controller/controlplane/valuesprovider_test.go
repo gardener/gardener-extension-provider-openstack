@@ -537,7 +537,7 @@ var _ = Describe("ValuesProvider", func() {
 			"replicas":          1,
 			"kubernetesVersion": "1.28.2",
 			"clusterName":       namespace,
-			"podNetwork":        cidr,
+			"podNetwork":        []string{cidr},
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
 				"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],

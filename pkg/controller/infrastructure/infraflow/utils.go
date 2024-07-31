@@ -33,24 +33,27 @@ func findExisting[T any](id *string, name string,
 	if len(found) == 0 {
 		return nil, nil
 	}
-
-	if len(found) > 1 {
-		return nil, ErrorMultipleMatches
-	}
-
-	if len(selector) > 0 {
-		for _, item := range found {
-			if selector[0](item) {
-				return item, nil
-			}
+	if len(selector) == 0 {
+		if len(found) > 1 {
+			return nil, fmt.Errorf("%w: found matches: %v", ErrorMultipleMatches, found)
 		}
-		return nil, nil
+		return found[0], nil
 	}
-	return found[0], nil
+
+	var res *T
+	for _, item := range found {
+		if selector[0](item) {
+			if res != nil {
+				return nil, fmt.Errorf("%w: found matches: %v, %v", ErrorMultipleMatches, res, item)
+			}
+			res = item
+		}
+	}
+	return res, nil
 }
 
 func sliceToPtr[T any](slice []T) []*T {
-	res := make([]*T, len(slice))
+	res := make([]*T, 0)
 	for _, t := range slice {
 		res = append(res, &t)
 	}

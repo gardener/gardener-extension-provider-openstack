@@ -12,6 +12,7 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
@@ -94,7 +95,13 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 }
 
 func (m *mutator) isInMigrationOrRestorePhase(infra *extensionsv1alpha1.Infrastructure) bool {
-	operationType := v1beta1helper.ComputeOperationType(infra.ObjectMeta, infra.Status.LastOperation)
+	// During the restore phase, the infrastructure object is created without status or state (including the operation type information).
+	// Instead, the object is annotated to indicate that the status and state information will be patched in a subsequent operation.
+	// Therefore, while the GardenerOperationWaitForState  annotation exists, do nothing.
+	if infra.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationWaitForState {
+		return true
+	}
 
+	operationType := v1beta1helper.ComputeOperationType(infra.ObjectMeta, infra.Status.LastOperation)
 	return operationType == v1beta1.LastOperationTypeMigrate || operationType == v1beta1.LastOperationTypeRestore
 }

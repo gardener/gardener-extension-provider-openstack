@@ -241,9 +241,9 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	current, err := findExisting(fctx.state.Get(IdentifierShareNetwork),
 		fctx.defaultSharedNetworkName(),
 		fctx.sharedFilesystem.GetShareNetwork,
-		func(_ string) ([]*sharenetworks.ShareNetwork, error) {
+		func(name string) ([]*sharenetworks.ShareNetwork, error) {
 			list, err := fctx.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
-				AllTenants:      false,
+				Name:            name,
 				NeutronNetID:    networkID,
 				NeutronSubnetID: subnetID,
 			})

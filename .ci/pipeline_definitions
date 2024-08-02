@@ -10,9 +10,18 @@ gardener-extension-provider-openstack:
         attribute: image.repository
       - ref: ocm-resource:gardener-extension-provider-openstack.tag
         attribute: image.tag
-    - &admission-openstack
-      name: admission-openstack
-      dir: charts/gardener-extension-admission-openstack
+    - &admission-openstack-application
+      name: admission-openstack-application
+      dir: charts/gardener-extension-admission-openstack/charts/application
+      registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
+      mappings:
+      - ref: ocm-resource:gardener-extension-admission-openstack.repository
+        attribute: global.image.repository
+      - ref: ocm-resource:gardener-extension-admission-openstack.tag
+        attribute: global.image.tag
+    - &admission-openstack-runtime
+      name: admission-openstack-runtime
+      dir: charts/gardener-extension-admission-openstack/charts/runtime
       registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
       mappings:
       - ref: ocm-resource:gardener-extension-admission-openstack.repository
@@ -74,7 +83,8 @@ gardener-extension-provider-openstack:
         publish:
           helmcharts:
           - *provider-openstack
-          - *admission-openstack
+          - *admission-openstack-application
+          - *admission-openstack-runtime
     pull-request:
       traits:
         pull-request: ~
@@ -86,7 +96,8 @@ gardener-extension-provider-openstack:
         publish:
           helmcharts:
           - *provider-openstack
-          - *admission-openstack
+          - *admission-openstack-application
+          - *admission-openstack-runtime
     release:
       traits:
         version:
@@ -115,5 +126,7 @@ gardener-extension-provider-openstack:
           helmcharts:
           - <<: *provider-openstack
             registry: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions
-          - <<: *admission-openstack
+          - <<: *admission-openstack-application
+            registry: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions
+          - <<: *admission-openstack-runtime
             registry: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions

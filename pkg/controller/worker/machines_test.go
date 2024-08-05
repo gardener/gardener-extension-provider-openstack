@@ -107,6 +107,9 @@ var _ = Describe("Machines", func() {
 				machineImage        string
 				machineImageID      string
 
+				archAMD string
+				archARM string
+
 				keyName               string
 				machineType           string
 				userData              []byte
@@ -132,10 +135,12 @@ var _ = Describe("Machines", func() {
 				zone1 string
 				zone2 string
 
-				nodeCapacity         corev1.ResourceList
-				nodeTemplateZone1    machinev1alpha1.NodeTemplate
-				nodeTemplateZone2    machinev1alpha1.NodeTemplate
-				machineConfiguration *machinev1alpha1.MachineConfiguration
+				nodeCapacity           corev1.ResourceList
+				nodeTemplatePool1Zone1 machinev1alpha1.NodeTemplate
+				nodeTemplatePool1Zone2 machinev1alpha1.NodeTemplate
+				nodeTemplatePool2Zone1 machinev1alpha1.NodeTemplate
+				nodeTemplatePool2Zone2 machinev1alpha1.NodeTemplate
+				machineConfiguration   *machinev1alpha1.MachineConfiguration
 
 				workerPoolHash1 string
 				workerPoolHash2 string
@@ -193,18 +198,36 @@ var _ = Describe("Machines", func() {
 					"gpu":    resource.MustParse("1"),
 					"memory": resource.MustParse("128Gi"),
 				}
-				nodeTemplateZone1 = machinev1alpha1.NodeTemplate{
+				nodeTemplatePool1Zone1 = machinev1alpha1.NodeTemplate{
 					Capacity:     nodeCapacity,
 					InstanceType: machineType,
 					Region:       region,
 					Zone:         zone1,
+					Architecture: ptr.To(archAMD),
 				}
 
-				nodeTemplateZone2 = machinev1alpha1.NodeTemplate{
+				nodeTemplatePool1Zone2 = machinev1alpha1.NodeTemplate{
 					Capacity:     nodeCapacity,
 					InstanceType: machineType,
 					Region:       region,
 					Zone:         zone2,
+					Architecture: ptr.To(archAMD),
+				}
+
+				nodeTemplatePool2Zone1 = machinev1alpha1.NodeTemplate{
+					Capacity:     nodeCapacity,
+					InstanceType: machineType,
+					Region:       region,
+					Zone:         zone2,
+					Architecture: ptr.To(archARM),
+				}
+
+				nodeTemplatePool2Zone2 = machinev1alpha1.NodeTemplate{
+					Capacity:     nodeCapacity,
+					InstanceType: machineType,
+					Region:       region,
+					Zone:         zone2,
+					Architecture: ptr.To(archARM),
 				}
 
 				machineConfiguration = &machinev1alpha1.MachineConfiguration{}
@@ -316,6 +339,7 @@ var _ = Describe("Machines", func() {
 								MaxSurge:       maxSurgePool1,
 								MaxUnavailable: maxUnavailablePool1,
 								MachineType:    machineType,
+								Architecture:   ptr.To(archAMD),
 								MachineImage: extensionsv1alpha1.MachineImage{
 									Name:    machineImageName,
 									Version: machineImageVersion,
@@ -337,6 +361,7 @@ var _ = Describe("Machines", func() {
 								Minimum:        minPool2,
 								Maximum:        maxPool2,
 								MaxSurge:       maxSurgePool2,
+								Architecture:   ptr.To(archARM),
 								MaxUnavailable: maxUnavailablePool2,
 								MachineType:    machineType,
 								MachineImage: extensionsv1alpha1.MachineImage{
@@ -720,10 +745,10 @@ var _ = Describe("Machines", func() {
 						addNameAndSecretToMachineClass(machineClassPool1Zone2, machineClassWithHashPool1Zone2, w.Spec.SecretRef)
 						addNameAndSecretToMachineClass(machineClassPool2Zone1, machineClassWithHashPool2Zone1, w.Spec.SecretRef)
 						addNameAndSecretToMachineClass(machineClassPool2Zone2, machineClassWithHashPool2Zone2, w.Spec.SecretRef)
-						addNodeTemplateToMachineClass(machineClassPool1Zone1, nodeTemplateZone1)
-						addNodeTemplateToMachineClass(machineClassPool1Zone2, nodeTemplateZone2)
-						addNodeTemplateToMachineClass(machineClassPool2Zone1, nodeTemplateZone1)
-						addNodeTemplateToMachineClass(machineClassPool2Zone2, nodeTemplateZone2)
+						addNodeTemplateToMachineClass(machineClassPool1Zone1, nodeTemplatePool1Zone1)
+						addNodeTemplateToMachineClass(machineClassPool1Zone2, nodeTemplatePool1Zone2)
+						addNodeTemplateToMachineClass(machineClassPool2Zone1, nodeTemplatePool2Zone1)
+						addNodeTemplateToMachineClass(machineClassPool2Zone2, nodeTemplatePool2Zone2)
 						machineClasses := map[string]interface{}{"machineClasses": []map[string]interface{}{
 							machineClassPool1Zone1,
 							machineClassPool1Zone2,

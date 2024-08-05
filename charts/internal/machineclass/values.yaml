@@ -6,6 +6,7 @@ machineClasses:
   availabilityZone: europe-1a
   machineType: medium_2_4
   nodeTemplate:
+    architecture: amd64
     capacity:
       cpu: 2
       gpu: 1

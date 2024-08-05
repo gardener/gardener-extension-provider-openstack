@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
@@ -731,7 +732,7 @@ func getCCMChartValues(
 		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"clusterName":       cp.Namespace,
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"podNetwork":        extensionscontroller.GetPodNetwork(cluster),
+		"podNetwork":        strings.Join(extensionscontroller.GetPodNetwork(cluster), ","),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
 			"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],

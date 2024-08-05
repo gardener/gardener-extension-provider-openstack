@@ -399,7 +399,7 @@ var _ = Describe("Machines", func() {
 						"keyName":        keyName,
 						"networkID":      networkID,
 						"subnetID":       subnetID,
-						"podNetworkCidr": podCIDR,
+						"podNetworkCidr": []string{podCIDR},
 						"securityGroups": []string{securityGroupName},
 						"tags": map[string]string{
 							fmt.Sprintf("kubernetes.io-cluster-%s", namespace): "1",

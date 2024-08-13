@@ -196,7 +196,8 @@ metadata:
   name: johndoe-openstack
   namespace: garden-dev
 spec:
-  cloudProfileName: openstack
+  cloudProfile:
+    name: openstack
   region: europe-1
   secretBindingName: core-openstack
   provider:

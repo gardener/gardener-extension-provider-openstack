@@ -6,10 +6,12 @@ package bastion
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"net"
+	"slices"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -33,6 +35,8 @@ type Options struct {
 	SecretReference     corev1.SecretReference
 	SecurityGroup       string
 	UserData            []byte
+	imageID             string
+	machineType         string
 }
 
 // DetermineOptions determines the required information that are required to reconcile a Bastion on Openstack. This
@@ -51,13 +55,32 @@ func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.C
 		Name:      v1beta1constants.SecretNameCloudProvider,
 	}
 
+	vmDetails, err := DetermineVmDetails(cluster.CloudProfile.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine VM details for bastion host: %w", err)
+	}
+	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract cloud provider config from cluster: %w", err)
+	}
+	machineImage, err := getProviderSpecificImage(cloudProfileConfig.MachineImages, vmDetails)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract image from provider config: %w", err)
+	}
+	imageId, err := findImageIdByRegion(machineImage, vmDetails.MachineName, region)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Options{
 		ShootName:           clusterName,
 		BastionInstanceName: baseResourceName,
 		SecretReference:     secretReference,
 		SecurityGroup:       securityGroupName(baseResourceName),
 		Region:              region,
-		UserData:            []byte(base64.StdEncoding.EncodeToString(bastion.Spec.UserData)),
+		UserData:            bastion.Spec.UserData,
+		imageID:             imageId,
+		machineType:         vmDetails.MachineName,
 	}, nil
 }
 
@@ -126,4 +149,42 @@ func ingressAllowSSHResourceName(baseName string) string {
 // egressAllowOnlyResourceName is Security group egress allow only rule name
 func egressAllowOnlyResourceName(baseName string) string {
 	return fmt.Sprintf("%s-egress-worker", baseName)
+}
+
+// getProviderSpecificImage returns the provider specific MachineImageVersion that matches with the given VmDetails
+func getProviderSpecificImage(images []openstack.MachineImages, vm VmDetails) (openstack.MachineImageVersion, error) {
+	imageIndex := slices.IndexFunc(images, func(image openstack.MachineImages) bool {
+		return image.Name == vm.ImageBaseName
+	})
+
+	if imageIndex == -1 {
+		return openstack.MachineImageVersion{},
+			fmt.Errorf("machine image with name %s not found in cloudProfileConfig", vm.ImageBaseName)
+	}
+
+	versions := images[imageIndex].Versions
+	versionIndex := slices.IndexFunc(versions, func(version openstack.MachineImageVersion) bool {
+		return version.Version == vm.ImageVersion
+	})
+
+	if versionIndex == -1 {
+		return openstack.MachineImageVersion{},
+			fmt.Errorf("version %s for arch %s of image %s not found in cloudProfileConfig",
+				vm.ImageVersion, vm.Architecture, vm.ImageBaseName)
+	}
+
+	return versions[versionIndex], nil
+}
+
+func findImageIdByRegion(image openstack.MachineImageVersion, imageName, region string) (string, error) {
+	regionIndex := slices.IndexFunc(image.Regions, func(regionID openstack.RegionIDMapping) bool {
+		return regionID.Name == region
+	})
+
+	if regionIndex == -1 {
+		return "", fmt.Errorf("image %s with version %s not found in region %s",
+			imageName, image.Version, region)
+	}
+
+	return image.Regions[regionIndex].ID, nil
 }

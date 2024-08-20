@@ -18,7 +18,6 @@ import (
 	"github.com/gophercloud/gophercloud"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -26,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -48,10 +46,6 @@ func (be *bastionEndpoints) ready() bool {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
-	err := bastionConfigCheck(a.bastionConfig)
-	if err != nil {
-		return err
-	}
 
 	opt, err := DetermineOptions(bastion, cluster)
 	if err != nil {
@@ -69,11 +63,6 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	}
 
 	computeClient, err := openstackClientFactory.Compute()
-	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
-	}
-
-	imageClient, err := openstackClientFactory.Images()
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -103,7 +92,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	instance, err := ensureComputeInstance(log, computeClient, imageClient, a.bastionConfig, infraStatus, opt)
+	instance, err := ensureComputeInstance(log, computeClient, infraStatus, opt)
 	if err != nil || instance == nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -207,7 +196,7 @@ func ensurePublicIPAddress(opt *Options, log logr.Logger, client openstackclient
 	return fip, nil
 }
 
-func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imageClient openstackclient.Images, bastionConfig *config.BastionConfig, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
+func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
 	instances, err := getBastionInstance(client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return nil, err
@@ -223,7 +212,7 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imag
 		return nil, errors.New("network id not found")
 	}
 
-	flavorID, err := client.FindFlavorID(bastionConfig.FlavorRef)
+	flavorID, err := client.FindFlavorID(opt.machineType)
 	if err != nil {
 		return nil, err
 	}
@@ -232,32 +221,10 @@ func ensureComputeInstance(log logr.Logger, client openstackclient.Compute, imag
 		return nil, errors.New("flavorID not found")
 	}
 
-	imageRes, err := imageClient.ListImages(images.ListOpts{
-		ID:         bastionConfig.ImageRef,
-		Visibility: "all",
-	})
-	if err != nil {
-		log.Info("image not found by id")
-	}
-	// we didn't find any image by ID. We will try to find by name.
-	if len(imageRes) == 0 {
-		imageRes, err = imageClient.ListImages(images.ListOpts{
-			Name:       bastionConfig.ImageRef,
-			Visibility: "all",
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-	if len(imageRes) == 0 {
-		return nil, fmt.Errorf("imageRef: '%s' not found neither by id or name", bastionConfig.ImageRef)
-	}
-	image := &imageRes[0]
-
 	createOpts := servers.CreateOpts{
 		Name:           opt.BastionInstanceName,
 		FlavorRef:      flavorID,
-		ImageRef:       image.ID,
+		ImageRef:       opt.imageID,
 		SecurityGroups: []string{opt.SecurityGroup},
 		Networks:       []servers.Network{{UUID: infraStatus.Networks.ID}},
 		UserData:       opt.UserData,

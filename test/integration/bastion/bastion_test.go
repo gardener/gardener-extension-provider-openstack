@@ -22,6 +22,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -31,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -41,12 +43,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+)
+
+const (
+	imageBaseName = "gardenlinux"
+	imageName     = "gardenlinux-1443.9"
+	imageVersion  = "1443.9.0"
+	machineType   = "m1.tiny"
+	userData      = "#!/bin/bash\n" +
+		"systemctl start ssh"
 )
 
 var (
@@ -60,11 +72,6 @@ var (
 	appID            = flag.String("app-id", "", "ApplicationCredentialID for openstack")
 	appName          = flag.String("app-name", "", "ApplicationCredentialName for openstack")
 	appSecret        = flag.String("app-secret", "", "ApplicationCredentialSecret for openstack")
-	flavorRef        = flag.String("flavor-ref", "", "Operating System flavour reference for openstack")
-	imageRef         = flag.String("image-ref", "", "Image reference for openstack")
-
-	userDataConst = "#!/bin/bash \n" +
-		"systemctl start ssh"
 )
 
 func validateFlags() {
@@ -82,12 +89,6 @@ func validateFlags() {
 	}
 	if len(*tenantName) == 0 {
 		panic("--tenant-name flag is not specified")
-	}
-	if len(*flavorRef) == 0 {
-		panic("--flavorRef flag is not specified")
-	}
-	if len(*imageRef) == 0 {
-		panic("--imageRef flag is not specified")
 	}
 	err := openstack.ValidateSecrets(*userName, *password, *appID, *appName, *appSecret)
 	if err != nil {
@@ -112,6 +113,7 @@ var (
 
 	networkClient openstackclient.Networking
 	computeClient openstackclient.Compute
+	imageClient   openstackclient.Images
 )
 
 var _ = BeforeSuite(func() {
@@ -152,12 +154,7 @@ var _ = BeforeSuite(func() {
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
 
-	Expect(bastionctrl.AddToManagerWithOptions(mgr, bastionctrl.AddOptions{
-		BastionConfig: config.BastionConfig{
-			ImageRef:  *imageRef,
-			FlavorRef: *flavorRef,
-		},
-	})).To(Succeed())
+	Expect(bastionctrl.AddToManager(ctx, mgr)).To(Succeed())
 
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
@@ -175,9 +172,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	bastionName = fmt.Sprintf("openstack-it-bastion-%s", randString)
-
-	extensionscluster, controllercluster = createClusters(bastionName)
-	bastion, options = createBastion(controllercluster, bastionName)
 
 	secret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -214,6 +208,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	computeClient, err = openstackClient.Compute(opts)
 	Expect(err).NotTo(HaveOccurred())
+	imageClient, err = openstackClient.Images(opts)
+	Expect(err).NotTo(HaveOccurred())
+
+	extensionscluster, controllercluster = createClusters(bastionName)
+	bastion, options = createBastion(controllercluster, bastionName)
 })
 
 var _ = AfterSuite(func() {
@@ -298,7 +297,7 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		err = retry(10, 5*time.Second, func() error {
+		err = retry(3, 5*time.Second, func() error {
 			return verifyPort22IsOpen(ctx, c, bastion)
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -617,10 +616,64 @@ func createShoot(infrastructureConfig []byte) *gardencorev1beta1.Shoot {
 }
 
 func createCloudProfile() *gardencorev1beta1.CloudProfile {
+	profileConfig := api.CloudProfileConfig{
+		MachineImages: []api.MachineImages{{
+			Name: imageBaseName,
+			Versions: []api.MachineImageVersion{{
+				Version: imageVersion,
+				Regions: []api.RegionIDMapping{{
+					Name: *region,
+					ID:   getImageID(imageName),
+				}},
+			}},
+		}}}
+
+	profileConfigData, err := json.Marshal(profileConfig)
+	Expect(err).NotTo(HaveOccurred())
+
 	cloudProfile := &gardencorev1beta1.CloudProfile{
-		Spec: gardencorev1beta1.CloudProfileSpec{},
+		Spec: gardencorev1beta1.CloudProfileSpec{
+			MachineTypes: []gardencorev1beta1.MachineType{{
+				CPU:          resource.MustParse("1"),
+				Name:         machineType,
+				Architecture: ptr.To("amd64"),
+			}},
+			MachineImages: []gardencorev1beta1.MachineImage{{
+				Name: imageBaseName,
+				Versions: []gardencorev1beta1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version:        imageVersion,
+							Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+						},
+						Architectures: []string{"amd64", "arm64"},
+					}},
+			}},
+			Regions: []gardencorev1beta1.Region{{
+				Name: *region,
+			}},
+			Bastion: &gardencorev1beta1.Bastion{
+				MachineImage: &gardencorev1beta1.BastionMachineImage{
+					Name: imageBaseName,
+				},
+			},
+			ProviderConfig: &runtime.RawExtension{
+				Raw: profileConfigData,
+			},
+		},
 	}
 	return cloudProfile
+}
+
+func getImageID(imageName string) string {
+	imageRes, err := imageClient.ListImages(images.ListOpts{
+		Name:       imageName,
+		Visibility: "all",
+	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(len(imageRes)).Should(BeNumerically(">", 0))
+
+	return imageRes[0].ID
 }
 
 func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha1.Bastion, *bastionctrl.Options) {
@@ -633,7 +686,7 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: openstack.Type,
 			},
-			UserData: []byte(userDataConst),
+			UserData: []byte(userData),
 			Ingress: []extensionsv1alpha1.BastionIngressPolicy{
 				{
 					IPBlock: networkingv1.IPBlock{

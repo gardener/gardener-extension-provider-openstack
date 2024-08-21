@@ -53,12 +53,9 @@ import (
 )
 
 const (
-	imageBaseName = "gardenlinux"
-	imageName     = "gardenlinux-1443.9"
-	imageVersion  = "1443.9.0"
-	machineType   = "m1.tiny"
-	userData      = "#!/bin/bash\n" +
-		"systemctl start ssh"
+	imageName   = "gardenlinux-1443.9"
+	machineType = "m1.tiny"
+	userData    = "IyEvYmluL2Jhc2gKCnN5c3RlbWN0bCBzdGFydCBzc2g="
 )
 
 var (
@@ -618,9 +615,9 @@ func createShoot(infrastructureConfig []byte) *gardencorev1beta1.Shoot {
 func createCloudProfile() *gardencorev1beta1.CloudProfile {
 	profileConfig := api.CloudProfileConfig{
 		MachineImages: []api.MachineImages{{
-			Name: imageBaseName,
+			Name: "imageName",
 			Versions: []api.MachineImageVersion{{
-				Version: imageVersion,
+				Version: "6.6.6",
 				Regions: []api.RegionIDMapping{{
 					Name: *region,
 					ID:   getImageID(imageName),
@@ -639,11 +636,11 @@ func createCloudProfile() *gardencorev1beta1.CloudProfile {
 				Architecture: ptr.To("amd64"),
 			}},
 			MachineImages: []gardencorev1beta1.MachineImage{{
-				Name: imageBaseName,
+				Name: "imageName",
 				Versions: []gardencorev1beta1.MachineImageVersion{
 					{
 						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-							Version:        imageVersion,
+							Version:        "6.6.6",
 							Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
 						},
 						Architectures: []string{"amd64", "arm64"},
@@ -654,7 +651,7 @@ func createCloudProfile() *gardencorev1beta1.CloudProfile {
 			}},
 			Bastion: &gardencorev1beta1.Bastion{
 				MachineImage: &gardencorev1beta1.BastionMachineImage{
-					Name: imageBaseName,
+					Name: "imageName",
 				},
 			},
 			ProviderConfig: &runtime.RawExtension{

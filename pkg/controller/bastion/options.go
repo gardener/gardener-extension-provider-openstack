@@ -59,14 +59,17 @@ func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.C
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine VM details for bastion host: %w", err)
 	}
+
 	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract cloud provider config from cluster: %w", err)
 	}
+
 	machineImage, err := getProviderSpecificImage(cloudProfileConfig.MachineImages, vmDetails)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract image from provider config: %w", err)
 	}
+
 	imageId, err := findImageIdByRegion(machineImage, vmDetails.MachineName, region)
 	if err != nil {
 		return nil, err

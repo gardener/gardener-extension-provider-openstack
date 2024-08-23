@@ -70,7 +70,7 @@ func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.C
 		return nil, fmt.Errorf("failed to extract image from provider config: %w", err)
 	}
 
-	imageId, err := findImageIdByRegion(machineImage, vmDetails.MachineName, region)
+	imageId, err := findImageIdByRegion(machineImage, vmDetails.ImageBaseName, region)
 	if err != nil {
 		return nil, err
 	}

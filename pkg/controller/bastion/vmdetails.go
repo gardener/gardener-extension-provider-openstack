@@ -2,12 +2,12 @@ package bastion
 
 import (
 	"fmt"
-	"math"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	core "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"golang.org/x/exp/maps"
+	"k8s.io/utils/ptr"
 )
 
 // This file should be exactly identical for all providers
@@ -19,7 +19,8 @@ type VmDetails struct {
 	ImageVersion  string
 }
 
-// DetermineVmDetails calculates the
+// DetermineVmDetails searches for optimal vm parameters in the cloud profile
+// if no bastionImage is given take the greatest supported version
 func DetermineVmDetails(spec core.CloudProfileSpec) (vm VmDetails, err error) {
 	imageArchs, err := getArchitectures(spec.Bastion, spec.MachineImages)
 	if err != nil {
@@ -55,7 +56,7 @@ func getMachine(bastion *core.Bastion, machineTypes []core.MachineType, possible
 	}
 
 	// find the machine in cloud profile with the lowest amount of cpus
-	var minCpu int64 = math.MaxInt64
+	var minCpu *int64
 
 	for _, machine := range machineTypes {
 		if machine.Architecture == nil {
@@ -63,14 +64,15 @@ func getMachine(bastion *core.Bastion, machineTypes []core.MachineType, possible
 		}
 
 		arch := *machine.Architecture
-		if machine.CPU.Value() < minCpu && (possibleArchs == nil || slices.Contains(possibleArchs, arch)) {
-			minCpu = machine.CPU.Value()
+		if minCpu == nil || machine.CPU.Value() < *minCpu &&
+			(possibleArchs == nil || slices.Contains(possibleArchs, arch)) {
+			minCpu = ptr.To(machine.CPU.Value())
 			machineName = machine.Name
 			machineArch = arch
 		}
 	}
 
-	if minCpu == math.MaxInt64 {
+	if minCpu == nil {
 		return "", "", fmt.Errorf("no suitable machine found")
 	}
 
@@ -82,9 +84,9 @@ func getMachine(bastion *core.Bastion, machineTypes []core.MachineType, possible
 func getArchitectures(bastion *core.Bastion, images []core.MachineImage) ([]string, error) {
 	archs := make(map[string]bool)
 
-	findSupportedArchs := func(versions []core.MachineImageVersion, specVersion *string) {
+	findSupportedArchs := func(versions []core.MachineImageVersion, bastionVersion *string) {
 		for _, version := range versions {
-			if specVersion != nil && version.Version == *bastion.MachineImage.Version {
+			if bastionVersion != nil && version.Version == *bastionVersion {
 				archs = make(map[string]bool)
 				for _, arch := range version.Architectures {
 					archs[arch] = true
@@ -111,15 +113,12 @@ func getArchitectures(bastion *core.Bastion, images []core.MachineImage) ([]stri
 
 	// if only machineImage is set -> find all supported versions if no version is set otherwise return arch of version
 	if bastion.MachineImage != nil && bastion.MachineType == nil {
-		imageIndex := slices.IndexFunc(images, func(image core.MachineImage) bool {
-			return image.Name == bastion.MachineImage.Name
-		})
-
-		if imageIndex == -1 {
-			return nil, fmt.Errorf("bastion image with name %s not found in cloudProfile", bastion.MachineImage.Name)
+		image, err := findImageByName(images, bastion.MachineImage.Name)
+		if err != nil {
+			return nil, err
 		}
 
-		findSupportedArchs(images[imageIndex].Versions, bastion.MachineImage.Version)
+		findSupportedArchs(image.Versions, bastion.MachineImage.Version)
 
 		return maps.Keys(archs), nil
 	}
@@ -131,15 +130,11 @@ func getArchitectures(bastion *core.Bastion, images []core.MachineImage) ([]stri
 func getImageName(bastion *core.Bastion, images []core.MachineImage, arch string) (string, error) {
 	// check if image name exists is also done in gardener cloudProfile validation
 	if bastion != nil && bastion.MachineImage != nil {
-		imageIndex := slices.IndexFunc(images, func(image core.MachineImage) bool {
-			return image.Name == bastion.MachineImage.Name
-		})
-
-		if imageIndex == -1 {
-			return "", fmt.Errorf("bastion image %s not found in cloudProfile", bastion.MachineImage.Name)
+		image, err := findImageByName(images, bastion.MachineImage.Name)
+		if err != nil {
+			return "", err
 		}
-
-		return bastion.MachineImage.Name, nil
+		return image.Name, nil
 	}
 
 	// take the first image from cloud profile that is supported and arch compatible
@@ -159,19 +154,14 @@ func getImageName(bastion *core.Bastion, images []core.MachineImage, arch string
 
 // getImageVersion returns the image version for the bastion.
 func getImageVersion(imageName, machineArch string, bastion *core.Bastion, images []core.MachineImage) (string, error) {
-	imageIndex := slices.IndexFunc(images, func(image core.MachineImage) bool {
-		return image.Name == imageName
-	})
-
-	if imageIndex == -1 {
-		return "", fmt.Errorf("machine image with name %s not found in cloudProfile", imageName)
+	image, err := findImageByName(images, imageName)
+	if err != nil {
+		return "", err
 	}
-
-	versions := images[imageIndex].Versions
 
 	// check if image version exists is also done in gardener cloudProfile validation
 	if bastion != nil && bastion.MachineImage != nil && bastion.MachineImage.Version != nil {
-		versionIndex := slices.IndexFunc(versions, func(version core.MachineImageVersion) bool {
+		versionIndex := slices.IndexFunc(image.Versions, func(version core.MachineImageVersion) bool {
 			return version.Version == *bastion.MachineImage.Version
 		})
 
@@ -182,8 +172,8 @@ func getImageVersion(imageName, machineArch string, bastion *core.Bastion, image
 		return *bastion.MachineImage.Version, nil
 	}
 
-	var newest *semver.Version
-	for _, version := range versions {
+	var greatest *semver.Version
+	for _, version := range image.Versions {
 		if version.Classification == nil || *version.Classification != core.ClassificationSupported {
 			continue
 		}
@@ -197,13 +187,25 @@ func getImageVersion(imageName, machineArch string, bastion *core.Bastion, image
 			return "", err
 		}
 
-		if newest == nil || v.GreaterThan(newest) {
-			newest = v
+		if greatest == nil || v.GreaterThan(greatest) {
+			greatest = v
 		}
 	}
 
-	if newest == nil {
+	if greatest == nil {
 		return "", fmt.Errorf("could not find any supported image version for %s and arch %s", imageName, machineArch)
 	}
-	return newest.String(), nil
+	return greatest.String(), nil
+}
+
+func findImageByName(images []core.MachineImage, name string) (core.MachineImage, error) {
+	imageIndex := slices.IndexFunc(images, func(image core.MachineImage) bool {
+		return image.Name == name
+	})
+
+	if imageIndex == -1 {
+		return core.MachineImage{}, fmt.Errorf("bastion image %s not found in cloudProfile", name)
+	}
+
+	return images[imageIndex], nil
 }

@@ -243,7 +243,7 @@ var _ = Describe("Bastion", func() {
 
 		It("should fail for unknown region", func() {
 			_, err := findImageIdByRegion(providerImages[0].Versions[0], "suse", "unknown")
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
@@ -340,8 +340,6 @@ func createShootTestStruct() *gardencorev1beta1.Shoot {
 
 func mustEncode(object any) []byte {
 	data, err := json.Marshal(object)
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).ToNot(HaveOccurred())
 	return data
 }

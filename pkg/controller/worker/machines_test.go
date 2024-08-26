@@ -107,6 +107,9 @@ var _ = Describe("Machines", func() {
 				machineImage        string
 				machineImageID      string
 
+				archAMD string
+				archARM string
+
 				keyName               string
 				machineType           string
 				userData              []byte
@@ -163,6 +166,9 @@ var _ = Describe("Machines", func() {
 				machineImage = "my-image-in-glance"
 				machineImageID = "my-image-id"
 
+				archAMD = "amd64"
+				archARM = "arm64"
+
 				keyName = "key-name"
 				machineType = "large"
 				userData = []byte("some-user-data")
@@ -198,6 +204,7 @@ var _ = Describe("Machines", func() {
 					InstanceType: machineType,
 					Region:       region,
 					Zone:         zone1,
+					Architecture: &archAMD,
 				}
 
 				nodeTemplateZone2 = machinev1alpha1.NodeTemplate{
@@ -205,6 +212,7 @@ var _ = Describe("Machines", func() {
 					InstanceType: machineType,
 					Region:       region,
 					Zone:         zone2,
+					Architecture: &archAMD,
 				}
 
 				machineConfiguration = &machinev1alpha1.MachineConfiguration{}
@@ -253,8 +261,14 @@ var _ = Describe("Machines", func() {
 								Image:   machineImage,
 								Regions: []api.RegionIDMapping{
 									{
-										Name: regionWithImages,
-										ID:   machineImageID,
+										Name:         regionWithImages,
+										ID:           machineImageID,
+										Architecture: &archARM,
+									},
+									{
+										Name:         regionWithImages,
+										ID:           machineImageID,
+										Architecture: &archAMD,
 									},
 								},
 							},
@@ -316,6 +330,7 @@ var _ = Describe("Machines", func() {
 								MaxSurge:       maxSurgePool1,
 								MaxUnavailable: maxUnavailablePool1,
 								MachineType:    machineType,
+								Architecture:   &archAMD,
 								MachineImage: extensionsv1alpha1.MachineImage{
 									Name:    machineImageName,
 									Version: machineImageVersion,
@@ -337,6 +352,7 @@ var _ = Describe("Machines", func() {
 								Minimum:        minPool2,
 								Maximum:        maxPool2,
 								MaxSurge:       maxSurgePool2,
+								Architecture:   &archAMD,
 								MaxUnavailable: maxUnavailablePool2,
 								MachineType:    machineType,
 								MachineImage: extensionsv1alpha1.MachineImage{
@@ -382,9 +398,16 @@ var _ = Describe("Machines", func() {
 					clusterWithRegion   *extensionscontroller.Cluster
 				)
 
-				setup := func(region, name, imageID string) {
+				setup := func(region, name, imageID, architecture string) {
 					workerWithRegion = w.DeepCopy()
+					zone1 = region + "a"
+					zone2 = region + "b"
 					workerWithRegion.Spec.Region = region
+					workerWithRegion.Spec.Pools[0].Architecture = &architecture
+					workerWithRegion.Spec.Pools[1].Architecture = &architecture
+
+					workerWithRegion.Spec.Pools[0].Zones = []string{zone1, zone2}
+					workerWithRegion.Spec.Pools[1].Zones = []string{zone1, zone2}
 
 					clusterWithRegion = &extensionscontroller.Cluster{
 						CloudProfile: cluster.CloudProfile,
@@ -424,6 +447,7 @@ var _ = Describe("Machines", func() {
 						InstanceType: machineType,
 						Region:       region,
 						Zone:         zone1,
+						Architecture: &architecture,
 					}
 
 					newNodeTemplateZone2 := machinev1alpha1.NodeTemplate{
@@ -431,6 +455,7 @@ var _ = Describe("Machines", func() {
 						InstanceType: machineType,
 						Region:       region,
 						Zone:         zone2,
+						Architecture: &architecture,
 					}
 
 					var (
@@ -518,7 +543,7 @@ var _ = Describe("Machines", func() {
 				}
 
 				It("should return the expected machine deployments for profile image types", func() {
-					setup(region, machineImage, "")
+					setup(region, machineImage, "", archAMD)
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
 
 					// Test workerDelegate.DeployMachineClasses()
@@ -575,7 +600,7 @@ var _ = Describe("Machines", func() {
 				})
 
 				It("should return the expected machine deployments for profile image types with id", func() {
-					setup(regionWithImages, "", machineImageID)
+					setup(regionWithImages, "", machineImageID, archARM)
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
 
@@ -608,7 +633,7 @@ var _ = Describe("Machines", func() {
 								Name:         machineImageName,
 								Version:      machineImageVersion,
 								ID:           machineImageID,
-								Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+								Architecture: ptr.To(v1beta1constants.ArchitectureARM64),
 							},
 						},
 					}
@@ -641,7 +666,7 @@ var _ = Describe("Machines", func() {
 							serverGroupID2   = "id2"
 						)
 
-						setup(region, machineImage, "")
+						setup(region, machineImage, "", archAMD)
 
 						workerWithServerGroup := w.DeepCopy()
 						workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
@@ -750,7 +775,7 @@ var _ = Describe("Machines", func() {
 					})
 
 					It("should fail if the server group dependencies do not exist", func() {
-						setup(region, machineImage, "")
+						setup(region, machineImage, "", archAMD)
 
 						workerWithServerGroup := w.DeepCopy()
 						workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
@@ -774,7 +799,7 @@ var _ = Describe("Machines", func() {
 
 				Context("Machine Labels", func() {
 					It("should consider rolling machine labels for the worker pool hash", func() {
-						setup(region, machineImage, "")
+						setup(region, machineImage, "", archAMD)
 
 						applyLabelsAndPolicy := func(labels []apiv1alpha1.MachineLabel, policy *string) string {
 							w.Spec.Pools[0].Labels = utils.MergeStringMaps(w.Spec.Pools[0].Labels, map[string]string{"k1": "v1"})

@@ -24,4 +24,4 @@ spec:
       --app-secret="$APPLICATION_CREDENTIAL_SECRET"
       --reconciler="${RECONCILER}"
 
-  image: golang:1.22.5
+  image: golang:1.23.0

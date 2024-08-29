@@ -67,34 +67,33 @@ func ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig *api.Co
 
 func validateLoadBalancerProviderConstraints(providers []api.LoadBalancerProvider, region, provider string) (bool, []string) {
 	var (
-		validValues = []string{}
-		fallback    *api.LoadBalancerProvider
+		validValues      = []string{}
+		regionalFound    = false
+		defaultProviders = []string{}
 	)
 
 	for _, p := range providers {
-		// store the first non-regional image for fallback value if no load balancer provider for the given
-		// region was found
-		if p.Region == nil && fallback == nil {
-			v := p
-			fallback = &v
+		if p.Region == nil {
+			defaultProviders = append(defaultProviders, p.Name)
 			continue
 		}
 
-		// load balancer provider for the given region found, validate it
-		if p.Region != nil && *p.Region == region {
+		if *p.Region == region {
+			regionalFound = true
 			validValues = append(validValues, p.Name)
 			if p.Name == provider {
 				return true, nil
 			}
-			return false, validValues
 		}
 	}
 
-	// no load balancer provider for the given region found yet, check if the non-regional fallback is used
-	if fallback != nil {
-		validValues = append(validValues, fallback.Name)
-		if fallback.Name == provider {
-			return true, nil
+	// If regional providers are found, don't allow default providers
+	if !regionalFound {
+		validValues = defaultProviders
+		for _, name := range defaultProviders {
+			if name == provider {
+				return true, nil
+			}
 		}
 	}
 

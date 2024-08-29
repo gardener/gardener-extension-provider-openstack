@@ -169,7 +169,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				}))))
 			})
 
-			It("should forbid duplicates regions in providers", func() {
+			It("should forbid exact duplicate name/region in providers", func() {
 				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
 					{
 						Name:   "foo",
@@ -185,8 +185,38 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("root.constraints.loadBalancerProviders[1].region"),
+					"Field": Equal("root.constraints.loadBalancerProviders[1]"),
 				}))))
+			})
+			It("should allow multiple providers in the same region", func() {
+				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
+					{
+						Name:   "foo",
+						Region: ptr.To("foo"),
+					},
+					{
+						Name:   "bar",
+						Region: ptr.To("foo"),
+					},
+				}
+
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
+
+				Expect(errorList).To(BeEmpty())
+			})
+			It("should allow multiple default providers", func() {
+				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{
+					{
+						Name: "foo",
+					},
+					{
+						Name: "bar",
+					},
+				}
+
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, fldPath)
+
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 

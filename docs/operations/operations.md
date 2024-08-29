@@ -125,8 +125,9 @@ constraints:
 #     subnetID: "7890"
   loadBalancerProviders:
   - name: haproxy
-#   region: europe
 # - name: f5
+#   region: asia
+# - name: haproxy
 #   region: asia
 ```
 
@@ -137,6 +138,7 @@ The default behavior is that, if found, the regional (and/or domain restricted) 
 If no entry for the given region exists then the fallback value is the most matching entry (w.r.t. wildcard matching) in the list without a `region` field (or the `keystoneURL` value for the keystone URLs).
 If an additional floating pool should be selectable for a region and/or domain, you can mark it as non constraining
 with setting the optional field `nonConstraining` to `true`.
+Multiple `loadBalancerProviders` can be specified with or without a `region`, also multiple for the same `region`. If a region specific entry is found none of the default entries apply, but the same `name` can be specified with and without a `region`.
 
 The `loadBalancerClasses` field is an optional list of load balancer classes which can be when the corresponding floating pool network is choosen. The load balancer classes can be configured in the same way as in the `ControlPlaneConfig` in the `Shoot` resource, therefore see [here](../usage/usage.md#ControlPlaneConfig) for more details.
 

@@ -156,6 +156,99 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			}))))
 		})
 
+		It("should allow all load balancer providers if multiple defaults are part of the constraints", func() {
+			lbProvider2 := "bar"
+			cloudProfileConfig.Constraints = api.Constraints{
+				LoadBalancerProviders: []api.LoadBalancerProvider{
+					{
+						Name: lbProvider1,
+					},
+					{
+						Name: lbProvider2,
+					},
+				},
+			}
+			controlPlane.LoadBalancerProvider = lbProvider1
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)
+
+			controlPlane.LoadBalancerProvider = lbProvider2
+			errorList = append(errorList, ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, floatingPool, cloudProfileConfig, nilPath)...)
+
+			Expect(errorList).To(BeEmpty())
+
+		})
+
+		It("should allow all load balancer providers that are found in the constraints for a region", func() {
+			lbProvider2 := "bar"
+			cloudProfileConfig.Constraints = api.Constraints{
+				LoadBalancerProviders: []api.LoadBalancerProvider{
+					{
+						Name:   lbProvider1,
+						Region: &region,
+					},
+					{
+						Name:   lbProvider2,
+						Region: &region,
+					},
+				},
+			}
+
+			controlPlane.LoadBalancerProvider = lbProvider1
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, "", cloudProfileConfig, nilPath)
+
+			controlPlane.LoadBalancerProvider = lbProvider2
+			errorList = append(errorList, ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, "", cloudProfileConfig, nilPath)...)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid using the default load balancer providers if there are also entries for a region", func() {
+			lbProvider2 := "bar"
+			cloudProfileConfig.Constraints = api.Constraints{
+				LoadBalancerProviders: []api.LoadBalancerProvider{
+					{
+						Name: lbProvider1,
+					},
+					{
+						Name:   lbProvider2,
+						Region: &region,
+					},
+				},
+			}
+
+			controlPlane.LoadBalancerProvider = lbProvider1
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, "", cloudProfileConfig, nilPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("loadBalancerProvider"),
+			}))))
+		})
+
+		It("should allow using the same value as a default load balancer provider if it is also specified for a region", func() {
+			lbProvider2 := "bar"
+			cloudProfileConfig.Constraints = api.Constraints{
+				LoadBalancerProviders: []api.LoadBalancerProvider{
+					{
+						Name: lbProvider1,
+					},
+					{
+						Name:   lbProvider2,
+						Region: &region,
+					},
+					{
+						Name:   lbProvider1,
+						Region: &region,
+					},
+				},
+			}
+
+			controlPlane.LoadBalancerProvider = lbProvider1
+			errorList := ValidateControlPlaneConfigAgainstCloudProfile(nil, controlPlane, domain, region, "", cloudProfileConfig, nilPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should forbid using a load balancer provider from a different region", func() {
 			differentRegion := "asia"
 			cloudProfileConfig.Constraints = api.Constraints{

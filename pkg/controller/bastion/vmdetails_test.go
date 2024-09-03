@@ -84,6 +84,13 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(details).To(DeepEqual(desired))
 		})
 
+		It("should succeed with empty bastion section", func() {
+			spec.Bastion = &v1beta1.Bastion{}
+			details, err := bastion.DetermineVmDetails(spec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details).To(DeepEqual(desired))
+		})
+
 		It("should succeed without setting bastion section", func() {
 			spec.Bastion = nil
 			details, err := bastion.DetermineVmDetails(spec)

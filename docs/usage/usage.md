@@ -6,7 +6,7 @@ In this document we are describing how this configuration looks like for OpenSta
 
 ## Provider Secret Data
 
-Every shoot cluster references a `SecretBinding` which itself references a `Secret`, and this `Secret` contains the provider credentials of your OpenStack tenant.
+Every shoot cluster references a `SecretBinding` or a `CredentialsBinding` which itself references a `Secret`, and this `Secret` contains the provider credentials of your OpenStack tenant.
 This `Secret` must look as follows:
 
 ```yaml

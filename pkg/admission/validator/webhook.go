@@ -8,6 +8,7 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/security"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,9 +37,10 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Path:       "/webhooks/validate",
 		Predicates: []predicate.Predicate{extensionspredicate.GardenCoreProviderType(openstack.Type)},
 		Validators: map[extensionswebhook.Validator][]extensionswebhook.Type{
-			NewShootValidator(mgr):         {{Obj: &core.Shoot{}}},
-			NewCloudProfileValidator(mgr):  {{Obj: &core.CloudProfile{}}},
-			NewSecretBindingValidator(mgr): {{Obj: &core.SecretBinding{}}},
+			NewShootValidator(mgr):              {{Obj: &core.Shoot{}}},
+			NewCloudProfileValidator(mgr):       {{Obj: &core.CloudProfile{}}},
+			NewSecretBindingValidator(mgr):      {{Obj: &core.SecretBinding{}}},
+			NewCredentialsBindingValidator(mgr): {{Obj: &security.CredentialsBinding{}}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{

@@ -120,5 +120,12 @@ var _ = Describe("CredentialsBinding validator", func() {
 			err := credentialsBindingValidator.Validate(ctx, credentialsBinding, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("should return nil when the CredentialsBinding did not change", func() {
+			old := credentialsBinding.DeepCopy()
+
+			err := credentialsBindingValidator.Validate(ctx, credentialsBinding, old)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 })

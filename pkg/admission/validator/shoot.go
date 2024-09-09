@@ -186,7 +186,11 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 
-	if err := c.Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
+	if shoot.Spec.CloudProfile == nil {
+		return nil, fmt.Errorf("shoot.spec.cloudprofile must not be nil <nil>")
+	}
+
+	if err := c.Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfile.Name}, cloudProfile); err != nil {
 		return nil, err
 	}
 

@@ -32,7 +32,7 @@ func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastru
 // CleanupTerraformerResources deletes terraformer artifacts (config, state, secrets).
 func CleanupTerraformerResources(ctx context.Context, tf terraformer.Terraformer) error {
 	if err := tf.EnsureCleanedUp(ctx); err != nil {
-		return nil
+		return err
 	}
 	if err := tf.CleanupConfiguration(ctx); err != nil {
 		return err

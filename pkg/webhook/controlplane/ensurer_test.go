@@ -592,7 +592,7 @@ WantedBy=multi-user.target
 			ensurer = NewEnsurer(logger)
 			DeferCleanup(testutils.WithVar(&ImageVector, imagevector.ImageVector{{
 				Name:       "machine-controller-manager-provider-openstack",
-				Repository: "foo",
+				Repository: ptr.To("foo"),
 				Tag:        ptr.To("bar"),
 			}}))
 		})

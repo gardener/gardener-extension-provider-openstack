@@ -8,10 +8,9 @@ import (
 	"context"
 	"fmt"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -29,7 +28,7 @@ func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error)
 		return nil, err
 	}
 	if _, _, err := w.decoder.Decode(marshalled, nil, workerStatus); err != nil {
-		return nil, fmt.Errorf("could not decode WorkerStatus %q: %w", kutil.ObjectName(w.worker), err)
+		return nil, fmt.Errorf("could not decode WorkerStatus %q: %w", k8sclient.ObjectKeyFromObject(w.worker), err)
 	}
 
 	return workerStatus, nil
@@ -47,7 +46,7 @@ func (w *workerDelegate) updateWorkerProviderStatus(ctx context.Context, workerS
 		return err
 	}
 
-	patch := client.MergeFrom(w.worker.DeepCopy())
+	patch := k8sclient.MergeFrom(w.worker.DeepCopy())
 	w.worker.Status.ProviderStatus = &runtime.RawExtension{Object: workerStatusV1alpha1}
 	return w.seedClient.Status().Patch(ctx, w.worker, patch)
 }

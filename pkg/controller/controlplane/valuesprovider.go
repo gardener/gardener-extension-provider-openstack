@@ -39,7 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
@@ -303,7 +303,7 @@ func NewValuesProvider(mgr manager.Manager) genericactuator.ValuesProvider {
 // valuesProvider is a ValuesProvider that provides OpenStack-specific values for the 2 charts applied by the generic actuator.
 type valuesProvider struct {
 	genericactuator.NoopValuesProvider
-	client  client.Client
+	client  k8sclient.Client
 	decoder runtime.Decoder
 }
 
@@ -316,7 +316,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
 		}
 	}
 
@@ -346,7 +346,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 func (vp *valuesProvider) getInfrastructureStatus(cp *extensionsv1alpha1.ControlPlane) (*api.InfrastructureStatus, error) {
 	infraStatus := &api.InfrastructureStatus{}
 	if _, _, err := vp.decoder.Decode(cp.Spec.InfrastructureProviderStatus.Raw, nil, infraStatus); err != nil {
-		return nil, fmt.Errorf("could not decode infrastructureProviderStatus of controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return nil, fmt.Errorf("could not decode infrastructureProviderStatus of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
 	}
 	return infraStatus, nil
 }
@@ -367,7 +367,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
 		}
 	}
 
@@ -377,7 +377,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	}
 
 	// TODO(rfranzke): Delete this after August 2024.
-	gep19Monitoring := vp.client.Get(ctx, client.ObjectKey{Name: "prometheus-shoot", Namespace: cp.Namespace}, &appsv1.StatefulSet{}) == nil
+	gep19Monitoring := vp.client.Get(ctx, k8sclient.ObjectKey{Name: "prometheus-shoot", Namespace: cp.Namespace}, &appsv1.StatefulSet{}) == nil
 	if gep19Monitoring {
 		if err := kutil.DeleteObject(ctx, vp.client, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cloud-controller-manager-observability-config", Namespace: cp.Namespace}}); err != nil {
 			return nil, fmt.Errorf("failed deleting cloud-controller-manager-observability-config ConfigMap: %w", err)
@@ -386,14 +386,14 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 
 	cpConfigSecret := &corev1.Secret{}
 
-	if err := vp.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderConfigName}, cpConfigSecret); err != nil {
+	if err := vp.client.Get(ctx, k8sclient.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderConfigName}, cpConfigSecret); err != nil {
 		return nil, err
 	}
 	checksums[openstack.CloudProviderConfigName] = gardenerutils.ComputeChecksum(cpConfigSecret.Data)
 
 	var userAgentHeaders []string
 	cpDiskConfigSecret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, cpDiskConfigSecret); err != nil {
+	if err := vp.client.Get(ctx, k8sclient.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, cpDiskConfigSecret); err != nil {
 		return nil, err
 	}
 	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(cpDiskConfigSecret.Data)
@@ -415,7 +415,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	cpConfig := &api.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil {
 		if _, _, err := vp.decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, cpConfig); err != nil {
-			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(cp), err)
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
 		}
 	}
 
@@ -431,11 +431,11 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 	providerConfig := api.CloudProfileConfig{}
 	if cluster.CloudProfile.Spec.ProviderConfig != nil {
 		if _, _, err := vp.decoder.Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, &providerConfig); err != nil {
-			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", kutil.ObjectName(controlPlane), err)
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(controlPlane), err)
 		}
 	}
 	values := make(map[string]interface{})
-	if providerConfig.StorageClasses != nil && len(providerConfig.StorageClasses) != 0 {
+	if len(providerConfig.StorageClasses) != 0 {
 		allSc := make([]map[string]interface{}, len(providerConfig.StorageClasses))
 		for i, sc := range providerConfig.StorageClasses {
 			var storageClassValues = map[string]interface{}{
@@ -532,7 +532,7 @@ func getConfigChartValues(
 ) (map[string]interface{}, error) {
 	subnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes)
 	if err != nil {
-		return nil, fmt.Errorf("could not determine subnet from infrastructureProviderStatus of controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return nil, fmt.Errorf("could not determine subnet from infrastructureProviderStatus of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
 	}
 
 	if cloudProfileConfig == nil {
@@ -845,7 +845,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	)
 
 	secret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, secret); err != nil {
+	if err := vp.client.Get(ctx, k8sclient.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, secret); err != nil {
 		return nil, err
 	}
 
@@ -956,7 +956,7 @@ func (vp *valuesProvider) addCSIManilaValues(
 
 	infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
 	if err != nil {
-		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", kutil.ObjectName(cp), err)
+		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
 	}
 	infraStatus, err := vp.getInfrastructureStatus(cp)
 	if err != nil {

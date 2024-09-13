@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -21,8 +22,10 @@ var _ = Describe("Infrastructure", func() {
 		nw            *mocks.MockNetworking
 		ctx           context.Context
 		routerID      string
+		subnetID      string
 		defaultWorker = "10.0.0.0/16"
 		router        *routers.Router
+		subnet        *subnets.Subnet
 		clusterName   = "foo-bar"
 	)
 
@@ -35,8 +38,13 @@ var _ = Describe("Infrastructure", func() {
 	Context("Route deletion", func() {
 		BeforeEach(func() {
 			routerID = "router"
+			subnetID = "subnet"
 			router = &routers.Router{
 				ID: routerID,
+			}
+			subnet = &subnets.Subnet{
+				ID:   subnetID,
+				CIDR: defaultWorker,
 			}
 		})
 
@@ -48,11 +56,12 @@ var _ = Describe("Infrastructure", func() {
 		prepRoutes := func(routes ...routers.Route) {
 			router.Routes = routes
 			nw.EXPECT().GetRouterByID(routerID).Return(router, nil)
+			nw.EXPECT().GetSubnetByID(subnetID).Return(subnet, nil)
 		}
 
 		DescribeTable("#RouteCleanup", func(a args, expErr error) {
 			a.prep()
-			err := CleanupKubernetesRoutes(ctx, nw, routerID, a.workers)
+			err := CleanupKubernetesRoutes(ctx, nw, routerID, subnetID)
 			if expErr == nil {
 				Expect(err).To(BeNil())
 			} else {

@@ -957,10 +957,6 @@ func (vp *valuesProvider) addCSIManilaValues(
 		"clusterID": cp.Namespace,
 	}
 
-	infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
-	if err != nil {
-		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
-	}
 	infraStatus, err := vp.getInfrastructureStatus(cp)
 	if err != nil {
 		return err

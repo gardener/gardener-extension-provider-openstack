@@ -87,7 +87,9 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "delete share network",
 		fctx.deleteShareNetwork,
-		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs))
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs),
+		shared.DoIf(needToDeleteSubnet),
+	)
 	deleteRouterInterface := fctx.AddTask(g, "delete router interface",
 		fctx.deleteRouterInterface,
 		shared.DoIf(needToDeleteSubnet || needToDeleteRouter),

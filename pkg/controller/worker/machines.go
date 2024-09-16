@@ -149,7 +149,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				"machineType":      pool.MachineType,
 				"keyName":          infrastructureStatus.Node.KeyName,
 				"networkID":        infrastructureStatus.Networks.ID,
-				"podNetworkCidr":   extensionscontroller.GetPodNetwork(w.cluster),
+				"podNetworkCIDRs":  extensionscontroller.GetPodNetwork(w.cluster),
 				"securityGroups":   []string{nodesSecurityGroup.Name},
 				"tags": utils.MergeStringMaps(
 					NormalizeLabelsForMachineClass(pool.Labels),

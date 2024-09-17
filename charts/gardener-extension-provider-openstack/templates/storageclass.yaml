@@ -1,4 +1,5 @@
-{{- if eq .Values.gardener.seed.provider "openstack" }}
+{{- if eq .Values.gardener.seed.provider "openstack" -}}
+{{- if .Values.config.etcd.storage.enabled -}}
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -15,4 +16,5 @@ provisioner: {{ .Values.config.etcd.storage.provisioner }}
 allowVolumeExpansion: true
 volumeBindingMode: {{ .Values.config.etcd.storage.volumeBindingMode }}
 reclaimPolicy: {{ .Values.config.etcd.storage.reclaimPolicy | default "Delete" }}
-{{- end }}
+{{- end -}}
+{{- end -}}

@@ -19,6 +19,9 @@ vpa:
 metricsPort: 8080
 healthPort: 8081
 
+monitoring:
+  createClusterFilters: true
+
 controllers:
   backupbucket:
     concurrentSyncs: 5
@@ -74,6 +77,7 @@ config:
     burst: 130
   etcd:
     storage:
+      enabled: true
       className: gardener.cloud-fast
       capacity: 25Gi
       provisioner: kubernetes.io/cinder

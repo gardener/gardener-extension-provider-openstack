@@ -3,7 +3,6 @@ package bastion_test
 import (
 	"slices"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	core "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -11,6 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 )
 
 var _ = Describe("Bastion VM Details", func() {
@@ -166,13 +167,11 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(details).To(DeepEqual(desired))
 		})
 
-		It("allow preview image if version is specified", func() {
+		It("should not allow preview image even if version is specified", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", core.ClassificationPreview, []string{"amd64"})
 			spec.Bastion.MachineImage.Version = ptr.To("1.2.4")
-			desired.ImageVersion = "1.2.4"
-			details, err := bastion.DetermineVmDetails(spec)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(details).To(DeepEqual(desired))
+			_, err := bastion.DetermineVmDetails(spec)
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("only use images for matching machineType architecture", func() {

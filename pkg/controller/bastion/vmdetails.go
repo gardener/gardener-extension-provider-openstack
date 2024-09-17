@@ -12,6 +12,7 @@ import (
 
 // This file should be exactly identical for all providers
 
+// VmDetails define all bastion vm details derived from the CloudProfile
 type VmDetails struct {
 	MachineName   string
 	Architecture  string
@@ -167,6 +168,10 @@ func getImageVersion(imageName, machineArch string, bastion *core.Bastion, image
 
 		if versionIndex == -1 {
 			return "", fmt.Errorf("image version %s not found not found in cloudProfile", *bastion.MachineImage.Version)
+		}
+
+		if image.Versions[versionIndex].Classification != nil && *image.Versions[versionIndex].Classification != core.ClassificationSupported {
+			return "", fmt.Errorf("specified image %s in version %s is not classified supported", imageName, *bastion.MachineImage.Version)
 		}
 
 		return *bastion.MachineImage.Version, nil

@@ -104,7 +104,7 @@ var _ = Describe("CredentialsBinding validator", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return nil when the corresponding Secret is valid", func() {
+		It("should succeed when the corresponding Secret is valid", func() {
 			apiReader.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 					secret := &corev1.Secret{Data: map[string][]byte{
@@ -117,15 +117,13 @@ var _ = Describe("CredentialsBinding validator", func() {
 					return nil
 				})
 
-			err := credentialsBindingValidator.Validate(ctx, credentialsBinding, nil)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(credentialsBindingValidator.Validate(ctx, credentialsBinding, nil)).To(Succeed())
 		})
 
 		It("should return nil when the CredentialsBinding did not change", func() {
 			old := credentialsBinding.DeepCopy()
 
-			err := credentialsBindingValidator.Validate(ctx, credentialsBinding, old)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(credentialsBindingValidator.Validate(ctx, credentialsBinding, old)).To(Succeed())
 		})
 	})
 })

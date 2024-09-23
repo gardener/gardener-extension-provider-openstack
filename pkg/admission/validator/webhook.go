@@ -8,6 +8,7 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/security"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -26,7 +27,7 @@ const (
 
 var logger = log.Log.WithName("openstack-validator-webhook")
 
-// New creates a new webhook that validates Shoot and CloudProfile resources.
+// New creates a new webhook that validates Shoot, CloudProfile, SecretBinding and CredentialsBinding resources.
 func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	logger.Info("Setting up webhook", "name", Name)
 
@@ -39,6 +40,9 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			NewShootValidator(mgr):         {{Obj: &core.Shoot{}}},
 			NewCloudProfileValidator(mgr):  {{Obj: &core.CloudProfile{}}},
 			NewSecretBindingValidator(mgr): {{Obj: &core.SecretBinding{}}},
+			// TODO(dimityrmirchev): Uncomment this line once this extension uses a g/g version that contains https://github.com/gardener/gardener/pull/10499
+			// Predicates: []predicate.Predicate{predicate.Or(extensionspredicate.GardenCoreProviderType(openstack.Type), extensionspredicate.GardenSecurityProviderType(openstack.Type))},
+			NewCredentialsBindingValidator(mgr): {{Obj: &security.CredentialsBinding{}}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{

@@ -12,6 +12,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -73,7 +74,7 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 	}
 
 	var credentials *openstack.Credentials
-	if shoot.Spec.SecretBindingName != nil {
+	if shoot.Spec.SecretBindingName != nil || shoot.Spec.CredentialsBindingName != nil {
 		secret, err := s.getCloudProviderSecretForShoot(ctx, shoot)
 		if err != nil {
 			return fmt.Errorf("failed to get cloud provider credentials: %v", err)
@@ -212,20 +213,30 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 }
 
 func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.Shoot) (*corev1.Secret, error) {
-	var (
-		secretBinding    = &gardencorev1beta1.SecretBinding{}
-		secretBindingKey = client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}
-	)
-	if err := kutil.LookupObject(ctx, s.client, s.apiReader, secretBindingKey, secretBinding); err != nil {
-		return nil, err
+	var secretKey client.ObjectKey
+	if shoot.Spec.SecretBindingName != nil {
+		var (
+			bindingKey    = client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}
+			secretBinding = &gardencorev1beta1.SecretBinding{}
+		)
+		if err := kutil.LookupObject(ctx, s.client, s.apiReader, bindingKey, secretBinding); err != nil {
+			return nil, err
+		}
+		secretKey = client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}
+	} else {
+		var (
+			bindingKey         = client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}
+			credentialsBinding = &securityv1alpha1.CredentialsBinding{}
+		)
+		if err := kutil.LookupObject(ctx, s.client, s.apiReader, bindingKey, credentialsBinding); err != nil {
+			return nil, err
+		}
+		secretKey = client.ObjectKey{Namespace: credentialsBinding.CredentialsRef.Namespace, Name: credentialsBinding.CredentialsRef.Name}
 	}
 
-	var (
-		secret    = &corev1.Secret{}
-		secretKey = client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}
-	)
 	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets
 	// under the hood. The latter increases the memory usage of the component.
+	secret := &corev1.Secret{}
 	if err := s.apiReader.Get(ctx, secretKey, secret); err != nil {
 		return nil, err
 	}

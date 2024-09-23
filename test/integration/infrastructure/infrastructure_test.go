@@ -128,7 +128,8 @@ var _ = BeforeSuite(func() {
 	// enable manager logs
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 
-	log = logf.Log.WithName("infrastructure-test")
+	log.Info("Testing parameters", "test-id", testId, "reconciler", *reconciler)
+	log = logf.Log.WithName("infrastructure-test").WithValues("test-id", testId)
 
 	DeferCleanup(func() {
 		defer func() {
@@ -184,9 +185,6 @@ var _ = BeforeSuite(func() {
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
-
-	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
-	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(infrastructure.AddToManagerWithOptions(ctx, mgr, infrastructure.AddOptions{
 		// During testing in testmachinery cluster, there is no gardener-resource-manager to inject the volume mount.
 		// Hence, we need to run without projected token mount.

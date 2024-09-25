@@ -417,13 +417,13 @@ var _ = Describe("Machines", func() {
 					clusterWithRegion.Shoot.Spec.Region = region
 
 					defaultMachineClass = map[string]interface{}{
-						"region":         region,
-						"machineType":    machineType,
-						"keyName":        keyName,
-						"networkID":      networkID,
-						"subnetID":       subnetID,
-						"podNetworkCidr": []string{podCIDR},
-						"securityGroups": []string{securityGroupName},
+						"region":          region,
+						"machineType":     machineType,
+						"keyName":         keyName,
+						"networkID":       networkID,
+						"subnetID":        subnetID,
+						"podNetworkCIDRs": []string{podCIDR},
+						"securityGroups":  []string{securityGroupName},
 						"tags": map[string]string{
 							fmt.Sprintf("kubernetes.io-cluster-%s", namespace): "1",
 							"kubernetes.io-role-node":                          "1",

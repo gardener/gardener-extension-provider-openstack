@@ -8,8 +8,6 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: openstack-csi-snapshot-controller
-      minAllowed:
-        memory: {{ .Values.csiSnapshotController.resources.requests.memory }}
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1

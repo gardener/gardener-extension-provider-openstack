@@ -45,30 +45,12 @@ resources:
       memory: 32Mi
 vpa:
   resourcePolicy:
-    driver:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    provisioner:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    attacher:
-      maxAllowed:
-        cpu: 500m
-        memory: 4G
-    snapshotter:
-      maxAllowed:
-        cpu: 700m
-        memory: 3G
-    resizer:
-      maxAllowed:
-        cpu: 700m
-        memory: 3G
-    livenessProbe:
-      maxAllowed:
-        cpu: 500m
-        memory: 2G
+    driver: {}
+    provisioner: {}
+    attacher: {}
+    snapshotter: {}
+    resizer: {}
+    livenessProbe: {}
 
 csiSnapshotController:
   replicas: 1

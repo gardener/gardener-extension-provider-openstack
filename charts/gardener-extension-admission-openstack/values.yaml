@@ -15,8 +15,8 @@ global:
   vpa:
     enabled: true
     resourcePolicy:
-      minAllowed:
-        memory: 64Mi
+#     minAllowed:
+#       memory: 64Mi
     updatePolicy:
       updateMode: "Auto"
   enableOverlayAsDefaultForCalico: true

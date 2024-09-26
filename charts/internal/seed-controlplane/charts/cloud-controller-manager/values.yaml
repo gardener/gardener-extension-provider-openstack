@@ -16,10 +16,7 @@ tlsCipherSuites: []
 secrets:
   server: cloud-controller-manager-server
 vpa:
-  resourcePolicy:
-    maxAllowed:
-      cpu: 4
-      memory: 10G
+  resourcePolicy: {}
 
 # TODO(rfranzke): Remove this field after August 2024.
 gep19Monitoring: false

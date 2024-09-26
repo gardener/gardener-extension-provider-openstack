@@ -8,46 +8,16 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: openstack-csi-driver
-      minAllowed:
-        memory: {{ .Values.resources.driver.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.driver.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.driver.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-provisioner
-      minAllowed:
-        memory: {{ .Values.resources.provisioner.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.provisioner.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-attacher
-      minAllowed:
-        memory: {{ .Values.resources.attacher.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.attacher.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.attacher.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-snapshotter
-      minAllowed:
-        memory: {{ .Values.resources.snapshotter.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.snapshotter.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.snapshotter.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-resizer
-      minAllowed:
-        memory: {{ .Values.resources.resizer.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.resizer.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.resizer.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: openstack-csi-liveness-probe
-      minAllowed:
-        memory: {{ .Values.resources.livenessProbe.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1

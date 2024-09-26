@@ -9,8 +9,7 @@ spec:
   resourcePolicy:
     containerPolicies:
       - containerName: '*'
-        minAllowed:
-          memory: {{ required ".Values.global.vpa.resourcePolicy.minAllowed.memory is required" .Values.global.vpa.resourcePolicy.minAllowed.memory }}
+        controlledValues: RequestsOnly
   {{- end }}
   targetRef:
     apiVersion: apps/v1

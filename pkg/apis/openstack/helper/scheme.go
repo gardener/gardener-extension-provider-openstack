@@ -71,9 +71,13 @@ func InfrastructureStatusFromRaw(raw *runtime.RawExtension) (*api.Infrastructure
 func CloudProfileConfigFromCluster(cluster *controller.Cluster) (*api.CloudProfileConfig, error) {
 	var cloudProfileConfig *api.CloudProfileConfig
 	if cluster != nil && cluster.CloudProfile != nil && cluster.CloudProfile.Spec.ProviderConfig != nil && cluster.CloudProfile.Spec.ProviderConfig.Raw != nil {
+		cloudProfileSpecifier := fmt.Sprintf("cloudProfile '%q'", k8sclient.ObjectKeyFromObject(cluster.CloudProfile))
+		if cluster.Shoot != nil && cluster.Shoot.Spec.CloudProfile != nil {
+			cloudProfileSpecifier = fmt.Sprintf("%s '%s/%s'", cluster.Shoot.Spec.CloudProfile.Kind, cluster.Shoot.Namespace, cluster.Shoot.Spec.CloudProfile.Name)
+		}
 		cloudProfileConfig = &api.CloudProfileConfig{}
 		if _, _, err := decoder.Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-			return nil, fmt.Errorf("could not decode providerConfig of cloudProfile for '%s': %w", k8sclient.ObjectKeyFromObject(cluster.CloudProfile), err)
+			return nil, fmt.Errorf("could not decode providerConfig of %s: %w", cloudProfileSpecifier, err)
 		}
 	}
 	return cloudProfileConfig, nil

@@ -13,6 +13,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -48,7 +49,7 @@ type validationContext struct {
 	shoot              *core.Shoot
 	infraConfig        *api.InfrastructureConfig
 	cpConfig           *api.ControlPlaneConfig
-	cloudProfile       *gardencorev1beta1.CloudProfile
+	cloudProfileSpec   *gardencorev1beta1.CloudProfileSpec
 	cloudProfileConfig *api.CloudProfileConfig
 }
 
@@ -86,19 +87,32 @@ func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 		}
 	}
 
+	shootV1Beta1 := &gardencorev1beta1.Shoot{}
+	err := gardencorev1beta1.Convert_core_Shoot_To_v1beta1_Shoot(shoot, shootV1Beta1, nil)
+	if err != nil {
+		return err
+	}
+	cloudProfile, err := gardener.GetCloudProfile(ctx, s.client, shootV1Beta1)
+	if err != nil {
+		return err
+	}
+	if cloudProfile == nil {
+		return fmt.Errorf("cloudprofile could not be found")
+	}
+
 	if old != nil {
 		oldShoot, ok := old.(*core.Shoot)
 		if !ok {
 			return fmt.Errorf("wrong object type %T for old object", old)
 		}
-		return s.validateShootUpdate(ctx, oldShoot, shoot, credentials)
+		return s.validateShootUpdate(oldShoot, shoot, credentials, &cloudProfile.Spec)
 	}
 
-	return s.validateShootCreation(ctx, shoot, credentials)
+	return s.validateShootCreation(shoot, credentials, &cloudProfile.Spec)
 }
 
-func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, credentials *openstack.Credentials) error {
-	valContext, err := newValidationContext(ctx, s.decoder, s.client, shoot)
+func (s *shoot) validateShootCreation(shoot *core.Shoot, credentials *openstack.Credentials, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) error {
+	valContext, err := newValidationContext(s.decoder, shoot, cloudProfileSpec)
 	if err != nil {
 		return err
 	}
@@ -113,13 +127,13 @@ func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, cr
 	return allErrs.ToAggregate()
 }
 
-func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.Shoot, credentials *openstack.Credentials) error {
-	oldValContext, err := newValidationContext(ctx, s.lenientDecoder, s.client, oldShoot)
+func (s *shoot) validateShootUpdate(oldShoot, shoot *core.Shoot, credentials *openstack.Credentials, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) error {
+	oldValContext, err := newValidationContext(s.lenientDecoder, oldShoot, cloudProfileSpec)
 	if err != nil {
 		return err
 	}
 
-	valContext, err := newValidationContext(ctx, s.decoder, s.client, shoot)
+	valContext, err := newValidationContext(s.decoder, shoot, cloudProfileSpec)
 	if err != nil {
 		return err
 	}
@@ -168,7 +182,7 @@ func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	return allErrs
 }
 
-func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client.Client, shoot *core.Shoot) (*validationContext, error) {
+func newValidationContext(decoder runtime.Decoder, shoot *core.Shoot, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) (*validationContext, error) {
 	if shoot.Spec.Provider.InfrastructureConfig == nil {
 		return nil, field.Required(infraConfigPath, "infrastructureConfig must be set for OpenStack shoots")
 	}
@@ -185,29 +199,19 @@ func newValidationContext(ctx context.Context, decoder runtime.Decoder, c client
 		return nil, fmt.Errorf("error decoding controlPlaneConfig: %v", err)
 	}
 
-	cloudProfile := &gardencorev1beta1.CloudProfile{}
-
-	if shoot.Spec.CloudProfile == nil {
-		return nil, fmt.Errorf("shoot.spec.cloudprofile must not be nil <nil>")
+	if cloudProfileSpec.ProviderConfig == nil {
+		return nil, fmt.Errorf("providerConfig is not given for cloud profile %q", shoot.Spec.CloudProfile)
 	}
-
-	if err := c.Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfile.Name}, cloudProfile); err != nil {
-		return nil, err
-	}
-
-	if cloudProfile.Spec.ProviderConfig == nil {
-		return nil, fmt.Errorf("providerConfig is not given for cloud profile %q", cloudProfile.Name)
-	}
-	cloudProfileConfig, err := decodeCloudProfileConfig(decoder, cloudProfile.Spec.ProviderConfig)
+	cloudProfileConfig, err := decodeCloudProfileConfig(decoder, cloudProfileSpec.ProviderConfig)
 	if err != nil {
-		return nil, fmt.Errorf("an error occurred while reading the cloud profile %q: %v", cloudProfile.Name, err)
+		return nil, fmt.Errorf("an error occurred while reading the cloud profile %q: %v", shoot.Spec.CloudProfile, err)
 	}
 
 	return &validationContext{
 		shoot:              shoot,
 		infraConfig:        infraConfig,
 		cpConfig:           cpConfig,
-		cloudProfile:       cloudProfile,
+		cloudProfileSpec:   cloudProfileSpec,
 		cloudProfileConfig: cloudProfileConfig,
 	}, nil
 }

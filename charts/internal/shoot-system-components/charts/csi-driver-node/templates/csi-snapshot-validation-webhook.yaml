@@ -5,15 +5,15 @@ metadata:
 webhooks:
 - name: "validation-webhook.snapshot.storage.k8s.io"
   rules:
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    apiVersions: ["v1", "v1beta1"]
-    operations: ["CREATE", "UPDATE"]
-    resources: ["volumesnapshots", "volumesnapshotcontents"]
-    scope: "*"
+  - apiGroups:   ["snapshot.storage.k8s.io"]
+    apiVersions: ["v1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["volumesnapshotclasses"]
+    scope:       "*"
   clientConfig:
     url: {{ required ".Values.webhookConfig.url is required" .Values.webhookConfig.url }}
     caBundle: {{ required ".Values.webhookConfig.caBundle is required" .Values.webhookConfig.caBundle | b64enc }}
-  admissionReviewVersions: ["v1", "v1beta1"]
+  admissionReviewVersions: ["v1"]
   sideEffects: None
   failurePolicy: Fail
   timeoutSeconds: 10

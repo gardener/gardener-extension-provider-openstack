@@ -325,9 +325,7 @@ var _ = Describe("ValuesProvider", func() {
 			"dhcpDomain":                  dhcpDomain,
 			"requestTimeout":              requestTimeout,
 			"useOctavia":                  useOctavia,
-			"rescanBlockStorageOnResize":  rescanBlockStorageOnResize,
 			"ignoreVolumeAZ":              ignoreVolumeAZ,
-			"nodeVolumeAttachLimit":       ptr.To[int32](nodeVoluemAttachLimit),
 			"applicationCredentialID":     "",
 			"applicationCredentialSecret": "",
 			"applicationCredentialName":   "",
@@ -742,7 +740,9 @@ var _ = Describe("ValuesProvider", func() {
 				Expect(values).To(Equal(map[string]interface{}{
 					openstack.CloudControllerManagerName: enabledTrue,
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-						"vpaEnabled": true,
+						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
+						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
+						"vpaEnabled":                 true,
 						"podAnnotations": map[string]interface{}{
 							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 						},
@@ -767,7 +767,9 @@ var _ = Describe("ValuesProvider", func() {
 				Expect(values).To(Equal(map[string]interface{}{
 					openstack.CloudControllerManagerName: enabledTrue,
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-						"vpaEnabled": true,
+						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
+						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
+						"vpaEnabled":                 true,
 						"podAnnotations": map[string]interface{}{
 							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 						},

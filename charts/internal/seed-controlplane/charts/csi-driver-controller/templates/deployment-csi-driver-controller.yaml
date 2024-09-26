@@ -43,7 +43,6 @@ spec:
         imagePullPolicy: IfNotPresent
         args :
         - /bin/cinder-csi-plugin
-        - --nodeid=dummy
         - --endpoint=$(CSI_ENDPOINT)
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster={{ .Release.Namespace }}
@@ -51,6 +50,9 @@ spec:
         - --user-agent={{ $userAgentHeader }}
         {{- end }}
         - --v=3
+{{- if semverCompare ">= 1.28-0" .Capabilities.KubeVersion.Version }}
+        - --provide-node-service=false
+{{- end }}
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock

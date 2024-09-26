@@ -419,7 +419,11 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 		}
 	}
 
-	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cluster, secretsReader, checksums)
+	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster, secretsReader, checksums)
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
@@ -556,9 +560,7 @@ func getConfigChartValues(
 		"dhcpDomain":                  cloudProfileConfig.DHCPDomain,
 		"requestTimeout":              cloudProfileConfig.RequestTimeout,
 		"useOctavia":                  cloudProfileConfig.UseOctavia != nil && *cloudProfileConfig.UseOctavia,
-		"rescanBlockStorageOnResize":  cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
 		"ignoreVolumeAZ":              cloudProfileConfig.IgnoreVolumeAZ != nil && *cloudProfileConfig.IgnoreVolumeAZ,
-		"nodeVolumeAttachLimit":       cloudProfileConfig.NodeVolumeAttachLimit,
 		// detect internal network.
 		// See https://github.com/kubernetes/cloud-provider-openstack/blob/v1.22.1/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#networking
 		"internalNetworkName": infraStatus.Networks.Name,
@@ -830,6 +832,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	ctx context.Context,
 	cpConfig *api.ControlPlaneConfig,
 	cp *extensionsv1alpha1.ControlPlane,
+	cloudProfileConfig *api.CloudProfileConfig,
 	cluster *extensionscontroller.Cluster,
 	secretsReader secretsmanager.Reader,
 	checksums map[string]string,
@@ -871,6 +874,9 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 			"url":      "https://" + openstack.CSISnapshotValidationName + "." + cp.Namespace + "/volumesnapshot",
 			"caBundle": caBundle,
 		},
+
+		"rescanBlockStorageOnResize": cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
+		"nodeVolumeAttachLimit":      cloudProfileConfig.NodeVolumeAttachLimit,
 	}
 
 	// add keystone CA bundle

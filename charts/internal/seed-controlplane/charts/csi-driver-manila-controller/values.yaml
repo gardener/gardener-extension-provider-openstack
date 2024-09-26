@@ -42,30 +42,12 @@ resources:
 
 vpa:
   resourcePolicy:
-    driverController:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    driverNFSController:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    provisioner:
-      maxAllowed:
-        cpu: 800m
-        memory: 4G
-    snapshotter:
-      maxAllowed:
-        cpu: 700m
-        memory: 3G
-    resizer:
-      maxAllowed:
-        cpu: 700m
-        memory: 3G
-    livenessProbe:
-      maxAllowed:
-        cpu: 500m
-        memory: 2G
+    driverController: {}
+    driverNFSController: {}
+    provisioner: {}
+    snapshotter: {}
+    resizer: {}
+    livenessProbe: {}
 
 # CSI Manila spec
 csimanila:

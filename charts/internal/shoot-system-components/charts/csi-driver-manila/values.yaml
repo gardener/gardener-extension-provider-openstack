@@ -43,18 +43,9 @@ resources:
 
 vpa:
   resourcePolicy:
-    livenessProbe:
-      maxAllowed:
-        cpu: 500m
-        memory: 2G
-    driverNode:
-      maxAllowed:
-        cpu: 2
-        memory: 4G
-    nodeDriverRegistrar:
-      maxAllowed:
-        cpu: 1
-        memory: 3G
+    livenessProbe: {}
+    driverNode: {}
+    nodeDriverRegistrar: {}
 
 # Enabled Manila share protocols
 nfs:

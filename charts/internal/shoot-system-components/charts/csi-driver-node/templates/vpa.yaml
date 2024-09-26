@@ -8,25 +8,10 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: csi-driver
-      minAllowed:
-        memory: {{ .Values.resources.driver.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.driver.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.driver.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: csi-node-driver-registrar
-      minAllowed:
-        memory: {{ .Values.resources.nodeDriverRegistrar.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.nodeDriverRegistrar.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.nodeDriverRegistrar.maxAllowed.memory }}
       controlledValues: RequestsOnly
     - containerName: csi-liveness-probe
-      minAllowed:
-        memory: {{ .Values.resources.livenessProbe.requests.memory }}
-      maxAllowed:
-        cpu: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.cpu }}
-        memory: {{ .Values.vpa.resourcePolicy.livenessProbe.maxAllowed.memory }}
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1

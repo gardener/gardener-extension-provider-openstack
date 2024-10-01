@@ -79,11 +79,11 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 			if len(*provider.Region) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("region"), "must provide a region if key is present"))
 			}
-			combo := fmt.Sprintf("%s,%s", provider.Name, *provider.Region)
-			if regionsFound.Has(combo) {
+			providerID := fmt.Sprintf("%s,%s", provider.Name, *provider.Region)
+			if regionsFound.Has(providerID) {
 				allErrs = append(allErrs, field.Duplicate(idxPath, fmt.Sprintf("duplicate provider %q for region %q", provider.Name, *provider.Region)))
 			}
-			regionsFound.Insert(combo)
+			regionsFound.Insert(providerID)
 		}
 	}
 

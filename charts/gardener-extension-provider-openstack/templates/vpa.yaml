@@ -5,12 +5,10 @@ metadata:
   name: {{ include "name" . }}-vpa
   namespace: {{ .Release.Namespace }}
 spec:
-  {{- if .Values.vpa.resourcePolicy }}
   resourcePolicy:
     containerPolicies:
       - containerName: '*'
         controlledValues: RequestsOnly
-  {{- end }}
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

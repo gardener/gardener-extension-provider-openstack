@@ -68,21 +68,22 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	}
 
 	regionsFound := sets.NewString()
-	for i, pool := range cloudProfile.Constraints.LoadBalancerProviders {
+	for i, provider := range cloudProfile.Constraints.LoadBalancerProviders {
 		idxPath := loadBalancerProviderPath.Index(i)
 
-		if len(pool.Name) == 0 {
+		if len(provider.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
 		}
 
-		if pool.Region != nil {
-			if len(*pool.Region) == 0 {
+		if provider.Region != nil {
+			if len(*provider.Region) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("region"), "must provide a region if key is present"))
 			}
-			if regionsFound.Has(*pool.Region) {
-				allErrs = append(allErrs, field.Duplicate(idxPath.Child("region"), *pool.Region))
+			providerID := fmt.Sprintf("%s,%s", provider.Name, *provider.Region)
+			if regionsFound.Has(providerID) {
+				allErrs = append(allErrs, field.Duplicate(idxPath, fmt.Sprintf("duplicate provider %q for region %q", provider.Name, *provider.Region)))
 			}
-			regionsFound.Insert(*pool.Region)
+			regionsFound.Insert(providerID)
 		}
 	}
 

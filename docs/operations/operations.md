@@ -139,7 +139,7 @@ If no entry for the given region exists then the fallback value is the most matc
 If an additional floating pool should be selectable for a region and/or domain, you can mark it as non constraining
 with setting the optional field `nonConstraining` to `true`.
 Multiple `loadBalancerProviders` can be specified in the `CloudProfile`. Each provider may specify a region constraint for where it can be used.
-If at least once region specific entry exists in the `CloudProfile`, the shoot's specified `loadBalancerProvider` must adhere to the list of the available providers of that region. Otherwise, one of the non-regional specific providers should be used.
+If at least one region specific entry exists in the `CloudProfile`, the shoot's specified `loadBalancerProvider` must adhere to the list of the available providers of that region. Otherwise, one of the non-regional specific providers should be used.
 Each entry in the `loadBalancerProviders` must be uniquely identified by its name and if applicable, its region.
 
 The `loadBalancerClasses` field is an optional list of load balancer classes which can be when the corresponding floating pool network is choosen. The load balancer classes can be configured in the same way as in the `ControlPlaneConfig` in the `Shoot` resource, therefore see [here](../usage/usage.md#ControlPlaneConfig) for more details.

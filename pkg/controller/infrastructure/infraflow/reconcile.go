@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	defaultTimeout     = 180 * time.Second
-	defaultLongTimeout = 6 * time.Minute
+	defaultTimeout     = 90 * time.Second
+	defaultLongTimeout = 3 * time.Minute
 )
 
 // Reconcile creates and runs the flow to reconcile the AWS infrastructure.
@@ -64,7 +64,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "ensure router interface",
 		fctx.ensureRouterInterface,
-		shared.Timeout(defaultLongTimeout), shared.Dependencies(ensureRouter, ensureSubnet))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnet))
 
 	ensureSecGroup := fctx.AddTask(g, "ensure security group",
 		fctx.ensureSecGroup,

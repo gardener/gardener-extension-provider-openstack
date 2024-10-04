@@ -83,7 +83,7 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 
 	openstackClient, err := openstackclient.NewOpenStackClientFromSecretRef(ctx, d.seedClient, worker.Spec.SecretRef, &keyStoneURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create openstack seedClient: %w", err)
+		return nil, fmt.Errorf("failed to create openstack client: %w", err)
 	}
 
 	return NewWorkerDelegate(

@@ -66,6 +66,11 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		if _, err := uuid.Parse(*infra.Networks.SubnetID); err != nil {
 			allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID, "if subnet ID is provided it must be a valid OpenStack UUID"))
 		}
+
+		if infra.Networks.ShareNetwork != nil && infra.Networks.ShareNetwork.Enabled {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("shareNetwork").Child("enabled"), infra.Networks.ShareNetwork.Enabled,
+				"the ShareNetwork can not be enabled when a user provider subnet is used. Please disable this option and ensure the shareNetwork connection with your subnet"))
+		}
 	}
 
 	if infra.Networks.Router != nil && len(infra.Networks.Router.ID) == 0 {

@@ -143,13 +143,11 @@ func validateStorage(storage *api.Storage, networks api.Networks, fldPath *field
 	if storage == nil || storage.CSIManila == nil || !storage.CSIManila.Enabled {
 		return allErrs
 	}
-	// for an existing subnet we do not need to validate the storage since we can only do that in runtime.
-	if networks.SubnetID != nil {
-		return allErrs
-	}
-	if networks.ShareNetwork != nil && networks.ShareNetwork.Enabled {
-		return allErrs
 
+	// for an existing subnet we do not need to validate the storage since we can only do that at runtime by checking
+	// if the subnet has an existing shareNetwork connection.
+	if networks.SubnetID == nil && (networks.ShareNetwork == nil || !networks.ShareNetwork.Enabled) {
+		return append(allErrs, field.Invalid(fldPath.Child("csiManila", "enabled"), storage.CSIManila.Enabled, "share network must be created if CSI manila driver is enabled"))
 	}
-	return append(allErrs, field.Invalid(fldPath.Child("csiManila", "enabled"), storage.CSIManila.Enabled, "share network must be created if CSI manila driver is enabled"))
+	return allErrs
 }

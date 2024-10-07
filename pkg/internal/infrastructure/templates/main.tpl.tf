@@ -87,7 +87,7 @@ data "openstack_networking_subnet_v2" "cluster" {
 }
 {{- end }}
 
-// This check is needed since the "Use existing subnet" feature
+// This check is needed for the "use existing subnet" feature
 // In the default case (no already existing resources) we always want to create the router interface
 // Existing router: create interface
 // Existing subnet: create interface

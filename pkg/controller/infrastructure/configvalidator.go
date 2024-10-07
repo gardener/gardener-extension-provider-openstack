@@ -77,12 +77,12 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 	if config.Networks.ID != nil {
 		allErrs = append(allErrs, c.validateNetwork(ctx, networkingClient, *config.Networks.ID, field.NewPath("networks.id"))...)
 	}
-	if config.Networks.SubnetID != nil {
+	if config.Networks.ID != nil && config.Networks.SubnetID != nil {
 		allErrs = append(allErrs, c.validateSubnet(ctx, networkingClient, *config.Networks.SubnetID, *config.Networks.ID, field.NewPath("networks.subnetId"))...)
 	}
 	if config.Networks.Router != nil && config.Networks.Router.ID != "" {
 		allErrs = append(allErrs, c.validateRouter(ctx, networkingClient, config.Networks.Router.ID, field.NewPath("networks.router.id"))...)
-		if isValidString(config.Networks.SubnetID) {
+		if isNotEmptyString(config.Networks.SubnetID) {
 			allErrs = append(allErrs, c.validateRouterInterface(ctx, networkingClient, config.Networks.Router.ID, *config.Networks.SubnetID, field.NewPath("networks.router"))...)
 		}
 	}
@@ -150,7 +150,7 @@ func (c *configValidator) validateRouter(_ context.Context, networkingClient ope
 
 	routers, err := networkingClient.ListRouters(routers.ListOpts{ID: routerID})
 	if err != nil {
-		allErrs = append(allErrs, field.InternalError(fldPath, fmt.Errorf("could not get subnet: %w", err)))
+		allErrs = append(allErrs, field.InternalError(fldPath, fmt.Errorf("could not get routers: %w", err)))
 		return allErrs
 	}
 	if len(routers) == 0 {
@@ -177,6 +177,6 @@ func (c *configValidator) validateRouterInterface(_ context.Context, networkingC
 	return allErrs
 }
 
-func isValidString(s *string) bool {
-	return len(ptr.Deref(s, "")) > 0
+func isNotEmptyString(s *string) bool {
+	return ptr.Deref(s, "") == ""
 }

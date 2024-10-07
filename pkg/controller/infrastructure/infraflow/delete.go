@@ -37,7 +37,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 
 	needToDeleteNetwork := fctx.config.Networks.ID == nil
 	needToDeleteRouter := fctx.config.Networks.Router == nil
-	// skip deletion of the subnet if we need to delete the network (it will be deleted anyway), or if the subnet is user provided.
+	// skip deletion of the subnet if the subnet is user-managed.
 	needToDeleteSubnet := fctx.config.Networks.SubnetID == nil
 
 	_ = fctx.AddTask(g, "delete ssh key pair",
@@ -97,6 +97,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 	// subnet deletion only needed if network is given by spec
 	_ = fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
+		// Delete the subnet only if the network is not being deleted already since it will be deleted anyways in that case.
 		shared.DoIf(!needToDeleteNetwork && needToDeleteSubnet), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
 	_ = fctx.AddTask(g, "delete network",
 		fctx.deleteNetwork,

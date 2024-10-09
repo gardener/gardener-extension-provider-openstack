@@ -77,6 +77,55 @@ var _ = Describe("InfrastructureConfig validation", func() {
 				"Field": Equal("floatingPoolSubnetName"),
 			}))
 		})
+
+		It("should forbid subnet id when network id is unspecified", func() {
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.NewString())
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.subnetId"),
+				"Detail": Equal("if subnet ID is provided a networkID must be provided"),
+			}))
+		})
+
+		It("should forbid an invalid subnet id", func() {
+			infrastructureConfig.Networks.ID = ptr.To(uuid.NewString())
+			infrastructureConfig.Networks.SubnetID = ptr.To("thisiswrong")
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.subnetId"),
+				"Detail": Equal("if subnet ID is provided it must be a valid OpenStack UUID"),
+			}))
+		})
+
+		It("should allow an valid OpenStack UUID as subnet ID", func() {
+			infrastructureConfig.Networks.ID = ptr.To(uuid.NewString())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.NewString())
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid using user-managed subnet with a shareNetwork", func() {
+			infrastructureConfig.Networks.ID = ptr.To(uuid.NewString())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.NewString())
+			infrastructureConfig.Networks.ShareNetwork = &api.ShareNetwork{
+				Enabled: true,
+			}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.shareNetwork.enabled"),
+				"Detail": Equal("the ShareNetwork can not be enabled when a user provider subnet is used. Please disable this option and ensure the shareNetwork connection with your subnet"),
+			}))
+		})
 	})
 
 	Context("CIDR", func() {

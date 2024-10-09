@@ -33,7 +33,7 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 	}
 
 	networksPath := fldPath.Child("networks")
-	if len(infra.Networks.Worker) == 0 && len(infra.Networks.Workers) == 0 {
+	if len(infra.Networks.Worker) == 0 && len(infra.Networks.Workers) == 0 && infra.Networks.SubnetID == nil {
 		allErrs = append(allErrs, field.Required(networksPath.Child("workers"), "must specify the network range for the worker network"))
 	}
 
@@ -56,6 +56,20 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 	if infra.Networks.ID != nil {
 		if _, err := uuid.Parse(*infra.Networks.ID); err != nil {
 			allErrs = append(allErrs, field.Invalid(networksPath.Child("id"), infra.Networks.ID, "if network ID is provided it must be a valid OpenStack UUID"))
+		}
+	}
+
+	if infra.Networks.SubnetID != nil {
+		if infra.Networks.ID == nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID, "if subnet ID is provided a networkID must be provided"))
+		}
+		if _, err := uuid.Parse(*infra.Networks.SubnetID); err != nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID, "if subnet ID is provided it must be a valid OpenStack UUID"))
+		}
+
+		if infra.Networks.ShareNetwork != nil && infra.Networks.ShareNetwork.Enabled {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("shareNetwork").Child("enabled"), infra.Networks.ShareNetwork.Enabled,
+				"the ShareNetwork can not be enabled when a user provider subnet is used. Please disable this option and ensure the shareNetwork connection with your subnet"))
 		}
 	}
 

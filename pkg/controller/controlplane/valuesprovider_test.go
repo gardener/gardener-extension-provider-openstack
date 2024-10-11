@@ -589,7 +589,8 @@ var _ = Describe("ValuesProvider", func() {
 					"gep19Monitoring":   false,
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"replicas": 1,
+					"replicas":          1,
+					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
@@ -626,7 +627,8 @@ var _ = Describe("ValuesProvider", func() {
 					"gep19Monitoring":   false,
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"replicas": 1,
+					"replicas":          1,
+					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},

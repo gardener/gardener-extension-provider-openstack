@@ -774,8 +774,9 @@ func getCSIControllerChartValues(
 	}
 
 	values := map[string]interface{}{
-		"enabled":  true,
-		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+		"enabled":           true,
+		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
@@ -847,6 +848,8 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		caBundle                string
 	)
 
+	// TODO: remove this when v1.27 is removed. From v1.28 onwards, we do not need credentials on the csi-node.
+	// Here we copy the data from the secret in the seed namespace to create the correct cloud-provider-config in the kube-system namespace of the shoot.
 	secret := &corev1.Secret{}
 	if err := vp.client.Get(ctx, k8sclient.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, secret); err != nil {
 		return nil, err

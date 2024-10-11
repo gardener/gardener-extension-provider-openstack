@@ -1,5 +1,6 @@
 replicas: 1
 podAnnotations: {}
+kubernetesVersion: 1.30.0
 
 images:
   csi-driver-cinder: image-repository:image-tag

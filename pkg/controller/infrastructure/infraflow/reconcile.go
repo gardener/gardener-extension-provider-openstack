@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -199,13 +201,20 @@ func (fctx *FlowContext) ensureNetwork(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) ensureConfiguredNetwork(_ context.Context) error {
-	network, err := fctx.access.GetNetworkByID(*fctx.config.Networks.ID)
+	networkId := *fctx.config.Networks.ID
+	network, err := fctx.access.GetNetworkByID(networkId)
 	if err != nil {
 		fctx.state.Set(IdentifierNetwork, "")
 		fctx.state.Set(NameNetwork, "")
 		return err
 	}
-	fctx.state.Set(IdentifierNetwork, *fctx.config.Networks.ID)
+	if network == nil {
+		return gardenv1beta1helper.NewErrorWithCodes(
+			fmt.Errorf("network with ID '%s' was not found", networkId),
+			gardencorev1beta1.ErrorInfraDependencies,
+		)
+	}
+	fctx.state.Set(IdentifierNetwork, networkId)
 	fctx.state.Set(NameNetwork, network.Name)
 	return nil
 }

@@ -21,6 +21,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.4.0
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	golang.org/x/tools v0.24.0
 	k8s.io/api v0.29.8
 	k8s.io/apiextensions-apiserver v0.29.8
@@ -117,7 +118,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
-	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect

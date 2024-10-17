@@ -95,18 +95,25 @@ func CleanupKubernetesLoadbalancers(ctx context.Context, log logr.Logger, client
 }
 
 // CleanupKubernetesRoutes deletes all routes from the router which have a nextHop in the subnet.
-func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networking, routerID, workers string) error {
+func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networking, routerID, subnetID string) error {
 	router, err := client.GetRouterByID(routerID)
 	if err != nil {
 		return err
 	}
-
 	if router == nil {
 		return nil
 	}
 
+	subnet, err := client.GetSubnetByID(subnetID)
+	if err != nil {
+		return err
+	}
+	if subnet == nil {
+		return nil
+	}
+
 	routes := []routers.Route{}
-	_, workersNet, err := net.ParseCIDR(workers)
+	_, workersNet, err := net.ParseCIDR(subnet.CIDR)
 	if err != nil {
 		return err
 	}

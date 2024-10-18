@@ -6,7 +6,6 @@ package bastion
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
@@ -20,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -34,15 +32,13 @@ type actuator struct {
 	decoder runtime.Decoder
 
 	openstackClientFactory openstackclient.FactoryFactory
-	bastionConfig          *controllerconfig.BastionConfig
 }
 
-func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory, bastionConfig *controllerconfig.BastionConfig) bastion.Actuator {
+func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory) bastion.Actuator {
 	return &actuator{
 		client:                 mgr.GetClient(),
 		decoder:                serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		openstackClientFactory: openstackClientFactory,
-		bastionConfig:          bastionConfig,
 	}
 }
 
@@ -140,19 +136,4 @@ func listRules(client openstackclient.Networking, secGroupID string) ([]rules.Se
 
 func deleteRule(client openstackclient.Networking, ruleID string) error {
 	return client.DeleteRule(ruleID)
-}
-
-func bastionConfigCheck(bastionConfig *controllerconfig.BastionConfig) error {
-	if bastionConfig == nil {
-		return errors.New("bastionConfig must not be empty")
-	}
-
-	if bastionConfig.FlavorRef == "" {
-		return errors.New("bastion not supported as no flavor is configured for the bastion host machine")
-	}
-
-	if bastionConfig.ImageRef == "" {
-		return errors.New("bastion not supported as no Image is configured for the bastion host machine")
-	}
-	return nil
 }

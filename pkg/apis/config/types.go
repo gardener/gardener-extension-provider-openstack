@@ -24,8 +24,6 @@ type ControllerConfiguration struct {
 	ETCD ETCD
 	// HealthCheckConfig is the config for the health check controller
 	HealthCheckConfig *healthcheckconfig.HealthCheckConfig
-	// BastionConfig is the config for the Bastion
-	BastionConfig *BastionConfig
 }
 
 // ETCD is an etcd configuration.
@@ -48,12 +46,4 @@ type ETCDStorage struct {
 type ETCDBackup struct {
 	// Schedule is the etcd backup schedule.
 	Schedule *string
-}
-
-// BastionConfig is the config for the Bastion
-type BastionConfig struct {
-	// ImageRef is the openstack image reference (name or id)
-	ImageRef string
-	// FlavorRef is the openstack flavorRef reference
-	FlavorRef string
 }

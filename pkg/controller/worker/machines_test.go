@@ -338,7 +338,7 @@ var _ = Describe("Machines", func() {
 								NodeTemplate: &extensionsv1alpha1.NodeTemplate{
 									Capacity: nodeCapacity,
 								},
-								UserDataSecretRef: &corev1.SecretKeySelector{
+								UserDataSecretRef: corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: userDataSecretName},
 									Key:                  userDataSecretDataKey,
 								},
@@ -362,9 +362,10 @@ var _ = Describe("Machines", func() {
 								NodeTemplate: &extensionsv1alpha1.NodeTemplate{
 									Capacity: nodeCapacity,
 								},
-								// TODO: Use UserDataSecretRef like in first pool once this field got removed from the
-								//  API.
-								UserData: userData,
+								UserDataSecretRef: corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: userDataSecretName},
+									Key:                  userDataSecretDataKey,
+								},
 								Zones: []string{
 									zone1,
 									zone2,
@@ -386,7 +387,7 @@ var _ = Describe("Machines", func() {
 						secret.Data = map[string][]byte{userDataSecretDataKey: userData}
 						return nil
 					},
-				)
+				).AnyTimes()
 			}
 
 			Describe("machine images", func() {

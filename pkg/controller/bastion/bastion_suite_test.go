@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	extensionsbastion "github.com/gardener/gardener/extensions/pkg/bastion"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -208,11 +209,11 @@ var _ = Describe("Bastion", func() {
 	})
 
 	Describe("#getProviderSpecificImage", func() {
-		var desiredVM = VmDetails{
-			MachineName:   "small_machine",
-			Architecture:  "amd64",
-			ImageBaseName: "gardenlinux",
-			ImageVersion:  "1.2.3",
+		var desiredVM = extensionsbastion.MachineSpec{
+			MachineTypeName: "small_machine",
+			Architecture:    "amd64",
+			ImageBaseName:   "gardenlinux",
+			ImageVersion:    "1.2.3",
 		}
 
 		It("should succeed for existing image", func() {

@@ -178,5 +178,5 @@ func (c *configValidator) validateRouterInterface(_ context.Context, networkingC
 }
 
 func isNotEmptyString(s *string) bool {
-	return ptr.Deref(s, "") == ""
+	return ptr.Deref(s, "") != ""
 }

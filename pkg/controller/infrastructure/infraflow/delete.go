@@ -235,6 +235,10 @@ func (fctx *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
+	if sn := fctx.config.Networks.ShareNetwork; sn == nil || !sn.Enabled {
+		return nil
+	}
+
 	log := shared.LogFromContext(ctx)
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")

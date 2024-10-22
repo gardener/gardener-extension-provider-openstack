@@ -275,19 +275,22 @@ func (fctx *FlowContext) getNetworkID() (*string, error) {
 }
 
 func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
-	if fctx.config.Networks.SubnetID != nil {
-		return fctx.ensureConfiguredSubnet(ctx)
+	if subnetID := fctx.config.Networks.SubnetID; subnetID != nil {
+		return fctx.ensureConfiguredSubnet(subnetID)
 	}
 	return fctx.ensureNewSubnet(ctx)
 }
 
-func (fctx *FlowContext) ensureConfiguredSubnet(_ context.Context) error {
-	_, err := fctx.access.GetSubnetByID(*fctx.config.Networks.SubnetID)
-	if err != nil {
+func (fctx *FlowContext) ensureConfiguredSubnet(subnetID *string) error {
+	if subnetID == nil {
+		return fmt.Errorf("subnetID can not be nil")
+	}
+
+	if _, err := fctx.access.GetSubnetByID(*subnetID); err != nil {
 		fctx.state.Set(IdentifierSubnet, "")
 		return err
 	}
-	fctx.state.Set(IdentifierSubnet, *fctx.config.Networks.SubnetID)
+	fctx.state.Set(IdentifierSubnet, *subnetID)
 	return nil
 }
 
@@ -536,16 +539,14 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 }
 
 // ensureShareNetworkForExistingSubnet ensures the shared network for an existing subnet. Because the subnet may be shared among many different shoots,
-// it could be that there is already a sharednetwork associated with a subnet. This function is responsible for detecting the shared network associated with the subnet.
+// it could be that there is already a shareNetwork associated with a subnet. This function is responsible for detecting the shared network associated with the subnet.
 func (fctx *FlowContext) ensureShareNetworkForExistingSubnet(_ context.Context) error {
-	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(fctx.state.Get(IdentifierShareNetwork),
 		"",
 		fctx.sharedFilesystem.GetShareNetwork,
 		func(_ string) ([]*sharenetworks.ShareNetwork, error) {
 			list, err := fctx.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
-				NeutronNetID:    networkID,
 				NeutronSubnetID: subnetID,
 			})
 			if err != nil {

@@ -25,7 +25,7 @@ COPY --from=builder /go/bin/gardener-extension-provider-openstack /gardener-exte
 ENTRYPOINT ["/gardener-extension-provider-openstack"]
 
 ############# gardener-extension-admission-openstack
-FROM base as gardener-extension-admission-openstack
+FROM base AS gardener-extension-admission-openstack
 WORKDIR /
 
 COPY --from=builder /go/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack

@@ -15,9 +15,11 @@ import (
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -260,6 +262,37 @@ var _ = Describe("Shoot validator", func() {
 					ContainSubstring("NamespacedCloudProfile"),
 					ContainSubstring("openstack-nscpfl"),
 				)))
+			})
+
+			Context("", func() {
+				BeforeEach(func() {
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "openstack",
+					}
+				})
+
+				It("should return err when networking is configured to use dual-stack", func() {
+					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.networking.ipFamilies"),
+					}))))
+				})
+
+				It("should return err when networking is configured to use IPv6-only", func() {
+					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.networking.ipFamilies"),
+					}))))
+				})
 			})
 		})
 	})

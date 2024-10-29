@@ -10,6 +10,4 @@ spec:
   selector:
     matchLabels:
       app: snapshot-validation
-{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
   unhealthyPodEvictionPolicy: AlwaysAllow
-{{- end }}

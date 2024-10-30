@@ -12,7 +12,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/unit"
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -35,6 +34,8 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )
 
 const namespace = "test"

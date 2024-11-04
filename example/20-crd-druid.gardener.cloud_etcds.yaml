@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: etcds.druid.gardener.cloud
 spec:
   group: druid.gardener.cloud
@@ -85,10 +85,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -99,6 +97,12 @@ spec:
                                 Name must match the name of one entry in pod.spec.resourceClaims of
                                 the Pod where this field is used. It makes that resource available
                                 inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
                               type: string
                           required:
                           - name
@@ -204,6 +208,12 @@ spec:
                           leadership status of corresponding etcd is checked.
                         type: string
                     type: object
+                  maxBackupsLimitBasedGC:
+                    description: |-
+                      MaxBackupsLimitBasedGC defines the maximum number of Full snapshots to retain in Limit Based GarbageCollectionPolicy
+                      All full snapshots beyond this limit will be garbage collected.
+                    format: int32
+                    type: integer
                   port:
                     description: Port define the port on which etcd-backup-restore
                       server will be exposed.
@@ -219,10 +229,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -233,6 +241,12 @@ spec:
                                 Name must match the name of one entry in pod.spec.resourceClaims of
                                 the Pod where this field is used. It makes that resource available
                                 inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
                               type: string
                           required:
                           - name
@@ -353,7 +367,8 @@ spec:
                     type: object
                 type: object
               etcd:
-                description: EtcdConfig defines parameters associated etcd deployed
+                description: EtcdConfig defines the configuration for the etcd cluster
+                  to be deployed.
                 properties:
                   authSecretRef:
                     description: |-
@@ -540,10 +555,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -554,6 +567,12 @@ spec:
                                 Name must match the name of one entry in pod.spec.resourceClaims of
                                 the Pod where this field is used. It makes that resource available
                                 inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
                               type: string
                           required:
                           - name
@@ -664,11 +683,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchFields:
                                       description: A list of node selector requirements
                                         by node's fields.
@@ -696,11 +717,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 weight:
@@ -713,6 +736,7 @@ spec:
                               - weight
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           requiredDuringSchedulingIgnoredDuringExecution:
                             description: |-
                               If the affinity requirements specified by this field are not met at
@@ -757,11 +781,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchFields:
                                       description: A list of node selector requirements
                                         by node's fields.
@@ -789,14 +815,17 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 type: array
+                                x-kubernetes-list-type: atomic
                             required:
                             - nodeSelectorTerms
                             type: object
@@ -859,11 +888,13 @@ spec:
                                                 items:
                                                   type: string
                                                 type: array
+                                                x-kubernetes-list-type: atomic
                                             required:
                                             - key
                                             - operator
                                             type: object
                                           type: array
+                                          x-kubernetes-list-type: atomic
                                         matchLabels:
                                           additionalProperties:
                                             type: string
@@ -878,13 +909,13 @@ spec:
                                       description: |-
                                         MatchLabelKeys is a set of pod label keys to select which pods will
                                         be taken into consideration. The keys are used to lookup values from the
-                                        incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
+                                        incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)`
                                         to select the group of existing pods which pods will be taken into consideration
                                         for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                         pod labels will be ignored. The default value is empty.
-                                        The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-                                        Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-                                        This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                        The same key is forbidden to exist in both matchLabelKeys and labelSelector.
+                                        Also, matchLabelKeys cannot be set when labelSelector isn't set.
+                                        This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                       items:
                                         type: string
                                       type: array
@@ -893,13 +924,13 @@ spec:
                                       description: |-
                                         MismatchLabelKeys is a set of pod label keys to select which pods will
                                         be taken into consideration. The keys are used to lookup values from the
-                                        incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
+                                        incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)`
                                         to select the group of existing pods which pods will be taken into consideration
                                         for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                         pod labels will be ignored. The default value is empty.
-                                        The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-                                        Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-                                        This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                        The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
+                                        Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
+                                        This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                       items:
                                         type: string
                                       type: array
@@ -939,11 +970,13 @@ spec:
                                                 items:
                                                   type: string
                                                 type: array
+                                                x-kubernetes-list-type: atomic
                                             required:
                                             - key
                                             - operator
                                             type: object
                                           type: array
+                                          x-kubernetes-list-type: atomic
                                         matchLabels:
                                           additionalProperties:
                                             type: string
@@ -963,6 +996,7 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     topologyKey:
                                       description: |-
                                         This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching
@@ -985,6 +1019,7 @@ spec:
                               - weight
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           requiredDuringSchedulingIgnoredDuringExecution:
                             description: |-
                               If the affinity requirements specified by this field are not met at
@@ -1035,11 +1070,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchLabels:
                                       additionalProperties:
                                         type: string
@@ -1054,13 +1091,13 @@ spec:
                                   description: |-
                                     MatchLabelKeys is a set of pod label keys to select which pods will
                                     be taken into consideration. The keys are used to lookup values from the
-                                    incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
+                                    incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)`
                                     to select the group of existing pods which pods will be taken into consideration
                                     for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                     pod labels will be ignored. The default value is empty.
-                                    The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-                                    Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-                                    This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                    The same key is forbidden to exist in both matchLabelKeys and labelSelector.
+                                    Also, matchLabelKeys cannot be set when labelSelector isn't set.
+                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -1069,13 +1106,13 @@ spec:
                                   description: |-
                                     MismatchLabelKeys is a set of pod label keys to select which pods will
                                     be taken into consideration. The keys are used to lookup values from the
-                                    incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
+                                    incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)`
                                     to select the group of existing pods which pods will be taken into consideration
                                     for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                     pod labels will be ignored. The default value is empty.
-                                    The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-                                    Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-                                    This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                    The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
+                                    Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
+                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -1115,11 +1152,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchLabels:
                                       additionalProperties:
                                         type: string
@@ -1139,6 +1178,7 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                  x-kubernetes-list-type: atomic
                                 topologyKey:
                                   description: |-
                                     This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching
@@ -1151,6 +1191,7 @@ spec:
                               - topologyKey
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                         type: object
                       podAntiAffinity:
                         description: Describes pod anti-affinity scheduling rules
@@ -1209,11 +1250,13 @@ spec:
                                                 items:
                                                   type: string
                                                 type: array
+                                                x-kubernetes-list-type: atomic
                                             required:
                                             - key
                                             - operator
                                             type: object
                                           type: array
+                                          x-kubernetes-list-type: atomic
                                         matchLabels:
                                           additionalProperties:
                                             type: string
@@ -1228,13 +1271,13 @@ spec:
                                       description: |-
                                         MatchLabelKeys is a set of pod label keys to select which pods will
                                         be taken into consideration. The keys are used to lookup values from the
-                                        incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
+                                        incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)`
                                         to select the group of existing pods which pods will be taken into consideration
                                         for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                         pod labels will be ignored. The default value is empty.
-                                        The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-                                        Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-                                        This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                        The same key is forbidden to exist in both matchLabelKeys and labelSelector.
+                                        Also, matchLabelKeys cannot be set when labelSelector isn't set.
+                                        This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                       items:
                                         type: string
                                       type: array
@@ -1243,13 +1286,13 @@ spec:
                                       description: |-
                                         MismatchLabelKeys is a set of pod label keys to select which pods will
                                         be taken into consideration. The keys are used to lookup values from the
-                                        incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
+                                        incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)`
                                         to select the group of existing pods which pods will be taken into consideration
                                         for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                         pod labels will be ignored. The default value is empty.
-                                        The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-                                        Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-                                        This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                        The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
+                                        Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
+                                        This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                       items:
                                         type: string
                                       type: array
@@ -1289,11 +1332,13 @@ spec:
                                                 items:
                                                   type: string
                                                 type: array
+                                                x-kubernetes-list-type: atomic
                                             required:
                                             - key
                                             - operator
                                             type: object
                                           type: array
+                                          x-kubernetes-list-type: atomic
                                         matchLabels:
                                           additionalProperties:
                                             type: string
@@ -1313,6 +1358,7 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     topologyKey:
                                       description: |-
                                         This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching
@@ -1335,6 +1381,7 @@ spec:
                               - weight
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           requiredDuringSchedulingIgnoredDuringExecution:
                             description: |-
                               If the anti-affinity requirements specified by this field are not met at
@@ -1385,11 +1432,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchLabels:
                                       additionalProperties:
                                         type: string
@@ -1404,13 +1453,13 @@ spec:
                                   description: |-
                                     MatchLabelKeys is a set of pod label keys to select which pods will
                                     be taken into consideration. The keys are used to lookup values from the
-                                    incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
+                                    incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)`
                                     to select the group of existing pods which pods will be taken into consideration
                                     for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                     pod labels will be ignored. The default value is empty.
-                                    The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-                                    Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-                                    This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                    The same key is forbidden to exist in both matchLabelKeys and labelSelector.
+                                    Also, matchLabelKeys cannot be set when labelSelector isn't set.
+                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -1419,13 +1468,13 @@ spec:
                                   description: |-
                                     MismatchLabelKeys is a set of pod label keys to select which pods will
                                     be taken into consideration. The keys are used to lookup values from the
-                                    incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
+                                    incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)`
                                     to select the group of existing pods which pods will be taken into consideration
                                     for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
                                     pod labels will be ignored. The default value is empty.
-                                    The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-                                    Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-                                    This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
+                                    The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
+                                    Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
+                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -1465,11 +1514,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchLabels:
                                       additionalProperties:
                                         type: string
@@ -1489,6 +1540,7 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                  x-kubernetes-list-type: atomic
                                 topologyKey:
                                   description: |-
                                     This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching
@@ -1501,6 +1553,7 @@ spec:
                               - topologyKey
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                         type: object
                     type: object
                   topologySpreadConstraints:
@@ -1543,11 +1596,13 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                    x-kubernetes-list-type: atomic
                                 required:
                                 - key
                                 - operator
                                 type: object
                               type: array
+                              x-kubernetes-list-type: atomic
                             matchLabels:
                               additionalProperties:
                                 type: string
@@ -1568,7 +1623,6 @@ spec:
                             MatchLabelKeys cannot be set when LabelSelector isn't set.
                             Keys that don't exist in the incoming pod labels will
                             be ignored. A null or empty list means only match against labelSelector.
-
 
                             This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).
                           items:
@@ -1609,7 +1663,6 @@ spec:
                             Valid values are integers greater than 0.
                             When value is not nil, WhenUnsatisfiable must be DoNotSchedule.
 
-
                             For example, in a 3-zone cluster, MaxSkew is set to 2, MinDomains is set to 5 and pods with the same
                             labelSelector spread as 2/2/2:
                             | zone1 | zone2 | zone3 |
@@ -1618,9 +1671,6 @@ spec:
                             In this situation, new pod with the same labelSelector cannot be scheduled,
                             because computed skew will be 3(3 - 0) if new Pod is scheduled to any of the three zones,
                             it will violate MaxSkew.
-
-
-                            This is a beta field and requires the MinDomainsInPodTopologySpread feature gate to be enabled (enabled by default).
                           format: int32
                           type: integer
                         nodeAffinityPolicy:
@@ -1629,7 +1679,6 @@ spec:
                             when calculating pod topology spread skew. Options are:
                             - Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
                             - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
-
 
                             If this value is nil, the behavior is equivalent to the Honor policy.
                             This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
@@ -1641,7 +1690,6 @@ spec:
                             - Honor: nodes without taints, along with tainted nodes for which the incoming pod
                             has a toleration, are included.
                             - Ignore: node taints are ignored. All nodes are included.
-
 
                             If this value is nil, the behavior is equivalent to the Ignore policy.
                             This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
@@ -1719,11 +1767,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
@@ -1740,7 +1790,7 @@ spec:
                 properties:
                   autoCompactionMode:
                     description: AutoCompactionMode defines the auto-compaction-mode:'periodic'
-                      mode or 'revision' mode for etcd and embedded-Etcd of backup-restore
+                      mode or 'revision' mode for etcd and embedded-etcd of backup-restore
                       sidecar.
                     enum:
                     - periodic
@@ -1748,7 +1798,7 @@ spec:
                     type: string
                   autoCompactionRetention:
                     description: AutoCompactionRetention defines the auto-compaction-retention
-                      length for etcd as well as for embedded-Etcd of backup-restore
+                      length for etcd as well as for embedded-etcd of backup-restore
                       sidecar.
                     type: string
                 type: object
@@ -1801,7 +1851,7 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: A human-readable message indicating details about
                         the transition.
                       type: string
                     reason:
@@ -1840,6 +1890,9 @@ spec:
                   name:
                     description: Name of the referent
                     type: string
+                required:
+                - kind
+                - name
                 type: object
               labelSelector:
                 description: |-
@@ -1873,11 +1926,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
@@ -1889,12 +1944,72 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               lastError:
-                description: LastError represents the last occurred error.
+                description: |-
+                  LastError represents the last occurred error.
+                  Deprecated: Use LastErrors instead.
                 type: string
+              lastErrors:
+                description: LastErrors captures errors that occurred during the last
+                  operation.
+                items:
+                  description: LastError stores details of the most recent error encountered
+                    for a resource.
+                  properties:
+                    code:
+                      description: Code is an error code that uniquely identifies
+                        an error.
+                      type: string
+                    description:
+                      description: Description is a human-readable message indicating
+                        details of the error.
+                      type: string
+                    observedAt:
+                      description: ObservedAt is the time the error was observed.
+                      format: date-time
+                      type: string
+                  required:
+                  - code
+                  - description
+                  - observedAt
+                  type: object
+                type: array
+              lastOperation:
+                description: LastOperation indicates the last operation performed
+                  on this resource.
+                properties:
+                  description:
+                    description: Description describes the last operation.
+                    type: string
+                  lastUpdateTime:
+                    description: LastUpdateTime is the time at which the operation
+                      was last updated.
+                    format: date-time
+                    type: string
+                  runID:
+                    description: |-
+                      RunID correlates an operation with a reconciliation run.
+                      Every time an Etcd resource is reconciled (barring status reconciliation which is periodic), a unique ID is
+                      generated which can be used to correlate all actions done as part of a single reconcile run. Capturing this
+                      as part of LastOperation aids in establishing this correlation. This further helps in also easily filtering
+                      reconcile logs as all structured logs in a reconciliation run should have the `runID` referenced.
+                    type: string
+                  state:
+                    description: State is the state of the last operation.
+                    type: string
+                  type:
+                    description: Type is the type of last operation.
+                    type: string
+                required:
+                - description
+                - lastUpdateTime
+                - runID
+                - state
+                - type
+                type: object
               members:
                 description: Members represents the members of the etcd cluster
                 items:
-                  description: EtcdMemberStatus holds information about a etcd cluster
+                  description: EtcdMemberStatus holds information about etcd cluster
                     membership.
                   properties:
                     id:
@@ -1944,7 +2059,7 @@ spec:
                 format: int32
                 type: integer
               replicas:
-                description: Replicas is the replica count of the etcd resource.
+                description: Replicas is the replica count of the etcd cluster.
                 format: int32
                 type: integer
               serviceName:

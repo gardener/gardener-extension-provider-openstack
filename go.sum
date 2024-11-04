@@ -97,8 +97,8 @@ github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nos
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/gardener/cert-management v0.15.0 h1:ohm1eWae2rQSkwFGWXTt+lBv4rLBhtJsJgqvaXJBs6o=
 github.com/gardener/cert-management v0.15.0/go.mod h1:3BK2VEtGwv2ijf3bSziTLMCUvYnPzIQrQ/uPeZzL4m0=
-github.com/gardener/etcd-druid v0.22.7 h1:ftMTv/+xTsR+JYlERAbXNmf/ykGy10NN6P5/h3yvWSk=
-github.com/gardener/etcd-druid v0.22.7/go.mod h1:FROhfVKyWBo4krlPe3R6FIhJRmOmijEWBdEeUP0CJjE=
+github.com/gardener/etcd-druid v0.23.2 h1:wK4Ys3+DZucMUcHOkVD+moosP9iu4qoNx14nSZO4I8E=
+github.com/gardener/etcd-druid v0.23.2/go.mod h1:D2VHr239nkMyRKtR6B/KGdbma7qVNmuZV8J/226VPwo=
 github.com/gardener/gardener v1.105.1 h1:2tC01B3TmhLztRx/UQ06xNWe7tkK0GEO8a+BpCGlRos=
 github.com/gardener/gardener v1.105.1/go.mod h1:6veUAG3zUdUxAGq+0iucMd1m3cOf42bIT6qmkggzUWs=
 github.com/gardener/hvpa-controller/api v0.17.0 h1:1mNeP+xsnjPH6GhewugU5srslXiTCJgYIFCMuRXwI7w=

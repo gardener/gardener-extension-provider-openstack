@@ -7,10 +7,12 @@ package infraflow
 import (
 	"context"
 
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
@@ -252,7 +254,7 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 				NeutronSubnetID: subnetID,
 			})
 			if err != nil {
-				return nil, err
+				return nil, util.DetermineError(err, helper.KnownCodes)
 			}
 			return sliceToPtr(list), nil
 		})

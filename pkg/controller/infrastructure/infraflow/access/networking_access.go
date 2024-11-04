@@ -143,7 +143,7 @@ func (a *networkingAccess) GetRouterByID(id string) (*Router, error) {
 		return nil, err
 	}
 	if len(routers) == 0 {
-		return nil, nil
+		return nil, fmt.Errorf("missing expected router %s", id)
 	}
 	return a.toRouter(&routers[0]), nil
 }

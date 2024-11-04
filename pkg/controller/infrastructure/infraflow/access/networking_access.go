@@ -20,7 +20,9 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	util "github.com/gardener/gardener/extensions/pkg/util"
 )
 
 // NetworkingAccess provides methods for managing routers and networks
@@ -197,7 +199,7 @@ func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool
 func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, routerID, subnetID string) error {
 	info, err := a.networking.AddRouterInterface(routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 	for {
 		if ctx.Err() != nil {

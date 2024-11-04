@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"time"
 
+	util "github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -22,7 +23,6 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	util "github.com/gardener/gardener/extensions/pkg/util"
 )
 
 // NetworkingAccess provides methods for managing routers and networks
@@ -143,7 +143,7 @@ func (a *networkingAccess) GetRouterByID(id string) (*Router, error) {
 		return nil, err
 	}
 	if len(routers) == 0 {
-		return nil, fmt.Errorf("missing expected router %s", id)
+		return nil, nil
 	}
 	return a.toRouter(&routers[0]), nil
 }

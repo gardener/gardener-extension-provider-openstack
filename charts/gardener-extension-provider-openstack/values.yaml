@@ -92,3 +92,6 @@ gardener:
     featureGates: {}
   seed:
     provider: openstack
+  runtimeCluster:
+    enabled: false
+  # priorityClassName: gardener-garden-system-200

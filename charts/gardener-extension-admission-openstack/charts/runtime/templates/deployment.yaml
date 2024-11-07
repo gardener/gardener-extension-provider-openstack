@@ -8,14 +8,14 @@ metadata:
     high-availability-config.resources.gardener.cloud/type: server
 spec:
   revisionHistoryLimit: 1
-  replicas: {{ .Values.global.replicaCount }}
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
 {{ include "labels" . | indent 6 }}
   template:
     metadata:
       annotations:
-        {{- if .Values.global.kubeconfig }}
+        {{- if .Values.kubeconfig }}
         checksum/gardener-extension-admission-openstack-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
         {{- end }}
       labels:
@@ -24,50 +24,49 @@ spec:
         networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
 {{ include "labels" . | indent 8 }}
     spec:
-      {{- if .Values.global.priorityClassName }}
-      priorityClassName: {{ .Values.global.priorityClassName }}
+      {{- if .Values.gardener.runtimeCluster.priorityClassName }}
+      priorityClassName: {{ .Values.gardener.runtimeCluster.priorityClassName }}
       {{- end }}
       serviceAccountName: {{ include "name" . }}
-      {{- if .Values.global.kubeconfig }}
+      {{- if .Values.kubeconfig }}
       automountServiceAccountToken: false
       {{- end }}
       containers:
       - name: {{ include "name" . }}
-        image: {{ include "image" .Values.global.image }}
-        imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+        image: {{ include "image" .Values.image }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
         - /gardener-extension-admission-openstack
-        - --webhook-config-server-port={{ .Values.global.webhookConfig.serverPort }}
-        {{- if .Values.global.virtualGarden.enabled }}
+        - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
         - --webhook-config-mode=url
         - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
-        {{- else }}
-        - --webhook-config-mode=service
-        {{- end }}
         - --webhook-config-namespace={{ .Release.Namespace }}
-        {{- if .Values.global.kubeconfig }}
+        {{- if .Values.gardener.virtualCluster.namespace }}
+        - --webhook-config-owner-namespace={{ .Values.gardener.virtualCluster.namespace }}
+        {{- end }}
+        {{- if .Values.kubeconfig }}
         - --kubeconfig=/etc/gardener-extension-admission-openstack/kubeconfig/kubeconfig
         {{- end }}
-        {{- if .Values.global.projectedKubeconfig }}
-        - --kubeconfig={{ required ".Values.global.projectedKubeconfig.baseMountPath is required" .Values.global.projectedKubeconfig.baseMountPath }}/kubeconfig
+        {{- if .Values.projectedKubeconfig }}
+        - --kubeconfig={{ required ".Values.projectedKubeconfig.baseMountPath is required" .Values.projectedKubeconfig.baseMountPath }}/kubeconfig
         {{- end }}
-        {{- if .Values.global.metricsPort }}
-        - --metrics-bind-address=:{{ .Values.global.metricsPort }}
+        {{- if .Values.metricsPort }}
+        - --metrics-bind-address=:{{ .Values.metricsPort }}
         {{- end }}
-        - --health-bind-address=:{{ .Values.global.healthPort }}
+        - --health-bind-address=:{{ .Values.healthPort }}
         - --leader-election-id={{ include "leaderelectionid" . }}
-        - --enable-overlay-as-default-for-calico={{ .Values.global.enableOverlayAsDefaultForCalico }}
-        - --enable-overlay-as-default-for-cilium={{ .Values.global.enableOverlayAsDefaultForCilium }}
+        - --enable-overlay-as-default-for-calico={{ .Values.enableOverlayAsDefaultForCalico }}
+        - --enable-overlay-as-default-for-cilium={{ .Values.enableOverlayAsDefaultForCilium }}
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ .Values.global.healthPort }}
+            port: {{ .Values.healthPort }}
             scheme: HTTP
           initialDelaySeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
-            port: {{ .Values.global.healthPort }}
+            port: {{ .Values.healthPort }}
             scheme: HTTP
           initialDelaySeconds: 5
         env:
@@ -75,53 +74,35 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        {{- if .Values.global.virtualGarden.enabled }}
         - name: SOURCE_CLUSTER
           value: enabled
-        {{- end }}
         ports:
         - name: webhook-server
-          containerPort: {{ .Values.global.webhookConfig.serverPort }}
+          containerPort: {{ .Values.webhookConfig.serverPort }}
           protocol: TCP
-{{- if .Values.global.resources }}
+{{- if .Values.resources }}
         resources:
-{{ toYaml .Values.global.resources | nindent 10 }}
+{{ toYaml .Values.resources | nindent 10 }}
 {{- end }}
         volumeMounts:
-        {{- if .Values.global.kubeconfig }}
+        {{- if .Values.kubeconfig }}
         - name: gardener-extension-admission-openstack-kubeconfig
           mountPath: /etc/gardener-extension-admission-openstack/kubeconfig
           readOnly: true
         {{- end }}
-        {{- if .Values.global.serviceAccountTokenVolumeProjection.enabled }}
-        - name: service-account-token
-          mountPath: /var/run/secrets/projected/serviceaccount
-          readOnly: true
-        {{- end }}
-        {{- if .Values.global.projectedKubeconfig }}
+        {{- if .Values.projectedKubeconfig }}
         - name: kubeconfig
-          mountPath: {{ required ".Values.global.projectedKubeconfig.baseMountPath is required" .Values.global.projectedKubeconfig.baseMountPath }}
+          mountPath: {{ required ".Values.projectedKubeconfig.baseMountPath is required" .Values.projectedKubeconfig.baseMountPath }}
           readOnly: true
         {{- end }}
       volumes:
-      {{- if .Values.global.kubeconfig }}
+      {{- if .Values.kubeconfig }}
       - name: gardener-extension-admission-openstack-kubeconfig
         secret:
           secretName: gardener-extension-admission-openstack-kubeconfig
           defaultMode: 420
       {{- end }}
-      {{- if .Values.global.serviceAccountTokenVolumeProjection.enabled }}
-      - name: service-account-token
-        projected:
-          sources:
-          - serviceAccountToken:
-              path: token
-              expirationSeconds: {{ .Values.global.serviceAccountTokenVolumeProjection.expirationSeconds }}
-              {{- if .Values.global.serviceAccountTokenVolumeProjection.audience }}
-              audience: {{ .Values.global.serviceAccountTokenVolumeProjection.audience }}
-              {{- end }}
-      {{- end }}
-      {{- if .Values.global.projectedKubeconfig }}
+      {{- if .Values.projectedKubeconfig }}
       - name: kubeconfig
         projected:
           defaultMode: 420
@@ -130,12 +111,12 @@ spec:
               items:
               - key: kubeconfig
                 path: kubeconfig
-              name: {{ required ".Values.global.projectedKubeconfig.genericKubeconfigSecretName is required" .Values.global.projectedKubeconfig.genericKubeconfigSecretName }}
+              name: {{ required ".Values.projectedKubeconfig.genericKubeconfigSecretName is required" .Values.projectedKubeconfig.genericKubeconfigSecretName }}
               optional: false
           - secret:
               items:
               - key: token
                 path: token
-              name: {{ required ".Values.global.projectedKubeconfig.tokenSecretName is required" .Values.global.projectedKubeconfig.tokenSecretName }}
+              name: {{ required ".Values.projectedKubeconfig.tokenSecretName is required" .Values.projectedKubeconfig.tokenSecretName }}
               optional: false
       {{- end }}

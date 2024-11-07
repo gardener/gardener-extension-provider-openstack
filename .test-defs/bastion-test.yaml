@@ -22,4 +22,4 @@ spec:
       --app-secret="$APPLICATION_CREDENTIAL_SECRET"
       --flavor-ref="$FLAVOR_REF"
       --image-ref="$IMAGE_REF"
-  image: golang:1.23.0
+  image: golang:1.23.3

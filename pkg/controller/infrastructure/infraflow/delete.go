@@ -46,9 +46,14 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 	recoverRouterID := fctx.AddTask(g, "recover router ID",
 		fctx.recoverRouterID,
 		shared.Timeout(defaultTimeout))
+	recoverNetworkID := fctx.AddTask(g, "recover network ID",
+		fctx.recoverNetworkID,
+		shared.Timeout(defaultTimeout))
 	recoverSubnetID := fctx.AddTask(g, "recover subnet ID",
 		fctx.recoverSubnetID,
-		shared.Timeout(defaultTimeout))
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverNetworkID))
+
+	recoverIDs := flow.NewTaskIDs(recoverNetworkID, recoverRouterID, recoverSubnetID)
 	k8sRoutes := fctx.AddTask(g, "delete kubernetes routes",
 		func(ctx context.Context) error {
 			routerID := fctx.state.Get(IdentifierRouter)
@@ -58,6 +63,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 			return infrastructure.CleanupKubernetesRoutes(ctx, fctx.networking, *routerID, infrastructure.WorkersCIDR(fctx.config))
 		},
 		shared.Timeout(defaultTimeout),
+		shared.Dependencies(recoverIDs),
 	)
 	k8sLoadBalancers := fctx.AddTask(g, "delete kubernetes loadbalancers",
 		func(ctx context.Context) error {
@@ -68,14 +74,15 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 			return infrastructure.CleanupKubernetesLoadbalancers(ctx, shared.LogFromContext(ctx), fctx.loadbalancing, *subnetID, fctx.infra.Namespace)
 		},
 		shared.Timeout(defaultTimeout),
+		shared.Dependencies(recoverIDs),
 	)
 
 	_ = fctx.AddTask(g, "delete share network",
 		fctx.deleteShareNetwork,
-		shared.Timeout(defaultTimeout), shared.Dependencies(recoverSubnetID))
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs))
 	deleteRouterInterface := fctx.AddTask(g, "delete router interface",
 		fctx.deleteRouterInterface,
-		shared.Timeout(defaultTimeout), shared.Dependencies(recoverRouterID, recoverSubnetID, k8sRoutes))
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs, k8sRoutes))
 	// subnet deletion only needed if network is given by spec
 	_ = fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
@@ -96,48 +103,47 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 }
 
 func (fctx *FlowContext) deleteRouter(ctx context.Context) error {
-	log := shared.LogFromContext(ctx)
-	current, err := fctx.findExistingRouter()
-	if err != nil {
+	routerID := fctx.state.Get(IdentifierRouter)
+	if routerID == nil {
+		return nil
+	}
+
+	shared.LogFromContext(ctx).Info("deleting...", "router", *routerID)
+	if err := fctx.networking.DeleteRouter(*routerID); err != nil {
 		return err
 	}
-	if current != nil {
-		log.Info("deleting...", "router", current.ID)
-		if err := fctx.networking.DeleteRouter(current.ID); err != nil {
-			return err
-		}
-	}
+
+	fctx.state.Set(IdentifierRouter, "")
 	return nil
 }
 
 func (fctx *FlowContext) deleteNetwork(ctx context.Context) error {
-	log := shared.LogFromContext(ctx)
-	current, err := fctx.findExistingNetwork()
-	if err != nil {
+	networkID := fctx.state.Get(IdentifierNetwork)
+	if networkID == nil {
+		return nil
+	}
+
+	shared.LogFromContext(ctx).Info("deleting...", "network", *networkID)
+	if err := fctx.networking.DeleteNetwork(*networkID); err != nil {
 		return err
 	}
-	if current != nil {
-		log.Info("deleting...", "network", current.ID)
-		if err := fctx.networking.DeleteNetwork(current.ID); err != nil {
-			return err
-		}
-	}
+
 	fctx.state.Set(NameNetwork, "")
+	fctx.state.Set(IdentifierNetwork, "")
 	return nil
 }
 
 func (fctx *FlowContext) deleteSubnet(ctx context.Context) error {
-	log := shared.LogFromContext(ctx)
-	current, err := fctx.findExistingSubnet()
-	if err != nil {
+	subnetID := fctx.state.Get(IdentifierSubnet)
+	if subnetID == nil {
+		return nil
+	}
+
+	shared.LogFromContext(ctx).Info("deleting...", "subnet", *subnetID)
+	if err := fctx.networking.DeleteSubnet(*subnetID); err != nil {
 		return err
 	}
-	if current != nil {
-		log.Info("deleting...", "subnet", current.ID)
-		if err := fctx.networking.DeleteSubnet(current.ID); err != nil {
-			return err
-		}
-	}
+	fctx.state.Set(IdentifierSubnet, "")
 	return nil
 }
 
@@ -158,6 +164,11 @@ func (fctx *FlowContext) recoverRouterID(_ context.Context) error {
 		fctx.state.Set(IdentifierRouter, router.ID)
 	}
 	return nil
+}
+
+func (fctx *FlowContext) recoverNetworkID(_ context.Context) error {
+	_, err := fctx.getNetworkID()
+	return err
 }
 
 func (fctx *FlowContext) recoverSubnetID(_ context.Context) error {

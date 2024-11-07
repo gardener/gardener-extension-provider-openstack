@@ -314,7 +314,7 @@ func (fctx *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
 		return nil, err
 	}
 	if networkID == nil {
-		return nil, fmt.Errorf("network not found")
+		return nil, nil
 	}
 	getByName := func(name string) ([]*subnets.Subnet, error) {
 		return fctx.access.GetSubnetByName(*networkID, name)

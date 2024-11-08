@@ -136,7 +136,7 @@ const (
 	// CSIManilaNFS is a constant for CSI Manila NFS resource objects
 	CSIManilaNFS = "csi-manila-nfs"
 	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret
-	CSIManilaSecret = "csi-manila-secret"
+	CSIManilaSecret = "csi-manila-secret" // #nosec G101 -- No credential.
 
 	// PreserveWorkerHashAnnotation controls whether the providerConfig will be included in the hash calculation for the respective worker pool.
 	// Deprecated: It is only introduced to ease the transition to the new hash calculation.

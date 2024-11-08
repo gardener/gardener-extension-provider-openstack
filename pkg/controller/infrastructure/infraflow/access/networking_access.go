@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"time"
 
-	util "github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
@@ -21,7 +20,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -199,7 +197,7 @@ func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool
 func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, routerID, subnetID string) error {
 	info, err := a.networking.AddRouterInterface(routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
 	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
+		return err
 	}
 	for {
 		if ctx.Err() != nil {

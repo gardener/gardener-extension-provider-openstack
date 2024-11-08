@@ -84,6 +84,63 @@ github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1.HealthCheckConf
 <p>HealthCheckConfig is the config for the health check controller</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>bastionConfig</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.BastionConfig">
+BastionConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>BastionConfig the config for the Bastion
+Deprecated: Configuring the bastion will be done via CloudProfile in future</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.BastionConfig">BastionConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ControllerConfiguration">ControllerConfiguration</a>)
+</p>
+<p>
+<p>BastionConfig is the config for the Bastion
+Deprecated: Configuring the bastion will be done via CloudProfile in future</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>imageRef</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ImageRef is the openstack image reference (name or id)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>flavorRef</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>FlavorRef is the openstack flavorRef reference</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.config.gardener.cloud/v1alpha1.ETCD">ETCD

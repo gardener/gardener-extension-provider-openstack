@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -27,6 +28,9 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
+	// BastionConfig contains config for the Bastion config.
+	// Deprecated: Configuring the bastion will be done via CloudProfile in future
+	BastionConfig controllerconfig.BastionConfig
 	// ExtensionClass defines the extension class this extension is responsible for.
 	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
@@ -35,7 +39,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return bastion.Add(mgr, bastion.AddArgs{
-		Actuator:          newActuator(mgr, openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials)),
+		Actuator:          newActuator(mgr, openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials), &opts.BastionConfig),
 		ControllerOptions: opts.Controller,
 		Predicates:        bastion.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,

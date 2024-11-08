@@ -81,6 +81,7 @@ config:
       volumeBindingMode: WaitForFirstConsumer
  #      parameters:
  #        type: volumetype-nameOrID
+  # -- Deprecated, should be configured via CloudProfile
   bastionConfig:
     imageRef: ""
     flavorRef: ""

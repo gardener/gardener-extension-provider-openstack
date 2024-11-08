@@ -84,3 +84,11 @@ func (c *Config) ApplyHealthCheckConfig(config *healthcheckconfig.HealthCheckCon
 		*config = *c.Config.HealthCheckConfig
 	}
 }
+
+// ApplyBastionConfig applies the BastionConfig to the config
+// Deprecated: Configuring the bastion will be done via CloudProfile in future
+func (c *Config) ApplyBastionConfig(config *config.BastionConfig) {
+	if c.Config.BastionConfig != nil {
+		*config = *c.Config.BastionConfig
+	}
+}

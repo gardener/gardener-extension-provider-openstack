@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -32,13 +33,15 @@ type actuator struct {
 	decoder runtime.Decoder
 
 	openstackClientFactory openstackclient.FactoryFactory
+	bastionConfig          *controllerconfig.BastionConfig
 }
 
-func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory) bastion.Actuator {
+func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory, bastionConfig *controllerconfig.BastionConfig) bastion.Actuator {
 	return &actuator{
 		client:                 mgr.GetClient(),
 		decoder:                serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		openstackClientFactory: openstackClientFactory,
+		bastionConfig:          bastionConfig,
 	}
 }
 
@@ -136,4 +139,12 @@ func listRules(client openstackclient.Networking, secGroupID string) ([]rules.Se
 
 func deleteRule(client openstackclient.Networking, ruleID string) error {
 	return client.DeleteRule(ruleID)
+}
+
+func useBastionControllerConfig(bastionConfig *controllerconfig.BastionConfig) bool {
+	if bastionConfig == nil || bastionConfig.FlavorRef == "" || bastionConfig.ImageRef == "" {
+		return false
+	}
+
+	return true
 }

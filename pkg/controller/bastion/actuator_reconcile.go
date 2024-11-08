@@ -18,6 +18,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -46,7 +47,6 @@ func (be *bastionEndpoints) ready() bool {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
-
 	opt, err := DetermineOptions(bastion, cluster)
 	if err != nil {
 		return err
@@ -60,6 +60,39 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %w", err), helper.KnownCodes)
+	}
+
+	// TODO(hebelsan) Remove bastionConfig via helm chart config map in future release
+	if useBastionControllerConfig(a.bastionConfig) {
+		imageClient, err := openstackClientFactory.Images()
+		if err != nil {
+			return util.DetermineError(err, helper.KnownCodes)
+		}
+
+		imageRes, err := imageClient.ListImages(images.ListOpts{
+			ID:         a.bastionConfig.ImageRef,
+			Visibility: "all",
+		})
+		if err != nil {
+			log.Info("image not found by id")
+		}
+		// we didn't find any image by ID. We will try to find by name.
+		if len(imageRes) == 0 {
+			imageRes, err = imageClient.ListImages(images.ListOpts{
+				Name:       a.bastionConfig.ImageRef,
+				Visibility: "all",
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if len(imageRes) == 0 {
+			return fmt.Errorf("imageRef: '%s' not found neither by id or name", a.bastionConfig.ImageRef)
+		}
+		image := &imageRes[0]
+
+		opt.machineType = a.bastionConfig.FlavorRef
+		opt.imageID = image.ID
 	}
 
 	computeClient, err := openstackClientFactory.Compute()

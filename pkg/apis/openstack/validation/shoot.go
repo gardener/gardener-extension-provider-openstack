@@ -46,7 +46,7 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 		}
 
 		if len(worker.Zones) > math.MaxInt32 {
-			allErrs = append(allErrs, field.Required(workerFldPath.Child("zones"), "too many zones"))
+			allErrs = append(allErrs, field.Invalid(workerFldPath.Child("zones"), len(worker.Zones), "too many zones"))
 			continue
 		}
 

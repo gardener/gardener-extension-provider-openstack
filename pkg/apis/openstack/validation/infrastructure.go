@@ -74,11 +74,15 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.InfrastructureConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	newNetworks := newConfig.Networks
-	oldNetworks := oldConfig.Networks
-	// share network changes are allowed, therefore ignore them on comparing
-	newNetworks.ShareNetwork = nil
-	oldNetworks.ShareNetwork = nil
+	newNetworks := newConfig.DeepCopy().Networks
+	oldNetworks := oldConfig.DeepCopy().Networks
+
+	// only enablement of share network enablement is allowed as update operation. Therefore we ignore it, when checking for other updates.
+	// TODO: allow both enabling and disabling of share networks.
+	if oldNetworks.ShareNetwork == nil || !oldNetworks.ShareNetwork.Enabled {
+		newNetworks.ShareNetwork = nil
+		oldNetworks.ShareNetwork = nil
+	}
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks, oldNetworks, fldPath.Child("networks"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolName, oldConfig.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolSubnetName, oldConfig.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)

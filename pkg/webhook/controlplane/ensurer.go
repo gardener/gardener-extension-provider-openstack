@@ -395,8 +395,8 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gctx gcontext.Garde
 // `/run/systemd/resolve/resolv.conf` and adds an options line to it.
 func (e *ensurer) addAdditionalFilesForResolvConfOptions(options []string, newObj *[]extensionsv1alpha1.File) {
 	var (
-		permissions int32 = 0o755
-		template          = `#!/bin/sh
+		permissions uint32 = 0o755
+		template           = `#!/bin/sh
 
 tmp=/etc/resolv-for-kubelet.conf.new
 dest=/etc/resolv-for-kubelet.conf

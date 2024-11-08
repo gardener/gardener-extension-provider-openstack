@@ -171,13 +171,23 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}))))
 		})
 
-		It("should allow changing the share network section", func() {
+		It("should allow enabling the share network section", func() {
 			newInfrastructureConfig := infrastructureConfig.DeepCopy()
 			newInfrastructureConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
 
 			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
-
 			Expect(errorList).To(BeEmpty())
+		})
+		It("should forbid disabling the share network section", func() {
+			infrastructureConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
+			newInfrastructureConfig := infrastructureConfig.DeepCopy()
+			newInfrastructureConfig.Networks.ShareNetwork = nil
+
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newInfrastructureConfig, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks"),
+			}))))
 		})
 
 		It("should forbid changing the floating pool", func() {

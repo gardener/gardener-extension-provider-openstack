@@ -314,7 +314,7 @@ func (fctx *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
 		return nil, err
 	}
 	if networkID == nil {
-		return nil, fmt.Errorf("network not found")
+		return nil, nil
 	}
 	getByName := func(name string) ([]*subnets.Subnet, error) {
 		return fctx.access.GetSubnetByName(*networkID, name)
@@ -467,8 +467,8 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
-	if fctx.config.Networks.ShareNetwork == nil || !fctx.config.Networks.ShareNetwork.Enabled {
-		return fctx.deleteShareNetwork(ctx)
+	if sn := fctx.config.Networks.ShareNetwork; sn == nil || !sn.Enabled {
+		return nil
 	}
 
 	log := shared.LogFromContext(ctx)

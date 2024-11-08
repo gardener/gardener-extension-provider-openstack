@@ -6,6 +6,7 @@ package validation
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -41,6 +42,11 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 
 		if len(worker.Zones) == 0 {
 			allErrs = append(allErrs, field.Required(workerFldPath.Child("zones"), "at least one zone must be configured"))
+			continue
+		}
+
+		if len(worker.Zones) > math.MaxInt32 {
+			allErrs = append(allErrs, field.Required(workerFldPath.Child("zones"), "too many zones"))
 			continue
 		}
 

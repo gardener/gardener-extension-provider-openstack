@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -485,7 +484,7 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 				NeutronSubnetID: subnetID,
 			})
 			if err != nil {
-				return nil, util.DetermineError(err, helper.KnownCodes)
+				return nil, err
 			}
 			return sliceToPtr(list), nil
 		})

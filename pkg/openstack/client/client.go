@@ -39,7 +39,7 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 	}
 
 	config := &tls.Config{
-		InsecureSkipVerify: credentials.Insecure,
+		InsecureSkipVerify: credentials.Insecure, // #nosec: G402 -- Can be parameterized.
 	}
 	if len(credentials.CACert) > 0 {
 		pool := x509.NewCertPool()

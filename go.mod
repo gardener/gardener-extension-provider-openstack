@@ -1,6 +1,7 @@
 module github.com/gardener/gardener-extension-provider-openstack
 
-go 1.23.3
+// minimum version of Go required
+go 1.23.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.0

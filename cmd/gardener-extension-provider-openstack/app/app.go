@@ -112,9 +112,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			Namespace: os.Getenv("WEBHOOK_CONFIG_NAMESPACE"),
 		}
 
-		gardenerVersion    = new(string)
 		controllerSwitches = openstackcmd.ControllerSwitchOptions()
-		webhookSwitches    = openstackcmd.WebhookSwitchOptions(gardenerVersion)
+		webhookSwitches    = openstackcmd.WebhookSwitchOptions()
 		webhookOptions     = webhookcmd.NewAddToManagerOptions(
 			openstack.Name,
 			genericactuator.ShootWebhooksResourceName,
@@ -186,16 +185,15 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			log := mgr.GetLogger()
 			gardenCluster, err := getGardenCluster(log)
+			if err != nil {
+				return err
+			}
 			log.Info("Adding garden cluster to manager")
 			if err := mgr.Add(gardenCluster); err != nil {
 				return fmt.Errorf("failed adding garden cluster to manager: %w", err)
 			}
-			if err != nil {
-				return err
-			}
-			log.Info("Adding controllers to manager")
-			*gardenerVersion = generalOpts.Completed().GardenerVersion
 
+			log.Info("Adding controllers to manager")
 			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
 			configFileOpts.Completed().ApplyBastionConfig(&openstackbastion.DefaultAddOptions.BastionConfig)

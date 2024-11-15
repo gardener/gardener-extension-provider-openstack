@@ -25,7 +25,7 @@ const (
 
 var logger = log.Log.WithName("openstack-validator-webhook")
 
-// New creates a new webhook that validates Shoot, CloudProfile, SecretBinding and CredentialsBinding resources.
+// New creates a new webhook that validates Shoot, CloudProfile, NamespacedCloudProfile, SecretBinding and CredentialsBinding resources.
 func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	logger.Info("Setting up webhook", "name", Name)
 
@@ -34,10 +34,11 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Name:     Name,
 		Path:     "/webhooks/validate",
 		Validators: map[extensionswebhook.Validator][]extensionswebhook.Type{
-			NewShootValidator(mgr):              {{Obj: &core.Shoot{}}},
-			NewCloudProfileValidator(mgr):       {{Obj: &core.CloudProfile{}}},
-			NewSecretBindingValidator(mgr):      {{Obj: &core.SecretBinding{}}},
-			NewCredentialsBindingValidator(mgr): {{Obj: &security.CredentialsBinding{}}},
+			NewShootValidator(mgr):                  {{Obj: &core.Shoot{}}},
+			NewCloudProfileValidator(mgr):           {{Obj: &core.CloudProfile{}}},
+			NewNamespacedCloudProfileValidator(mgr): {{Obj: &core.NamespacedCloudProfile{}}},
+			NewSecretBindingValidator(mgr):          {{Obj: &core.SecretBinding{}}},
+			NewCredentialsBindingValidator(mgr):     {{Obj: &security.CredentialsBinding{}}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{

@@ -29,8 +29,6 @@ This extension controller supports the following Kubernetes versions:
 | Kubernetes 1.29 | 1.29.0+     | [![Gardener v1.29 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.29%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.29%20OpenStack) |
 | Kubernetes 1.28 | 1.28.0+     | [![Gardener v1.28 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.28%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.28%20OpenStack) |
 | Kubernetes 1.27 | 1.27.0+     | [![Gardener v1.27 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.27%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.27%20OpenStack) |
-| Kubernetes 1.26 | 1.26.0+     | [![Gardener v1.26 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.26%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.26%20OpenStack) |
-| Kubernetes 1.25 | 1.25.0+     | [![Gardener v1.25 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.25%20OpenStack/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.25%20OpenStack) |
 
 Please take a look [here](https://github.com/gardener/gardener/blob/master/docs/usage/supported_k8s_versions.md) to see which versions are supported by Gardener in general.
 

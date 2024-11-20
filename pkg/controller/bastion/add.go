@@ -29,6 +29,7 @@ type AddOptions struct {
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
 	// BastionConfig contains config for the Bastion config.
+	// Deprecated: Configuring the bastion will be done via CloudProfile in future
 	BastionConfig controllerconfig.BastionConfig
 	// ExtensionClass defines the extension class this extension is responsible for.
 	ExtensionClass extensionsv1alpha1.ExtensionClass

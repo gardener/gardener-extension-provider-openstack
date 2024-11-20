@@ -25,6 +25,7 @@ type ControllerConfiguration struct {
 	// HealthCheckConfig is the config for the health check controller
 	HealthCheckConfig *healthcheckconfig.HealthCheckConfig
 	// BastionConfig is the config for the Bastion
+	// Deprecated: Configuring the bastion will be done via CloudProfile in future
 	BastionConfig *BastionConfig
 }
 
@@ -51,6 +52,7 @@ type ETCDBackup struct {
 }
 
 // BastionConfig is the config for the Bastion
+// Deprecated: Configuring the bastion will be done via CloudProfile in future
 type BastionConfig struct {
 	// ImageRef is the openstack image reference (name or id)
 	ImageRef string

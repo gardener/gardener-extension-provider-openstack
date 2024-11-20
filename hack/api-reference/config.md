@@ -95,7 +95,8 @@ BastionConfig
 </td>
 <td>
 <em>(Optional)</em>
-<p>BastionConfig the config for the Bastion</p>
+<p>BastionConfig the config for the Bastion
+Deprecated: Configuring the bastion will be done via CloudProfile in future</p>
 </td>
 </tr>
 </tbody>
@@ -107,7 +108,8 @@ BastionConfig
 <a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ControllerConfiguration">ControllerConfiguration</a>)
 </p>
 <p>
-<p>BastionConfig is the config for the Bastion</p>
+<p>BastionConfig is the config for the Bastion
+Deprecated: Configuring the bastion will be done via CloudProfile in future</p>
 </p>
 <table>
 <thead>

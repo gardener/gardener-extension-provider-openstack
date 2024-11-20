@@ -6,7 +6,6 @@ package bastion
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
@@ -142,17 +141,10 @@ func deleteRule(client openstackclient.Networking, ruleID string) error {
 	return client.DeleteRule(ruleID)
 }
 
-func bastionConfigCheck(bastionConfig *controllerconfig.BastionConfig) error {
-	if bastionConfig == nil {
-		return errors.New("bastionConfig must not be empty")
+func useBastionControllerConfig(bastionConfig *controllerconfig.BastionConfig) bool {
+	if bastionConfig == nil || bastionConfig.FlavorRef == "" || bastionConfig.ImageRef == "" {
+		return false
 	}
 
-	if bastionConfig.FlavorRef == "" {
-		return errors.New("bastion not supported as no flavor is configured for the bastion host machine")
-	}
-
-	if bastionConfig.ImageRef == "" {
-		return errors.New("bastion not supported as no Image is configured for the bastion host machine")
-	}
-	return nil
+	return true
 }

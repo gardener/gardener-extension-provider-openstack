@@ -69,7 +69,7 @@ spec:
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
         {{- if .Values.gardener.runtimeCluster.enabled }}
-        - --disable-controllers=backupentry,bastion,controlplane,infrastructure,worker,healthcheck
+        - --controllers=backupbucket,dnsrecord
         - --disable-webhooks="*"
         - --extension-class=garden
         {{- else }}

@@ -96,7 +96,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	}
 
 	for _, pool := range w.worker.Spec.Pools {
-		zoneLen := int32(len(pool.Zones))
+		zoneLen := int32(len(pool.Zones)) // #nosec: G115 - We validate if num pool zones exceeds max_int32.
 
 		architecture := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
 		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version, architecture)
@@ -142,7 +142,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		}
 
 		for zoneIndex, zone := range pool.Zones {
-			zoneIdx := int32(zoneIndex)
+			zoneIdx := int32(zoneIndex) // #nosec: G115 - We validate if num pool zones exceeds max_int32.
 			machineClassSpec := map[string]interface{}{
 				"region":           w.worker.Spec.Region,
 				"availabilityZone": zone,

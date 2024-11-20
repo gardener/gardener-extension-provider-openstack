@@ -28,11 +28,11 @@ const (
 	// TerraformVarNamePassword maps to terraform internal var representation.
 	TerraformVarNamePassword = "TF_VAR_PASSWORD"
 	// TerraformVarNameApplicationCredentialId maps to terraform internal var representation.
-	TerraformVarNameApplicationCredentialId = "TF_VAR_APPLICATION_CREDENTIAL_ID"
+	TerraformVarNameApplicationCredentialId = "TF_VAR_APPLICATION_CREDENTIAL_ID" // #nosec G101 -- No credential.
 	// TerraformVarNameApplicationCredentialName maps to terraform internal var representation.
-	TerraformVarNameApplicationCredentialName = "TF_VAR_APPLICATION_CREDENTIAL_NAME"
+	TerraformVarNameApplicationCredentialName = "TF_VAR_APPLICATION_CREDENTIAL_NAME" // #nosec G101 -- No credential.
 	// TerraformVarNameApplicationCredentialSecret maps to terraform internal var representation.
-	TerraformVarNameApplicationCredentialSecret = "TF_VAR_APPLICATION_CREDENTIAL_SECRET"
+	TerraformVarNameApplicationCredentialSecret = "TF_VAR_APPLICATION_CREDENTIAL_SECRET" // #nosec G101 -- No credential.
 	// TerraformVarCACert  maps to terraform internal var representation.
 	TerraformVarCACert = "TF_VAR_CA_CERT"
 )

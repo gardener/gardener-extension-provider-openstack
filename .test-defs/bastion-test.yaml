@@ -20,4 +20,4 @@ spec:
       --app-id="$APPLICATION_CREDENTIAL_ID"
       --app-name="$APPLICATION_CREDENTIAL_NAME"
       --app-secret="$APPLICATION_CREDENTIAL_SECRET"
-  image: golang:1.23.0
+  image: golang:1.23

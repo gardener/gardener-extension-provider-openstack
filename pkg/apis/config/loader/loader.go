@@ -36,7 +36,7 @@ func init() {
 
 // LoadFromFile takes a filename and de-serializes the contents into ControllerConfiguration object.
 func LoadFromFile(filename string) (*config.ControllerConfiguration, error) {
-	bytes, err := os.ReadFile(filename)
+	bytes, err := os.ReadFile(filename) // #nosec: G304 -- In reality files can be read from the Pod's file system only.
 	if err != nil {
 		return nil, err
 	}

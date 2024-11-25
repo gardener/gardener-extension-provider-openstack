@@ -7,6 +7,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -114,12 +116,15 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 		}
 		for _, version := range machineImage.Versions {
 			_, existsInParent := parentImages.GetImageVersion(machineImage.Name, version.Version)
-			if _, exists := providerImages.GetImageVersion(machineImage.Name, version.Version); !existsInParent && !exists {
+			providerImageVersion, exists := providerImages.GetImageVersion(machineImage.Name, version.Version)
+			if !existsInParent && !exists {
 				allErrs = append(allErrs, field.Required(
 					field.NewPath("spec.providerConfig.machineImages"),
 					fmt.Sprintf("machine image version %s@%s is not defined in the NamespacedCloudProfile providerConfig", machineImage.Name, version.Version),
 				))
 			}
+
+			allErrs = append(allErrs, validateMachineImageArchitectures(machineImage, version, providerImageVersion)...)
 		}
 	}
 	for imageIdx, machineImage := range providerConfig.MachineImages {
@@ -148,6 +153,44 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 					field.NewPath("spec.providerConfig.machineImages").Index(imageIdx).Child("versions").Index(versionIdx),
 					fmt.Sprintf("%s@%s", machineImage.Name, version.Version),
 					"machine image version is not defined in the NamespacedCloudProfile",
+				))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineImageArchitectures(machineImage core.MachineImage, version core.MachineImageVersion, providerImageVersion api.MachineImageVersion) field.ErrorList {
+	allErrs := field.ErrorList{}
+	regionsArchitectureMap := map[string][]string{}
+
+	for _, regionMapping := range providerImageVersion.Regions {
+		providerConfigArchitecture := ptr.Deref(regionMapping.Architecture, constants.ArchitectureAMD64)
+		if !slices.Contains(version.Architectures, providerConfigArchitecture) {
+			allErrs = append(allErrs, field.Forbidden(
+				field.NewPath("spec.providerConfig.machineImages"),
+				fmt.Sprintf("machine image version %s@%s in region %q has an excess entry for architecture %q, which is not defined in the machineImages spec",
+					machineImage.Name, version.Version, regionMapping.Name, providerConfigArchitecture),
+			))
+		}
+		regionsArchitectureMap[regionMapping.Name] = append(regionsArchitectureMap[regionMapping.Name], providerConfigArchitecture)
+	}
+
+	for _, expectedArchitecture := range version.Architectures {
+		if len(regionsArchitectureMap) == 0 {
+			allErrs = append(allErrs, field.Required(
+				field.NewPath("spec.providerConfig.machineImages"),
+				fmt.Sprintf("machine image version %s@%s with architecture %q is not defined in the NamespacedCloudProfile providerConfig",
+					machineImage.Name, version.Version, expectedArchitecture),
+			))
+		}
+		for region, architectures := range regionsArchitectureMap {
+			if !slices.Contains(architectures, expectedArchitecture) {
+				allErrs = append(allErrs, field.Required(
+					field.NewPath("spec.providerConfig.machineImages"),
+					fmt.Sprintf("machine image version %s@%s for region %q with architecture %q is not defined in the NamespacedCloudProfile providerConfig",
+						machineImage.Name, version.Version, region, expectedArchitecture),
 				))
 			}
 		}

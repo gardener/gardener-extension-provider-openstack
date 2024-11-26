@@ -33,7 +33,7 @@ func findExisting[T any](id *string, name string,
 		return nil, nil
 	}
 	if len(found) > 1 {
-		return nil, fmt.Errorf("%w: found matches: %v", ErrorMultipleMatches, found)
+		return nil, fmt.Errorf("%w: found %d matches for name %q", ErrorMultipleMatches, len(found), name)
 	}
 	return found[0], nil
 }

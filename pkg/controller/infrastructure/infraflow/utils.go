@@ -13,15 +13,14 @@ var ErrorMultipleMatches = fmt.Errorf("error multiple matches")
 
 func findExisting[T any](id *string, name string,
 	getter func(id string) (*T, error),
-	finder func(name string) ([]*T, error),
-	selector ...func(item *T) bool) (*T, error) {
+	finder func(name string) ([]*T, error)) (*T, error) {
 
 	if id != nil {
 		found, err := getter(*id)
 		if err != nil {
 			return nil, err
 		}
-		if found != nil && (len(selector) == 0 || selector[0](found)) {
+		if found != nil {
 			return found, nil
 		}
 	}
@@ -33,23 +32,10 @@ func findExisting[T any](id *string, name string,
 	if len(found) == 0 {
 		return nil, nil
 	}
-	if len(selector) == 0 {
-		if len(found) > 1 {
-			return nil, fmt.Errorf("%w: found matches: %v", ErrorMultipleMatches, found)
-		}
-		return found[0], nil
+	if len(found) > 1 {
+		return nil, fmt.Errorf("%w: found %d matches for name %q", ErrorMultipleMatches, len(found), name)
 	}
-
-	var res *T
-	for _, item := range found {
-		if selector[0](item) {
-			if res != nil {
-				return nil, fmt.Errorf("%w: found matches: %v, %v", ErrorMultipleMatches, res, item)
-			}
-			res = item
-		}
-	}
-	return res, nil
+	return found[0], nil
 }
 
 func sliceToPtr[T any](slice []T) []*T {

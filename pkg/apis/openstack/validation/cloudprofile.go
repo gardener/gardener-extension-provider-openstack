@@ -93,35 +93,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	}
 	for i, machineImage := range cloudProfile.MachineImages {
 		idxPath := machineImagesPath.Index(i)
-
-		if len(machineImage.Name) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
-		}
-
-		if len(machineImage.Versions) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for machine image %q", machineImage.Name)))
-		}
-		for j, version := range machineImage.Versions {
-			jdxPath := idxPath.Child("versions").Index(j)
-
-			if len(version.Version) == 0 {
-				allErrs = append(allErrs, field.Required(jdxPath.Child("version"), "must provide a version"))
-			}
-
-			for k, region := range version.Regions {
-				kdxPath := jdxPath.Child("regions").Index(k)
-
-				if len(region.Name) == 0 {
-					allErrs = append(allErrs, field.Required(kdxPath.Child("name"), "must provide a name"))
-				}
-				if len(region.ID) == 0 {
-					allErrs = append(allErrs, field.Required(kdxPath.Child("id"), "must provide an image ID"))
-				}
-				if !slices.Contains(v1beta1constants.ValidArchitectures, ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
-					allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), *region.Architecture, v1beta1constants.ValidArchitectures))
-				}
-			}
-		}
+		allErrs = append(allErrs, ValidateMachineImage(idxPath, machineImage)...)
 	}
 
 	if len(cloudProfile.KeyStoneURL) == 0 && len(cloudProfile.KeyStoneURLs) == 0 {
@@ -175,6 +147,42 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 
 		if len(policy) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath, "policy cannot be empty"))
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateMachineImage validates a CloudProfileConfig MachineImages entry.
+func ValidateMachineImage(validationPath *field.Path, machineImage api.MachineImages) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(machineImage.Name) == 0 {
+		allErrs = append(allErrs, field.Required(validationPath.Child("name"), "must provide a name"))
+	}
+
+	if len(machineImage.Versions) == 0 {
+		allErrs = append(allErrs, field.Required(validationPath.Child("versions"), fmt.Sprintf("must provide at least one version for machine image %q", machineImage.Name)))
+	}
+	for j, version := range machineImage.Versions {
+		jdxPath := validationPath.Child("versions").Index(j)
+
+		if len(version.Version) == 0 {
+			allErrs = append(allErrs, field.Required(jdxPath.Child("version"), "must provide a version"))
+		}
+
+		for k, region := range version.Regions {
+			kdxPath := jdxPath.Child("regions").Index(k)
+
+			if len(region.Name) == 0 {
+				allErrs = append(allErrs, field.Required(kdxPath.Child("name"), "must provide a name"))
+			}
+			if len(region.ID) == 0 {
+				allErrs = append(allErrs, field.Required(kdxPath.Child("id"), "must provide an image ID"))
+			}
+			if !slices.Contains(v1beta1constants.ValidArchitectures, ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
+				allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), *region.Architecture, v1beta1constants.ValidArchitectures))
+			}
 		}
 	}
 

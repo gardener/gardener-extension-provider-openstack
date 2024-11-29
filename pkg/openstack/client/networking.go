@@ -7,6 +7,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -273,8 +274,7 @@ func (c *NetworkingClient) GetPort(portID string) (*ports.Port, error) {
 // GetRouterInterfacePort gets a port for a router interface
 func (c *NetworkingClient) GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error) {
 	page, err := ports.List(c.client, ports.ListOpts{
-		DeviceOwner: "network:router_interface",
-		DeviceID:    routerID,
+		DeviceID: routerID,
 		FixedIPs: []ports.FixedIPOpts{
 			{SubnetID: subnetID},
 		},
@@ -286,8 +286,18 @@ func (c *NetworkingClient) GetRouterInterfacePort(routerID, subnetID string) (*p
 	if err != nil {
 		return nil, err
 	}
-	if len(list) == 0 {
+
+	validDeviceOwners := []string{
+		"network:router_interface",
+		"network:router_interface_distributed",
+		"network:ha_router_replicated_interface",
+	}
+	filtered := slices.DeleteFunc(list, func(p ports.Port) bool {
+		return !slices.Contains(validDeviceOwners, p.DeviceOwner)
+	})
+
+	if len(filtered) == 0 {
 		return nil, nil
 	}
-	return &list[0], nil
+	return &filtered[0], nil
 }

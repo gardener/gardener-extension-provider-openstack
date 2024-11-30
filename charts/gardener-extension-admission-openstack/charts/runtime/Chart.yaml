@@ -1,4 +1,4 @@
 apiVersion: v1
 description: A Helm chart to deploy the gardener-extension-admission-openstack runtime related resources
-name: runtime
+name:  admission-openstack-runtime
 version: 0.1.0

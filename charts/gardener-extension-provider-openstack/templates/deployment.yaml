@@ -41,7 +41,11 @@ spec:
         networking.gardener.cloud/to-private-networks: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
     spec:
+      {{- if .Values.gardener.runtimeCluster.enabled }}
+      priorityClassName: {{ .Values.gardener.runtimeCluster.priorityClassName }}
+      {{- else }}
       priorityClassName: gardener-system-900
+      {{- end }}
       serviceAccountName: {{ include "name" . }}
       containers:
       - name: {{ include "name" . }}
@@ -64,8 +68,14 @@ spec:
         - --webhook-config-namespace={{ .Release.Namespace }}
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        {{- if .Values.gardener.runtimeCluster.enabled }}
+        - --controllers=backupbucket,dnsrecord
+        - --disable-webhooks="*"
+        - --extension-class=garden
+        {{- else }}
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
+        {{- end }}
         {{- if .Values.metricsPort }}
         - --metrics-bind-address=:{{ .Values.metricsPort }}
         {{- end }}

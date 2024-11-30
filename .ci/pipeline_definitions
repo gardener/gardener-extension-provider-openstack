@@ -16,18 +16,18 @@ gardener-extension-provider-openstack:
       registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
       mappings:
       - ref: ocm-resource:gardener-extension-admission-openstack.repository
-        attribute: global.image.repository
+        attribute: image.repository
       - ref: ocm-resource:gardener-extension-admission-openstack.tag
-        attribute: global.image.tag
+        attribute: image.tag
     - &admission-openstack-runtime
       name: admission-openstack-runtime
       dir: charts/gardener-extension-admission-openstack/charts/runtime
       registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
       mappings:
       - ref: ocm-resource:gardener-extension-admission-openstack.repository
-        attribute: global.image.repository
+        attribute: image.repository
       - ref: ocm-resource:gardener-extension-admission-openstack.tag
-        attribute: global.image.tag
+        attribute: image.tag
 
   base_definition:
     traits:

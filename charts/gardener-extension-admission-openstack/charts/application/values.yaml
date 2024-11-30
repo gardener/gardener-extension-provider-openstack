@@ -1,1 +1,5 @@
-../../values.yaml
+gardener:
+  virtualCluster:
+    serviceAccount: {}
+#     name: extension-admission-provider-openstack
+#     namespace: kube-system

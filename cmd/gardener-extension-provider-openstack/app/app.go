@@ -209,6 +209,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &openstackcontrolplane.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation, &openstackworker.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbastion.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupbucket.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupentry.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &openstackdnsrecord.DefaultAddOptions.ExtensionClass)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
 

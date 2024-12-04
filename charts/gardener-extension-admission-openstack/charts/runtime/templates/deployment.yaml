@@ -38,8 +38,12 @@ spec:
         command:
         - /gardener-extension-admission-openstack
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        {{- if .Values.gardener.virtualCluster.enabled }}
         - --webhook-config-mode=url
         - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
+        {{- else }}
+        - --webhook-config-mode=service
+        {{- end }}
         - --webhook-config-namespace={{ .Release.Namespace }}
         {{- if .Values.gardener.virtualCluster.namespace }}
         - --webhook-config-owner-namespace={{ .Values.gardener.virtualCluster.namespace }}
@@ -74,8 +78,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- if .Values.gardener.virtualCluster.enabled }}
         - name: SOURCE_CLUSTER
           value: enabled
+        {{- end }}
         ports:
         - name: webhook-server
           containerPort: {{ .Values.webhookConfig.serverPort }}

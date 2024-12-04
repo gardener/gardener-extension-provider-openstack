@@ -30,6 +30,7 @@ service:
 
 gardener:
   virtualCluster:
+    enabled: true
     serviceAccount: {}
   #     name: extension-admission-provider-openstack
   #     namespace: kube-system

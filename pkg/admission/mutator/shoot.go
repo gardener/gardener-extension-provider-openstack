@@ -15,6 +15,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -127,6 +128,18 @@ func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 			Raw: modifiedJSON,
 		}
 	}
+
+	// Disable TCP to upstream DNS queries by default on OpenStack. DNS over TCP may cause performance issues on larger clusters.
+	if shoot.Spec.SystemComponents != nil {
+		if shoot.Spec.SystemComponents.NodeLocalDNS != nil {
+			if shoot.Spec.SystemComponents.NodeLocalDNS.Enabled {
+				if shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS == nil {
+					shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS = ptr.To(false)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

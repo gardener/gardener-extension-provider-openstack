@@ -271,5 +271,37 @@ var _ = Describe("Shoot mutator", func() {
 				Expect(shoot).To(DeepEqual(shootExpected))
 			})
 		})
+
+		Context("Mutate shoot NodeLocalDNS default for ForceTCPToUpstreamDNS property", func() {
+			BeforeEach(func() {
+				shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{
+						Enabled: true,
+					},
+				}
+			})
+
+			It("should not touch the ForceTCPToUpstreamDNS property if NodeLocalDNS is disabled", func() {
+				shoot.Spec.SystemComponents.NodeLocalDNS.Enabled = false
+				err := shootMutator.Mutate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS).To(BeNil())
+			})
+
+			It("should not touch the ForceTCPToUpstreamDNS property if it is already set", func() {
+				shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS = ptr.To(true)
+				err := shootMutator.Mutate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS).ToNot(BeNil())
+				Expect(*shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS).To(BeTrue())
+			})
+
+			It("should set the ForceTCPToUpstreamDNS property to false by default", func() {
+				err := shootMutator.Mutate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS).ToNot(BeNil())
+				Expect(*shoot.Spec.SystemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS).To(BeFalse())
+			})
+		})
 	})
 })

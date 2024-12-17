@@ -37,7 +37,7 @@ type ensurer struct {
 func (e *ensurer) EnsureCloudProviderSecret(
 	ctx context.Context,
 	ectx gcontext.GardenContext,
-	new, _ *corev1.Secret,
+	newSecret, _ *corev1.Secret,
 ) error {
 	cluster, err := ectx.GetCluster(ctx)
 	if err != nil {
@@ -64,18 +64,18 @@ func (e *ensurer) EnsureCloudProviderSecret(
 	}
 	keyStoneCABundle := helper.FindKeyStoneCACert(config.KeyStoneURLs, config.KeyStoneCACert, cluster.Shoot.Spec.Region)
 
-	if new.Data == nil {
-		new.Data = make(map[string][]byte)
+	if newSecret.Data == nil {
+		newSecret.Data = make(map[string][]byte)
 	}
-	new.Data[types.AuthURL] = []byte(keyStoneURL)
+	newSecret.Data[types.AuthURL] = []byte(keyStoneURL)
 	if keyStoneCABundle != nil {
-		new.Data[types.CACert] = []byte(*keyStoneCABundle)
+		newSecret.Data[types.CACert] = []byte(*keyStoneCABundle)
 	}
 
 	// remove key from user
-	delete(new.Data, types.Insecure)
+	delete(newSecret.Data, types.Insecure)
 	if config.KeyStoneForceInsecure {
-		new.Data[types.Insecure] = []byte("true")
+		newSecret.Data[types.Insecure] = []byte("true")
 	}
 	return nil
 }

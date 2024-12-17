@@ -31,10 +31,10 @@ type cloudProfile struct {
 }
 
 // Validate validates the given cloud profile objects.
-func (cp *cloudProfile) Validate(_ context.Context, new, _ client.Object) error {
-	cloudProfile, ok := new.(*core.CloudProfile)
+func (cp *cloudProfile) Validate(_ context.Context, newObj, _ client.Object) error {
+	cloudProfile, ok := newObj.(*core.CloudProfile)
 	if !ok {
-		return fmt.Errorf("wrong object type %T", new)
+		return fmt.Errorf("wrong object type %T", newObj)
 	}
 
 	providerConfigPath := field.NewPath("spec").Child("providerConfig")

@@ -229,8 +229,8 @@ data.openstack_networking_network_v2.cluster.name
 {{- end -}}
 {{- define "router-ip" -}}
 {{ if .create.router -}}
-openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
+one([for external_fixed_ip in openstack_networking_router_v2.router.external_fixed_ip : external_fixed_ip.ip_address if can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", external_fixed_ip.ip_address))])
 {{ else -}}
-data.openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
+one([for external_fixed_ip in data.openstack_networking_router_v2.router.external_fixed_ip : external_fixed_ip.ip_address if can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", external_fixed_ip.ip_address))])
 {{ end -}}
 {{- end -}}

@@ -115,7 +115,7 @@ images:
 - name: machine-controller-manager-provider-openstack
   sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-openstack
-  tag: "v0.19.0"
+  tag: "v0.20.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

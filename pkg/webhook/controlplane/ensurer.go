@@ -334,7 +334,7 @@ func (e *ensurer) EnsureAdditionalUnits(_ context.Context, _ gcontext.GardenCont
 
 // addAdditionalUnitsForResolvConfOptions installs a systemd service to update `resolv-for-kubelet.conf`
 // after each change of `/run/systemd/resolve/resolv.conf`.
-func (e *ensurer) addAdditionalUnitsForResolvConfOptions(new *[]extensionsv1alpha1.Unit) {
+func (e *ensurer) addAdditionalUnitsForResolvConfOptions(newUnit *[]extensionsv1alpha1.Unit) {
 	var (
 		trueVar           = true
 		customPathContent = `[Path]
@@ -354,12 +354,12 @@ ExecStart=/opt/bin/update-resolv-conf.sh
 `
 	)
 
-	extensionswebhook.AppendUniqueUnit(new, extensionsv1alpha1.Unit{
+	extensionswebhook.AppendUniqueUnit(newUnit, extensionsv1alpha1.Unit{
 		Name:    "update-resolv-conf.path",
 		Enable:  &trueVar,
 		Content: &customPathContent,
 	})
-	extensionswebhook.AppendUniqueUnit(new, extensionsv1alpha1.Unit{
+	extensionswebhook.AppendUniqueUnit(newUnit, extensionsv1alpha1.Unit{
 		Name:    "update-resolv-conf.service",
 		Enable:  &trueVar,
 		Content: &customUnitContent,

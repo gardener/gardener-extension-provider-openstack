@@ -744,7 +744,6 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"vpaEnabled":                 true,
 						"podAnnotations": map[string]interface{}{
 							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 						},
@@ -771,7 +770,6 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"vpaEnabled":                 true,
 						"podAnnotations": map[string]interface{}{
 							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 						},

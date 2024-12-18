@@ -8,7 +8,6 @@ images:
 
 keystoneCACert:
 socketPath: /csi/csi.sock
-vpaEnabled: false
 userAgentHeaders: []
 
 webhookConfig:
@@ -31,9 +30,3 @@ resources:
     requests:
       cpu: 11m
       memory: 32Mi
-
-vpa:
-  resourcePolicy:
-    driver: {}
-    nodeDriverRegistrar: {}
-    livenessProbe: {}

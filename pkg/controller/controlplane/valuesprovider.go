@@ -207,7 +207,6 @@ var (
 					{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
-					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSINodeName},
 					// csi-provisioner
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIProvisionerName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIProvisionerName},
@@ -867,8 +866,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	caBundle = string(caSecret.Data[secretutils.DataKeyCertificateBundle])
 
 	csiNodeDriverValues = map[string]interface{}{
-		"enabled":    true,
-		"vpaEnabled": gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot),
+		"enabled": true,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},

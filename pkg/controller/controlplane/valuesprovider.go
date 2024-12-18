@@ -262,7 +262,6 @@ var (
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIManilaNodeName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
-					{Type: extensionscontroller.GetVerticalPodAutoscalerObject(), Name: openstack.CSIManilaNodeName},
 				},
 			},
 		},
@@ -941,8 +940,6 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 	}
 
 	if csiManilaEnabled {
-		values["vpaEnabled"] = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot)
-
 		if err := vp.addCSIManilaValues(values, cp, cluster, credentials); err != nil {
 			return nil, err
 		}

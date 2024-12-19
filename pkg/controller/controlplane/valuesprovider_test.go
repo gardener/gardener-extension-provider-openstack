@@ -175,9 +175,6 @@ var _ = Describe("ValuesProvider", func() {
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.28.4",
-						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
-							Enabled: true,
-						},
 					},
 					Provider: gardencorev1beta1.Provider{
 						InfrastructureConfig: &runtime.RawExtension{
@@ -744,7 +741,6 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"vpaEnabled":                 true,
 						"podAnnotations": map[string]interface{}{
 							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 						},
@@ -771,7 +767,6 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"vpaEnabled":                 true,
 						"podAnnotations": map[string]interface{}{
 							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 						},
@@ -802,7 +797,6 @@ var _ = Describe("ValuesProvider", func() {
 							"tlsInsecure":                 "",
 							"caCert":                      "",
 						},
-						"vpaEnabled": true,
 					}),
 				}))
 			})

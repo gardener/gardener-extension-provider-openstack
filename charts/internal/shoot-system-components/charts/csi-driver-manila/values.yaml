@@ -4,7 +4,6 @@ images:
   csi-node-driver-registrar: image-repository:image-tag
   csi-liveness-probe: image-repository:image-tag
 
-vpaEnabled: false
 dnsPolicy: ClusterFirstWithHostNet # available values: Default, ClusterFirstWithHostNet, ClusterFirst
 timeout: 3m
 
@@ -40,12 +39,6 @@ resources:
     requests:
       cpu: 11m
       memory: 32Mi
-
-vpa:
-  resourcePolicy:
-    livenessProbe: {}
-    driverNode: {}
-    nodeDriverRegistrar: {}
 
 # Enabled Manila share protocols
 nfs:

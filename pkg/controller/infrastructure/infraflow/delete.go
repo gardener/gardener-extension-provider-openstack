@@ -13,6 +13,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 // Delete creates and runs the flow to delete the AWS infrastructure.
@@ -109,7 +110,7 @@ func (fctx *FlowContext) deleteRouter(ctx context.Context) error {
 	}
 
 	shared.LogFromContext(ctx).Info("deleting...", "router", *routerID)
-	if err := fctx.networking.DeleteRouter(*routerID); err != nil {
+	if err := fctx.networking.DeleteRouter(*routerID); client.IgnoreNotFoundError(err) != nil {
 		return err
 	}
 
@@ -124,7 +125,7 @@ func (fctx *FlowContext) deleteNetwork(ctx context.Context) error {
 	}
 
 	shared.LogFromContext(ctx).Info("deleting...", "network", *networkID)
-	if err := fctx.networking.DeleteNetwork(*networkID); err != nil {
+	if err := fctx.networking.DeleteNetwork(*networkID); client.IgnoreNotFoundError(err) != nil {
 		return err
 	}
 
@@ -140,7 +141,7 @@ func (fctx *FlowContext) deleteSubnet(ctx context.Context) error {
 	}
 
 	shared.LogFromContext(ctx).Info("deleting...", "subnet", *subnetID)
-	if err := fctx.networking.DeleteSubnet(*subnetID); err != nil {
+	if err := fctx.networking.DeleteSubnet(*subnetID); client.IgnoreNotFoundError(err) != nil {
 		return err
 	}
 	fctx.state.Set(IdentifierSubnet, "")
@@ -221,7 +222,7 @@ func (fctx *FlowContext) deleteSecGroup(ctx context.Context) error {
 	}
 	if current != nil {
 		log.Info("deleting...", "securityGroup", current.ID)
-		if err := fctx.networking.DeleteSecurityGroup(current.ID); err != nil {
+		if err := fctx.networking.DeleteSecurityGroup(current.ID); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}
@@ -238,7 +239,7 @@ func (fctx *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 	}
 	if current != nil {
 		log.Info("deleting...")
-		if err := fctx.compute.DeleteKeyPair(current.Name); err != nil {
+		if err := fctx.compute.DeleteKeyPair(current.Name); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}
@@ -272,7 +273,7 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	}
 	if current != nil {
 		log.Info("deleting...", "shareNetwork", current.ID)
-		if err := fctx.sharedFilesystem.DeleteShareNetwork(current.ID); err != nil {
+		if err := fctx.sharedFilesystem.DeleteShareNetwork(current.ID); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}

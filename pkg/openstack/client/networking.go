@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/external"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"k8s.io/utils/ptr"
 )
 
@@ -26,8 +26,8 @@ type networkWithExternalExt struct {
 }
 
 // GetExternalNetworkNames returns a list of all external network names.
-func (c *NetworkingClient) GetExternalNetworkNames(_ context.Context) ([]string, error) {
-	externalNetworks, err := c.listExternalNetworks(networks.ListOpts{})
+func (c *NetworkingClient) GetExternalNetworkNames(ctx context.Context) ([]string, error) {
+	externalNetworks, err := c.listExternalNetworks(ctx, networks.ListOpts{})
 	if err != nil {
 		return nil, err
 	}
@@ -39,11 +39,11 @@ func (c *NetworkingClient) GetExternalNetworkNames(_ context.Context) ([]string,
 }
 
 // GetExternalNetworkNames returns a list of all external network names.
-func (c *NetworkingClient) listExternalNetworks(listOpts networks.ListOptsBuilder) ([]networkWithExternalExt, error) {
+func (c *NetworkingClient) listExternalNetworks(ctx context.Context, listOpts networks.ListOptsBuilder) ([]networkWithExternalExt, error) {
 	allPages, err := networks.List(c.client, external.ListOptsExt{
 		ListOptsBuilder: listOpts,
 		External:        ptr.To(true),
-	}).AllPages()
+	}).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func (c *NetworkingClient) listExternalNetworks(listOpts networks.ListOptsBuilde
 }
 
 // GetExternalNetworkByName returns an external network by name
-func (c *NetworkingClient) GetExternalNetworkByName(name string) (*networks.Network, error) {
-	externalNetworks, err := c.listExternalNetworks(networks.ListOpts{Name: name})
+func (c *NetworkingClient) GetExternalNetworkByName(ctx context.Context, name string) (*networks.Network, error) {
+	externalNetworks, err := c.listExternalNetworks(ctx, networks.ListOpts{Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +72,8 @@ func (c *NetworkingClient) GetExternalNetworkByName(name string) (*networks.Netw
 }
 
 // ListNetwork returns a list of all network info by listOpts
-func (c *NetworkingClient) ListNetwork(listOpts networks.ListOpts) ([]networks.Network, error) {
-	pages, err := networks.List(c.client, listOpts).AllPages()
+func (c *NetworkingClient) ListNetwork(ctx context.Context, listOpts networks.ListOpts) ([]networks.Network, error) {
+	pages, err := networks.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -81,42 +81,42 @@ func (c *NetworkingClient) ListNetwork(listOpts networks.ListOpts) ([]networks.N
 }
 
 // UpdateNetwork updates settings of a network resource
-func (c *NetworkingClient) UpdateNetwork(networkID string, opts networks.UpdateOpts) (*networks.Network, error) {
-	return networks.Update(c.client, networkID, opts).Extract()
+func (c *NetworkingClient) UpdateNetwork(ctx context.Context, networkID string, opts networks.UpdateOpts) (*networks.Network, error) {
+	return networks.Update(ctx, c.client, networkID, opts).Extract()
 }
 
 // GetNetworkByName return a network info by name
-func (c *NetworkingClient) GetNetworkByName(name string) ([]networks.Network, error) {
+func (c *NetworkingClient) GetNetworkByName(ctx context.Context, name string) ([]networks.Network, error) {
 	listOpts := networks.ListOpts{
 		Name: name,
 	}
-	return c.ListNetwork(listOpts)
+	return c.ListNetwork(ctx, listOpts)
 }
 
 // GetNetworkByID return a network info by id
-func (c *NetworkingClient) GetNetworkByID(id string) (*networks.Network, error) {
-	network, err := networks.Get(c.client, id).Extract()
+func (c *NetworkingClient) GetNetworkByID(ctx context.Context, id string) (*networks.Network, error) {
+	network, err := networks.Get(ctx, c.client, id).Extract()
 	return network, IgnoreNotFoundError(err)
 }
 
 // CreateNetwork creates a network
-func (c *NetworkingClient) CreateNetwork(opts networks.CreateOpts) (*networks.Network, error) {
-	return networks.Create(c.client, opts).Extract()
+func (c *NetworkingClient) CreateNetwork(ctx context.Context, opts networks.CreateOpts) (*networks.Network, error) {
+	return networks.Create(ctx, c.client, opts).Extract()
 }
 
 // DeleteNetwork deletes a network
-func (c *NetworkingClient) DeleteNetwork(networkID string) error {
-	return networks.Delete(c.client, networkID).ExtractErr()
+func (c *NetworkingClient) DeleteNetwork(ctx context.Context, networkID string) error {
+	return networks.Delete(ctx, c.client, networkID).ExtractErr()
 }
 
 // CreateFloatingIP create floating ip
-func (c *NetworkingClient) CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
-	return floatingips.Create(c.client, createOpts).Extract()
+func (c *NetworkingClient) CreateFloatingIP(ctx context.Context, createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
+	return floatingips.Create(ctx, c.client, createOpts).Extract()
 }
 
 // ListFip returns a list of all network info
-func (c *NetworkingClient) ListFip(listOpts floatingips.ListOpts) ([]floatingips.FloatingIP, error) {
-	allPages, err := floatingips.List(c.client, listOpts).AllPages()
+func (c *NetworkingClient) ListFip(ctx context.Context, listOpts floatingips.ListOpts) ([]floatingips.FloatingIP, error) {
+	allPages, err := floatingips.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,21 +124,21 @@ func (c *NetworkingClient) ListFip(listOpts floatingips.ListOpts) ([]floatingips
 }
 
 // GetFipByName returns floating IP info by floatingip name
-func (c *NetworkingClient) GetFipByName(name string) ([]floatingips.FloatingIP, error) {
+func (c *NetworkingClient) GetFipByName(ctx context.Context, name string) ([]floatingips.FloatingIP, error) {
 	listOpts := floatingips.ListOpts{
 		Description: name,
 	}
-	return c.ListFip(listOpts)
+	return c.ListFip(ctx, listOpts)
 }
 
 // DeleteFloatingIP delete floatingip by floatingip id
-func (c *NetworkingClient) DeleteFloatingIP(id string) error {
-	return floatingips.Delete(c.client, id).ExtractErr()
+func (c *NetworkingClient) DeleteFloatingIP(ctx context.Context, id string) error {
+	return floatingips.Delete(ctx, c.client, id).ExtractErr()
 }
 
 // ListRules returns a list of security group rules
-func (c *NetworkingClient) ListRules(listOpts rules.ListOpts) ([]rules.SecGroupRule, error) {
-	allPages, err := rules.List(c.client, listOpts).AllPages()
+func (c *NetworkingClient) ListRules(ctx context.Context, listOpts rules.ListOpts) ([]rules.SecGroupRule, error) {
+	allPages, err := rules.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -146,28 +146,28 @@ func (c *NetworkingClient) ListRules(listOpts rules.ListOpts) ([]rules.SecGroupR
 }
 
 // CreateRule create security group rule
-func (c *NetworkingClient) CreateRule(createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
-	return rules.Create(c.client, createOpts).Extract()
+func (c *NetworkingClient) CreateRule(ctx context.Context, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
+	return rules.Create(ctx, c.client, createOpts).Extract()
 }
 
 // DeleteRule delete security group rule
-func (c *NetworkingClient) DeleteRule(ruleID string) error {
-	return rules.Delete(c.client, ruleID).ExtractErr()
+func (c *NetworkingClient) DeleteRule(ctx context.Context, ruleID string) error {
+	return groups.Delete(ctx, c.client, ruleID).ExtractErr()
 }
 
 // CreateSecurityGroup create a security group
-func (c *NetworkingClient) CreateSecurityGroup(listOpts groups.CreateOpts) (*groups.SecGroup, error) {
-	return groups.Create(c.client, listOpts).Extract()
+func (c *NetworkingClient) CreateSecurityGroup(ctx context.Context, listOpts groups.CreateOpts) (*groups.SecGroup, error) {
+	return groups.Create(ctx, c.client, listOpts).Extract()
 }
 
 // DeleteSecurityGroup delete a security group
-func (c *NetworkingClient) DeleteSecurityGroup(groupID string) error {
-	return groups.Delete(c.client, groupID).ExtractErr()
+func (c *NetworkingClient) DeleteSecurityGroup(ctx context.Context, groupID string) error {
+	return groups.Delete(ctx, c.client, groupID).ExtractErr()
 }
 
 // ListSecurityGroup returns a list of security group
-func (c *NetworkingClient) ListSecurityGroup(listOpts groups.ListOpts) ([]groups.SecGroup, error) {
-	allPages, err := groups.List(c.client, listOpts).AllPages()
+func (c *NetworkingClient) ListSecurityGroup(ctx context.Context, listOpts groups.ListOpts) ([]groups.SecGroup, error) {
+	allPages, err := groups.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -175,32 +175,32 @@ func (c *NetworkingClient) ListSecurityGroup(listOpts groups.ListOpts) ([]groups
 }
 
 // GetSecurityGroupByName returns a security group info by security group name
-func (c *NetworkingClient) GetSecurityGroupByName(name string) ([]groups.SecGroup, error) {
+func (c *NetworkingClient) GetSecurityGroupByName(ctx context.Context, name string) ([]groups.SecGroup, error) {
 	listOpts := groups.ListOpts{
 		Name: name,
 	}
-	return c.ListSecurityGroup(listOpts)
+	return c.ListSecurityGroup(ctx, listOpts)
 }
 
 // GetRouterByID return a router info by name
-func (c *NetworkingClient) GetRouterByID(id string) (*routers.Router, error) {
-	router, err := routers.Get(c.client, id).Extract()
+func (c *NetworkingClient) GetRouterByID(ctx context.Context, id string) (*routers.Router, error) {
+	router, err := routers.Get(ctx, c.client, id).Extract()
 	return router, IgnoreNotFoundError(err)
 }
 
 // GetSecurityGroup returns a security group info by id
-func (c *NetworkingClient) GetSecurityGroup(groupID string) (*groups.SecGroup, error) {
-	return groups.Get(c.client, groupID).Extract()
+func (c *NetworkingClient) GetSecurityGroup(ctx context.Context, groupID string) (*groups.SecGroup, error) {
+	return groups.Get(ctx, c.client, groupID).Extract()
 }
 
 // CreateRouter creates a router
-func (c *NetworkingClient) CreateRouter(createOpts routers.CreateOpts) (*routers.Router, error) {
-	return routers.Create(c.client, createOpts).Extract()
+func (c *NetworkingClient) CreateRouter(ctx context.Context, createOpts routers.CreateOpts) (*routers.Router, error) {
+	return routers.Create(ctx, c.client, createOpts).Extract()
 }
 
 // ListRouters returns a list of routers
-func (c *NetworkingClient) ListRouters(listOpts routers.ListOpts) ([]routers.Router, error) {
-	allPages, err := routers.List(c.client, listOpts).AllPages()
+func (c *NetworkingClient) ListRouters(ctx context.Context, listOpts routers.ListOpts) ([]routers.Router, error) {
+	allPages, err := routers.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -208,48 +208,47 @@ func (c *NetworkingClient) ListRouters(listOpts routers.ListOpts) ([]routers.Rou
 }
 
 // UpdateRoutesForRouter updates the route list for a router
-func (c *NetworkingClient) UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error) {
-
+func (c *NetworkingClient) UpdateRoutesForRouter(ctx context.Context, routes []routers.Route, routerID string) (*routers.Router, error) {
 	updateOpts := routers.UpdateOpts{
 		Routes: &routes,
 	}
-	return routers.Update(c.client, routerID, updateOpts).Extract()
+	return routers.Update(ctx, c.client, routerID, updateOpts).Extract()
 }
 
 // UpdateRouter updates router settings
-func (c *NetworkingClient) UpdateRouter(routerID string, updateOpts routers.UpdateOpts) (*routers.Router, error) {
-	return routers.Update(c.client, routerID, updateOpts).Extract()
+func (c *NetworkingClient) UpdateRouter(ctx context.Context, routerID string, updateOpts routers.UpdateOpts) (*routers.Router, error) {
+	return routers.Update(ctx, c.client, routerID, updateOpts).Extract()
 }
 
 // DeleteRouter deletes a router by identifier
-func (c *NetworkingClient) DeleteRouter(routerID string) error {
-	return routers.Delete(c.client, routerID).ExtractErr()
+func (c *NetworkingClient) DeleteRouter(ctx context.Context, routerID string) error {
+	return routers.Delete(ctx, c.client, routerID).ExtractErr()
 }
 
 // AddRouterInterface adds a router interface
-func (c *NetworkingClient) AddRouterInterface(routerID string, addOpts routers.AddInterfaceOpts) (*routers.InterfaceInfo, error) {
-	return routers.AddInterface(c.client, routerID, addOpts).Extract()
+func (c *NetworkingClient) AddRouterInterface(ctx context.Context, routerID string, addOpts routers.AddInterfaceOpts) (*routers.InterfaceInfo, error) {
+	return routers.AddInterface(ctx, c.client, routerID, addOpts).Extract()
 }
 
 // RemoveRouterInterface removes a router interface
-func (c *NetworkingClient) RemoveRouterInterface(routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error) {
-	return routers.RemoveInterface(c.client, routerID, removeOpts).Extract()
+func (c *NetworkingClient) RemoveRouterInterface(ctx context.Context, routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error) {
+	return routers.RemoveInterface(ctx, c.client, routerID, removeOpts).Extract()
 }
 
 // CreateSubnet creates a subnet
-func (c *NetworkingClient) CreateSubnet(createOpts subnets.CreateOpts) (*subnets.Subnet, error) {
-	return subnets.Create(c.client, createOpts).Extract()
+func (c *NetworkingClient) CreateSubnet(ctx context.Context, createOpts subnets.CreateOpts) (*subnets.Subnet, error) {
+	return subnets.Create(ctx, c.client, createOpts).Extract()
 }
 
 // GetSubnetByID return a subnet info by id
-func (c *NetworkingClient) GetSubnetByID(id string) (*subnets.Subnet, error) {
-	subnet, err := subnets.Get(c.client, id).Extract()
+func (c *NetworkingClient) GetSubnetByID(ctx context.Context, id string) (*subnets.Subnet, error) {
+	subnet, err := subnets.Get(ctx, c.client, id).Extract()
 	return subnet, IgnoreNotFoundError(err)
 }
 
 // ListSubnets returns a list of subnets
-func (c *NetworkingClient) ListSubnets(listOpts subnets.ListOpts) ([]subnets.Subnet, error) {
-	page, err := subnets.List(c.client, listOpts).AllPages()
+func (c *NetworkingClient) ListSubnets(ctx context.Context, listOpts subnets.ListOpts) ([]subnets.Subnet, error) {
+	page, err := subnets.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -257,28 +256,28 @@ func (c *NetworkingClient) ListSubnets(listOpts subnets.ListOpts) ([]subnets.Sub
 }
 
 // UpdateSubnet updates a subnet
-func (c *NetworkingClient) UpdateSubnet(id string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error) {
-	return subnets.Update(c.client, id, updateOpts).Extract()
+func (c *NetworkingClient) UpdateSubnet(ctx context.Context, id string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error) {
+	return subnets.Update(ctx, c.client, id, updateOpts).Extract()
 }
 
 // DeleteSubnet deletes a subnet by identifier
-func (c *NetworkingClient) DeleteSubnet(subnetID string) error {
-	return subnets.Delete(c.client, subnetID).ExtractErr()
+func (c *NetworkingClient) DeleteSubnet(ctx context.Context, subnetID string) error {
+	return subnets.Delete(ctx, c.client, subnetID).ExtractErr()
 }
 
 // GetPort gets a port by identifier
-func (c *NetworkingClient) GetPort(portID string) (*ports.Port, error) {
-	return ports.Get(c.client, portID).Extract()
+func (c *NetworkingClient) GetPort(ctx context.Context, portID string) (*ports.Port, error) {
+	return ports.Get(ctx, c.client, portID).Extract()
 }
 
 // GetRouterInterfacePort gets a port for a router interface
-func (c *NetworkingClient) GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error) {
+func (c *NetworkingClient) GetRouterInterfacePort(ctx context.Context, routerID, subnetID string) (*ports.Port, error) {
 	page, err := ports.List(c.client, ports.ListOpts{
 		DeviceID: routerID,
 		FixedIPs: []ports.FixedIPOpts{
 			{SubnetID: subnetID},
 		},
-	}).AllPages()
+	}).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}

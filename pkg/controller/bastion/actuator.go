@@ -5,15 +5,15 @@
 package bastion
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
-	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,16 +45,16 @@ func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.Fac
 	}
 }
 
-func getBastionInstance(client openstackclient.Compute, name string) ([]servers.Server, error) {
-	return client.FindServersByName(name)
+func getBastionInstance(ctx context.Context, client openstackclient.Compute, name string) ([]servers.Server, error) {
+	return client.FindServersByName(ctx, name)
 }
 
-func createBastionInstance(client openstackclient.Compute, parameters servers.CreateOpts) (*servers.Server, error) {
-	return client.CreateServer(parameters)
+func createBastionInstance(ctx context.Context, client openstackclient.Compute, parameters servers.CreateOpts) (*servers.Server, error) {
+	return client.CreateServer(ctx, parameters)
 }
 
-func deleteBastionInstance(client openstackclient.Compute, id string) error {
-	return client.DeleteServer(id)
+func deleteBastionInstance(ctx context.Context, client openstackclient.Compute, id string) error {
+	return client.DeleteServer(ctx, id)
 }
 
 // GetIPs return privateip, publicip
@@ -94,51 +94,43 @@ func GetIPs(s *servers.Server, opt *Options) (string, string, error) {
 	return privateIP, publicIp, nil
 }
 
-func createFloatingIP(client openstackclient.Networking, parameters floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
-	return client.CreateFloatingIP(parameters)
+func createFloatingIP(ctx context.Context, client openstackclient.Networking, parameters floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
+	return client.CreateFloatingIP(ctx, parameters)
 }
 
-func deleteFloatingIP(client openstackclient.Networking, id string) error {
-	return client.DeleteFloatingIP(id)
+func deleteFloatingIP(ctx context.Context, client openstackclient.Networking, id string) error {
+	return client.DeleteFloatingIP(ctx, id)
 }
 
-func associateFIPWithInstance(client openstackclient.Compute, id string, parameter computefip.AssociateOpts) error {
-	return client.AssociateFIPWithInstance(id, parameter)
+func getFipByName(ctx context.Context, client openstackclient.Networking, name string) ([]floatingips.FloatingIP, error) {
+	return client.GetFipByName(ctx, name)
 }
 
-func findFloatingIDByInstanceID(client openstackclient.Compute, id string) (string, error) {
-	return client.FindFloatingIDByInstanceID(id)
+func createSecurityGroup(ctx context.Context, client openstackclient.Networking, createOpts groups.CreateOpts) (*groups.SecGroup, error) {
+	return client.CreateSecurityGroup(ctx, createOpts)
 }
 
-func getFipByName(client openstackclient.Networking, name string) ([]floatingips.FloatingIP, error) {
-	return client.GetFipByName(name)
+func deleteSecurityGroup(ctx context.Context, client openstackclient.Networking, groupid string) error {
+	return client.DeleteSecurityGroup(ctx, groupid)
 }
 
-func createSecurityGroup(client openstackclient.Networking, createOpts groups.CreateOpts) (*groups.SecGroup, error) {
-	return client.CreateSecurityGroup(createOpts)
+func getSecurityGroups(ctx context.Context, client openstackclient.Networking, name string) ([]groups.SecGroup, error) {
+	return client.GetSecurityGroupByName(ctx, name)
 }
 
-func deleteSecurityGroup(client openstackclient.Networking, groupid string) error {
-	return client.DeleteSecurityGroup(groupid)
+func createRules(ctx context.Context, client openstackclient.Networking, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
+	return client.CreateRule(ctx, createOpts)
 }
 
-func getSecurityGroups(client openstackclient.Networking, name string) ([]groups.SecGroup, error) {
-	return client.GetSecurityGroupByName(name)
-}
-
-func createRules(client openstackclient.Networking, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
-	return client.CreateRule(createOpts)
-}
-
-func listRules(client openstackclient.Networking, secGroupID string) ([]rules.SecGroupRule, error) {
+func listRules(ctx context.Context, client openstackclient.Networking, secGroupID string) ([]rules.SecGroupRule, error) {
 	listOpts := rules.ListOpts{
 		SecGroupID: secGroupID,
 	}
-	return client.ListRules(listOpts)
+	return client.ListRules(ctx, listOpts)
 }
 
-func deleteRule(client openstackclient.Networking, ruleID string) error {
-	return client.DeleteRule(ruleID)
+func deleteRule(ctx context.Context, client openstackclient.Networking, ruleID string) error {
+	return client.DeleteRule(ctx, ruleID)
 }
 
 func useBastionControllerConfig(bastionConfig *controllerconfig.BastionConfig) bool {

@@ -22,12 +22,12 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -230,7 +230,7 @@ var _ = Describe("Bastion tests", func() {
 		subnetName := bastionName + "-subnet"
 
 		By("setup Infrastructure ")
-		shootSecurityGroupID, err := prepareShootSecurityGroup(bastionName)
+		shootSecurityGroupID, err := prepareShootSecurityGroup(ctx, bastionName)
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
@@ -346,7 +346,7 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID string, err error) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
-	externalNetwork, err := networkClient.GetExternalNetworkByName(*floatingPoolName)
+	externalNetwork, err := networkClient.GetExternalNetworkByName(ctx, *floatingPoolName)
 	Expect(err).NotTo(HaveOccurred())
 
 	createOpts := routers.CreateOpts{
@@ -356,13 +356,13 @@ func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID str
 			NetworkID: externalNetwork.ID,
 		},
 	}
-	router, err := networkClient.CreateRouter(createOpts)
+	router, err := networkClient.CreateRouter(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
 
 	intOpts := routers.AddInterfaceOpts{
 		SubnetID: subnetID,
 	}
-	_, err = networkClient.AddRouterInterface(router.ID, intOpts)
+	_, err = networkClient.AddRouterInterface(ctx, router.ID, intOpts)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is created", "routerName", routerName)
@@ -372,7 +372,7 @@ func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID str
 func teardownRouter(routerID string) error {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
-	err := networkClient.DeleteRouter(routerID)
+	err := networkClient.DeleteRouter(ctx, routerID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is deleted", "routerID", routerID)
@@ -382,7 +382,7 @@ func teardownRouter(routerID string) error {
 func prepareNewNetwork(networkName string) (string, error) {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
-	network, err := networkClient.CreateNetwork(networks.CreateOpts{
+	network, err := networkClient.CreateNetwork(ctx, networks.CreateOpts{
 		Name: networkName,
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -407,17 +407,17 @@ func prepareSubNet(subnetName, networkID string) (string, error) {
 			},
 		},
 	}
-	subnet, err := networkClient.CreateSubnet(createOpts)
+	subnet, err := networkClient.CreateSubnet(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Subnet is created", "subnetName", subnetName)
 	return subnet.ID, nil
 }
 
 // prepareShootSecurityGroup create fake shoot security group which will be used in EgressAllowSSHToWorker remoteGroupID
-func prepareShootSecurityGroup(shootSgName string) (string, error) {
+func prepareShootSecurityGroup(ctx context.Context, shootSgName string) (string, error) {
 	log.Info("Waiting until Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 
-	sGroup, err := networkClient.CreateSecurityGroup(groups.CreateOpts{
+	sGroup, err := networkClient.CreateSecurityGroup(ctx, groups.CreateOpts{
 		Name: shootSgName,
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -426,7 +426,7 @@ func prepareShootSecurityGroup(shootSgName string) (string, error) {
 }
 
 func teardownShootSecurityGroup(groupID string) error {
-	err := networkClient.DeleteSecurityGroup(groupID)
+	err := networkClient.DeleteSecurityGroup(ctx, groupID)
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is deleted", "shootSecurityGroupID", groupID)
 	return nil
@@ -435,10 +435,10 @@ func teardownShootSecurityGroup(groupID string) error {
 func teardownNetwork(networkID, routerID, subnetID string) error {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
-	_, err := networkClient.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
+	_, err := networkClient.RemoveRouterInterface(ctx, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = networkClient.DeleteNetwork(networkID)
+	err = networkClient.DeleteNetwork(ctx, networkID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)
@@ -662,7 +662,7 @@ func createCloudProfile() *gardencorev1beta1.CloudProfile {
 }
 
 func getImageID(imageName string) string {
-	imageRes, err := imageClient.ListImages(images.ListOpts{
+	imageRes, err := imageClient.ListImages(ctx, images.ListOpts{
 		Name:       imageName,
 		Visibility: "all",
 	})
@@ -710,37 +710,37 @@ func teardownBastion(ctx context.Context, c client.Client, bastion *extensionsv1
 
 func verifyDeletion(name string) {
 	// bastion public ip should be gone
-	fIPs, err := networkClient.GetFipByName(name)
+	fIPs, err := networkClient.GetFipByName(ctx, name)
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
 	Expect(fIPs).To(BeEmpty())
 
 	// bastion Security group should be gone
-	sGroups, err := networkClient.GetSecurityGroupByName(fmt.Sprintf("%s-sg", name))
+	sGroups, err := networkClient.GetSecurityGroupByName(ctx, fmt.Sprintf("%s-sg", name))
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
 	Expect(sGroups).To(BeEmpty())
 
 	// bastion instance should be terminated and not found
-	servers, err := computeClient.FindServersByName(name)
+	servers, err := computeClient.FindServersByName(ctx, name)
 	Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
 	Expect(servers).To(BeEmpty())
 }
 
 func verifyCreation(options *bastionctrl.Options) {
 	By("checkSecurityGroupExists")
-	sGroups, err := networkClient.GetSecurityGroupByName(options.SecurityGroup)
+	sGroups, err := networkClient.GetSecurityGroupByName(ctx, options.SecurityGroup)
 	Expect(err).To(Succeed())
 	Expect(sGroups).ToNot(BeEmpty())
 	Expect(sGroups[0].Description).To(Equal(options.SecurityGroup))
 
 	By("checkNSGExists")
 	securityRuleName := bastionctrl.IngressAllowSSH(options, "", "", "", "").Description
-	sRules, err := networkClient.ListRules(rules.ListOpts{Description: securityRuleName})
+	sRules, err := networkClient.ListRules(context.Background(), rules.ListOpts{Description: securityRuleName})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(sRules).ToNot(BeEmpty())
 	Expect(sRules[0].Description).To(Equal(securityRuleName))
 
 	By("checking bastion instance")
-	servers, err := computeClient.FindServersByName(options.BastionInstanceName)
+	servers, err := computeClient.FindServersByName(context.Background(), options.BastionInstanceName)
 	Expect(err).To(Succeed())
 	Expect(servers[0].Name).To(Equal(options.BastionInstanceName))
 

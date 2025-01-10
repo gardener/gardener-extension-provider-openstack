@@ -13,10 +13,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/sharenetworks"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -89,8 +89,8 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 	return g
 }
 
-func (fctx *FlowContext) ensureExternalNetwork(_ context.Context) error {
-	externalNetwork, err := fctx.networking.GetExternalNetworkByName(fctx.config.FloatingPoolName)
+func (fctx *FlowContext) ensureExternalNetwork(ctx context.Context) error {
+	externalNetwork, err := fctx.networking.GetExternalNetworkByName(ctx, fctx.config.FloatingPoolName)
 	if err != nil {
 		return err
 	}
@@ -114,8 +114,8 @@ func (fctx *FlowContext) ensureRouter(ctx context.Context) error {
 	return fctx.ensureNewRouter(ctx, *externalNetworkID)
 }
 
-func (fctx *FlowContext) ensureConfiguredRouter(_ context.Context) error {
-	router, err := fctx.access.GetRouterByID(fctx.config.Networks.Router.ID)
+func (fctx *FlowContext) ensureConfiguredRouter(ctx context.Context) error {
+	router, err := fctx.access.GetRouterByID(ctx, fctx.config.Networks.Router.ID)
 	if err != nil {
 		fctx.state.Set(IdentifierRouter, "")
 		fctx.state.Set(RouterIP, "")
@@ -142,7 +142,7 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 		ExternalNetworkID: externalNetworkID,
 		EnableSNAT:        fctx.cloudProfileConfig.UseSNAT,
 	}
-	current, err := fctx.findExistingRouter()
+	current, err := fctx.findExistingRouter(ctx)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 		}
 		fctx.state.Set(IdentifierRouter, current.ID)
 		fctx.state.Set(RouterIP, current.ExternalFixedIPs[0].IPAddress)
-		_, err := fctx.access.UpdateRouter(desired, current)
+		_, err := fctx.access.UpdateRouter(ctx, desired, current)
 		return err
 	}
 
@@ -160,14 +160,14 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 	fctx.state.SetPtr(NameFloatingPoolSubnet, floatingPoolSubnetName)
 	if floatingPoolSubnetName != nil {
 		log.Info("looking up floating pool subnets...")
-		desired.ExternalSubnetIDs, err = fctx.access.LookupFloatingPoolSubnetIDs(externalNetworkID, *floatingPoolSubnetName)
+		desired.ExternalSubnetIDs, err = fctx.access.LookupFloatingPoolSubnetIDs(ctx, externalNetworkID, *floatingPoolSubnetName)
 		if err != nil {
 			return err
 		}
 	}
 	log.Info("creating...")
 	// TODO: add tags to created resources
-	created, err := fctx.access.CreateRouter(desired)
+	created, err := fctx.access.CreateRouter(ctx, desired)
 	if err != nil {
 		return err
 	}
@@ -177,8 +177,8 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 	return nil
 }
 
-func (fctx *FlowContext) findExistingRouter() (*access.Router, error) {
-	return findExisting(fctx.state.Get(IdentifierRouter), fctx.defaultRouterName(), fctx.access.GetRouterByID, fctx.access.GetRouterByName)
+func (fctx *FlowContext) findExistingRouter(ctx context.Context) (*access.Router, error) {
+	return findExisting(ctx, fctx.state.Get(IdentifierRouter), fctx.defaultRouterName(), fctx.access.GetRouterByID, fctx.access.GetRouterByName)
 }
 
 func (fctx *FlowContext) findFloatingPoolSubnetName() *string {
@@ -201,9 +201,9 @@ func (fctx *FlowContext) ensureNetwork(ctx context.Context) error {
 	return fctx.ensureNewNetwork(ctx)
 }
 
-func (fctx *FlowContext) ensureConfiguredNetwork(_ context.Context) error {
+func (fctx *FlowContext) ensureConfiguredNetwork(ctx context.Context) error {
 	networkId := *fctx.config.Networks.ID
-	network, err := fctx.access.GetNetworkByID(networkId)
+	network, err := fctx.access.GetNetworkByID(ctx, networkId)
 	if err != nil {
 		fctx.state.Set(IdentifierNetwork, "")
 		fctx.state.Set(NameNetwork, "")
@@ -227,19 +227,19 @@ func (fctx *FlowContext) ensureNewNetwork(ctx context.Context) error {
 		Name:         fctx.defaultNetworkName(),
 		AdminStateUp: true,
 	}
-	current, err := fctx.findExistingNetwork()
+	current, err := fctx.findExistingNetwork(ctx)
 	if err != nil {
 		return err
 	}
 	if current != nil {
 		fctx.state.Set(IdentifierNetwork, current.ID)
 		fctx.state.Set(NameNetwork, current.Name)
-		if _, err := fctx.access.UpdateNetwork(desired, current); err != nil {
+		if _, err := fctx.access.UpdateNetwork(ctx, desired, current); err != nil {
 			return err
 		}
 	} else {
 		log.Info("creating...")
-		created, err := fctx.access.CreateNetwork(desired)
+		created, err := fctx.access.CreateNetwork(ctx, desired)
 		if err != nil {
 			return err
 		}
@@ -250,11 +250,11 @@ func (fctx *FlowContext) ensureNewNetwork(ctx context.Context) error {
 	return nil
 }
 
-func (fctx *FlowContext) findExistingNetwork() (*access.Network, error) {
-	return findExisting(fctx.state.Get(IdentifierNetwork), fctx.defaultNetworkName(), fctx.access.GetNetworkByID, fctx.access.GetNetworkByName)
+func (fctx *FlowContext) findExistingNetwork(ctx context.Context) (*access.Network, error) {
+	return findExisting(ctx, fctx.state.Get(IdentifierNetwork), fctx.defaultNetworkName(), fctx.access.GetNetworkByID, fctx.access.GetNetworkByName)
 }
 
-func (fctx *FlowContext) getNetworkID() (*string, error) {
+func (fctx *FlowContext) getNetworkID(ctx context.Context) (*string, error) {
 	if fctx.config.Networks.ID != nil {
 		return fctx.config.Networks.ID, nil
 	}
@@ -262,7 +262,7 @@ func (fctx *FlowContext) getNetworkID() (*string, error) {
 	if networkID != nil {
 		return networkID, nil
 	}
-	network, err := fctx.findExistingNetwork()
+	network, err := fctx.findExistingNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -288,19 +288,19 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 		IPVersion:      4,
 		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
 	}
-	current, err := fctx.findExistingSubnet()
+	current, err := fctx.findExistingSubnet(ctx)
 	if err != nil {
 		return err
 	}
 	if current != nil {
 		fctx.state.Set(IdentifierSubnet, current.ID)
 		log.Info("updating...")
-		if _, err := fctx.access.UpdateSubnet(desired, current); err != nil {
+		if _, err := fctx.access.UpdateSubnet(ctx, desired, current); err != nil {
 			return err
 		}
 	} else {
 		log.Info("creating...")
-		created, err := fctx.access.CreateSubnet(desired)
+		created, err := fctx.access.CreateSubnet(ctx, desired)
 		if err != nil {
 			return err
 		}
@@ -309,18 +309,18 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	return nil
 }
 
-func (fctx *FlowContext) findExistingSubnet() (*subnets.Subnet, error) {
-	networkID, err := fctx.getNetworkID()
+func (fctx *FlowContext) findExistingSubnet(ctx context.Context) (*subnets.Subnet, error) {
+	networkID, err := fctx.getNetworkID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if networkID == nil {
 		return nil, nil
 	}
-	getByName := func(name string) ([]*subnets.Subnet, error) {
-		return fctx.access.GetSubnetByName(*networkID, name)
+	getByName := func(ctx context.Context, name string) ([]*subnets.Subnet, error) {
+		return fctx.access.GetSubnetByName(ctx, *networkID, name)
 	}
-	return findExisting(fctx.state.Get(IdentifierSubnet), fctx.defaultSubnetName(), fctx.access.GetSubnetByID, getByName)
+	return findExisting(ctx, fctx.state.Get(IdentifierSubnet), fctx.defaultSubnetName(), fctx.access.GetSubnetByID, getByName)
 }
 
 func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
@@ -334,7 +334,7 @@ func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
 	if subnetID == nil {
 		return fmt.Errorf("internal error: missing subnetID")
 	}
-	portID, err := fctx.access.GetRouterInterfacePortID(*routerID, *subnetID)
+	portID, err := fctx.access.GetRouterInterfacePortID(ctx, *routerID, *subnetID)
 	if err != nil {
 		return err
 	}
@@ -352,7 +352,7 @@ func (fctx *FlowContext) ensureSecGroup(ctx context.Context) error {
 		Name:        fctx.defaultSecurityGroupName(),
 		Description: "Cluster Nodes",
 	}
-	current, err := findExisting(fctx.state.Get(IdentifierSecGroup), fctx.defaultSecurityGroupName(), fctx.access.GetSecurityGroupByID, fctx.access.GetSecurityGroupByName)
+	current, err := findExisting(ctx, fctx.state.Get(IdentifierSecGroup), fctx.defaultSecurityGroupName(), fctx.access.GetSecurityGroupByID, fctx.access.GetSecurityGroupByName)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (fctx *FlowContext) ensureSecGroup(ctx context.Context) error {
 	}
 
 	log.Info("creating...")
-	created, err := fctx.access.CreateSecurityGroup(desired)
+	created, err := fctx.access.CreateSecurityGroup(ctx, desired)
 	if err != nil {
 		return err
 	}
@@ -424,7 +424,7 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 		},
 	}
 
-	if modified, err := fctx.access.UpdateSecurityGroupRules(group, desiredRules, func(_ *rules.SecGroupRule) bool {
+	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(_ *rules.SecGroupRule) bool {
 		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
 		// As we don't store the role ids in the state, this function needs to be adjusted
 		// if values in existing rules are changed to identify them for update by replacement.
@@ -440,7 +440,7 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 
-	keyPair, err := fctx.compute.GetKeyPair(fctx.defaultSSHKeypairName())
+	keyPair, err := fctx.compute.GetKeyPair(ctx, fctx.defaultSSHKeypairName())
 	if err != nil {
 		return err
 	}
@@ -452,7 +452,7 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 		}
 
 		log.Info("replacing SSH key pair")
-		if err := fctx.compute.DeleteKeyPair(fctx.defaultSSHKeypairName()); client.IgnoreNotFoundError(err) != nil {
+		if err := fctx.compute.DeleteKeyPair(ctx, fctx.defaultSSHKeypairName()); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 		keyPair = nil
@@ -460,7 +460,7 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 	}
 
 	log.Info("creating SSH key pair")
-	if keyPair, err = fctx.compute.CreateKeyPair(fctx.defaultSSHKeypairName(), string(fctx.infra.Spec.SSHPublicKey)); err != nil {
+	if keyPair, err = fctx.compute.CreateKeyPair(ctx, fctx.defaultSSHKeypairName(), string(fctx.infra.Spec.SSHPublicKey)); err != nil {
 		return err
 	}
 	fctx.state.Set(NameKeyPair, keyPair.Name)
@@ -475,11 +475,11 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")
-	current, err := findExisting(fctx.state.Get(IdentifierShareNetwork),
+	current, err := findExisting(ctx, fctx.state.Get(IdentifierShareNetwork),
 		fctx.defaultSharedNetworkName(),
 		fctx.sharedFilesystem.GetShareNetwork,
-		func(name string) ([]*sharenetworks.ShareNetwork, error) {
-			list, err := fctx.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+		func(ctx context.Context, name string) ([]*sharenetworks.ShareNetwork, error) {
+			list, err := fctx.sharedFilesystem.ListShareNetworks(ctx, sharenetworks.ListOpts{
 				Name:            name,
 				NeutronNetID:    networkID,
 				NeutronSubnetID: subnetID,
@@ -501,7 +501,7 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	}
 
 	log.Info("creating...")
-	created, err := fctx.sharedFilesystem.CreateShareNetwork(sharenetworks.CreateOpts{
+	created, err := fctx.sharedFilesystem.CreateShareNetwork(ctx, sharenetworks.CreateOpts{
 		NeutronNetID:    networkID,
 		NeutronSubnetID: subnetID,
 		Name:            fctx.defaultSharedNetworkName(),

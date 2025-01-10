@@ -5,12 +5,14 @@
 package client
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
 )
 
 // ListImages lists all images filtered by listOpts
-func (c *ImageClient) ListImages(listOpts images.ListOpts) ([]images.Image, error) {
-	pages, err := images.List(c.client, listOpts).AllPages()
+func (c *ImageClient) ListImages(ctx context.Context, opts images.ListOpts) ([]images.Image, error) {
+	pages, err := images.List(c.client, opts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}

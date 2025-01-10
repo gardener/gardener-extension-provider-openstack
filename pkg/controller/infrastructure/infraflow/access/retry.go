@@ -6,9 +6,11 @@ package access
 
 import (
 	"encoding/json"
+	"errors"
+	"net/http"
 
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 // following https://github.com/terraform-provider-openstack/terraform-provider-openstack/blob/cec35ae29769b4de7d84980b1335a2b723ffb15f/openstack/networking_v2_shared.go
@@ -24,37 +26,39 @@ type neutronError struct {
 }
 
 func retryOnError(log logr.Logger, err error) bool {
-	switch err := err.(type) {
-	case gophercloud.ErrDefault409:
-		neutronError, e := decodeNeutronError(err.ErrUnexpectedResponseCode.Body)
-		if e != nil {
-			// retry, when error type cannot be detected
-			log.V(1).Info("[DEBUG] failed to decode a neutron error", "error", e)
-			return true
-		}
-		if neutronError.Type == "IpAddressGenerationFailure" {
-			return true
-		}
+	var unexpectedErr gophercloud.ErrUnexpectedResponseCode
+	if errors.As(err, &unexpectedErr) {
+		switch unexpectedErr.Actual {
+		case http.StatusConflict:
+			neutronError, e := decodeNeutronError(unexpectedErr.Body)
+			if e != nil {
+				// retry, when error type cannot be detected
+				log.V(1).Info("[DEBUG] failed to decode a neutron error", "error", e)
+				return true
+			}
+			if neutronError.Type == "IpAddressGenerationFailure" {
+				return true
+			}
 
-		// don't retry on quota or other errors
-		return false
-	case gophercloud.ErrDefault400:
-		neutronError, e := decodeNeutronError(err.ErrUnexpectedResponseCode.Body)
-		if e != nil {
-			// retry, when error type cannot be detected
-			log.V(1).Info("[DEBUG] failed to decode a neutron error", "error", e)
-			return true
-		}
-		if neutronError.Type == "ExternalIpAddressExhausted" {
-			return true
-		}
+			// don't retry on quota or other errors
+			return false
+		case http.StatusBadRequest:
+			neutronError, e := decodeNeutronError(unexpectedErr.Body)
+			if e != nil {
+				// retry, when error type cannot be detected
+				log.V(1).Info("[DEBUG] failed to decode a neutron error", "error", e)
+				return true
+			}
+			if neutronError.Type == "ExternalIpAddressExhausted" {
+				return true
+			}
 
-		// don't retry on quota or other errors
-		return false
-	case gophercloud.ErrDefault404: // this case is handled mostly for functional tests
-		return true
+			// don't retry on quota or other errors
+			return false
+		case http.StatusNotFound:
+			return true
+		}
 	}
-
 	return false
 }
 

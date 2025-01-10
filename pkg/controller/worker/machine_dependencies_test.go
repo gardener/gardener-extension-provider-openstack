@@ -16,7 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	k8smocks "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -126,10 +126,10 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool1)), policy).Return(&servergroups.ServerGroup{
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(clusterName, pool1)), policy).Return(&servergroups.ServerGroup{
 					ID: serverGroupID1,
 				}, nil)
-				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, pool2)), policy).Return(&servergroups.ServerGroup{
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(clusterName, pool2)), policy).Return(&servergroups.ServerGroup{
 					ID: serverGroupID2,
 				}, nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
@@ -171,7 +171,7 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), policy).Return(&servergroups.ServerGroup{
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(clusterName, poolName)), policy).Return(&servergroups.ServerGroup{
 					ID: "id",
 				}, nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
@@ -188,11 +188,11 @@ var _ = Describe("#MachineDependencies", func() {
 				))
 
 				w.Spec.Pools[0] = *(newWorkerPoolWithPolicy("pool", &newPolicy))
-				computeClient.EXPECT().GetServerGroup("id").Return(&servergroups.ServerGroup{
+				computeClient.EXPECT().GetServerGroup(ctx, "id").Return(&servergroups.ServerGroup{
 					ID:       "id",
 					Policies: []string{"foo"},
 				}, nil)
-				computeClient.EXPECT().CreateServerGroup(prefixMatch(serverGroupPrefix(clusterName, poolName)), newPolicy).Return(&servergroups.ServerGroup{
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(clusterName, poolName)), newPolicy).Return(&servergroups.ServerGroup{
 					ID: "new-id",
 				}, nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
@@ -243,13 +243,13 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID,
 						Name: serverGroupName,
 					},
 				}, nil)
-				computeClient.EXPECT().DeleteServerGroup(serverGroupID).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID).Return(nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostReconcileHook(ctx)
@@ -298,7 +298,7 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID,
 						Name: serverGroupName,
@@ -308,7 +308,7 @@ var _ = Describe("#MachineDependencies", func() {
 						Name: oldServerGroupName,
 					},
 				}, nil)
-				computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, oldServerGroupID).Return(nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostReconcileHook(ctx)
@@ -361,7 +361,7 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID1,
 						Name: poolName1,
@@ -371,8 +371,8 @@ var _ = Describe("#MachineDependencies", func() {
 						Name: poolName2,
 					},
 				}, nil)
-				computeClient.EXPECT().DeleteServerGroup(serverGroupID1).Return(nil)
-				computeClient.EXPECT().DeleteServerGroup(serverGroupID2).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID1).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID2).Return(nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostReconcileHook(ctx)
@@ -416,13 +416,13 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID,
 						Name: serverGroupName,
 					},
 				}, nil)
-				computeClient.EXPECT().DeleteServerGroup(serverGroupID).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID).Return(nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostDeleteHook(ctx)
@@ -471,7 +471,7 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID,
 						Name: serverGroupName,
@@ -481,7 +481,7 @@ var _ = Describe("#MachineDependencies", func() {
 						Name: oldServerGroupName,
 					},
 				}, nil)
-				computeClient.EXPECT().DeleteServerGroup(oldServerGroupID).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, oldServerGroupID).Return(nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostDeleteHook(ctx)
@@ -534,7 +534,7 @@ var _ = Describe("#MachineDependencies", func() {
 					osFactory,
 				)
 
-				computeClient.EXPECT().ListServerGroups().Return([]servergroups.ServerGroup{
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID1,
 						Name: poolName1,
@@ -544,8 +544,8 @@ var _ = Describe("#MachineDependencies", func() {
 						Name: poolName2,
 					},
 				}, nil)
-				computeClient.EXPECT().DeleteServerGroup(serverGroupID1).Return(nil)
-				computeClient.EXPECT().DeleteServerGroup(serverGroupID2).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID1).Return(nil)
+				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID2).Return(nil)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostDeleteHook(ctx)

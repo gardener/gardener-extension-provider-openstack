@@ -8,17 +8,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"regexp"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -26,32 +27,32 @@ import (
 // NetworkingAccess provides methods for managing routers and networks
 type NetworkingAccess interface {
 	// Routers
-	CreateRouter(desired *Router) (*Router, error)
-	GetRouterByID(id string) (*Router, error)
-	GetRouterByName(name string) ([]*Router, error)
-	UpdateRouter(desired, current *Router) (modified bool, router *Router, err error)
-	LookupFloatingPoolSubnetIDs(networkID, floatingPoolSubnetNameRegex string) ([]string, error)
+	CreateRouter(ctx context.Context, desired *Router) (router *Router, err error)
+	GetRouterByID(ctx context.Context, id string) (*Router, error)
+	GetRouterByName(ctx context.Context, name string) ([]*Router, error)
+	UpdateRouter(ctx context.Context, desired, current *Router) (modified bool, router *Router, err error)
+	LookupFloatingPoolSubnetIDs(ctx context.Context, networkID, floatingPoolSubnetNameRegex string) ([]string, error)
 	AddRouterInterfaceAndWait(ctx context.Context, routerID, subnetID string) error
-	GetRouterInterfacePortID(routerID, subnetID string) (portID *string, err error)
+	GetRouterInterfacePortID(ctx context.Context, routerID, subnetID string) (portID *string, err error)
 	RemoveRouterInterfaceAndWait(ctx context.Context, routerID, subnetID, portID string) error
 
 	// Networks
-	CreateNetwork(desired *Network) (*Network, error)
-	GetNetworkByID(id string) (*Network, error)
-	GetNetworkByName(name string) ([]*Network, error)
-	UpdateNetwork(desired, current *Network) (modified bool, err error)
+	CreateNetwork(ctx context.Context, desired *Network) (*Network, error)
+	GetNetworkByID(ctx context.Context, id string) (*Network, error)
+	GetNetworkByName(ctx context.Context, name string) ([]*Network, error)
+	UpdateNetwork(ctx context.Context, desired, current *Network) (modified bool, err error)
 
 	// Subnets
-	CreateSubnet(desired *subnets.Subnet) (*subnets.Subnet, error)
-	GetSubnetByID(id string) (*subnets.Subnet, error)
-	GetSubnetByName(networkID, name string) ([]*subnets.Subnet, error)
-	UpdateSubnet(desired, current *subnets.Subnet) (modified bool, err error)
+	CreateSubnet(ctx context.Context, desired *subnets.Subnet) (*subnets.Subnet, error)
+	GetSubnetByID(ctx context.Context, id string) (*subnets.Subnet, error)
+	GetSubnetByName(ctx context.Context, networkID, name string) ([]*subnets.Subnet, error)
+	UpdateSubnet(ctx context.Context, desired, current *subnets.Subnet) (modified bool, err error)
 
 	// SecurityGroups
-	CreateSecurityGroup(desired *groups.SecGroup) (*groups.SecGroup, error)
-	GetSecurityGroupByID(id string) (*groups.SecGroup, error)
-	GetSecurityGroupByName(name string) ([]*groups.SecGroup, error)
-	UpdateSecurityGroupRules(group *groups.SecGroup, desiredRules []rules.SecGroupRule, allowDelete func(rule *rules.SecGroupRule) bool) (modified bool, err error)
+	CreateSecurityGroup(ctx context.Context, desired *groups.SecGroup) (*groups.SecGroup, error)
+	GetSecurityGroupByID(ctx context.Context, id string) (*groups.SecGroup, error)
+	GetSecurityGroupByName(ctx context.Context, name string) ([]*groups.SecGroup, error)
+	UpdateSecurityGroupRules(ctx context.Context, group *groups.SecGroup, desiredRules []rules.SecGroupRule, allowDelete func(rule *rules.SecGroupRule) bool) (modified bool, err error)
 }
 
 // Router is a simplified router resource
@@ -98,13 +99,13 @@ func NewNetworkingAccess(networking client.Networking, log logr.Logger) (Network
 // CreateRouter creates a router.
 // If the input router object specifies external subnet ids, the router is created in the
 // first available subnet.
-func (a *networkingAccess) CreateRouter(desired *Router) (router *Router, err error) {
+func (a *networkingAccess) CreateRouter(ctx context.Context, desired *Router) (router *Router, err error) {
 	if len(desired.ExternalSubnetIDs) == 0 {
-		return a.tryCreateRouter(desired, nil)
+		return a.tryCreateRouter(ctx, desired, nil)
 	}
 	// create router in first available subnet
 	for _, subnetID := range desired.ExternalSubnetIDs {
-		router, err = a.tryCreateRouter(desired, &subnetID)
+		router, err = a.tryCreateRouter(ctx, desired, &subnetID)
 		// if there is retryable error, then we keep trying along the available list of subnets for the first successful operation.
 		if err != nil && !retryOnError(a.log, err) {
 			return
@@ -116,7 +117,7 @@ func (a *networkingAccess) CreateRouter(desired *Router) (router *Router, err er
 	return
 }
 
-func (a *networkingAccess) tryCreateRouter(desired *Router, subnetID *string) (*Router, error) {
+func (a *networkingAccess) tryCreateRouter(ctx context.Context, desired *Router, subnetID *string) (*Router, error) {
 	options := routers.CreateOpts{
 		Name: desired.Name,
 		GatewayInfo: &routers.GatewayInfo{
@@ -127,7 +128,7 @@ func (a *networkingAccess) tryCreateRouter(desired *Router, subnetID *string) (*
 	if subnetID != nil {
 		options.GatewayInfo.ExternalFixedIPs = []routers.ExternalFixedIP{{SubnetID: *subnetID}}
 	}
-	raw, err := a.networking.CreateRouter(options)
+	raw, err := a.networking.CreateRouter(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +136,8 @@ func (a *networkingAccess) tryCreateRouter(desired *Router, subnetID *string) (*
 }
 
 // GetRouterByID retrieves router by identifier
-func (a *networkingAccess) GetRouterByID(id string) (*Router, error) {
-	routers, err := a.networking.ListRouters(routers.ListOpts{ID: id})
+func (a *networkingAccess) GetRouterByID(ctx context.Context, id string) (*Router, error) {
+	routers, err := a.networking.ListRouters(ctx, routers.ListOpts{ID: id})
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +148,8 @@ func (a *networkingAccess) GetRouterByID(id string) (*Router, error) {
 }
 
 // GetRouterByName retrieves routers by name
-func (a *networkingAccess) GetRouterByName(name string) ([]*Router, error) {
-	routers, err := a.networking.ListRouters(routers.ListOpts{Name: name})
+func (a *networkingAccess) GetRouterByName(ctx context.Context, name string) ([]*Router, error) {
+	routers, err := a.networking.ListRouters(ctx, routers.ListOpts{Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +173,7 @@ func (a *networkingAccess) toRouter(raw *routers.Router) *Router {
 }
 
 // UpdateRouter updates the router if important fields have changed
-func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool, router *Router, err error) {
-	router = current
+func (a *networkingAccess) UpdateRouter(ctx context.Context, desired, current *Router) (modified bool, router *Router, err error) {
 	updateOpts := routers.UpdateOpts{}
 	if desired.Name != current.Name {
 		modified = true
@@ -189,7 +189,7 @@ func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool
 		}
 	}
 	if modified {
-		updated, err := a.networking.UpdateRouter(current.ID, updateOpts)
+		updated, err := a.networking.UpdateRouter(ctx, current.ID, updateOpts)
 		if err != nil {
 			return false, nil, err
 		}
@@ -200,7 +200,7 @@ func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool
 
 // AddRouterInterfaceAndWait adds router interface and waits up to
 func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, routerID, subnetID string) error {
-	info, err := a.networking.AddRouterInterface(routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
+	info, err := a.networking.AddRouterInterface(ctx, routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, router
 		case <-ctx.Done():
 			return fmt.Errorf("%w, last error: %w", ctx.Err(), err)
 		case <-ticker:
-			port, err := a.networking.GetPort(info.PortID)
+			port, err := a.networking.GetPort(ctx, info.PortID)
 			if err != nil {
 				return err
 			}
@@ -240,8 +240,8 @@ func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, router
 	}
 }
 
-func (a *networkingAccess) GetRouterInterfacePortID(routerID, subnetID string) (portID *string, err error) {
-	port, err := a.networking.GetRouterInterfacePort(routerID, subnetID)
+func (a *networkingAccess) GetRouterInterfacePortID(ctx context.Context, routerID, subnetID string) (portID *string, err error) {
+	port, err := a.networking.GetRouterInterfacePort(ctx, routerID, subnetID)
 	if err != nil {
 		return
 	}
@@ -261,12 +261,12 @@ func (a *networkingAccess) RemoveRouterInterfaceAndWait(ctx context.Context, rou
 		case <-ctx.Done():
 			return fmt.Errorf("%w, last error: %w", ctx.Err(), err)
 		case <-ticker:
-			_, err := a.networking.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID, PortID: portID})
+			_, err := a.networking.RemoveRouterInterface(ctx, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID, PortID: portID})
 			if err != nil {
-				if _, ok := err.(gophercloud.ErrDefault404); ok {
+				if gophercloud.ResponseCodeIs(err, http.StatusNotFound) {
 					return nil
 				}
-				if _, ok := err.(gophercloud.ErrDefault409); !ok {
+				if gophercloud.ResponseCodeIs(err, http.StatusConflict) {
 					return err
 				}
 			}
@@ -278,8 +278,8 @@ func (a *networkingAccess) RemoveRouterInterfaceAndWait(ctx context.Context, rou
 }
 
 // LookupFloatingPoolSubnetIDs returns a list of subnet ids matching the given regex of the subnet name
-func (a *networkingAccess) LookupFloatingPoolSubnetIDs(networkID, floatingPoolSubnetNameRegex string) ([]string, error) {
-	allSubnets, err := a.networking.ListSubnets(subnets.ListOpts{
+func (a *networkingAccess) LookupFloatingPoolSubnetIDs(ctx context.Context, networkID, floatingPoolSubnetNameRegex string) ([]string, error) {
+	allSubnets, err := a.networking.ListSubnets(ctx, subnets.ListOpts{
 		NetworkID: networkID,
 	})
 	if err != nil {
@@ -314,8 +314,8 @@ func (a *networkingAccess) LookupFloatingPoolSubnetIDs(networkID, floatingPoolSu
 }
 
 // CreateNetwork creates a private network
-func (a *networkingAccess) CreateNetwork(desired *Network) (*Network, error) {
-	raw, err := a.networking.CreateNetwork(networks.CreateOpts{
+func (a *networkingAccess) CreateNetwork(ctx context.Context, desired *Network) (*Network, error) {
+	raw, err := a.networking.CreateNetwork(ctx, networks.CreateOpts{
 		AdminStateUp: &desired.AdminStateUp,
 		Name:         desired.Name,
 	})
@@ -326,8 +326,8 @@ func (a *networkingAccess) CreateNetwork(desired *Network) (*Network, error) {
 }
 
 // GetNetworkByID retrieves a network by identifer
-func (a *networkingAccess) GetNetworkByID(id string) (*Network, error) {
-	networks, err := a.networking.ListNetwork(networks.ListOpts{ID: id})
+func (a *networkingAccess) GetNetworkByID(ctx context.Context, id string) (*Network, error) {
+	networks, err := a.networking.ListNetwork(ctx, networks.ListOpts{ID: id})
 	if err != nil {
 		return nil, err
 	}
@@ -338,8 +338,8 @@ func (a *networkingAccess) GetNetworkByID(id string) (*Network, error) {
 }
 
 // GetNetworkByName retrieves networks by name
-func (a *networkingAccess) GetNetworkByName(name string) ([]*Network, error) {
-	networks, err := a.networking.GetNetworkByName(name)
+func (a *networkingAccess) GetNetworkByName(ctx context.Context, name string) ([]*Network, error) {
+	networks, err := a.networking.GetNetworkByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func (a *networkingAccess) GetNetworkByName(name string) ([]*Network, error) {
 }
 
 // UpdateNetwork updates a network
-func (a *networkingAccess) UpdateNetwork(desired, current *Network) (modified bool, err error) {
+func (a *networkingAccess) UpdateNetwork(ctx context.Context, desired, current *Network) (modified bool, err error) {
 	updateOpts := networks.UpdateOpts{}
 	if desired.Name != current.Name {
 		modified = true
@@ -362,7 +362,7 @@ func (a *networkingAccess) UpdateNetwork(desired, current *Network) (modified bo
 		updateOpts.AdminStateUp = &desired.AdminStateUp
 	}
 	if modified {
-		_, err = a.networking.UpdateNetwork(current.ID, updateOpts)
+		_, err = a.networking.UpdateNetwork(ctx, current.ID, updateOpts)
 	}
 	return
 }
@@ -376,8 +376,8 @@ func (a *networkingAccess) toNetwork(raw *networks.Network) *Network {
 	}
 }
 
-func (a *networkingAccess) CreateSubnet(desired *subnets.Subnet) (*subnets.Subnet, error) {
-	raw, err := a.networking.CreateSubnet(subnets.CreateOpts{
+func (a *networkingAccess) CreateSubnet(ctx context.Context, desired *subnets.Subnet) (*subnets.Subnet, error) {
+	raw, err := a.networking.CreateSubnet(ctx, subnets.CreateOpts{
 		NetworkID:      desired.NetworkID,
 		CIDR:           desired.CIDR,
 		Name:           desired.Name,
@@ -390,8 +390,8 @@ func (a *networkingAccess) CreateSubnet(desired *subnets.Subnet) (*subnets.Subne
 	return raw, nil
 }
 
-func (a *networkingAccess) GetSubnetByID(id string) (*subnets.Subnet, error) {
-	list, err := a.networking.ListSubnets(subnets.ListOpts{ID: id})
+func (a *networkingAccess) GetSubnetByID(ctx context.Context, id string) (*subnets.Subnet, error) {
+	list, err := a.networking.ListSubnets(ctx, subnets.ListOpts{ID: id})
 	if err != nil {
 		return nil, err
 	}
@@ -401,8 +401,8 @@ func (a *networkingAccess) GetSubnetByID(id string) (*subnets.Subnet, error) {
 	return &list[0], nil
 }
 
-func (a *networkingAccess) GetSubnetByName(networkID, name string) ([]*subnets.Subnet, error) {
-	list, err := a.networking.ListSubnets(subnets.ListOpts{NetworkID: networkID, Name: name})
+func (a *networkingAccess) GetSubnetByName(ctx context.Context, networkID, name string) ([]*subnets.Subnet, error) {
+	list, err := a.networking.ListSubnets(ctx, subnets.ListOpts{NetworkID: networkID, Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +414,7 @@ func (a *networkingAccess) GetSubnetByName(networkID, name string) ([]*subnets.S
 	return result, nil
 }
 
-func (a *networkingAccess) UpdateSubnet(desired, current *subnets.Subnet) (modified bool, err error) {
+func (a *networkingAccess) UpdateSubnet(ctx context.Context, desired, current *subnets.Subnet) (modified bool, err error) {
 	updateOpts := subnets.UpdateOpts{}
 	if desired.Name != current.Name {
 		modified = true
@@ -425,26 +425,26 @@ func (a *networkingAccess) UpdateSubnet(desired, current *subnets.Subnet) (modif
 		updateOpts.DNSNameservers = &desired.DNSNameservers
 	}
 	if modified {
-		_, err = a.networking.UpdateSubnet(current.ID, updateOpts)
+		_, err = a.networking.UpdateSubnet(ctx, current.ID, updateOpts)
 	}
 	return
 }
 
-func (a *networkingAccess) CreateSecurityGroup(desired *groups.SecGroup) (*groups.SecGroup, error) {
+func (a *networkingAccess) CreateSecurityGroup(ctx context.Context, desired *groups.SecGroup) (*groups.SecGroup, error) {
 	opts := groups.CreateOpts{
 		Name:        desired.Name,
 		Description: desired.Description,
 	}
-	return a.networking.CreateSecurityGroup(opts)
+	return a.networking.CreateSecurityGroup(ctx, opts)
 }
 
-func (a *networkingAccess) GetSecurityGroupByID(id string) (*groups.SecGroup, error) {
-	sg, err := a.networking.GetSecurityGroup(id)
+func (a *networkingAccess) GetSecurityGroupByID(ctx context.Context, id string) (*groups.SecGroup, error) {
+	sg, err := a.networking.GetSecurityGroup(ctx, id)
 	return sg, client.IgnoreNotFoundError(err)
 }
 
-func (a *networkingAccess) GetSecurityGroupByName(name string) ([]*groups.SecGroup, error) {
-	list, err := a.networking.ListSecurityGroup(groups.ListOpts{Name: name})
+func (a *networkingAccess) GetSecurityGroupByName(ctx context.Context, name string) ([]*groups.SecGroup, error) {
+	list, err := a.networking.ListSecurityGroup(ctx, groups.ListOpts{Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -457,6 +457,7 @@ func (a *networkingAccess) GetSecurityGroupByName(name string) ([]*groups.SecGro
 }
 
 func (a *networkingAccess) UpdateSecurityGroupRules(
+	ctx context.Context,
 	group *groups.SecGroup,
 	desiredRules []rules.SecGroupRule,
 	allowDelete func(rule *rules.SecGroupRule) bool,
@@ -475,7 +476,7 @@ func (a *networkingAccess) UpdateSecurityGroupRules(
 		rule := &group.Rules[i]
 		if desiredRule, _ := a.findMatchingRule(rule, desiredRules); desiredRule == nil {
 			if allowDelete == nil || allowDelete(rule) {
-				if err = a.networking.DeleteRule(rule.ID); err != nil {
+				if err = a.networking.DeleteRule(ctx, rule.ID); err != nil {
 					err = fmt.Errorf("Error deleting rule for security group %s: %s", rule.ID, err)
 					return
 				}
@@ -503,8 +504,8 @@ func (a *networkingAccess) UpdateSecurityGroupRules(
 			RemoteIPPrefix: rule.RemoteIPPrefix,
 			ProjectID:      rule.ProjectID,
 		}
-		if _, err = a.networking.CreateRule(createOpts); err != nil {
-			err = fmt.Errorf("Error creating rule %d for security group: %s", i, err)
+		if _, err = a.networking.CreateRule(ctx, createOpts); err != nil {
+			err = fmt.Errorf("error creating rule %d for security group: %s", i, err)
 			return
 		}
 		modified = true

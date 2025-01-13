@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package controlplaneexposure
+package seedprovider
 
 import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -21,13 +21,13 @@ var (
 	DefaultAddOptions = AddOptions{}
 )
 
-// AddOptions are options to apply when adding the Openstack exposure webhook to the manager.
+// AddOptions are options to apply when adding the Openstack seedprovider webhook to the manager.
 type AddOptions struct {
 	// ETCDStorage is the etcd storage configuration.
 	ETCDStorage config.ETCDStorage
 }
 
-var logger = log.Log.WithName("openstack-controlplaneexposure-webhook")
+var logger = log.Log.WithName("openstack-seedprovider-webhook")
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {

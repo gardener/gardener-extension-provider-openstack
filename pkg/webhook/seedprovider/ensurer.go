@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package controlplaneexposure
+package seedprovider
 
 import (
 	"context"
@@ -17,11 +17,11 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 )
 
-// NewEnsurer creates a new controlplaneexposure ensurer.
+// NewEnsurer creates a new seedprovider ensurer.
 func NewEnsurer(etcdStorage *config.ETCDStorage, logger logr.Logger) genericmutator.Ensurer {
 	return &ensurer{
 		etcdStorage: etcdStorage,
-		logger:      logger.WithName("openstack-controlplaneexposure-ensurer"),
+		logger:      logger.WithName("openstack-seedprovider-ensurer"),
 	}
 }
 

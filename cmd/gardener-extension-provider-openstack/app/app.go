@@ -40,7 +40,7 @@ import (
 	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackcontrolplaneexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplaneexposure"
+	openstackseedprovider "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/seedprovider"
 )
 
 // NewControllerManagerCommand creates a new command for running a OpenStack provider controller.
@@ -194,7 +194,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			log.Info("Adding controllers to manager")
-			configFileOpts.Completed().ApplyETCDStorage(&openstackcontrolplaneexposure.DefaultAddOptions.ETCDStorage)
+			configFileOpts.Completed().ApplyETCDStorage(&openstackseedprovider.DefaultAddOptions.ETCDStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
 			configFileOpts.Completed().ApplyBastionConfig(&openstackbastion.DefaultAddOptions.BastionConfig)
 			healthCheckCtrlOpts.Completed().Apply(&healthcheck.DefaultAddOptions.Controller)

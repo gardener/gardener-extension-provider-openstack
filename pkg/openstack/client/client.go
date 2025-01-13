@@ -37,9 +37,7 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 		//// cache your credentials in memory, and to allow Gophercloud to attempt to
 		//// re-authenticate automatically if/when your token expires.
 		AllowReauth: true,
-		Scope: &gophercloud.AuthScope{
-			ProjectName: credentials.TenantName,
-		},
+		TenantName:  credentials.TenantName,
 	}
 
 	tlsConfig := &tls.Config{

@@ -9,7 +9,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/gardener/etcd-druid v0.25.0
-	github.com/gardener/gardener v1.110.1
+	github.com/gardener/gardener v1.110.2
 	github.com/gardener/machine-controller-manager v0.55.1
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0

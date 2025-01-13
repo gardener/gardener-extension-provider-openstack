@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
 	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 const (
@@ -451,7 +452,7 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 		}
 
 		log.Info("replacing SSH key pair")
-		if err := fctx.compute.DeleteKeyPair(fctx.defaultSSHKeypairName()); err != nil {
+		if err := fctx.compute.DeleteKeyPair(fctx.defaultSSHKeypairName()); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 		keyPair = nil

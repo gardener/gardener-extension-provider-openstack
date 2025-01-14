@@ -187,7 +187,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(&openstack.Credentials{
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(ctx, &openstack.Credentials{
 		AuthURL:                     *authURL,
 		Username:                    *userName,
 		Password:                    *password,

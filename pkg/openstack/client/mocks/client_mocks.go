@@ -212,18 +212,18 @@ func (m *MockFactoryFactory) EXPECT() *MockFactoryFactoryMockRecorder {
 }
 
 // NewFactory mocks base method.
-func (m *MockFactoryFactory) NewFactory(credentials *openstack.Credentials) (client.Factory, error) {
+func (m *MockFactoryFactory) NewFactory(ctx context.Context, credentials *openstack.Credentials) (client.Factory, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewFactory", credentials)
+	ret := m.ctrl.Call(m, "NewFactory", ctx, credentials)
 	ret0, _ := ret[0].(client.Factory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewFactory indicates an expected call of NewFactory.
-func (mr *MockFactoryFactoryMockRecorder) NewFactory(credentials any) *gomock.Call {
+func (mr *MockFactoryFactoryMockRecorder) NewFactory(ctx, credentials any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewFactory", reflect.TypeOf((*MockFactoryFactory)(nil).NewFactory), credentials)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewFactory", reflect.TypeOf((*MockFactoryFactory)(nil).NewFactory), ctx, credentials)
 }
 
 // MockCompute is a mock of Compute interface.

@@ -24,7 +24,7 @@ import (
 // NewOpenstackClientFromCredentials returns a Factory implementation that can be used to create clients for OpenStack services.
 // TODO: respect CloudProfile's requestTimeout for the OpenStack client.
 // see https://github.com/kubernetes/cloud-provider-openstack/blob/c44d941cdb5c7fe651f5cb9191d0af23e266c7cb/pkg/openstack/openstack.go#L257
-func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, error) {
+func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Credentials) (Factory, error) {
 	authOpts := gophercloud.AuthOptions{
 		IdentityEndpoint:            credentials.AuthURL,
 		Username:                    credentials.Username,
@@ -70,7 +70,7 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 		panic(err)
 	}
 
-	err = openstack.Authenticate(context.Background(), provider, authOpts)
+	err = openstack.Authenticate(ctx, provider, authOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func NewOpenStackClientFromSecretRef(ctx context.Context, c client.Client, secre
 	if len(strings.TrimSpace(creds.AuthURL)) == 0 && keyStoneUrl != nil {
 		creds.AuthURL = *keyStoneUrl
 	}
-	return NewOpenstackClientFromCredentials(creds)
+	return NewOpenstackClientFromCredentials(ctx, creds)
 }
 
 // WithRegion returns an Option that can modify the region a client targets.

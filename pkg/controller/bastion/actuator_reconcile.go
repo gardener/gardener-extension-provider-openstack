@@ -58,7 +58,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
 
-	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
+	openstackClientFactory, err := a.openstackClientFactory.NewFactory(ctx, credentials)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %w", err), helper.KnownCodes)
 	}

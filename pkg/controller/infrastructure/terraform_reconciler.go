@@ -147,7 +147,7 @@ func (t *TerraformReconciler) delete(ctx context.Context, infra *extensionsv1alp
 		return err
 	}
 
-	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(ctx, credentials)
 	if err != nil {
 		return err
 	}

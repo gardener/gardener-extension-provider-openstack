@@ -183,7 +183,7 @@ type SharedFilesystem interface {
 // FactoryFactory creates instances of Factory.
 type FactoryFactory interface {
 	// NewFactory creates a new instance of Factory for the given Openstack credentials.
-	NewFactory(credentials *openstack.Credentials) (Factory, error)
+	NewFactory(ctx context.Context, credentials *openstack.Credentials) (Factory, error)
 }
 
 // Images describes the operations of a client interacting with images
@@ -192,9 +192,9 @@ type Images interface {
 }
 
 // FactoryFactoryFunc is a function that implements FactoryFactory.
-type FactoryFactoryFunc func(credentials *openstack.Credentials) (Factory, error)
+type FactoryFactoryFunc func(ctx context.Context, credentials *openstack.Credentials) (Factory, error)
 
 // NewFactory creates a new instance of Factory for the given Openstack credentials.
-func (f FactoryFactoryFunc) NewFactory(credentials *openstack.Credentials) (Factory, error) {
-	return f(credentials)
+func (f FactoryFactoryFunc) NewFactory(ctx context.Context, credentials *openstack.Credentials) (Factory, error) {
+	return f(ctx, credentials)
 }

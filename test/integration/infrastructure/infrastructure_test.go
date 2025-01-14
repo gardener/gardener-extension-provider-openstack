@@ -210,7 +210,7 @@ var _ = BeforeSuite(func() {
 
 	decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 
-	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(&openstack.Credentials{
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(ctx, &openstack.Credentials{
 		AuthURL:                     *authURL,
 		Username:                    *userName,
 		Password:                    *password,

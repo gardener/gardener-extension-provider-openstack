@@ -367,36 +367,6 @@ func (mr *MockComputeMockRecorder) FindServersByName(ctx, name any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindServersByName", reflect.TypeOf((*MockCompute)(nil).FindServersByName), ctx, name)
 }
 
-// GetFloatingIP mocks base method.
-func (m *MockCompute) GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFloatingIP", ctx, listOpts)
-	ret0, _ := ret[0].(floatingips.FloatingIP)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetFloatingIP indicates an expected call of GetFloatingIP.
-func (mr *MockComputeMockRecorder) GetFloatingIP(ctx, listOpts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFloatingIP", reflect.TypeOf((*MockCompute)(nil).GetFloatingIP), ctx, listOpts)
-}
-
-// GetInstancePorts mocks base method.
-func (m *MockCompute) GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInstancePorts", ctx, instanceID)
-	ret0, _ := ret[0].([]ports.Port)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetInstancePorts indicates an expected call of GetInstancePorts.
-func (mr *MockComputeMockRecorder) GetInstancePorts(ctx, instanceID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstancePorts", reflect.TypeOf((*MockCompute)(nil).GetInstancePorts), ctx, instanceID)
-}
-
 // GetKeyPair mocks base method.
 func (m *MockCompute) GetKeyPair(ctx context.Context, name string) (*keypairs.KeyPair, error) {
 	m.ctrl.T.Helper()
@@ -440,20 +410,6 @@ func (m *MockCompute) ListServerGroups(ctx context.Context) ([]servergroups.Serv
 func (mr *MockComputeMockRecorder) ListServerGroups(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServerGroups", reflect.TypeOf((*MockCompute)(nil).ListServerGroups), ctx)
-}
-
-// UpdateFIPWithPort mocks base method.
-func (m *MockCompute) UpdateFIPWithPort(ctx context.Context, fipID, portID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateFIPWithPort", ctx, fipID, portID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateFIPWithPort indicates an expected call of UpdateFIPWithPort.
-func (mr *MockComputeMockRecorder) UpdateFIPWithPort(ctx, fipID, portID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFIPWithPort", reflect.TypeOf((*MockCompute)(nil).UpdateFIPWithPort), ctx, fipID, portID)
 }
 
 // MockDNS is a mock of DNS interface.
@@ -781,6 +737,36 @@ func (mr *MockNetworkingMockRecorder) GetFipByName(ctx, name any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFipByName", reflect.TypeOf((*MockNetworking)(nil).GetFipByName), ctx, name)
 }
 
+// GetFloatingIP mocks base method.
+func (m *MockNetworking) GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFloatingIP", ctx, listOpts)
+	ret0, _ := ret[0].(floatingips.FloatingIP)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFloatingIP indicates an expected call of GetFloatingIP.
+func (mr *MockNetworkingMockRecorder) GetFloatingIP(ctx, listOpts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFloatingIP", reflect.TypeOf((*MockNetworking)(nil).GetFloatingIP), ctx, listOpts)
+}
+
+// GetInstancePorts mocks base method.
+func (m *MockNetworking) GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstancePorts", ctx, instanceID)
+	ret0, _ := ret[0].([]ports.Port)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstancePorts indicates an expected call of GetInstancePorts.
+func (mr *MockNetworkingMockRecorder) GetInstancePorts(ctx, instanceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstancePorts", reflect.TypeOf((*MockNetworking)(nil).GetInstancePorts), ctx, instanceID)
+}
+
 // GetNetworkByID mocks base method.
 func (m *MockNetworking) GetNetworkByID(ctx context.Context, id string) (*networks.Network, error) {
 	m.ctrl.T.Helper()
@@ -1004,6 +990,20 @@ func (m *MockNetworking) RemoveRouterInterface(ctx context.Context, routerID str
 func (mr *MockNetworkingMockRecorder) RemoveRouterInterface(ctx, routerID, removeOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveRouterInterface", reflect.TypeOf((*MockNetworking)(nil).RemoveRouterInterface), ctx, routerID, removeOpts)
+}
+
+// UpdateFIPWithPort mocks base method.
+func (m *MockNetworking) UpdateFIPWithPort(ctx context.Context, fipID, portID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFIPWithPort", ctx, fipID, portID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFIPWithPort indicates an expected call of UpdateFIPWithPort.
+func (mr *MockNetworkingMockRecorder) UpdateFIPWithPort(ctx, fipID, portID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFIPWithPort", reflect.TypeOf((*MockNetworking)(nil).UpdateFIPWithPort), ctx, fipID, portID)
 }
 
 // UpdateNetwork mocks base method.

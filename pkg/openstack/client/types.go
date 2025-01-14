@@ -97,10 +97,6 @@ type Compute interface {
 	CreateServer(ctx context.Context, createOpts servers.CreateOpts) (*servers.Server, error)
 	DeleteServer(ctx context.Context, id string) error
 	FindServersByName(ctx context.Context, name string) ([]servers.Server, error)
-	// FloatingID
-	UpdateFIPWithPort(ctx context.Context, fipID, portID string) error
-	GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error)
-	GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error)
 
 	// Flavor
 	FindFlavorID(ctx context.Context, name string) (string, error)
@@ -135,6 +131,7 @@ type Networking interface {
 	DeleteFloatingIP(ctx context.Context, id string) error
 	ListFip(ctx context.Context, listOpts floatingips.ListOpts) ([]floatingips.FloatingIP, error)
 	GetFipByName(ctx context.Context, name string) ([]floatingips.FloatingIP, error)
+	GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error)
 	// Security Group
 	CreateSecurityGroup(ctx context.Context, listOpts groups.CreateOpts) (*groups.SecGroup, error)
 	DeleteSecurityGroup(ctx context.Context, groupID string) error
@@ -163,6 +160,8 @@ type Networking interface {
 	// Ports
 	GetPort(ctx context.Context, portID string) (*ports.Port, error)
 	GetRouterInterfacePort(ctx context.Context, routerID, subnetID string) (*ports.Port, error)
+	GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error)
+	UpdateFIPWithPort(ctx context.Context, fipID, portID string) error
 }
 
 // Loadbalancing describes the operations of a client interacting with OpenStack's Octavia service.

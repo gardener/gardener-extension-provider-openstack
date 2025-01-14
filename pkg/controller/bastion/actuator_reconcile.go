@@ -146,7 +146,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	err = ensureAssociateFIPWithInstance(ctx, computeClient, instance, fipid)
+	err = ensureAssociateFIPWithInstance(ctx, networkingClient, instance, fipid)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -323,8 +323,8 @@ func addressToIngress(dnsName *string, ipAddress *string) *corev1.LoadBalancerIn
 	return ingress
 }
 
-func ensureAssociateFIPWithInstance(ctx context.Context, client openstackclient.Compute, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
-	instancePorts, err := client.GetInstancePorts(ctx, instance.ID)
+func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
+	instancePorts, err := networkClient.GetInstancePorts(ctx, instance.ID)
 	if err != nil {
 		return err
 	}
@@ -346,10 +346,18 @@ func ensureAssociateFIPWithInstance(ctx context.Context, client openstackclient.
 		return fmt.Errorf("no active port found for instance id %s", instance.ID)
 	}
 
-	// check if floating ip is associated with the instance
-	fip, err := client.GetFloatingIP(ctx, floatingips.ListOpts{PortID: activePort.ID})
+	// check if floating ip is already associated with the instance
+	fip, err := networkClient.GetFloatingIP(ctx, floatingips.ListOpts{PortID: activePort.ID})
 	if err != nil {
 		return err
+	}
+
+	if fip.ID == "" {
+		err := networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, activePort.ID)
+		if err != nil {
+			return err
+		}
+		fip = *floatingIP
 	}
 
 	if fip.ID != "" {
@@ -360,7 +368,7 @@ func ensureAssociateFIPWithInstance(ctx context.Context, client openstackclient.
 		return fmt.Errorf("instance or floating ip address not ready yet")
 	}
 
-	return client.UpdateFIPWithPort(ctx, floatingIP.ID, activePort.ID)
+	return networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, activePort.ID)
 }
 
 func ensureSecurityGroupRules(ctx context.Context, log logr.Logger, client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {

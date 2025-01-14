@@ -13,8 +13,6 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
-	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
 )
 
 const (
@@ -97,47 +95,6 @@ func (c *ComputeClient) FindServersByName(ctx context.Context, name string) ([]s
 		return nil, err
 	}
 	return allServers, nil
-}
-
-// GetInstancePorts retrieves the ports of the instance.
-func (c *ComputeClient) GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error) {
-	portListOpts := ports.ListOpts{
-		DeviceID: instanceID,
-	}
-	allPorts, err := ports.List(c.client, portListOpts).AllPages(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return ports.ExtractPorts(allPorts)
-}
-
-// UpdateFIPWithPort updates a Floating IP by adding a port.
-func (c *ComputeClient) UpdateFIPWithPort(ctx context.Context, fipID, portID string) error {
-	updateOpts := floatingips.UpdateOpts{
-		PortID: &portID,
-	}
-	_, err := floatingips.Update(ctx, c.client, fipID, updateOpts).Extract()
-	return err
-}
-
-// GetFloatingIP gets the Floating IP ID by listOpts.
-func (c *ComputeClient) GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error) {
-	allPages, err := floatingips.List(c.client, listOpts).AllPages(ctx)
-	if err != nil {
-		return floatingips.FloatingIP{}, err
-	}
-
-	allFloatingIPs, err := floatingips.ExtractFloatingIPs(allPages)
-	if err != nil {
-		return floatingips.FloatingIP{}, err
-	}
-
-	if len(allFloatingIPs) == 1 {
-		return allFloatingIPs[0], nil
-	}
-	// we don't want to throw an error if the floating IP is not found
-	return floatingips.FloatingIP{}, nil
 }
 
 // FindFlavorID find flavor ID by flavor name.

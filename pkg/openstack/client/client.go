@@ -62,7 +62,7 @@ func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Cred
 	}
 
 	provider, err := config.NewProviderClient(
-		context.Background(),
+		ctx,
 		authOpts,
 		config.WithTLSConfig(tlsConfig),
 		config.WithHTTPClient(httpClient))

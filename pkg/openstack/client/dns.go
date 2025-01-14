@@ -9,14 +9,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/gophercloud/gophercloud/openstack/dns/v2/recordsets"
-	"github.com/gophercloud/gophercloud/openstack/dns/v2/zones"
+	"github.com/gophercloud/gophercloud/v2/openstack/dns/v2/recordsets"
+	"github.com/gophercloud/gophercloud/v2/openstack/dns/v2/zones"
 )
 
 // GetZones returns a map of all zone names mapped to their IDs.
-func (c *DNSClient) GetZones(_ context.Context) (map[string]string, error) {
+func (c *DNSClient) GetZones(ctx context.Context) (map[string]string, error) {
 	result := make(map[string]string)
-	allPages, err := zones.List(c.client, zones.ListOpts{}).AllPages()
+	allPages, err := zones.List(c.client, zones.ListOpts{}).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -32,8 +32,8 @@ func (c *DNSClient) GetZones(_ context.Context) (map[string]string, error) {
 
 // CreateOrUpdateRecordSet creates or updates the recordset with the given name, record type, records, and ttl
 // in the zone with the given zone ID.
-func (c *DNSClient) CreateOrUpdateRecordSet(_ context.Context, zoneID, name, recordType string, records []string, ttl int) error {
-	rs, err := c.getRecordSet(zoneID, name, recordType)
+func (c *DNSClient) CreateOrUpdateRecordSet(ctx context.Context, zoneID, name, recordType string, records []string, ttl int) error {
+	rs, err := c.getRecordSet(ctx, zoneID, name, recordType)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (c *DNSClient) CreateOrUpdateRecordSet(_ context.Context, zoneID, name, rec
 				Records: records,
 				TTL:     &ttl,
 			}
-			_, err := recordsets.Update(c.client, zoneID, rs.ID, updateOpts).Extract()
+			_, err := recordsets.Update(ctx, c.client, zoneID, rs.ID, updateOpts).Extract()
 			return err
 		}
 		return nil
@@ -57,30 +57,30 @@ func (c *DNSClient) CreateOrUpdateRecordSet(_ context.Context, zoneID, name, rec
 		Records: records,
 		TTL:     ttl,
 	}
-	_, err = recordsets.Create(c.client, zoneID, createOpts).Extract()
+	_, err = recordsets.Create(ctx, c.client, zoneID, createOpts).Extract()
 	return err
 }
 
 // DeleteRecordSet deletes the recordset with the given name and record type in the zone with the given zone ID.
-func (c *DNSClient) DeleteRecordSet(_ context.Context, zoneID, name, recordType string) error {
-	rs, err := c.getRecordSet(zoneID, name, recordType)
+func (c *DNSClient) DeleteRecordSet(ctx context.Context, zoneID, name, recordType string) error {
+	rs, err := c.getRecordSet(ctx, zoneID, name, recordType)
 	if err != nil {
 		return err
 	}
 	if rs != nil {
-		if err := recordsets.Delete(c.client, zoneID, rs.ID).ExtractErr(); !IsNotFoundError(err) {
+		if err := recordsets.Delete(ctx, c.client, zoneID, rs.ID).ExtractErr(); !IsNotFoundError(err) {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *DNSClient) getRecordSet(zoneID, name, recordType string) (*recordsets.RecordSet, error) {
+func (c *DNSClient) getRecordSet(ctx context.Context, zoneID, name, recordType string) (*recordsets.RecordSet, error) {
 	listOpts := recordsets.ListOpts{
 		Name: ensureTrailingDot(name),
 		Type: recordType,
 	}
-	allPages, err := recordsets.ListByZone(c.client, zoneID, listOpts).AllPages()
+	allPages, err := recordsets.ListByZone(c.client, zoneID, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}

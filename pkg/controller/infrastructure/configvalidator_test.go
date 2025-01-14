@@ -131,7 +131,7 @@ var _ = Describe("ConfigValidator", func() {
 					return nil
 				},
 			)
-			openstackClientFactoryFactory.EXPECT().NewFactory(credentials).Return(openstackClientFactory, nil)
+			openstackClientFactoryFactory.EXPECT().NewFactory(ctx, credentials).Return(openstackClientFactory, nil)
 			openstackClientFactory.EXPECT().Networking().Return(networkingClient, nil)
 		})
 

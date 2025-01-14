@@ -15,8 +15,8 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +35,7 @@ const (
 // Note that this deletion may still leave some leftover resources like the floating IPs. This is intentional because the users may want to preserve them but without the k8s
 // service object we cannot decide that - therefore the floating IPs will be untouched.
 func CleanupKubernetesLoadbalancers(ctx context.Context, log logr.Logger, client openstackclient.Loadbalancing, subnetID, clusterName string) error {
-	lbList, err := client.ListLoadbalancers(loadbalancers.ListOpts{
+	lbList, err := client.ListLoadbalancers(ctx, loadbalancers.ListOpts{
 		VipSubnetID: subnetID,
 	})
 
@@ -66,13 +66,13 @@ func CleanupKubernetesLoadbalancers(ctx context.Context, log logr.Logger, client
 		w.Add(1)
 		go func() {
 			defer w.Done()
-			if err := client.DeleteLoadbalancer(lb.ID, loadbalancers.DeleteOpts{Cascade: true}); err != nil {
+			if err := client.DeleteLoadbalancer(ctx, lb.ID, loadbalancers.DeleteOpts{Cascade: true}); err != nil {
 				res <- err
 				return
 			}
 
 			err := wait.ExponentialBackoffWithContext(ctx, b, func(_ context.Context) (done bool, err error) {
-				lb, err := client.GetLoadbalancer(lb.ID)
+				lb, err := client.GetLoadbalancer(ctx, lb.ID)
 				if err != nil {
 					return false, err
 				}
@@ -95,8 +95,8 @@ func CleanupKubernetesLoadbalancers(ctx context.Context, log logr.Logger, client
 }
 
 // CleanupKubernetesRoutes deletes all routes from the router which have a nextHop in the subnet.
-func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networking, routerID, workers string) error {
-	router, err := client.GetRouterByID(routerID)
+func CleanupKubernetesRoutes(ctx context.Context, client openstackclient.Networking, routerID, workers string) error {
+	router, err := client.GetRouterByID(ctx, routerID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networkin
 		return nil
 	}
 
-	routes := []routers.Route{}
+	var routes []routers.Route
 	_, workersNet, err := net.ParseCIDR(workers)
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func CleanupKubernetesRoutes(_ context.Context, client openstackclient.Networkin
 		return nil
 	}
 
-	if _, err := client.UpdateRoutesForRouter(routes, routerID); err != nil {
+	if _, err := client.UpdateRoutesForRouter(ctx, routes, routerID); err != nil {
 		return err
 	}
 	return nil

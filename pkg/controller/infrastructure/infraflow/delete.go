@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/sharenetworks"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
@@ -110,7 +110,7 @@ func (fctx *FlowContext) deleteRouter(ctx context.Context) error {
 	}
 
 	shared.LogFromContext(ctx).Info("deleting...", "router", *routerID)
-	if err := fctx.networking.DeleteRouter(*routerID); client.IgnoreNotFoundError(err) != nil {
+	if err := fctx.networking.DeleteRouter(ctx, *routerID); client.IgnoreNotFoundError(err) != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func (fctx *FlowContext) deleteNetwork(ctx context.Context) error {
 	}
 
 	shared.LogFromContext(ctx).Info("deleting...", "network", *networkID)
-	if err := fctx.networking.DeleteNetwork(*networkID); client.IgnoreNotFoundError(err) != nil {
+	if err := fctx.networking.DeleteNetwork(ctx, *networkID); client.IgnoreNotFoundError(err) != nil {
 		return err
 	}
 
@@ -141,14 +141,14 @@ func (fctx *FlowContext) deleteSubnet(ctx context.Context) error {
 	}
 
 	shared.LogFromContext(ctx).Info("deleting...", "subnet", *subnetID)
-	if err := fctx.networking.DeleteSubnet(*subnetID); client.IgnoreNotFoundError(err) != nil {
+	if err := fctx.networking.DeleteSubnet(ctx, *subnetID); client.IgnoreNotFoundError(err) != nil {
 		return err
 	}
 	fctx.state.Set(IdentifierSubnet, "")
 	return nil
 }
 
-func (fctx *FlowContext) recoverRouterID(_ context.Context) error {
+func (fctx *FlowContext) recoverRouterID(ctx context.Context) error {
 	if fctx.config.Networks.Router != nil {
 		fctx.state.Set(IdentifierRouter, fctx.config.Networks.Router.ID)
 		return nil
@@ -157,7 +157,7 @@ func (fctx *FlowContext) recoverRouterID(_ context.Context) error {
 	if routerID != nil {
 		return nil
 	}
-	router, err := fctx.findExistingRouter()
+	router, err := fctx.findExistingRouter(ctx)
 	if err != nil {
 		return err
 	}
@@ -167,17 +167,17 @@ func (fctx *FlowContext) recoverRouterID(_ context.Context) error {
 	return nil
 }
 
-func (fctx *FlowContext) recoverNetworkID(_ context.Context) error {
-	_, err := fctx.getNetworkID()
+func (fctx *FlowContext) recoverNetworkID(ctx context.Context) error {
+	_, err := fctx.getNetworkID(ctx)
 	return err
 }
 
-func (fctx *FlowContext) recoverSubnetID(_ context.Context) error {
+func (fctx *FlowContext) recoverSubnetID(ctx context.Context) error {
 	if fctx.state.Get(IdentifierSubnet) != nil {
 		return nil
 	}
 
-	subnet, err := fctx.findExistingSubnet()
+	subnet, err := fctx.findExistingSubnet(ctx)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
 		return nil
 	}
 
-	portID, err := fctx.access.GetRouterInterfacePortID(*routerID, *subnetID)
+	portID, err := fctx.access.GetRouterInterfacePortID(ctx, *routerID, *subnetID)
 	if err != nil {
 		return err
 	}
@@ -216,13 +216,13 @@ func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
 
 func (fctx *FlowContext) deleteSecGroup(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
-	current, err := findExisting(fctx.state.Get(IdentifierSecGroup), fctx.defaultSecurityGroupName(), fctx.access.GetSecurityGroupByID, fctx.access.GetSecurityGroupByName)
+	current, err := findExisting(ctx, fctx.state.Get(IdentifierSecGroup), fctx.defaultSecurityGroupName(), fctx.access.GetSecurityGroupByID, fctx.access.GetSecurityGroupByName)
 	if err != nil {
 		return err
 	}
 	if current != nil {
 		log.Info("deleting...", "securityGroup", current.ID)
-		if err := fctx.networking.DeleteSecurityGroup(current.ID); client.IgnoreNotFoundError(err) != nil {
+		if err := fctx.networking.DeleteSecurityGroup(ctx, current.ID); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}
@@ -233,13 +233,13 @@ func (fctx *FlowContext) deleteSecGroup(ctx context.Context) error {
 
 func (fctx *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
-	current, err := fctx.compute.GetKeyPair(fctx.defaultSSHKeypairName())
+	current, err := fctx.compute.GetKeyPair(ctx, fctx.defaultSSHKeypairName())
 	if err != nil {
 		return err
 	}
 	if current != nil {
 		log.Info("deleting...")
-		if err := fctx.compute.DeleteKeyPair(current.Name); client.IgnoreNotFoundError(err) != nil {
+		if err := fctx.compute.DeleteKeyPair(ctx, current.Name); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}
@@ -254,11 +254,11 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")
-	current, err := findExisting(fctx.state.Get(IdentifierShareNetwork),
+	current, err := findExisting(ctx, fctx.state.Get(IdentifierShareNetwork),
 		fctx.defaultSharedNetworkName(),
 		fctx.sharedFilesystem.GetShareNetwork,
-		func(name string) ([]*sharenetworks.ShareNetwork, error) {
-			list, err := fctx.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+		func(ctx context.Context, name string) ([]*sharenetworks.ShareNetwork, error) {
+			list, err := fctx.sharedFilesystem.ListShareNetworks(ctx, sharenetworks.ListOpts{
 				Name:            name,
 				NeutronNetID:    networkID,
 				NeutronSubnetID: subnetID,
@@ -273,7 +273,7 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	}
 	if current != nil {
 		log.Info("deleting...", "shareNetwork", current.ID)
-		if err := fctx.sharedFilesystem.DeleteShareNetwork(current.ID); client.IgnoreNotFoundError(err) != nil {
+		if err := fctx.sharedFilesystem.DeleteShareNetwork(ctx, current.ID); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}

@@ -5,22 +5,23 @@
 package client
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
 )
 
 // ListLoadbalancers returns a list of all loadbalancers info by listOpts
-func (c *LoadbalancingClient) ListLoadbalancers(listOpts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error) {
-	pages, err := loadbalancers.List(c.client, listOpts).AllPages()
+func (c *LoadbalancingClient) ListLoadbalancers(ctx context.Context, listOpts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error) {
+	pages, err := loadbalancers.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	return loadbalancers.ExtractLoadBalancers(pages)
 }
 
 // DeleteLoadbalancer deletes the loadbalancer with the specified ID.
-func (c *LoadbalancingClient) DeleteLoadbalancer(id string, opts loadbalancers.DeleteOpts) error {
-	err := loadbalancers.Delete(c.client, id, opts).ExtractErr()
+func (c *LoadbalancingClient) DeleteLoadbalancer(ctx context.Context, id string, opts loadbalancers.DeleteOpts) error {
+	err := loadbalancers.Delete(ctx, c.client, id, opts).ExtractErr()
 	if err != nil && !IsNotFoundError(err) {
 		return err
 	}
@@ -28,8 +29,8 @@ func (c *LoadbalancingClient) DeleteLoadbalancer(id string, opts loadbalancers.D
 }
 
 // GetLoadbalancer returns the loadbalancer with the specified ID.
-func (c *LoadbalancingClient) GetLoadbalancer(id string) (*loadbalancers.LoadBalancer, error) {
-	lb, err := loadbalancers.Get(c.client, id).Extract()
+func (c *LoadbalancingClient) GetLoadbalancer(ctx context.Context, id string) (*loadbalancers.LoadBalancer, error) {
+	lb, err := loadbalancers.Get(ctx, c.client, id).Extract()
 	if err != nil && !IsNotFoundError(err) {
 		return nil, err
 	}

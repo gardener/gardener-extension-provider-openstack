@@ -136,6 +136,25 @@ func (c *NetworkingClient) DeleteFloatingIP(ctx context.Context, id string) erro
 	return floatingips.Delete(ctx, c.client, id).ExtractErr()
 }
 
+// GetFloatingIP gets the Floating IP ID by listOpts.
+func (c *NetworkingClient) GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error) {
+	allPages, err := floatingips.List(c.client, listOpts).AllPages(ctx)
+	if err != nil {
+		return floatingips.FloatingIP{}, err
+	}
+
+	allFloatingIPs, err := floatingips.ExtractFloatingIPs(allPages)
+	if err != nil {
+		return floatingips.FloatingIP{}, err
+	}
+
+	if len(allFloatingIPs) == 1 {
+		return allFloatingIPs[0], nil
+	}
+	// we don't want to throw an error if the floating IP is not found
+	return floatingips.FloatingIP{}, nil
+}
+
 // ListRules returns a list of security group rules
 func (c *NetworkingClient) ListRules(ctx context.Context, listOpts rules.ListOpts) ([]rules.SecGroupRule, error) {
 	allPages, err := rules.List(c.client, listOpts).AllPages(ctx)
@@ -299,4 +318,26 @@ func (c *NetworkingClient) GetRouterInterfacePort(ctx context.Context, routerID,
 		return nil, nil
 	}
 	return &filtered[0], nil
+}
+
+// GetInstancePorts retrieves the ports of the instance.
+func (c *NetworkingClient) GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error) {
+	portListOpts := ports.ListOpts{
+		DeviceID: instanceID,
+	}
+	allPorts, err := ports.List(c.client, portListOpts).AllPages(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return ports.ExtractPorts(allPorts)
+}
+
+// UpdateFIPWithPort updates a Floating IP by adding a port.
+func (c *NetworkingClient) UpdateFIPWithPort(ctx context.Context, fipID, portID string) error {
+	updateOpts := floatingips.UpdateOpts{
+		PortID: &portID,
+	}
+	_, err := floatingips.Update(ctx, c.client, fipID, updateOpts).Extract()
+	return err
 }

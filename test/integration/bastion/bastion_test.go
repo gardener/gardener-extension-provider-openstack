@@ -348,6 +348,7 @@ func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID str
 
 	externalNetwork, err := networkClient.GetExternalNetworkByName(ctx, *floatingPoolName)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(externalNetwork).NotTo(BeNil())
 
 	createOpts := routers.CreateOpts{
 		Name:         routerName,

@@ -5,7 +5,10 @@
 package utils
 
 import (
+	"fmt"
 	"strings"
+
+	utilsnet "k8s.io/utils/net"
 )
 
 // IsEmptyString checks whether a string is empty
@@ -52,4 +55,18 @@ func SimpleMatch(pattern, text string) (bool, int) {
 	}
 
 	return false, 0
+}
+
+// ComputeEgressCIDRs converts an IP to a CIDR depending on the IP family.
+func ComputeEgressCIDRs(ips []string) []string {
+	var result []string
+	for _, ip := range ips {
+		switch {
+		case utilsnet.IsIPv4String(ip):
+			result = append(result, fmt.Sprintf("%s/32", ip))
+		case utilsnet.IsIPv6String(ip):
+			result = append(result, fmt.Sprintf("%s/128", ip))
+		}
+	}
+	return result
 }

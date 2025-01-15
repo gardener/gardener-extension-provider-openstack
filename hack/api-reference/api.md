@@ -1373,7 +1373,7 @@ string
 </td>
 <td>
 <p>Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
-Deprecated - use <code>workers</code> instead.</p>
+Deprecated: use <code>workers</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -1574,7 +1574,19 @@ string
 </em>
 </td>
 <td>
-<p>IP is the router ip.</p>
+<p>IP is the router ip.
+Deprecated: use ExternalFixedIPs instead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>externalFixedIP</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>ExternalFixedIPs is the list of the router&rsquo;s assigned external fixed IPs.</p>
 </td>
 </tr>
 </tbody>

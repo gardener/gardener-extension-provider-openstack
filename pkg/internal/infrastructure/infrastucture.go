@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 const (
@@ -158,9 +159,7 @@ func PatchProviderStatusAndState(
 	patch := client.MergeFrom(infra.DeepCopy())
 	if status != nil {
 		infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
-		if status.Networks.Router.IP != "" {
-			infra.Status.EgressCIDRs = []string{fmt.Sprintf("%s/32", status.Networks.Router.IP)}
-		}
+		infra.Status.EgressCIDRs = utils.ComputeEgressCIDRs(status.Networks.Router.ExternalFixedIPs)
 	}
 
 	if state != nil {

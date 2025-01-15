@@ -12,7 +12,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

@@ -227,6 +227,12 @@ openstack_networking_network_v2.cluster.name
 data.openstack_networking_network_v2.cluster.name
 {{ end -}}
 {{- end -}}
+
+// Openstack API could return an IPv6 external IP even for v4-only clusters see
+// https://github.com/gardener/gardener-extension-provider-openstack/issues/897
+// We filter for IPs that match the v4 pattern (4 numbers seperated by dots)
+// and only return one just in case there are mulitple as the rest of the
+// codebase is currently expecting a single v4 IP
 {{- define "router-ip" -}}
 {{ if .create.router -}}
 one([for external_fixed_ip in openstack_networking_router_v2.router.external_fixed_ip : external_fixed_ip.ip_address if can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", external_fixed_ip.ip_address))])

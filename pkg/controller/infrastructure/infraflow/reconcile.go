@@ -67,6 +67,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "ensure router interface",
 		fctx.ensureRouterInterface,
+		shared.DoIf(fctx.config.Networks.SubnetID == nil || fctx.config.Networks.Router == nil),
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnet))
 
 	ensureSecGroup := fctx.AddTask(g, "ensure security group",
@@ -274,6 +275,26 @@ func (fctx *FlowContext) getNetworkID() (*string, error) {
 }
 
 func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
+	if subnetID := fctx.config.Networks.SubnetID; subnetID != nil {
+		return fctx.ensureConfiguredSubnet(subnetID)
+	}
+	return fctx.ensureNewSubnet(ctx)
+}
+
+func (fctx *FlowContext) ensureConfiguredSubnet(subnetID *string) error {
+	if subnetID == nil {
+		return fmt.Errorf("subnetID can not be nil")
+	}
+
+	if _, err := fctx.access.GetSubnetByID(*subnetID); err != nil {
+		fctx.state.Set(IdentifierSubnet, "")
+		return err
+	}
+	fctx.state.Set(IdentifierSubnet, *subnetID)
+	return nil
+}
+
+func (fctx *FlowContext) ensureNewSubnet(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 
 	if fctx.state.Get(IdentifierNetwork) == nil {
@@ -284,7 +305,7 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	desired := &subnets.Subnet{
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
-		CIDR:           fctx.workerCIDR(),
+		CIDR:           infrainternal.WorkersCIDR(fctx.config),
 		IPVersion:      4,
 		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
 	}
@@ -471,6 +492,9 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	if sn := fctx.config.Networks.ShareNetwork; sn == nil || !sn.Enabled {
 		return nil
 	}
+	if fctx.config.Networks.SubnetID != nil {
+		return fctx.ensureShareNetworkForExistingSubnet(ctx)
+	}
 
 	log := shared.LogFromContext(ctx)
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
@@ -511,5 +535,34 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	}
 	fctx.state.Set(IdentifierShareNetwork, created.ID)
 	fctx.state.Set(NameShareNetwork, created.Name)
+	return nil
+}
+
+// ensureShareNetworkForExistingSubnet ensures the shared network for an existing subnet. Because the subnet may be shared among many different shoots,
+// it could be that there is already a shareNetwork associated with a subnet. This function is responsible for detecting the shared network associated with the subnet.
+func (fctx *FlowContext) ensureShareNetworkForExistingSubnet(_ context.Context) error {
+	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")
+	current, err := findExisting(fctx.state.Get(IdentifierShareNetwork),
+		"",
+		fctx.sharedFilesystem.GetShareNetwork,
+		func(_ string) ([]*sharenetworks.ShareNetwork, error) {
+			list, err := fctx.sharedFilesystem.ListShareNetworks(sharenetworks.ListOpts{
+				NeutronSubnetID: subnetID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return sliceToPtr(list), nil
+		})
+
+	if err != nil {
+		return err
+	}
+
+	if current != nil {
+		fctx.state.Set(IdentifierShareNetwork, current.ID)
+		fctx.state.Set(NameShareNetwork, current.Name)
+	}
+
 	return nil
 }

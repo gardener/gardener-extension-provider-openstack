@@ -69,12 +69,3 @@ func (fctx *FlowContext) defaultSecurityGroupName() string {
 func (fctx *FlowContext) defaultSharedNetworkName() string {
 	return fctx.infra.Namespace
 }
-
-func (fctx *FlowContext) workerCIDR() string {
-	s := fctx.config.Networks.Worker
-	if workers := fctx.config.Networks.Workers; workers != "" {
-		s = workers
-	}
-
-	return s
-}

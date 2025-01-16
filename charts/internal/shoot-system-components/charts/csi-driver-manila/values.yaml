@@ -12,7 +12,7 @@ openstack:
     - zone1
     - zone2
   shareNetworkID: shareNetworkIDValue
-  shareClient: 10.180.0.0/16
+  # shareClient: 10.180.0.0/16
   shareProtocol: NFS
   authURL: authURLValue
   region: regionValue

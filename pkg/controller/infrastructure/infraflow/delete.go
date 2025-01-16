@@ -37,6 +37,8 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 
 	needToDeleteNetwork := fctx.config.Networks.ID == nil
 	needToDeleteRouter := fctx.config.Networks.Router == nil
+	// skip deletion of the subnet if the subnet is user-managed.
+	needToDeleteSubnet := fctx.config.Networks.SubnetID == nil
 
 	_ = fctx.AddTask(g, "delete ssh key pair",
 		fctx.deleteSSHKeyPair,
@@ -61,8 +63,13 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 			if routerID == nil {
 				return nil
 			}
-			return infrastructure.CleanupKubernetesRoutes(ctx, fctx.networking, *routerID, infrastructure.WorkersCIDR(fctx.config))
+			subnetID := fctx.state.Get(IdentifierSubnet)
+			if subnetID == nil {
+				return nil
+			}
+			return infrastructure.CleanupKubernetesRoutes(ctx, fctx.networking, *routerID, *subnetID)
 		},
+		shared.DoIf(needToDeleteRouter || needToDeleteSubnet),
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(recoverIDs),
 	)
@@ -80,14 +87,18 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "delete share network",
 		fctx.deleteShareNetwork,
-		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs))
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs),
+		shared.DoIf(needToDeleteSubnet),
+	)
 	deleteRouterInterface := fctx.AddTask(g, "delete router interface",
 		fctx.deleteRouterInterface,
+		shared.DoIf(needToDeleteSubnet || needToDeleteRouter),
 		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs, k8sRoutes))
 	// subnet deletion only needed if network is given by spec
 	_ = fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
-		shared.DoIf(!needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
+		// Delete the subnet only if the network is not being deleted already since it will be deleted anyways in that case.
+		shared.DoIf(!needToDeleteNetwork && needToDeleteSubnet), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
 	_ = fctx.AddTask(g, "delete network",
 		fctx.deleteNetwork,
 		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface))

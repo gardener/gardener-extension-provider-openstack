@@ -61,31 +61,34 @@ networks:
 #   enabled: true
 ```
 
-The `floatingPoolName` is the name of the floating pool you want to use for your shoot.
-If you don't know which floating pools are available look it up in the respective `CloudProfile`.
+* The `floatingPoolName` is the name of the floating pool you want to use for your shoot.
+  If you don't know which floating pools are available look it up in the respective `CloudProfile`.
 
-With `floatingPoolSubnetName` you can explicitly define to which subnet in the floating pool network (defined via `floatingPoolName`) the router should be attached to.
+* With `floatingPoolSubnetName` you can explicitly define to which subnet in the floating pool network (defined via `floatingPoolName`) the router should be attached to.
 
-`networks.id` is an optional field. If it is given, you can specify the uuid of an existing private Neutron network (created manually, by other tooling, ...) that should be reused. A new subnet for the Shoot will be created in it.
+* `networks.id` is an optional field. If it is given, you can specify the uuid of an existing private Neutron network (created manually, by other tooling, ...) that should be reused. A new subnet for the Shoot will be created in it.
 
-If a `networks.id` is given and calico shoot clusters are created without a network overlay within one network make sure that the pod CIDR specified in `shoot.spec.networking.pods` is not overlapping with any other pod CIDR used in that network.
+  If a `networks.id` is given and calico shoot clusters are created without a network overlay within one network make sure that the pod CIDR specified in `shoot.spec.networking.pods` is not overlapping with any other pod CIDR used in that network.
 Overlapping pod CIDRs will lead to disfunctional shoot clusters.
 
-The `networks.router` section describes whether you want to create the shoot cluster in an already existing router or whether to create a new one:
-
-* If `networks.router.id` is given then you have to specify the router id of the existing router that was created by other means (manually, other tooling, ...).
+* The `networks.router` section describes whether you want to create the shoot cluster in an already existing router or whether to create a new one:
+  * If `networks.router.id` is given then you have to specify the router id of the existing router that was created by other means (manually, other tooling, ...).
 If you want to get a fresh router for the shoot then just omit the `networks.router` field.
+ 
+* `networks.subnetID` is an optional field where you can specify the uuid of an existing private Neutron subnet. 
+  The shoot worker nodes will be created in the provided subnet.
+  * In any other case, the shoot cluster will be created in a **new** subnet.
 
-* In any case, the shoot cluster will be created in a **new** subnet.
+* The `networks.workers` section describes the CIDR for a subnet that is used for all shoot worker nodes, i.e., VMs which later run your applications.
 
-The `networks.workers` section describes the CIDR for a subnet that is used for all shoot worker nodes, i.e., VMs which later run your applications.
+  You can freely choose these CIDRs and it is your responsibility to properly design the network layout to suit your needs.
 
-You can freely choose these CIDRs and it is your responsibility to properly design the network layout to suit your needs.
+* Apart from the router and the worker subnet the OpenStack extension will also create a network, router interfaces, security groups, and a key pair.
 
-Apart from the router and the worker subnet the OpenStack extension will also create a network, router interfaces, security groups, and a key pair.
-
-The optional `networks.shareNetwork.enabled` field controls the creation of a share network. This is only needed if shared
-file system storage (like NFS) should be used. Note, that in this case, the `ControlPlaneConfig` needs additional configuration, too.
+* The optional `networks.shareNetwork.enabled` field controls the creation of a share network. 
+  This is only needed if shared file system storage (like NFS) should be used. Note, that in this case, the `ControlPlaneConfig` needs additional configuration, too.
+  * if `networks.subnetID` is used then the `shareNetworks` property should not be enabled. 
+    The user is responsible for creating the Share Network to the subnet before 
 
 ## `ControlPlaneConfig`
 

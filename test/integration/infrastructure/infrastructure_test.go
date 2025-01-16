@@ -51,6 +51,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 const (
@@ -689,9 +690,17 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	Expect(router.Status).To(Equal("ACTIVE"))
 	infrastructureIdentifier.routerID = ptr.To(router.ID)
 
+	var externalFixedIPs []string
+	for _, ip := range router.GatewayInfo.ExternalFixedIPs {
+		if ip.IPAddress != "" {
+			externalFixedIPs = append(externalFixedIPs, ip.IPAddress)
+		}
+	}
+
 	// verify router ip in status
 	Expect(router.GatewayInfo.ExternalFixedIPs).NotTo(BeEmpty())
 	Expect(providerStatus.Networks.Router.IP).To(Equal(router.GatewayInfo.ExternalFixedIPs[0].IPAddress))
+	Expect(providerStatus.Networks.Router.ExternalFixedIPs).To(ContainElements(externalFixedIPs))
 
 	// network is created
 	net, err := networkClient.GetNetworkByID(providerStatus.Networks.ID)
@@ -721,8 +730,7 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	infrastructureIdentifier.keyPair = ptr.To(keyPair.Name)
 
 	// verify egressCIDRs
-	expectedCIDRDs := []string{providerStatus.Networks.Router.IP + "/32"}
-	Expect(infraStatus.EgressCIDRs).To(Equal(expectedCIDRDs))
+	Expect(infraStatus.EgressCIDRs).To(ContainElements(utils.ComputeEgressCIDRs(providerStatus.Networks.Router.ExternalFixedIPs)))
 
 	return infrastructureIdentifier, providerStatus
 }

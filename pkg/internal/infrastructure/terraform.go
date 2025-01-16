@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/terraformer"
@@ -27,8 +28,8 @@ const (
 	TerraformOutputKeySSHKeyName = "key_name"
 	// TerraformOutputKeyRouterID is the id the router between provider network and the worker subnet.
 	TerraformOutputKeyRouterID = "router_id"
-	// TerraformOutputKeyRouterIP is the ip address of the router.
-	TerraformOutputKeyRouterIP = "router_ip"
+	// TerraformOutputKeyRouterIPs is the ip addresses of the router.
+	TerraformOutputKeyRouterIPs = "router_ips"
 	// TerraformOutputKeyNetworkID is the private worker network.
 	TerraformOutputKeyNetworkID = "network_id"
 	// TerraformOutputKeyNetworkName is the private worker network name.
@@ -73,7 +74,7 @@ func ComputeTerraformerTemplateValues(
 		}
 		outputKeysConfig = map[string]interface{}{
 			"routerID":          TerraformOutputKeyRouterID,
-			"routerIP":          TerraformOutputKeyRouterIP,
+			"routerIPs":         TerraformOutputKeyRouterIPs,
 			"networkID":         TerraformOutputKeyNetworkID,
 			"networkName":       TerraformOutputKeyNetworkName,
 			"keyName":           TerraformOutputKeySSHKeyName,
@@ -204,7 +205,7 @@ type TerraformState struct {
 	// RouterID is the id the router between provider network and the worker subnet.
 	RouterID string
 	// RouterIP is the ip address of the router.
-	RouterIP string
+	RouterIPs string
 	// NetworkID is the private worker network.
 	NetworkID string
 	// NetworkName is the private worker network name.
@@ -228,7 +229,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer, conf
 	outputKeys := []string{
 		TerraformOutputKeySSHKeyName,
 		TerraformOutputKeyRouterID,
-		TerraformOutputKeyRouterIP,
+		TerraformOutputKeyRouterIPs,
 		TerraformOutputKeyNetworkID,
 		TerraformOutputKeyNetworkName,
 		TerraformOutputKeySubnetID,
@@ -249,7 +250,7 @@ func ExtractTerraformState(ctx context.Context, tf terraformer.Terraformer, conf
 	return &TerraformState{
 		SSHKeyName:        vars[TerraformOutputKeySSHKeyName],
 		RouterID:          vars[TerraformOutputKeyRouterID],
-		RouterIP:          vars[TerraformOutputKeyRouterIP],
+		RouterIPs:         vars[TerraformOutputKeyRouterIPs],
 		NetworkID:         vars[TerraformOutputKeyNetworkID],
 		NetworkName:       vars[TerraformOutputKeyNetworkName],
 		SubnetID:          vars[TerraformOutputKeySubnetID],
@@ -271,6 +272,11 @@ func StatusFromTerraformState(state *TerraformState) *apiv1alpha1.Infrastructure
 			Name: state.ShareNetworkName,
 		}
 	}
+	routerIPs := strings.Split(state.RouterIPs, ",")
+	var routerIP string
+	if len(routerIPs) > 0 {
+		routerIP = routerIPs[0]
+	}
 	return &apiv1alpha1.InfrastructureStatus{
 		TypeMeta: StatusTypeMeta,
 		Networks: apiv1alpha1.NetworkStatus{
@@ -280,8 +286,9 @@ func StatusFromTerraformState(state *TerraformState) *apiv1alpha1.Infrastructure
 				ID: state.FloatingNetworkID,
 			},
 			Router: apiv1alpha1.RouterStatus{
-				ID: state.RouterID,
-				IP: state.RouterIP,
+				ID:               state.RouterID,
+				IP:               routerIP,
+				ExternalFixedIPs: routerIPs,
 			},
 			Subnets: []apiv1alpha1.Subnet{
 				{

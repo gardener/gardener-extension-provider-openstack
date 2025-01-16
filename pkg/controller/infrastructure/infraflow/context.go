@@ -39,6 +39,8 @@ const (
 	IdentifierSecGroup = "SecurityGroup"
 	// IdentifierShareNetwork is the key for the share network id
 	IdentifierShareNetwork = "ShareNetwork"
+	// IdentifierEgressCIDRs is the key for the slice containing egress CIDRs strings.
+	IdentifierEgressCIDRs = "EgressCIDRs"
 
 	// NameFloatingNetwork is the key for the floating network name
 	NameFloatingNetwork = "FloatingNetworkName"
@@ -171,7 +173,11 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 	status.Networks.Name = ptr.Deref(fctx.state.Get(NameNetwork), "")
 
 	status.Networks.Router.ID = ptr.Deref(fctx.state.Get(IdentifierRouter), "")
-	status.Networks.Router.IP = ptr.Deref(fctx.state.Get(RouterIP), "")
+	status.Networks.Router.ExternalFixedIPs = fctx.state.GetObject(IdentifierEgressCIDRs).([]string)
+	// backwards compatibility change for the deprecated field
+	if len(status.Networks.Router.ExternalFixedIPs) > 0 {
+		status.Networks.Router.IP = status.Networks.Router.ExternalFixedIPs[0]
+	}
 
 	status.Node.KeyName = ptr.Deref(fctx.state.Get(NameKeyPair), "")
 

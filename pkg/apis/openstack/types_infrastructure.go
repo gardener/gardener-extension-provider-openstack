@@ -27,7 +27,7 @@ type Networks struct {
 	// Router indicates whether to use an existing router or create a new one.
 	Router *Router
 	// Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
-	// Deprecated - use `workers` instead.
+	// Deprecated: use `workers` instead.
 	Worker string
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	Workers string
@@ -89,7 +89,10 @@ type RouterStatus struct {
 	// ID is the Router id.
 	ID string
 	// IP is the router ip.
+	// Deprecated: use ExternalFixedIPs instead.
 	IP string
+	// ExternalFixedIPs is the list of the router's assigned external fixed IPs.
+	ExternalFixedIPs []string
 }
 
 // FloatingPoolStatus contains information about the floating pool.

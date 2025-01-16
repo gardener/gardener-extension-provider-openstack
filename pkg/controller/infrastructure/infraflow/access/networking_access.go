@@ -29,7 +29,7 @@ type NetworkingAccess interface {
 	CreateRouter(desired *Router) (*Router, error)
 	GetRouterByID(id string) (*Router, error)
 	GetRouterByName(name string) ([]*Router, error)
-	UpdateRouter(desired, current *Router) (modified bool, err error)
+	UpdateRouter(desired, current *Router) (modified bool, router *Router, err error)
 	LookupFloatingPoolSubnetIDs(networkID, floatingPoolSubnetNameRegex string) ([]string, error)
 	AddRouterInterfaceAndWait(ctx context.Context, routerID, subnetID string) error
 	GetRouterInterfacePortID(routerID, subnetID string) (portID *string, err error)
@@ -172,7 +172,8 @@ func (a *networkingAccess) toRouter(raw *routers.Router) *Router {
 }
 
 // UpdateRouter updates the router if important fields have changed
-func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool, err error) {
+func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool, router *Router, err error) {
+	router = current
 	updateOpts := routers.UpdateOpts{}
 	if desired.Name != current.Name {
 		modified = true
@@ -188,9 +189,13 @@ func (a *networkingAccess) UpdateRouter(desired, current *Router) (modified bool
 		}
 	}
 	if modified {
-		_, err = a.networking.UpdateRouter(current.ID, updateOpts)
+		updated, err := a.networking.UpdateRouter(current.ID, updateOpts)
+		if err != nil {
+			return false, nil, err
+		}
+		router = a.toRouter(updated)
 	}
-	return
+	return modified, router, err
 }
 
 // AddRouterInterfaceAndWait adds router interface and waits up to

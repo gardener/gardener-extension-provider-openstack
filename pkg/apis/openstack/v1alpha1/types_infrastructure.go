@@ -30,7 +30,7 @@ type Networks struct {
 	// +optional
 	Router *Router `json:"router,omitempty"`
 	// Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
-	// Deprecated - use `workers` instead.
+	// Deprecated: use `workers` instead.
 	Worker string `json:"worker"`
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	Workers string `json:"workers"`
@@ -95,7 +95,10 @@ type RouterStatus struct {
 	// ID is the Router id.
 	ID string `json:"id"`
 	// IP is the router ip.
+	// Deprecated: use ExternalFixedIPs instead.
 	IP string `json:"ip"`
+	// ExternalFixedIPs is the list of the router's assigned external fixed IPs.
+	ExternalFixedIPs []string `json:"externalFixedIP"`
 }
 
 // FloatingPoolStatus contains information about the floating pool.

@@ -168,8 +168,8 @@ output "{{ .outputKeys.routerID }}" {
   value = {{ .router.id }}
 }
 
-output "{{ .outputKeys.routerIP }}" {
-  value = {{ template "router-ip" $ }}
+output "{{ .outputKeys.routerIPs }}" {
+  value = {{ template "router-ips" $ }}
 }
 
 output "{{ .outputKeys.networkID }}" {
@@ -227,10 +227,10 @@ openstack_networking_network_v2.cluster.name
 data.openstack_networking_network_v2.cluster.name
 {{ end -}}
 {{- end -}}
-{{- define "router-ip" -}}
+{{- define "router-ips" -}}
 {{ if .create.router -}}
-openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
+join(",", openstack_networking_router_v2.router.external_fixed_ip[*].ip_address)
 {{ else -}}
-data.openstack_networking_router_v2.router.external_fixed_ip[0].ip_address
+join(",", data.openstack_networking_router_v2.router.external_fixed_ip[*].ip_address)
 {{ end -}}
 {{- end -}}

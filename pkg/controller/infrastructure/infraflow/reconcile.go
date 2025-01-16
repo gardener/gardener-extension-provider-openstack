@@ -41,17 +41,23 @@ func (fctx *FlowContext) Reconcile(ctx context.Context) error {
 		return errors.Join(flow.Causes(err), fctx.persistState(ctx))
 	}
 
-	status := fctx.computeInfrastructureStatus()
 	state := fctx.computeInfrastructureState()
+	status := fctx.computeInfrastructureStatus()
 	return infrainternal.PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, status, state)
 }
 
 func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 	g := flow.NewGraph("Openstack infrastructure reconciliation")
 
+	prehook := fctx.AddTask(g, "pre-reconcile hook", func(_ context.Context) error {
+		// delete unnecessary state object. RouterIP was replaced by IdentifierEgressCIDRs to handle cases where the router had multiple externalFixedIPs attached to it.
+		fctx.state.Delete(RouterIP)
+		return nil
+	})
+
 	ensureExternalNetwork := fctx.AddTask(g, "ensure external network",
 		fctx.ensureExternalNetwork,
-		shared.Timeout(defaultTimeout))
+		shared.Timeout(defaultTimeout), shared.Dependencies(prehook))
 
 	ensureRouter := fctx.AddTask(g, "ensure router",
 		fctx.ensureRouter,
@@ -59,7 +65,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	ensureNetwork := fctx.AddTask(g, "ensure network",
 		fctx.ensureNetwork,
-		shared.Timeout(defaultTimeout))
+		shared.Timeout(defaultTimeout), shared.Dependencies(prehook))
 
 	ensureSubnet := fctx.AddTask(g, "ensure subnet",
 		fctx.ensureSubnet,
@@ -118,7 +124,6 @@ func (fctx *FlowContext) ensureConfiguredRouter(_ context.Context) error {
 	router, err := fctx.access.GetRouterByID(fctx.config.Networks.Router.ID)
 	if err != nil {
 		fctx.state.Set(IdentifierRouter, "")
-		fctx.state.Set(RouterIP, "")
 		return err
 	}
 	if router == nil {
@@ -130,8 +135,8 @@ func (fctx *FlowContext) ensureConfiguredRouter(_ context.Context) error {
 	if len(router.ExternalFixedIPs) < 1 {
 		return fmt.Errorf("expected at least one external fixed ip")
 	}
-	fctx.state.Set(RouterIP, router.ExternalFixedIPs[0].IPAddress)
-	return nil
+
+	return fctx.ensureEgressCIDRs(router)
 }
 
 func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID string) error {
@@ -150,10 +155,11 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 		if len(current.ExternalFixedIPs) < 1 {
 			return fmt.Errorf("expected at least one external fixed ip")
 		}
+		if _, current, err = fctx.access.UpdateRouter(desired, current); err != nil {
+			return err
+		}
 		fctx.state.Set(IdentifierRouter, current.ID)
-		fctx.state.Set(RouterIP, current.ExternalFixedIPs[0].IPAddress)
-		_, err := fctx.access.UpdateRouter(desired, current)
-		return err
+		return fctx.ensureEgressCIDRs(current)
 	}
 
 	floatingPoolSubnetName := fctx.findFloatingPoolSubnetName()
@@ -171,10 +177,9 @@ func (fctx *FlowContext) ensureNewRouter(ctx context.Context, externalNetworkID 
 	if err != nil {
 		return err
 	}
-	fctx.state.Set(IdentifierRouter, created.ID)
-	fctx.state.Set(RouterIP, created.ExternalFixedIPs[0].IPAddress)
 
-	return nil
+	fctx.state.Set(IdentifierRouter, created.ID)
+	return fctx.ensureEgressCIDRs(created)
 }
 
 func (fctx *FlowContext) findExistingRouter() (*access.Router, error) {
@@ -511,5 +516,14 @@ func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
 	}
 	fctx.state.Set(IdentifierShareNetwork, created.ID)
 	fctx.state.Set(NameShareNetwork, created.Name)
+	return nil
+}
+
+func (fctx *FlowContext) ensureEgressCIDRs(router *access.Router) error {
+	var result []string
+	for _, efip := range router.ExternalFixedIPs {
+		result = append(result, efip.IPAddress)
+	}
+	fctx.state.SetObject(IdentifierEgressCIDRs, result)
 	return nil
 }

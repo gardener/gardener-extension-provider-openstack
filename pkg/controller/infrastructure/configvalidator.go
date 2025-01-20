@@ -61,7 +61,7 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack client factory: %+v", err)))
 		return allErrs
 	}
-	networkingClient, err := clientFactory.Networking()
+	networkingClient, err := clientFactory.Networking(openstackclient.WithRegion(infra.Spec.Region))
 	if err != nil {
 		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack networking client: %+v", err)))
 		return allErrs

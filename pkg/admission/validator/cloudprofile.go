@@ -47,5 +47,5 @@ func (cp *cloudProfile) Validate(_ context.Context, newObj, _ client.Object) err
 		return err
 	}
 
-	return openstackvalidation.ValidateCloudProfileConfig(cpConfig, providerConfigPath).ToAggregate()
+	return openstackvalidation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, providerConfigPath).ToAggregate()
 }

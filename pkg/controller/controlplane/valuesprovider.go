@@ -17,7 +17,6 @@ import (
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -26,7 +25,6 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -53,7 +51,6 @@ import (
 const (
 	caNameControlPlane               = "ca-" + openstack.Name + "-controlplane"
 	cloudControllerManagerServerName = openstack.CloudControllerManagerName + "-server"
-	csiSnapshotValidationServerName  = openstack.CSISnapshotValidationName + "-server"
 )
 
 func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
@@ -76,18 +73,6 @@ func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfig
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
 		},
-		{
-			Config: &secretutils.CertificateSecretConfig{
-				Name:                        csiSnapshotValidationServerName,
-				CommonName:                  openstack.UsernamePrefix + openstack.CSISnapshotValidationName,
-				DNSNames:                    kutil.DNSNamesForService(openstack.CSISnapshotValidationName, namespace),
-				CertType:                    secretutils.ServerCert,
-				SkipPublishingCACertificate: true,
-			},
-			// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook
-			// config in phase Completing
-			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane, secretsmanager.UseCurrentCA)},
-		},
 	}
 }
 
@@ -99,7 +84,6 @@ func shootAccessSecretsFunc(namespace string) []*gutil.AccessSecret {
 		gutil.NewShootAccessSecret(openstack.CSISnapshotterName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSIResizerName, namespace),
 		gutil.NewShootAccessSecret(openstack.CSISnapshotControllerName, namespace),
-		gutil.NewShootAccessSecret(openstack.CSISnapshotValidationName, namespace),
 	}
 }
 
@@ -146,7 +130,6 @@ var (
 					openstack.CSIResizerImageName,
 					openstack.CSILivenessProbeImageName,
 					openstack.CSISnapshotControllerImageName,
-					openstack.CSISnapshotValidationWebhookImageName,
 				},
 				Objects: []*chart.Object{
 					// csi-driver-controller
@@ -156,9 +139,6 @@ var (
 					// csi-snapshot-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotControllerName},
 					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
-					// csi-snapshot-validation-webhook
-					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotValidationName},
-					{Type: &corev1.Service{}, Name: openstack.CSISnapshotValidationName},
 				},
 			},
 			{
@@ -232,10 +212,6 @@ var (
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.Role{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
 					{Type: &rbacv1.RoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIResizerName},
-					// csi-snapshot-validation-webhook
-					{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}, Name: openstack.CSISnapshotValidationName},
-					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
-					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSISnapshotValidationName},
 				},
 			},
 			{
@@ -372,6 +348,11 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	// TODO(rfranzke): Delete this in a future release.
 	if err := kutil.DeleteObject(ctx, vp.client, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "csi-driver-controller-observability-config", Namespace: cp.Namespace}}); err != nil {
 		return nil, fmt.Errorf("failed deleting legacy csi-driver-controller-observability-config ConfigMap: %w", err)
+	}
+
+	// TODO(AndreasBurger): rm in future release.
+	if err := cleanupSeedLegacyCSISnapshotValidation(ctx, vp.client, cp.Namespace); err != nil {
+		return nil, err
 	}
 
 	// TODO(rfranzke): Delete this after August 2024.
@@ -761,16 +742,11 @@ func getCCMChartValues(
 // getCSIControllerChartValues collects and returns the CSIController chart values.
 func getCSIControllerChartValues(
 	cluster *extensionscontroller.Cluster,
-	secretsReader secretsmanager.Reader,
+	_ secretsmanager.Reader,
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
 ) (map[string]interface{}, error) {
-	serverSecret, found := secretsReader.Get(csiSnapshotValidationServerName)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", csiSnapshotValidationServerName)
-	}
-
 	values := map[string]interface{}{
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 		"enabled":           true,
@@ -780,13 +756,6 @@ func getCSIControllerChartValues(
 		},
 		"csiSnapshotController": map[string]interface{}{
 			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-		},
-		"csiSnapshotValidationWebhook": map[string]interface{}{
-			"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-			"secrets": map[string]interface{}{
-				"server": serverSecret.Name,
-			},
-			"topologyAwareRoutingEnabled": gardencorev1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(cluster.Seed, cluster.Shoot),
 		},
 		"maxEntries": 1000,
 	}
@@ -834,7 +803,7 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	cp *extensionsv1alpha1.ControlPlane,
 	cloudProfileConfig *api.CloudProfileConfig,
 	cluster *extensionscontroller.Cluster,
-	secretsReader secretsmanager.Reader,
+	_ secretsmanager.Reader,
 	checksums map[string]string,
 ) (
 	map[string]interface{},
@@ -844,7 +813,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		cloudProviderDiskConfig []byte
 		userAgentHeader         []string
 		csiNodeDriverValues     map[string]interface{}
-		caBundle                string
 	)
 
 	// TODO: remove this when v1.27 is removed. From v1.28 onwards, we do not need credentials on the csi-node.
@@ -859,22 +827,12 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	credentials, _ := vp.getCredentials(ctx, cp) // ignore missing credentials
 	userAgentHeader = vp.getUserAgentHeaders(credentials, cluster)
 
-	caSecret, found := secretsReader.Get(caNameControlPlane)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", caNameControlPlane)
-	}
-	caBundle = string(caSecret.Data[secretutils.DataKeyCertificateBundle])
-
 	csiNodeDriverValues = map[string]interface{}{
 		"enabled": true,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
 		"cloudProviderConfig": cloudProviderDiskConfig,
-		"webhookConfig": map[string]interface{}{
-			"url":      "https://" + openstack.CSISnapshotValidationName + "." + cp.Namespace + "/volumesnapshot",
-			"caBundle": caBundle,
-		},
 
 		"rescanBlockStorageOnResize": cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
 		"nodeVolumeAttachLimit":      cloudProfileConfig.NodeVolumeAttachLimit,
@@ -1016,4 +974,27 @@ func (vp *valuesProvider) getAllWorkerPoolsZones(cluster *extensionscontroller.C
 	list := zones.UnsortedList()
 	sort.Strings(list)
 	return list
+}
+
+func cleanupSeedLegacyCSISnapshotValidation(
+	ctx context.Context,
+	client k8sclient.Client,
+	namespace string,
+) error {
+	if err := kutil.DeleteObject(
+		ctx,
+		client,
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}},
+	); err != nil {
+		return fmt.Errorf("failed to delete legacy csi snapshot validation deployment: %w", err)
+	}
+	if err := kutil.DeleteObject(
+		ctx,
+		client,
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}},
+	); err != nil {
+		return fmt.Errorf("failed to delete legacy csi snapshot validation service: %w", err)
+	}
+
+	return nil
 }

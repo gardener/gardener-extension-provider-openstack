@@ -123,6 +123,7 @@ spec:
         - --leader-election-namespace=kube-system
         - --timeout={{ .Values.timeout }}
         - --v=5
+        - --max-entries={{ .Values.maxEntries }}
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock

@@ -788,6 +788,7 @@ func getCSIControllerChartValues(
 			},
 			"topologyAwareRoutingEnabled": gardencorev1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(cluster.Seed, cluster.Shoot),
 		},
+		"maxEntries": 1000,
 	}
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders

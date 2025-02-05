@@ -15,6 +15,7 @@ images:
 socketPath: /var/lib/csi/sockets/pluginproxy
 timeout: 3m
 userAgentHeaders: []
+maxEntries: 1000
 
 global:
   genericTokenKubeconfigSecretName: secret

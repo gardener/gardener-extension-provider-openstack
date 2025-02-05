@@ -587,6 +587,7 @@ var _ = Describe("ValuesProvider", func() {
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 					"replicas":          1,
+					"maxEntries":        1000,
 					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
@@ -629,6 +630,7 @@ var _ = Describe("ValuesProvider", func() {
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
+					"maxEntries":       1000,
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,

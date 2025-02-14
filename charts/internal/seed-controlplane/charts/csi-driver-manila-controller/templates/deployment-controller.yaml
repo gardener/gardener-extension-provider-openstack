@@ -71,6 +71,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.driverController | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -104,6 +106,8 @@ spec:
             - containerPort: 9808
               name: healthz
               protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -131,6 +135,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.livenessProbe | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-fwd-plugin-dir
               mountPath: /csi
@@ -152,6 +158,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.provisioner | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -172,6 +180,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.snapshotter | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -193,6 +203,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.resizer | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi

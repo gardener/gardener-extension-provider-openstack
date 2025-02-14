@@ -72,6 +72,8 @@ spec:
           timeoutSeconds: 3
           periodSeconds: 10
           failureThreshold: 5
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -106,6 +108,8 @@ spec:
         resources:
 {{ toYaml .Values.resources.provisioner | indent 10 }}
 {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -131,6 +135,8 @@ spec:
         resources:
 {{ toYaml .Values.resources.attacher | indent 10 }}
 {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -155,6 +161,8 @@ spec:
         resources:
 {{ toYaml .Values.resources.snapshotter | indent 10 }}
 {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -180,6 +188,8 @@ spec:
         resources:
 {{ toYaml .Values.resources.resizer | indent 10 }}
 {{- end }}
+        securityContext:
+          allowPrivilegeEscalations: false
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -195,6 +205,8 @@ spec:
         resources:
 {{ toYaml .Values.resources.livenessProbe | indent 10 }}
 {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: socket-dir
           mountPath: /csi

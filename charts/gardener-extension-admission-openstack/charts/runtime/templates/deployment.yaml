@@ -73,6 +73,8 @@ spec:
             port: {{ .Values.healthPort }}
             scheme: HTTP
           initialDelaySeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

@@ -75,6 +75,8 @@ spec:
         - containerPort: {{ include "cloud-controller-manager.port" . }}
           name: metrics
           protocol: TCP
+        securityContext:
+          allowPrivilegeEscalation: false
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         {{- if .Values.resources }}

@@ -204,37 +204,38 @@ func (a *networkingAccess) AddRouterInterfaceAndWait(ctx context.Context, router
 	if err != nil {
 		return err
 	}
+	ticker := time.Tick(3 * time.Second)
 	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		time.Sleep(1 * time.Second)
-		port, err := a.networking.GetPort(info.PortID)
-		if err != nil {
-			return err
-		}
-
-		if port == nil {
-			return fmt.Errorf("port was not found ")
-
-		}
-
-		switch port.Status {
-		case "BUILD", "PENDING_CREATE", "PENDING_UPDATE", "DOWN":
-			a.log.Info("port is not in expected state", "Port", info.PortID, "Status", port.Status)
-			if a.log.V(1).Enabled() {
-				marshalled, err := json.Marshal(info)
-				if err != nil {
-					return err
-				}
-				a.log.V(1).Info("port info", "Port", string(marshalled))
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("%w, last error: %w", ctx.Err(), err)
+		case <-ticker:
+			port, err := a.networking.GetPort(info.PortID)
+			if err != nil {
+				return err
 			}
-			time.Sleep(3 * time.Second)
-			continue
-		case "ACTIVE":
-			return nil
-		default:
-			return fmt.Errorf("router interface has unexpected status: %s", port.Status)
+
+			if port == nil {
+				return fmt.Errorf("port was not found ")
+			}
+
+			switch port.Status {
+			case "BUILD", "PENDING_CREATE", "PENDING_UPDATE", "DOWN":
+				a.log.Info("port is not in expected state", "Port", info.PortID, "Status", port.Status)
+				if a.log.V(1).Enabled() {
+					marshalled, err := json.Marshal(info)
+					if err != nil {
+						return err
+					}
+					a.log.V(1).Info("port info", "Port", string(marshalled))
+				}
+				time.Sleep(3 * time.Second)
+				continue
+			case "ACTIVE":
+				return nil
+			default:
+				return fmt.Errorf("router interface has unexpected status: %s", port.Status)
+			}
 		}
 	}
 }
@@ -253,23 +254,26 @@ func (a *networkingAccess) GetRouterInterfacePortID(routerID, subnetID string) (
 
 // RemoveRouterInterfaceAndWait removes the router interface. Either subnetID or portID must be specified
 func (a *networkingAccess) RemoveRouterInterfaceAndWait(ctx context.Context, routerID, subnetID, portID string) error {
+	var err error
+	ticker := time.Tick(3 * time.Second)
 	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		_, err := a.networking.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID, PortID: portID})
-		if err != nil {
-			if _, ok := err.(gophercloud.ErrDefault404); ok {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("%w, last error: %w", ctx.Err(), err)
+		case <-ticker:
+			_, err := a.networking.RemoveRouterInterface(routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID, PortID: portID})
+			if err != nil {
+				if _, ok := err.(gophercloud.ErrDefault404); ok {
+					return nil
+				}
+				if _, ok := err.(gophercloud.ErrDefault409); !ok {
+					return err
+				}
+			}
+			if err == nil {
 				return nil
 			}
-			if _, ok := err.(gophercloud.ErrDefault409); !ok {
-				return err
-			}
 		}
-		if err == nil {
-			return nil
-		}
-		time.Sleep(3 * time.Second)
 	}
 }
 

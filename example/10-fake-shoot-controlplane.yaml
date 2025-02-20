@@ -30,8 +30,6 @@ spec:
         - -advertise-client-urls=http://0.0.0.0:2379
         - -listen-client-urls=http://0.0.0.0:2379
         - -data-dir=/etcd-data
-        securityContext:
-          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /etcd-data
           name: data
@@ -178,8 +176,6 @@ spec:
         - containerPort: 8080
           name: local
           protocol: TCP
-        securityContext:
-          allowPrivilegeEscalation: false
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:

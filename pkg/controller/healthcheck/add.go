@@ -66,10 +66,6 @@ func RegisterHealthChecks(ctx context.Context, mgr manager.Manager, opts healthc
 				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
 				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CSISnapshotControllerName),
 			},
-			{
-				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
-				HealthCheck:   general.NewSeedDeploymentHealthChecker(openstack.CSISnapshotValidationName),
-			},
 		},
 		sets.New[gardencorev1beta1.ConditionType](),
 	); err != nil {

@@ -81,8 +81,6 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 10
             periodSeconds: 30
-          securityContext:
-            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi

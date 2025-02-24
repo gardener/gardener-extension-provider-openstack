@@ -189,7 +189,7 @@ spec:
 {{ toYaml .Values.resources.resizer | indent 10 }}
 {{- end }}
         securityContext:
-          allowPrivilegeEscalations: false
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}

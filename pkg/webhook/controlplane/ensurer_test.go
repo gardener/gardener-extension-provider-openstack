@@ -602,7 +602,7 @@ func checkKubeAPIServerDeployment(dep *appsv1.Deployment, k8sVersion string) {
 	}
 }
 
-func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, k8sVersion string) {
+func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, _ string) {
 	// Check that the kube-controller-manager container still exists and contains all needed command line args,
 	// env vars, and volume mounts
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-controller-manager")
@@ -622,7 +622,7 @@ func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, k8sVersion str
 	Expect(dep.Spec.Template.Spec.Volumes).To(BeEmpty())
 }
 
-func checkKubeSchedulerDeployment(dep *appsv1.Deployment, k8sVersion string) {
+func checkKubeSchedulerDeployment(dep *appsv1.Deployment, _ string) {
 	// Check that the kube-scheduler container still exists and contains all needed command line args.
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-scheduler")
 	Expect(c).To(Not(BeNil()))
@@ -630,7 +630,7 @@ func checkKubeSchedulerDeployment(dep *appsv1.Deployment, k8sVersion string) {
 	Expect(c.Command).NotTo(ContainElement("--feature-gates=CSIMigration=true"))
 }
 
-func checkClusterAutoscalerDeployment(dep *appsv1.Deployment, k8sVersion string) {
+func checkClusterAutoscalerDeployment(dep *appsv1.Deployment, _ string) {
 	// Check that the cluster-autoscaler container still exists and contains all needed command line args.
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "cluster-autoscaler")
 	Expect(c).To(Not(BeNil()))

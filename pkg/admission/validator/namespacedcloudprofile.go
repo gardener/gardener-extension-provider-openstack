@@ -14,7 +14,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -97,12 +96,12 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 	machineImagesPath := field.NewPath("spec.providerConfig.machineImages")
 	for i, machineImage := range providerConfig.MachineImages {
 		idxPath := machineImagesPath.Index(i)
-		allErrs = append(allErrs, validation.ValidateMachineImage(idxPath, machineImage)...)
+		allErrs = append(allErrs, validation.ValidateProviderMachineImage(idxPath, machineImage)...)
 	}
 
 	profileImages := util.NewCoreImagesContext(machineImages)
 	parentImages := util.NewV1beta1ImagesContext(parentSpec.MachineImages)
-	providerImages := newProviderImagesContext(providerConfig.MachineImages)
+	providerImages := validation.NewProviderImagesContext(providerConfig.MachineImages)
 
 	for _, machineImage := range profileImages.Images {
 		// Check that for each new image version defined in the NamespacedCloudProfile, the image is also defined in the providerConfig.
@@ -197,13 +196,4 @@ func validateMachineImageArchitectures(machineImage core.MachineImage, version c
 	}
 
 	return allErrs
-}
-
-func newProviderImagesContext(providerImages []api.MachineImages) *util.ImagesContext[api.MachineImages, api.MachineImageVersion] {
-	return util.NewImagesContext(
-		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
-		func(mi api.MachineImages) map[string]api.MachineImageVersion {
-			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
-		},
-	)
 }

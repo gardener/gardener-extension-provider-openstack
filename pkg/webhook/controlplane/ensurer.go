@@ -178,18 +178,18 @@ func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, k8sVersion *semver.
 	}
 }
 
-func ensureKubeControllerManagerCommandLineArgs(c *corev1.Container, k8sVersion *semver.Version) {
+func ensureKubeControllerManagerCommandLineArgs(c *corev1.Container, _ *semver.Version) {
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--cloud-provider=", "external")
 	c.Command = extensionswebhook.EnsureNoStringWithPrefix(c.Command, "--cloud-config=")
 	c.Command = extensionswebhook.EnsureNoStringWithPrefix(c.Command, "--external-cloud-volume-plugin=")
 }
 
-func ensureKubeSchedulerCommandLineArgs(c *corev1.Container, k8sVersion *semver.Version) {
+func ensureKubeSchedulerCommandLineArgs(_ *corev1.Container, _ *semver.Version) {
 	// TODO: in the future add logic if "--feature-gates="" assertion is needed for a certain version
 }
 
 // ensureClusterAutoscalerCommandLineArgs ensures the cluster-autoscaler command line args.
-func ensureClusterAutoscalerCommandLineArgs(c *corev1.Container, k8sVersion *semver.Version) {
+func ensureClusterAutoscalerCommandLineArgs(_ *corev1.Container, _ *semver.Version) {
 	// TODO: in the future add logic if "--feature-gates="" assertion is needed for a certain version
 }
 
@@ -266,7 +266,7 @@ func ensureKubeletCommandLineArgs(command []string) []string {
 }
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
-func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, kubeletVersion *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
+func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	if newObj.FeatureGates == nil {
 		newObj.FeatureGates = make(map[string]bool)
 	}

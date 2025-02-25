@@ -5,10 +5,10 @@
 package config
 
 import (
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	healthcheckconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -19,11 +19,11 @@ type ControllerConfiguration struct {
 
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
-	ClientConnection *componentbaseconfig.ClientConnectionConfiguration
+	ClientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
 	// ETCD is the etcd configuration.
 	ETCD ETCD
 	// HealthCheckConfig is the config for the health check controller
-	HealthCheckConfig *healthcheckconfig.HealthCheckConfig
+	HealthCheckConfig *healthcheckconfigv1alpha1.HealthCheckConfig
 	// BastionConfig is the config for the Bastion
 	// Deprecated: Configuring the bastion will be done via CloudProfile in future
 	BastionConfig *BastionConfig

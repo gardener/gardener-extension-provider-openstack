@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.0
+    controller-gen.kubebuilder.io/version: v0.17.2
   name: operatingsystemconfigs.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -262,6 +262,49 @@ spec:
                   - path
                   type: object
                 type: array
+              inPlaceUpdates:
+                description: InPlaceUpdates contains the configuration for in-place
+                  updates.
+                properties:
+                  credentialsRotation:
+                    description: CredentialsRotation is a structure containing information
+                      about the last initiation time of the certificate authority
+                      and service account key rotation.
+                    properties:
+                      certificateAuthorities:
+                        description: CertificateAuthorities contains information about
+                          the certificate authority credential rotation.
+                        properties:
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the certificate authority credential rotation was
+                              initiated.
+                            format: date-time
+                            type: string
+                        type: object
+                      serviceAccountKey:
+                        description: ServiceAccountKey contains information about
+                          the service account key credential rotation.
+                        properties:
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the service account key credential rotation was
+                              initiated.
+                            format: date-time
+                            type: string
+                        type: object
+                    type: object
+                  kubelet:
+                    description: KubeletVersion is the version of the kubelet.
+                    type: string
+                  operatingSystemVersion:
+                    description: OperatingSystemVersion is the version of the operating
+                      system.
+                    type: string
+                required:
+                - kubelet
+                - operatingSystemVersion
+                type: object
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
@@ -336,6 +379,7 @@ spec:
                 description: |-
                   CloudConfig is a structure for containing the generated output for the given operating system
                   config spec. It contains a reference to a secret as the result may contain confidential data.
+                  After Gardener v1.112, this will be only set for OperatingSystemConfigs with purpose 'provision'.
                 properties:
                   secretRef:
                     description: SecretRef is a reference to a secret that contains
@@ -524,6 +568,28 @@ spec:
                   - name
                   type: object
                 type: array
+              inPlaceUpdates:
+                description: InPlaceUpdates contains the configuration for in-place
+                  updates.
+                properties:
+                  osUpdate:
+                    description: OSUpdate defines the configuration for the operating
+                      system update.
+                    properties:
+                      args:
+                        description: Args provides a mechanism to pass additional
+                          arguments or flags to the Command.
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        description: Command defines the command responsible for performing
+                          machine image updates.
+                        type: string
+                    required:
+                    - command
+                    type: object
+                type: object
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.

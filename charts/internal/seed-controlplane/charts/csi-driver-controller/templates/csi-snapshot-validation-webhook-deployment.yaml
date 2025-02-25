@@ -42,6 +42,8 @@ spec:
           tcpSocket:
             port: 443
           initialDelaySeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
           - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
             name: kubeconfig

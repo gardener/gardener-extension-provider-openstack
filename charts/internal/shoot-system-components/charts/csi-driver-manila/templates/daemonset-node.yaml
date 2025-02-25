@@ -161,6 +161,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.nodeDriverRegistrar | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -176,6 +178,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.livenessProbe | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -189,6 +193,8 @@ spec:
           resources:
 {{ toYaml .Values.resources.livenessProbe | indent 12 }}
 {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi

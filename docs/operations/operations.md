@@ -230,7 +230,7 @@ spec:
       - name: haproxy
 ```
 
-### In-place vs Rolling-updates of Shoot Workers
+### Rolling Update Triggers
 
 Changes to the `Shoot` worker-pools are applied in-place where possible. In case this is not possible a rolling update of the workers will be performed to apply the new configuration, as outlined in [the Gardener documentation](https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#in-place-vs-rolling-updates). Regardless of the `NewWorkerPoolHash` featuregate, the provider-config is never considered, unless the shoot is annotated with `"openstack.provider.extensions.gardener.cloud/worker-preserve-hash=true"`.
 As a replacement, a pool's `.providerConfig.MachineLabels[]` can be used for determination if the corresponding `.providerConfig.MachineLabels[].triggerRollingUpdate` field changes.

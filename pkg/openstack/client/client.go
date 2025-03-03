@@ -26,18 +26,22 @@ import (
 // see https://github.com/kubernetes/cloud-provider-openstack/blob/c44d941cdb5c7fe651f5cb9191d0af23e266c7cb/pkg/openstack/openstack.go#L257
 func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Credentials) (Factory, error) {
 	authOpts := gophercloud.AuthOptions{
-		IdentityEndpoint:            credentials.AuthURL,
-		Username:                    credentials.Username,
-		Password:                    credentials.Password,
-		DomainName:                  credentials.DomainName,
-		ApplicationCredentialID:     credentials.ApplicationCredentialID,
-		ApplicationCredentialName:   credentials.ApplicationCredentialName,
-		ApplicationCredentialSecret: credentials.ApplicationCredentialSecret,
-		//// AllowReauth should be set to true if you grant permission for Gophercloud to
-		//// cache your credentials in memory, and to allow Gophercloud to attempt to
-		//// re-authenticate automatically if/when your token expires.
+		IdentityEndpoint: credentials.AuthURL,
+		// AllowReauth should be set to true if you grant permission for Gophercloud to
+		// cache your credentials in memory, and to allow Gophercloud to attempt to
+		// re-authenticate automatically if/when your token expires.
 		AllowReauth: true,
-		TenantName:  credentials.TenantName,
+	}
+
+	if credentials.ApplicationCredentialID != "" {
+		authOpts.ApplicationCredentialID = credentials.ApplicationCredentialID
+		authOpts.ApplicationCredentialName = credentials.ApplicationCredentialName
+		authOpts.ApplicationCredentialSecret = credentials.ApplicationCredentialSecret
+	} else {
+		authOpts.Username = credentials.Username
+		authOpts.Password = credentials.Password
+		authOpts.DomainName = credentials.DomainName
+		authOpts.TenantName = credentials.TenantName
 	}
 
 	tlsConfig := &tls.Config{
@@ -51,10 +55,6 @@ func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Cred
 		}
 		tlsConfig.RootCAs = pool
 	}
-
-	//if opts.AuthInfo.ApplicationCredentialSecret != "" {
-	//	opts.AuthType = clientconfig.AuthV3ApplicationCredential
-	//}
 
 	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: tlsConfig}
 	httpClient := http.Client{

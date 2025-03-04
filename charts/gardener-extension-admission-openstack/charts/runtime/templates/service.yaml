@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
-    {{- if .Values.service.topologyAwareRouting.enabled }}
+    {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare "< 1.31-0" .Capabilities.KubeVersion.Version) }}
     {{- if semverCompare ">= 1.27-0" .Capabilities.KubeVersion.Version }}
     service.kubernetes.io/topology-mode: "auto"
     {{- else }}
@@ -14,7 +14,7 @@ metadata:
     {{- end }}
   labels:
 {{ include "labels" . | indent 4 }}
-    {{- if .Values.service.topologyAwareRouting.enabled }}
+    {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare "< 1.32-0" .Capabilities.KubeVersion.Version) }}
     endpoint-slice-hints.resources.gardener.cloud/consider: "true"
     {{- end }}
 spec:
@@ -25,3 +25,6 @@ spec:
   - port: 443
     protocol: TCP
     targetPort: {{ .Values.webhookConfig.serverPort }}
+  {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare ">= 1.31-0" .Capabilities.KubeVersion.Version) }}
+  trafficDistribution: PreferClose
+  {{- end }}

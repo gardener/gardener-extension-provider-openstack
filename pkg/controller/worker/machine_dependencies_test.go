@@ -76,7 +76,7 @@ var _ = Describe("#MachineDependencies", func() {
 					Namespace: namespace,
 				},
 			}
-			osFactory.EXPECT().Compute().AnyTimes().Return(computeClient, nil)
+			osFactory.EXPECT().Compute(gomock.Any()).AnyTimes().Return(computeClient, nil)
 		})
 
 		Context("#PreReconcileHook", func() {

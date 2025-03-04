@@ -30,7 +30,7 @@ func (w *workerDelegate) CleanupMachineDependencies(_ context.Context) error {
 
 // PreReconcileHook implements genericactuator.WorkerDelegate.
 func (w *workerDelegate) PreReconcileHook(ctx context.Context) error {
-	computeClient, err := w.openstackClient.Compute()
+	computeClient, err := w.openstackClient.Compute(osclient.WithRegion(w.worker.Spec.Region))
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (w *workerDelegate) PostDeleteHook(ctx context.Context) error {
 // Refactor this so that PostDeleteHook executes only the handling for Worker being deleted and PostReconcileHook executes only
 // the handling for Worker reconciled (not being deleted).
 func (w *workerDelegate) cleanupMachineDependencies(ctx context.Context) error {
-	computeClient, err := w.openstackClient.Compute()
+	computeClient, err := w.openstackClient.Compute(osclient.WithRegion(w.worker.Spec.Region))
 	if err != nil {
 		return err
 	}

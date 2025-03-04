@@ -334,26 +334,28 @@ func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstack
 	}
 
 	// maybe we need to refine which port to use
-	var activePort *ports.Port
+	var instancePort *ports.Port
 	for _, port := range instancePorts {
 		if port.Status == "ACTIVE" {
-			activePort = &port
+			instancePort = &port
 			break
 		}
 	}
 
-	if activePort == nil {
+	if instancePort == nil {
 		return fmt.Errorf("no active port found for instance id %s", instance.ID)
 	}
 
-	// check if floating ip is already associated with the instance
-	fip, err := networkClient.GetFloatingIP(ctx, floatingips.ListOpts{PortID: activePort.ID})
+	// check if floating IP is already associated with the instance
+	// if no IP is found NO error is returned
+	fip, err := networkClient.GetFloatingIP(ctx, floatingips.ListOpts{PortID: instancePort.ID})
 	if err != nil {
 		return err
 	}
 
+	// if no floating IP is yet associated with the instance
 	if fip.ID == "" {
-		err := networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, activePort.ID)
+		err := networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, instancePort.ID)
 		if err != nil {
 			return err
 		}
@@ -368,7 +370,7 @@ func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstack
 		return fmt.Errorf("instance or floating ip address not ready yet")
 	}
 
-	return networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, activePort.ID)
+	return networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, instancePort.ID)
 }
 
 func ensureSecurityGroupRules(ctx context.Context, log logr.Logger, client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {

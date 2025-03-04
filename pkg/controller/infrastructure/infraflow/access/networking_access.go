@@ -173,7 +173,8 @@ func (a *networkingAccess) toRouter(raw *routers.Router) *Router {
 }
 
 // UpdateRouter updates the router if important fields have changed
-func (a *networkingAccess) UpdateRouter(ctx context.Context, desired, current *Router) (modified bool, router *Router, err error) {
+func (a *networkingAccess) UpdateRouter(ctx context.Context, desired, current *Router) (bool, *Router, error) {
+	modified := false
 	updateOpts := routers.UpdateOpts{}
 	if desired.Name != current.Name {
 		modified = true
@@ -193,9 +194,9 @@ func (a *networkingAccess) UpdateRouter(ctx context.Context, desired, current *R
 		if err != nil {
 			return false, nil, err
 		}
-		router = a.toRouter(updated)
+		return modified, a.toRouter(updated), nil
 	}
-	return modified, router, err
+	return modified, current, nil
 }
 
 // AddRouterInterfaceAndWait adds router interface and waits up to

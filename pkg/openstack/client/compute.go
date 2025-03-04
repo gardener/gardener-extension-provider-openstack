@@ -5,12 +5,14 @@
 package client
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	flavorutils "github.com/gophercloud/utils/openstack/compute/v2/flavors"
+	"context"
+	"fmt"
+
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/flavors"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/keypairs"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
 )
 
 const (
@@ -30,7 +32,7 @@ const (
 )
 
 // CreateServerGroup creates a server group with the specified policy.
-func (c *ComputeClient) CreateServerGroup(name, policy string) (*servergroups.ServerGroup, error) {
+func (c *ComputeClient) CreateServerGroup(ctx context.Context, name, policy string) (*servergroups.ServerGroup, error) {
 	if policy != ServerGroupPolicyAffinity && policy != ServerGroupPolicyAntiAffinity {
 		c.client.Microversion = softPolicyMicroversion
 	}
@@ -40,17 +42,17 @@ func (c *ComputeClient) CreateServerGroup(name, policy string) (*servergroups.Se
 		Policies: []string{policy},
 	}
 
-	return servergroups.Create(c.client, createOpts).Extract()
+	return servergroups.Create(ctx, c.client, createOpts).Extract()
 }
 
 // GetServerGroup retrieves the server group with the specified id.
-func (c *ComputeClient) GetServerGroup(id string) (*servergroups.ServerGroup, error) {
-	return servergroups.Get(c.client, id).Extract()
+func (c *ComputeClient) GetServerGroup(ctx context.Context, id string) (*servergroups.ServerGroup, error) {
+	return servergroups.Get(ctx, c.client, id).Extract()
 }
 
 // DeleteServerGroup deletes the server group with the specified id. It returns nil if the server group could not be found.
-func (c *ComputeClient) DeleteServerGroup(id string) error {
-	err := servergroups.Delete(c.client, id).ExtractErr()
+func (c *ComputeClient) DeleteServerGroup(ctx context.Context, id string) error {
+	err := servergroups.Delete(ctx, c.client, id).ExtractErr()
 	if err != nil && !IsNotFoundError(err) {
 		return err
 	}
@@ -59,8 +61,8 @@ func (c *ComputeClient) DeleteServerGroup(id string) error {
 }
 
 // ListServerGroups retrieves the list of server groups.
-func (c *ComputeClient) ListServerGroups() ([]servergroups.ServerGroup, error) {
-	pages, err := servergroups.List(c.client, nil).AllPages()
+func (c *ComputeClient) ListServerGroups(ctx context.Context) ([]servergroups.ServerGroup, error) {
+	pages, err := servergroups.List(c.client, nil).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,21 +71,21 @@ func (c *ComputeClient) ListServerGroups() ([]servergroups.ServerGroup, error) {
 }
 
 // CreateServer retrieves the Create of Compute service.
-func (c *ComputeClient) CreateServer(createOpts servers.CreateOpts) (*servers.Server, error) {
-	return servers.Create(c.client, createOpts).Extract()
+func (c *ComputeClient) CreateServer(ctx context.Context, createOpts servers.CreateOpts) (*servers.Server, error) {
+	return servers.Create(ctx, c.client, createOpts, nil).Extract()
 }
 
 // DeleteServer delete the Compute service.
-func (c *ComputeClient) DeleteServer(id string) error {
-	return servers.Delete(c.client, id).ExtractErr()
+func (c *ComputeClient) DeleteServer(ctx context.Context, id string) error {
+	return servers.Delete(ctx, c.client, id).ExtractErr()
 }
 
 // FindServersByName retrieves the Compute Server by Name
-func (c *ComputeClient) FindServersByName(name string) ([]servers.Server, error) {
+func (c *ComputeClient) FindServersByName(ctx context.Context, name string) ([]servers.Server, error) {
 	listOpts := servers.ListOpts{
 		Name: name,
 	}
-	allPages, err := servers.List(c.client, listOpts).AllPages()
+	allPages, err := servers.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -95,47 +97,40 @@ func (c *ComputeClient) FindServersByName(name string) ([]servers.Server, error)
 	return allServers, nil
 }
 
-// AssociateFIPWithInstance associate floating ip with instance
-func (c *ComputeClient) AssociateFIPWithInstance(serverID string, associateOpts floatingips.AssociateOpts) error {
-	return floatingips.AssociateInstance(c.client, serverID, associateOpts).ExtractErr()
-}
-
-// FindFloatingIDByInstanceID find floating id by instance id
-func (c *ComputeClient) FindFloatingIDByInstanceID(id string) (string, error) {
-	allPages, err := floatingips.List(c.client).AllPages()
+// FindFlavorID find flavor ID by flavor name.
+func (c *ComputeClient) FindFlavorID(ctx context.Context, name string) (string, error) {
+	// unfortunately, there is no way to filter by name
+	allPages, err := flavors.ListDetail(c.client, nil).AllPages(ctx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to list flavors: %w", err)
 	}
 
-	allFloatingIPs, err := floatingips.ExtractFloatingIPs(allPages)
+	// Extract and filter
+	allFlavors, err := flavors.ExtractFlavors(allPages)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to extract flavors: %w", err)
 	}
 
-	for _, fip := range allFloatingIPs {
-		if fip.InstanceID == id {
-			return fip.ID, nil
+	for _, flavor := range allFlavors {
+		if flavor.Name == name {
+			return flavor.ID, nil
 		}
 	}
-	return "", nil
+
+	return "", fmt.Errorf("flavor with name %q not found", name)
 }
 
-// FindFlavorID find flavor ID by flavor name
-func (c *ComputeClient) FindFlavorID(name string) (string, error) {
-	return flavorutils.IDFromName(c.client, name)
-}
-
-// FindImages find image ID by images name
-func (c *ComputeClient) FindImages(name string) ([]images.Image, error) {
+// FindImages find image ID by images name.
+func (c *ComputeClient) FindImages(ctx context.Context, name string) ([]images.Image, error) {
 	listOpts := images.ListOpts{
 		Name: name,
 	}
-	return c.ListImages(listOpts)
+	return c.ListImages(ctx, listOpts)
 }
 
-// ListImages list all images
-func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, error) {
-	allPages, err := images.ListDetail(c.client, listOpts).AllPages()
+// ListImages list all images.
+func (c *ComputeClient) ListImages(ctx context.Context, listOpts images.ListOpts) ([]images.Image, error) {
+	allPages, err := images.List(c.client, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,27 +138,27 @@ func (c *ComputeClient) ListImages(listOpts images.ListOpts) ([]images.Image, er
 }
 
 // FindImageByID returns the image with the given ID. It returns nil if the image is not found.
-func (c *ComputeClient) FindImageByID(id string) (*images.Image, error) {
-	image, err := images.Get(c.client, id).Extract()
+func (c *ComputeClient) FindImageByID(ctx context.Context, id string) (*images.Image, error) {
+	image, err := images.Get(ctx, c.client, id).Extract()
 	return image, IgnoreNotFoundError(err)
 }
 
 // CreateKeyPair creates an SSH key pair
-func (c *ComputeClient) CreateKeyPair(name, publicKey string) (*keypairs.KeyPair, error) {
+func (c *ComputeClient) CreateKeyPair(ctx context.Context, name, publicKey string) (*keypairs.KeyPair, error) {
 	opts := keypairs.CreateOpts{
 		Name:      name,
 		PublicKey: publicKey,
 	}
-	return keypairs.Create(c.client, opts).Extract()
+	return keypairs.Create(ctx, c.client, opts).Extract()
 }
 
 // GetKeyPair gets an SSH key pair by name
-func (c *ComputeClient) GetKeyPair(name string) (*keypairs.KeyPair, error) {
-	keypair, err := keypairs.Get(c.client, name, nil).Extract()
+func (c *ComputeClient) GetKeyPair(ctx context.Context, name string) (*keypairs.KeyPair, error) {
+	keypair, err := keypairs.Get(ctx, c.client, name, nil).Extract()
 	return keypair, IgnoreNotFoundError(err)
 }
 
 // DeleteKeyPair deletes an SSH key pair by name
-func (c *ComputeClient) DeleteKeyPair(name string) error {
-	return keypairs.Delete(c.client, name, nil).ExtractErr()
+func (c *ComputeClient) DeleteKeyPair(ctx context.Context, name string) error {
+	return keypairs.Delete(ctx, c.client, name, nil).ExtractErr()
 }

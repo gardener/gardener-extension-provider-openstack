@@ -20,10 +20,10 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -210,7 +210,7 @@ var _ = BeforeSuite(func() {
 
 	decoder = serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 
-	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(&openstack.Credentials{
+	openstackClient, err := openstackclient.NewOpenstackClientFromCredentials(ctx, &openstack.Credentials{
 		AuthURL:                     *authURL,
 		Username:                    *userName,
 		Password:                    *password,
@@ -229,7 +229,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Retrieve FloatingPoolNetworkID
-	externalNetwork, err := networkClient.GetExternalNetworkByName(*floatingPoolName)
+	externalNetwork, err := networkClient.GetExternalNetworkByName(ctx, *floatingPoolName)
 	Expect(err).NotTo(HaveOccurred())
 	floatingPoolID = externalNetwork.ID
 
@@ -632,7 +632,7 @@ func prepareNewRouter(log logr.Logger, routerName string) (*string, error) {
 			NetworkID: floatingPoolID,
 		},
 	}
-	router, err := networkClient.CreateRouter(createOpts)
+	router, err := networkClient.CreateRouter(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is created", "routerName", routerName)
@@ -642,7 +642,7 @@ func prepareNewRouter(log logr.Logger, routerName string) (*string, error) {
 func teardownRouter(log logr.Logger, routerID string) error {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
-	err := networkClient.DeleteRouter(routerID)
+	err := networkClient.DeleteRouter(ctx, routerID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is deleted", "routerID", routerID)
@@ -655,7 +655,7 @@ func prepareNewNetwork(log logr.Logger, networkName string) (*string, error) {
 	createOpts := networks.CreateOpts{
 		Name: networkName,
 	}
-	network, err := networkClient.CreateNetwork(createOpts)
+	network, err := networkClient.CreateNetwork(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is created", "networkName", networkName)
@@ -665,7 +665,7 @@ func prepareNewNetwork(log logr.Logger, networkName string) (*string, error) {
 func teardownNetwork(log logr.Logger, networkID string) error {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
-	err := networkClient.DeleteNetwork(networkID)
+	err := networkClient.DeleteNetwork(ctx, networkID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)
@@ -685,7 +685,7 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	Expect(err).NotTo(HaveOccurred())
 
 	// router exists
-	router, err := networkClient.GetRouterByID(providerStatus.Networks.Router.ID)
+	router, err := networkClient.GetRouterByID(ctx, providerStatus.Networks.Router.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(router.Status).To(Equal("ACTIVE"))
 	infrastructureIdentifier.routerID = ptr.To(router.ID)
@@ -703,7 +703,7 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	Expect(providerStatus.Networks.Router.ExternalFixedIPs).To(ContainElements(externalFixedIPs))
 
 	// network is created
-	net, err := networkClient.GetNetworkByID(providerStatus.Networks.ID)
+	net, err := networkClient.GetNetworkByID(ctx, providerStatus.Networks.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(net).NotTo(BeNil())
 
@@ -713,19 +713,19 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	infrastructureIdentifier.networkID = ptr.To(net.ID)
 
 	// subnet is created
-	subnet, err := networkClient.GetSubnetByID(providerStatus.Networks.Subnets[0].ID)
+	subnet, err := networkClient.GetSubnetByID(ctx, providerStatus.Networks.Subnets[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
 	infrastructureIdentifier.subnetID = ptr.To(subnet.ID)
 
 	// security group is created
-	secGroup, err := networkClient.GetSecurityGroup(providerStatus.SecurityGroups[0].ID)
+	secGroup, err := networkClient.GetSecurityGroup(ctx, providerStatus.SecurityGroups[0].ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(secGroup.Name).To(Equal(providerStatus.SecurityGroups[0].Name))
 	infrastructureIdentifier.secGroupID = ptr.To(secGroup.ID)
 
 	// keypair is created
-	keyPair, err := computeClient.GetKeyPair(providerStatus.Node.KeyName)
+	keyPair, err := computeClient.GetKeyPair(ctx, providerStatus.Node.KeyName)
 	Expect(err).NotTo(HaveOccurred())
 	infrastructureIdentifier.keyPair = ptr.To(keyPair.Name)
 
@@ -737,13 +737,13 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 
 func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {
 	// keypair doesn't exist
-	keyPair, _ := computeClient.GetKeyPair(ptr.Deref(infrastructureIdentifier.keyPair, ""))
+	keyPair, _ := computeClient.GetKeyPair(ctx, ptr.Deref(infrastructureIdentifier.keyPair, ""))
 	Expect(keyPair).To(BeNil())
 
 	if infrastructureIdentifier.subnetID != nil {
 		// subnet doesn't exist
 		subnetsOpts := subnets.ListOpts{ID: ptr.Deref(infrastructureIdentifier.subnetID, "")}
-		subnets, err := networkClient.ListSubnets(subnetsOpts)
+		subnets, err := networkClient.ListSubnets(ctx, subnetsOpts)
 		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 		Expect(subnets).To(BeEmpty())
 	}
@@ -752,7 +752,7 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 		if providerConfig.Networks.ID == nil {
 			// make sure network doesn't exist, if it wasn't present before
 			opts := networks.ListOpts{ID: ptr.Deref(infrastructureIdentifier.networkID, "")}
-			networks, err := networkClient.ListNetwork(opts)
+			networks, err := networkClient.ListNetwork(ctx, opts)
 			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 			Expect(networks).To(BeEmpty())
 		}
@@ -761,7 +761,7 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 	if infrastructureIdentifier.secGroupID != nil {
 		// security group doesn't exist
 		sGroupsOpts := groups.ListOpts{ID: ptr.Deref(infrastructureIdentifier.secGroupID, "")}
-		sGroups, err := networkClient.ListSecurityGroup(sGroupsOpts)
+		sGroups, err := networkClient.ListSecurityGroup(ctx, sGroupsOpts)
 		Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 		Expect(sGroups).To(BeEmpty())
 	}
@@ -770,7 +770,7 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 		if providerConfig.Networks.Router == nil {
 			// make sure router doesn't exist, if it wasn't present in the start of test
 			opts := routers.ListOpts{ID: ptr.Deref(infrastructureIdentifier.routerID, "")}
-			routers, err := networkClient.ListRouters(opts)
+			routers, err := networkClient.ListRouters(ctx, opts)
 			Expect(openstackclient.IgnoreNotFoundError(err)).NotTo(HaveOccurred())
 			Expect(routers).To(BeEmpty())
 		}

@@ -67,11 +67,6 @@ func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Cred
 		config.WithTLSConfig(tlsConfig),
 		config.WithHTTPClient(httpClient))
 	if err != nil {
-		panic(err)
-	}
-
-	err = openstack.Authenticate(ctx, provider, authOpts)
-	if err != nil {
 		return nil, err
 	}
 

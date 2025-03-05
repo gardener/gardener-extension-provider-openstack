@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/utils/openstack/clientconfig"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack"
+	"github.com/gophercloud/gophercloud/v2/openstack/config"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -24,21 +24,27 @@ import (
 // NewOpenstackClientFromCredentials returns a Factory implementation that can be used to create clients for OpenStack services.
 // TODO: respect CloudProfile's requestTimeout for the OpenStack client.
 // see https://github.com/kubernetes/cloud-provider-openstack/blob/c44d941cdb5c7fe651f5cb9191d0af23e266c7cb/pkg/openstack/openstack.go#L257
-func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, error) {
-	opts := &clientconfig.ClientOpts{
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:                     credentials.AuthURL,
-			Username:                    credentials.Username,
-			Password:                    credentials.Password,
-			ProjectName:                 credentials.TenantName,
-			DomainName:                  credentials.DomainName,
-			ApplicationCredentialID:     credentials.ApplicationCredentialID,
-			ApplicationCredentialName:   credentials.ApplicationCredentialName,
-			ApplicationCredentialSecret: credentials.ApplicationCredentialSecret,
-		},
+func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Credentials) (Factory, error) {
+	authOpts := gophercloud.AuthOptions{
+		IdentityEndpoint: credentials.AuthURL,
+		// AllowReauth should be set to true if you grant permission for Gophercloud to
+		// cache your credentials in memory, and to allow Gophercloud to attempt to
+		// re-authenticate automatically if/when your token expires.
+		AllowReauth: true,
 	}
 
-	config := &tls.Config{
+	if credentials.ApplicationCredentialID != "" {
+		authOpts.ApplicationCredentialID = credentials.ApplicationCredentialID
+		authOpts.ApplicationCredentialName = credentials.ApplicationCredentialName
+		authOpts.ApplicationCredentialSecret = credentials.ApplicationCredentialSecret
+	} else {
+		authOpts.Username = credentials.Username
+		authOpts.Password = credentials.Password
+		authOpts.DomainName = credentials.DomainName
+		authOpts.TenantName = credentials.TenantName
+	}
+
+	tlsConfig := &tls.Config{
 		InsecureSkipVerify: credentials.Insecure, // #nosec: G402 -- Can be parameterized.
 	}
 	if len(credentials.CACert) > 0 {
@@ -47,36 +53,19 @@ func NewOpenstackClientFromCredentials(credentials *os.Credentials) (Factory, er
 		if !ok {
 			return nil, fmt.Errorf("failed to load CA Bundle for KeyStone")
 		}
-		config.RootCAs = pool
+		tlsConfig.RootCAs = pool
 	}
 
-	if opts.AuthInfo.ApplicationCredentialSecret != "" {
-		opts.AuthType = clientconfig.AuthV3ApplicationCredential
-	}
-
-	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: config}
-	opts.HTTPClient = &http.Client{
+	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: tlsConfig}
+	httpClient := http.Client{
 		Transport: transport,
 	}
 
-	authOpts, err := clientconfig.AuthOptions(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// AllowReauth should be set to true if you grant permission for Gophercloud to
-	// cache your credentials in memory, and to allow Gophercloud to attempt to
-	// re-authenticate automatically if/when your token expires.
-	authOpts.AllowReauth = true
-
-	provider, err := openstack.NewClient(authOpts.IdentityEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	provider.HTTPClient = *opts.HTTPClient
-
-	err = openstack.Authenticate(provider, *authOpts)
+	provider, err := config.NewProviderClient(
+		ctx,
+		authOpts,
+		config.WithTLSConfig(tlsConfig),
+		config.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +86,7 @@ func NewOpenStackClientFromSecretRef(ctx context.Context, c client.Client, secre
 	if len(strings.TrimSpace(creds.AuthURL)) == 0 && keyStoneUrl != nil {
 		creds.AuthURL = *keyStoneUrl
 	}
-	return NewOpenstackClientFromCredentials(creds)
+	return NewOpenstackClientFromCredentials(ctx, creds)
 }
 
 // WithRegion returns an Option that can modify the region a client targets.
@@ -216,7 +205,7 @@ func (oc *OpenstackClientFactory) Images(options ...Option) (Images, error) {
 		eo = opt(eo)
 	}
 
-	client, err := openstack.NewImageServiceV2(oc.providerClient, eo)
+	client, err := openstack.NewImageV2(oc.providerClient, eo)
 	if err != nil {
 		return nil, err
 	}
@@ -232,11 +221,7 @@ func IsNotFoundError(err error) bool {
 		return false
 	}
 
-	if _, ok := err.(gophercloud.ErrDefault404); ok {
-		return true
-	}
-
-	if _, ok := err.(gophercloud.Err404er); ok {
+	if gophercloud.ResponseCodeIs(err, http.StatusNotFound) {
 		return true
 	}
 

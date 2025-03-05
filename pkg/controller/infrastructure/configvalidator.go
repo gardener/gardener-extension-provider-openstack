@@ -56,7 +56,7 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not get Openstack credentials: %+v", err)))
 		return allErrs
 	}
-	clientFactory, err := c.clientFactoryFactory.NewFactory(credentials)
+	clientFactory, err := c.clientFactoryFactory.NewFactory(ctx, credentials)
 	if err != nil {
 		allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create Openstack client factory: %+v", err)))
 		return allErrs

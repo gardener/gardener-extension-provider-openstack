@@ -137,7 +137,7 @@ var _ = Describe("Actuator", func() {
 					return nil
 				},
 			)
-			openstackClientFactoryFactory.EXPECT().NewFactory(credentials).Return(openstackClientFactory, nil)
+			openstackClientFactoryFactory.EXPECT().NewFactory(ctx, credentials).Return(openstackClientFactory, nil)
 			openstackClientFactory.EXPECT().DNS().Return(dnsClient, nil)
 			dnsClient.EXPECT().GetZones(ctx).Return(zones, nil)
 			dnsClient.EXPECT().CreateOrUpdateRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA), []string{address}, 120).Return(nil)
@@ -165,7 +165,7 @@ var _ = Describe("Actuator", func() {
 					return nil
 				},
 			)
-			openstackClientFactoryFactory.EXPECT().NewFactory(credentials).Return(openstackClientFactory, nil)
+			openstackClientFactoryFactory.EXPECT().NewFactory(ctx, credentials).Return(openstackClientFactory, nil)
 			openstackClientFactory.EXPECT().DNS().Return(dnsClient, nil)
 			dnsClient.EXPECT().DeleteRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA)).Return(nil)
 

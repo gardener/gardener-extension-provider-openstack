@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -47,7 +47,7 @@ var _ = Describe("Infrastructure", func() {
 
 		prepRoutes := func(routes ...routers.Route) {
 			router.Routes = routes
-			nw.EXPECT().GetRouterByID(routerID).Return(router, nil)
+			nw.EXPECT().GetRouterByID(ctx, routerID).Return(router, nil)
 		}
 
 		DescribeTable("#RouteCleanup", func(a args, expErr error) {
@@ -82,7 +82,7 @@ var _ = Describe("Infrastructure", func() {
 						// plus one more that needs to be preserved
 						routers.Route{NextHop: "10.11.2.0"},
 					)
-					nw.EXPECT().UpdateRoutesForRouter([]routers.Route{{NextHop: "10.11.2.0"}}, routerID).Return(router, nil)
+					nw.EXPECT().UpdateRoutesForRouter(ctx, []routers.Route{{NextHop: "10.11.2.0"}}, routerID).Return(router, nil)
 				}}, nil),
 		)
 	})
@@ -115,12 +115,12 @@ var _ = Describe("Infrastructure", func() {
 		})
 
 		It("should delete all the kubernetes loadbalancers", func() {
-			lbclient.EXPECT().ListLoadbalancers(gomock.Any()).Return(lbs, nil)
-			lbclient.EXPECT().DeleteLoadbalancer("k8s", loadbalancers.DeleteOpts{Cascade: true}).Return(nil)
+			lbclient.EXPECT().ListLoadbalancers(ctx, gomock.Any()).Return(lbs, nil)
+			lbclient.EXPECT().DeleteLoadbalancer(ctx, "k8s", loadbalancers.DeleteOpts{Cascade: true}).Return(nil)
 			// first call to Get will return active state
 			gomock.InOrder(
-				lbclient.EXPECT().GetLoadbalancer("k8s").Return(&lbs[0], nil),
-				lbclient.EXPECT().GetLoadbalancer("k8s").Return(nil, nil),
+				lbclient.EXPECT().GetLoadbalancer(ctx, "k8s").Return(&lbs[0], nil),
+				lbclient.EXPECT().GetLoadbalancer(ctx, "k8s").Return(nil, nil),
 			)
 			err := CleanupKubernetesLoadbalancers(ctx, log, lbclient, subnetID, clusterName)
 			Expect(err).To(BeNil())

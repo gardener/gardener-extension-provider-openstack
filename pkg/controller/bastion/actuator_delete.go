@@ -32,7 +32,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensi
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
 
-	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
+	openstackClientFactory, err := a.openstackClientFactory.NewFactory(ctx, credentials)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create openstack client factory: %w", err), helper.KnownCodes)
 	}
@@ -47,17 +47,17 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensi
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	err = removeBastionInstance(log, computeClient, opt)
+	err = removeBastionInstance(ctx, log, computeClient, opt)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("failed to remove bastion instance: %w", err), helper.KnownCodes)
 	}
 
-	err = removePublicIPAddress(log, networkingClient, opt)
+	err = removePublicIPAddress(ctx, log, networkingClient, opt)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("failed to remove public ip address: %w", err), helper.KnownCodes)
 	}
 
-	deleted, err := isInstanceDeleted(computeClient, opt)
+	deleted, err := isInstanceDeleted(ctx, computeClient, opt)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("failed to check for bastion instance: %w", err), helper.KnownCodes)
 	}
@@ -70,15 +70,15 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensi
 	}
 
 	// The ssh ingress rule for the bastion in the worker node security group was also deleted once the bastion security group was removed. Therefore, there's no need to manage its deletion.
-	return util.DetermineError(removeSecurityGroup(networkingClient, opt), helper.KnownCodes)
+	return util.DetermineError(removeSecurityGroup(ctx, networkingClient, opt), helper.KnownCodes)
 }
 
 func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.Bastion, _ *controller.Cluster) error {
 	return nil
 }
 
-func removeBastionInstance(log logr.Logger, client openstackclient.Compute, opt *Options) error {
-	instances, err := getBastionInstance(client, opt.BastionInstanceName)
+func removeBastionInstance(ctx context.Context, log logr.Logger, client openstackclient.Compute, opt *Options) error {
+	instances, err := getBastionInstance(ctx, client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func removeBastionInstance(log logr.Logger, client openstackclient.Compute, opt 
 		return nil
 	}
 
-	err = deleteBastionInstance(client, instances[0].ID)
+	err = deleteBastionInstance(ctx, client, instances[0].ID)
 	if err != nil {
 		return fmt.Errorf("failed to terminate bastion instance: %w", err)
 	}
@@ -96,8 +96,8 @@ func removeBastionInstance(log logr.Logger, client openstackclient.Compute, opt 
 	return nil
 }
 
-func removePublicIPAddress(log logr.Logger, client openstackclient.Networking, opt *Options) error {
-	fips, err := getFipByName(client, opt.BastionInstanceName)
+func removePublicIPAddress(ctx context.Context, log logr.Logger, client openstackclient.Networking, opt *Options) error {
+	fips, err := getFipByName(ctx, client, opt.BastionInstanceName)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func removePublicIPAddress(log logr.Logger, client openstackclient.Networking, o
 		return nil
 	}
 
-	err = deleteFloatingIP(client, fips[0].ID)
+	err = deleteFloatingIP(ctx, client, fips[0].ID)
 	if err != nil {
 		return fmt.Errorf("failed to terminate bastion Public IP: %w", err)
 	}
@@ -115,8 +115,8 @@ func removePublicIPAddress(log logr.Logger, client openstackclient.Networking, o
 	return nil
 }
 
-func removeSecurityGroup(client openstackclient.Networking, opt *Options) error {
-	bastionSecurityGroups, err := getSecurityGroups(client, opt.SecurityGroup)
+func removeSecurityGroup(ctx context.Context, client openstackclient.Networking, opt *Options) error {
+	bastionSecurityGroups, err := getSecurityGroups(ctx, client, opt.SecurityGroup)
 	if err != nil {
 		return err
 	}
@@ -125,11 +125,11 @@ func removeSecurityGroup(client openstackclient.Networking, opt *Options) error 
 		return nil
 	}
 
-	return deleteSecurityGroup(client, bastionSecurityGroups[0].ID)
+	return deleteSecurityGroup(ctx, client, bastionSecurityGroups[0].ID)
 }
 
-func isInstanceDeleted(client openstackclient.Compute, opt *Options) (bool, error) {
-	instances, err := getBastionInstance(client, opt.BastionInstanceName)
+func isInstanceDeleted(ctx context.Context, client openstackclient.Compute, opt *Options) (bool, error) {
+	instances, err := getBastionInstance(ctx, client, opt.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
 		return false, err
 	}

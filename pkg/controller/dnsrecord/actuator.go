@@ -51,7 +51,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dns *extensio
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
-	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
+	openstackClientFactory, err := a.openstackClientFactory.NewFactory(ctx, credentials)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %w", err), helper.KnownCodes)
 	}
@@ -89,7 +89,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, dns *extensionsv
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %+v", err)
 	}
-	openstackClientFactory, err := a.openstackClientFactory.NewFactory(credentials)
+	openstackClientFactory, err := a.openstackClientFactory.NewFactory(ctx, credentials)
 	if err != nil {
 		return util.DetermineError(fmt.Errorf("could not create Openstack client factory: %+v", err), helper.KnownCodes)
 	}

@@ -177,6 +177,9 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		}
 		return nil
 	})
+	if err != nil {
+		return util.DetermineError(err, helper.KnownCodes)
+	}
 
 	// check if the instance already exists and has an IP
 	endpoints, err := getInstanceEndpoints(instance, opt)

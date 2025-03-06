@@ -7,7 +7,9 @@ package utils
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/go-logr/logr"
 	utilsnet "k8s.io/utils/net"
 )
 
@@ -69,4 +71,18 @@ func ComputeEgressCIDRs(ips []string) []string {
 		}
 	}
 	return result
+}
+
+// Retry performs a function with retries, delay, and a max number of attempts
+func Retry(maxRetries int, delay time.Duration, log logr.Logger, fn func() error) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+		log.Info(fmt.Sprintf("Attempt %d failed, retrying in %v: %v", i+1, delay, err))
+		time.Sleep(delay)
+	}
+	return err
 }

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -141,28 +142,44 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
 	}
 
-	fipid, err := ensurePublicIPAddress(ctx, opt, log, networkingClient, infraStatus)
+	fipID, err := ensurePublicIPAddress(ctx, opt, log, networkingClient, infraStatus)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	err = ensureAssociateFIPWithInstance(ctx, networkingClient, instance, fipid)
+	err = ensureAssociateFIPWithInstance(ctx, networkingClient, instance, fipID)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	// refresh instance after public ip attached/created
-	instances, err := getBastionInstance(ctx, computeClient, opt.BastionInstanceName)
-	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
-	}
+	// wait until instance and floatingIP are ready
+	err = utils.Retry(3, 10*time.Second, log, func() error {
+		// refresh bastion instance
+		instances, err := getBastionInstance(ctx, computeClient, opt.BastionInstanceName)
+		if err != nil {
+			return util.DetermineError(err, helper.KnownCodes)
+		}
 
-	if len(instances) == 0 {
-		return errors.New("instances must not be empty")
-	}
+		if len(instances) == 0 {
+			return errors.New("instances must not be empty")
+		}
+		instance = &instances[0]
+
+		// refresh floatingIP
+		fip, err := networkingClient.GetFloatingIP(ctx, floatingips.ListOpts{ID: fipID.ID})
+		if err != nil {
+			return util.DetermineError(err, helper.KnownCodes)
+		}
+		fipID = &fip
+
+		if fipID.Status != "ACTIVE" || instance.Status != "ACTIVE" {
+			return fmt.Errorf("instance or floating ip address not ready yet")
+		}
+		return nil
+	})
 
 	// check if the instance already exists and has an IP
-	endpoints, err := getInstanceEndpoints(&instances[0], opt)
+	endpoints, err := getInstanceEndpoints(instance, opt)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -324,6 +341,19 @@ func addressToIngress(dnsName *string, ipAddress *string) *corev1.LoadBalancerIn
 }
 
 func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
+	if floatingIP == nil {
+		return fmt.Errorf("floatingIP must not be nil")
+	}
+
+	// the floatingIP is already associated
+	if floatingIP.PortID != "" {
+		return nil
+	}
+
+	return associateFIPWithInstance(ctx, networkClient, instance, floatingIP)
+}
+
+func associateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
 	instancePorts, err := networkClient.GetInstancePorts(ctx, instance.ID)
 	if err != nil {
 		return err
@@ -344,30 +374,6 @@ func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstack
 
 	if instancePort == nil {
 		return fmt.Errorf("no active port found for instance id %s", instance.ID)
-	}
-
-	// check if floating IP is already associated with the instance
-	// if no IP is found NO error is returned
-	fip, err := networkClient.GetFloatingIP(ctx, floatingips.ListOpts{PortID: instancePort.ID})
-	if err != nil {
-		return err
-	}
-
-	// if no floating IP is yet associated with the instance
-	if fip.ID == "" {
-		err := networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, instancePort.ID)
-		if err != nil {
-			return err
-		}
-		fip = *floatingIP
-	}
-
-	if fip.ID != "" {
-		return nil
-	}
-
-	if fip.Status != "ACTIVE" || instance.Status != "ACTIVE" {
-		return fmt.Errorf("instance or floating ip address not ready yet")
 	}
 
 	return networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, instancePort.ID)

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -293,7 +294,7 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		err = retry(3, 5*time.Second, func() error {
+		err = utils.Retry(3, 5*time.Second, log, func() error {
 			return verifyPort22IsOpen(ctx, c, bastion)
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -750,18 +751,4 @@ func verifyCreation(options *bastionctrl.Options) {
 	Expect(err).To(Succeed())
 	Expect(privateIP).NotTo(BeNil())
 	Expect(externalIP).NotTo(BeNil())
-}
-
-// retry performs a function with retries, delay, and a max number of attempts
-func retry(maxRetries int, delay time.Duration, fn func() error) error {
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		log.Info(fmt.Sprintf("Attempt %d failed, retrying in %v: %v", i+1, delay, err))
-		time.Sleep(delay)
-	}
-	return err
 }

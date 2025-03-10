@@ -105,65 +105,13 @@ func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gct
 	template := &newObj.Spec.Template
 	ps := &template.Spec
 
-	cluster, err := gctx.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
-	if err != nil {
-		return err
-	}
-
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-controller-manager"); c != nil {
-		ensureKubeControllerManagerCommandLineArgs(c, k8sVersion)
+		ensureKubeControllerManagerCommandLineArgs(c)
 		ensureKubeControllerManagerVolumeMounts(c)
 	}
 
 	ensureKubeControllerManagerLabels(template)
 	ensureKubeControllerManagerVolumes(ps)
-	return nil
-}
-
-// EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
-	template := &newObj.Spec.Template
-	ps := &template.Spec
-
-	cluster, err := gctx.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
-	if err != nil {
-		return err
-	}
-
-	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-scheduler"); c != nil {
-		ensureKubeSchedulerCommandLineArgs(c, k8sVersion)
-	}
-	return nil
-}
-
-// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
-func (e *ensurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
-	template := &newObj.Spec.Template
-	ps := &template.Spec
-
-	cluster, err := gctx.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
-	if err != nil {
-		return err
-	}
-
-	if c := extensionswebhook.ContainerWithName(ps.Containers, "cluster-autoscaler"); c != nil {
-		ensureClusterAutoscalerCommandLineArgs(c, k8sVersion)
-	}
 	return nil
 }
 
@@ -178,19 +126,10 @@ func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, k8sVersion *semver.
 	}
 }
 
-func ensureKubeControllerManagerCommandLineArgs(c *corev1.Container, _ *semver.Version) {
+func ensureKubeControllerManagerCommandLineArgs(c *corev1.Container) {
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--cloud-provider=", "external")
 	c.Command = extensionswebhook.EnsureNoStringWithPrefix(c.Command, "--cloud-config=")
 	c.Command = extensionswebhook.EnsureNoStringWithPrefix(c.Command, "--external-cloud-volume-plugin=")
-}
-
-func ensureKubeSchedulerCommandLineArgs(_ *corev1.Container, _ *semver.Version) {
-	// TODO: in the future add logic if "--feature-gates="" assertion is needed for a certain version
-}
-
-// ensureClusterAutoscalerCommandLineArgs ensures the cluster-autoscaler command line args.
-func ensureClusterAutoscalerCommandLineArgs(_ *corev1.Container, _ *semver.Version) {
-	// TODO: in the future add logic if "--feature-gates="" assertion is needed for a certain version
 }
 
 func ensureKubeControllerManagerLabels(t *corev1.PodTemplateSpec) {
@@ -267,10 +206,6 @@ func ensureKubeletCommandLineArgs(command []string) []string {
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
-	if newObj.FeatureGates == nil {
-		newObj.FeatureGates = make(map[string]bool)
-	}
-
 	newObj.EnableControllerAttachDetach = ptr.To(true)
 
 	// resolv-for-kubelet.conf is created by update-resolv-conf.service

@@ -161,7 +161,7 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should add missing elements to kube-apiserver deployment (k8s >= 1.27, < 1.31)", func() {
+		It("should add missing elements to kube-apiserver deployment (k8s < 1.31)", func() {
 			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s127, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
@@ -224,7 +224,7 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should add missing elements to kube-controller-manager deployment (k8s >= 1.27)", func() {
+		It("should add missing elements to kube-controller-manager deployment", func() {
 			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s127, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
@@ -269,72 +269,6 @@ var _ = Describe("Ensurer", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			checkKubeControllerManagerDeployment(dep, "1.27.1")
-		})
-	})
-
-	Describe("#EnsureKubeSchedulerDeployment", func() {
-		var (
-			dep     *appsv1.Deployment
-			ensurer genericmutator.Ensurer
-		)
-
-		BeforeEach(func() {
-			dep = &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: v1beta1constants.DeploymentNameKubeScheduler},
-				Spec: appsv1.DeploymentSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: "kube-scheduler",
-								},
-							},
-						},
-					},
-				},
-			}
-
-			ensurer = NewEnsurer(logger)
-		})
-
-		It("should add missing elements to kube-scheduler deployment (k8s >= 1.27)", func() {
-			err := ensurer.EnsureKubeSchedulerDeployment(ctx, eContextK8s127, dep, nil)
-			Expect(err).To(Not(HaveOccurred()))
-
-			checkKubeSchedulerDeployment(dep, "1.27.1")
-		})
-	})
-
-	Describe("#EnsureClusterAutoscalerDeployment", func() {
-		var (
-			dep     *appsv1.Deployment
-			ensurer genericmutator.Ensurer
-		)
-
-		BeforeEach(func() {
-			dep = &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler},
-				Spec: appsv1.DeploymentSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: "cluster-autoscaler",
-								},
-							},
-						},
-					},
-				},
-			}
-
-			ensurer = NewEnsurer(logger)
-		})
-
-		It("should add missing elements to cluster-autoscaler deployment (k8s >= 1.27)", func() {
-			err := ensurer.EnsureClusterAutoscalerDeployment(ctx, eContextK8s127, dep, nil)
-			Expect(err).To(Not(HaveOccurred()))
-
-			checkClusterAutoscalerDeployment(dep, "1.27.1")
 		})
 	})
 
@@ -593,7 +527,6 @@ func checkKubeAPIServerDeployment(dep *appsv1.Deployment, k8sVersion string) {
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-apiserver")
 	Expect(c).To(Not(BeNil()))
 
-	Expect(c.Command).NotTo(ContainElement("--feature-gates=CSIMigration=true"))
 	Expect(c.Command).NotTo(ContainElement("--cloud-provider=openstack"))
 	Expect(c.Command).NotTo(ContainElement("--cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf"))
 	if !k8sVersionAtLeast131 {
@@ -610,8 +543,6 @@ func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, _ string) {
 
 	Expect(c.Command).To(ContainElement("--cloud-provider=external"))
 
-	Expect(c.Command).NotTo(ContainElement("--feature-gates=CSIMigration=true"))
-
 	Expect(c.Command).NotTo(ContainElement("--cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf"))
 	Expect(c.Command).NotTo(ContainElement("--external-cloud-volume-plugin=openstack"))
 	Expect(c.VolumeMounts).NotTo(ContainElement(etcSSLVolumeMount))
@@ -626,16 +557,12 @@ func checkKubeSchedulerDeployment(dep *appsv1.Deployment, _ string) {
 	// Check that the kube-scheduler container still exists and contains all needed command line args.
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-scheduler")
 	Expect(c).To(Not(BeNil()))
-
-	Expect(c.Command).NotTo(ContainElement("--feature-gates=CSIMigration=true"))
 }
 
 func checkClusterAutoscalerDeployment(dep *appsv1.Deployment, _ string) {
 	// Check that the cluster-autoscaler container still exists and contains all needed command line args.
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "cluster-autoscaler")
 	Expect(c).To(Not(BeNil()))
-
-	Expect(c.Command).NotTo(ContainElement("--feature-gates=CSIMigration=true"))
 }
 
 func encode(obj runtime.Object) []byte {

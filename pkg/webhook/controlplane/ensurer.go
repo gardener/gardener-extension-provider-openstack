@@ -101,7 +101,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 }
 
 // EnsureKubeControllerManagerDeployment ensures that the kube-controller-manager deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
+func (e *ensurer) EnsureKubeControllerManagerDeployment(_ context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
 	template := &newObj.Spec.Template
 	ps := &template.Spec
 

@@ -106,10 +106,10 @@ rules:
 - apiGroups:
   - machine.sapcloud.io
   resources:
-  - "machineclasses"
-  - "machinedeployments"
-  - "machines"
-  - "machinesets"
+  - machineclasses
+  - machinedeployments
+  - machines
+  - machinesets
   verbs:
   - create
   - get

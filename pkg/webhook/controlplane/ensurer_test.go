@@ -324,28 +324,20 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		DescribeTable("should modify existing elements of kubelet configuration",
-			func(gctx gcontext.GardenContext, kubeletVersion *semver.Version, featureGates []string) {
-				newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
-					FeatureGates: map[string]bool{
-						"Foo": true,
-					},
-					ResolverConfig:               ptr.To("/etc/resolv-for-kubelet.conf"),
-					EnableControllerAttachDetach: ptr.To(true),
-				}
+		It("should modify existing elements of kubelet configuration", func() {
+			newKubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
+				FeatureGates: map[string]bool{
+					"Foo": true,
+				},
+				ResolverConfig:               ptr.To("/etc/resolv-for-kubelet.conf"),
+				EnableControllerAttachDetach: ptr.To(true),
+			}
 
-				for _, featureGate := range featureGates {
-					newKubeletConfig.FeatureGates[featureGate] = true
-				}
-
-				kubeletConfig := *oldKubeletConfig
-
-				err := ensurer.EnsureKubeletConfiguration(ctx, gctx, kubeletVersion, &kubeletConfig, nil)
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(&kubeletConfig).To(Equal(newKubeletConfig))
-			},
-
-			Entry("kubelet >= 1.27", eContextK8s127, semver.MustParse("1.27.1"), nil),
+			kubeletConfig := *oldKubeletConfig
+			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s127, semver.MustParse("1.27.1"), &kubeletConfig, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
+		},
 		)
 	})
 
@@ -551,18 +543,6 @@ func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, _ string) {
 	Expect(dep.Spec.Template.Spec.Volumes).NotTo(ContainElement(usrShareCACertificatesVolume))
 	Expect(dep.Spec.Template.Spec.Volumes).NotTo(ContainElement(etcSSLVolume))
 	Expect(dep.Spec.Template.Spec.Volumes).To(BeEmpty())
-}
-
-func checkKubeSchedulerDeployment(dep *appsv1.Deployment, _ string) {
-	// Check that the kube-scheduler container still exists and contains all needed command line args.
-	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-scheduler")
-	Expect(c).To(Not(BeNil()))
-}
-
-func checkClusterAutoscalerDeployment(dep *appsv1.Deployment, _ string) {
-	// Check that the cluster-autoscaler container still exists and contains all needed command line args.
-	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "cluster-autoscaler")
-	Expect(c).To(Not(BeNil()))
 }
 
 func encode(obj runtime.Object) []byte {

@@ -337,8 +337,7 @@ var _ = Describe("Ensurer", func() {
 			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s127, semver.MustParse("1.27.1"), &kubeletConfig, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
-		},
-		)
+		})
 	})
 
 	Describe("#EnsureAdditionalUnits", func() {

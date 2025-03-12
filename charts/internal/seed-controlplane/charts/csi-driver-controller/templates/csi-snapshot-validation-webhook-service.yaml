@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":443}]'
-    {{- if .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled }}
+    {{- if and .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled (semverCompare "< 1.31-0" .Capabilities.KubeVersion.Version) }}
     {{- if semverCompare ">= 1.27-0" .Capabilities.KubeVersion.Version }}
     service.kubernetes.io/topology-mode: "auto"
     {{- else }}
@@ -13,7 +13,7 @@ metadata:
     {{- end }}
     {{- end }}
   labels:
-    {{- if .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled }}
+    {{- if and .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled (semverCompare "< 1.32-0" .Capabilities.KubeVersion.Version) }}
     endpoint-slice-hints.resources.gardener.cloud/consider: "true"
     {{- end }}
 spec:
@@ -23,3 +23,6 @@ spec:
     - protocol: TCP
       port: 443
       targetPort: 443
+  {{- if and .Values.csiSnapshotValidationWebhook.topologyAwareRoutingEnabled (semverCompare ">= 1.31-0" .Capabilities.KubeVersion.Version) }}
+  trafficDistribution: PreferClose
+  {{- end }}

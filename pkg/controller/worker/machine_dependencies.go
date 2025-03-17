@@ -40,14 +40,14 @@ func (w *workerDelegate) PreReconcileHook(ctx context.Context) error {
 		return err
 	}
 
-	serverGroupDepSet, err := w.reconcileServerGroups(computeClient, workerStatus.DeepCopy())
+	serverGroupDepSet, err := w.reconcileServerGroups(ctx, computeClient, workerStatus.DeepCopy())
 	return w.updateMachineDependenciesStatus(ctx, workerStatus, serverGroupDepSet.extract(), err)
 }
 
-func (w *workerDelegate) reconcileServerGroups(computeClient osclient.Compute, workerStatus *api.WorkerStatus) (serverGroupDependencySet, error) {
+func (w *workerDelegate) reconcileServerGroups(ctx context.Context, computeClient osclient.Compute, workerStatus *api.WorkerStatus) (serverGroupDependencySet, error) {
 	serverGroupDepSet := newServerGroupDependencySet(workerStatus.ServerGroupDependencies)
 	for _, pool := range w.worker.Spec.Pools {
-		serverGroupDependencyStatus, err := w.reconcilePoolServerGroup(computeClient, pool, serverGroupDepSet)
+		serverGroupDependencyStatus, err := w.reconcilePoolServerGroup(ctx, computeClient, pool, serverGroupDepSet)
 		if err != nil {
 			return serverGroupDepSet, fmt.Errorf("reconciling server groups failed for pool %q: %w", pool.Name, err)
 		}
@@ -56,7 +56,7 @@ func (w *workerDelegate) reconcileServerGroups(computeClient osclient.Compute, w
 	return serverGroupDepSet, nil
 }
 
-func (w *workerDelegate) reconcilePoolServerGroup(computeClient osclient.Compute, pool extensionsv1alpha1.WorkerPool, set serverGroupDependencySet) (*api.ServerGroupDependency, error) {
+func (w *workerDelegate) reconcilePoolServerGroup(ctx context.Context, computeClient osclient.Compute, pool extensionsv1alpha1.WorkerPool, set serverGroupDependencySet) (*api.ServerGroupDependency, error) {
 	poolProviderConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (w *workerDelegate) reconcilePoolServerGroup(computeClient osclient.Compute
 
 	poolDep := set.getByPoolName(pool.Name)
 	if poolDep != nil {
-		serverGroup, err := computeClient.GetServerGroup(poolDep.ID)
+		serverGroup, err := computeClient.GetServerGroup(ctx, poolDep.ID)
 		if err != nil && !osclient.IsNotFoundError(err) {
 			return nil, err
 		} else if err == nil {
@@ -84,7 +84,7 @@ func (w *workerDelegate) reconcilePoolServerGroup(computeClient osclient.Compute
 		return nil, fmt.Errorf("failed to generate server group name for worker pool %q: %w", pool.Name, err)
 	}
 
-	result, err := computeClient.CreateServerGroup(name, poolProviderConfig.ServerGroup.Policy)
+	result, err := computeClient.CreateServerGroup(ctx, name, poolProviderConfig.ServerGroup.Policy)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (w *workerDelegate) cleanupMachineDependencies(ctx context.Context) error {
 	}
 
 	serverGroupDepSet := newServerGroupDependencySet(workerStatus.DeepCopy().ServerGroupDependencies)
-	err = w.cleanupServerGroupDependencies(computeClient, serverGroupDepSet)
+	err = w.cleanupServerGroupDependencies(ctx, computeClient, serverGroupDepSet)
 
 	return w.updateMachineDependenciesStatus(ctx, workerStatus, serverGroupDepSet.extract(), err)
 }
@@ -141,8 +141,8 @@ func (w *workerDelegate) cleanupMachineDependencies(ctx context.Context) error {
 // b) worker pool is deleted
 // c) worker pool's server group configuration (e.g. policy) changed
 // d) worker pool no longer requires use of server groups
-func (w *workerDelegate) cleanupServerGroupDependencies(computeClient osclient.Compute, set serverGroupDependencySet) error {
-	groups, err := computeClient.ListServerGroups()
+func (w *workerDelegate) cleanupServerGroupDependencies(ctx context.Context, computeClient osclient.Compute, set serverGroupDependencySet) error {
+	groups, err := computeClient.ListServerGroups(ctx)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (w *workerDelegate) cleanupServerGroupDependencies(computeClient osclient.C
 			continue
 		}
 
-		err = computeClient.DeleteServerGroup(group.ID)
+		err = computeClient.DeleteServerGroup(ctx, group.ID)
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func (w *workerDelegate) cleanupServerGroupDependencies(computeClient osclient.C
 	// handles case [a]
 	if w.worker.DeletionTimestamp != nil {
 		return set.forEach(func(d api.ServerGroupDependency) error {
-			if err := computeClient.DeleteServerGroup(d.ID); err != nil {
+			if err := computeClient.DeleteServerGroup(ctx, d.ID); err != nil {
 				return err
 			}
 
@@ -195,7 +195,7 @@ func (w *workerDelegate) cleanupServerGroupDependencies(computeClient osclient.C
 			return nil
 		}
 
-		if err := computeClient.DeleteServerGroup(d.ID); err != nil {
+		if err := computeClient.DeleteServerGroup(ctx, d.ID); err != nil {
 			return err
 		}
 

@@ -74,7 +74,7 @@ func (f *FlowReconciler) Reconcile(ctx context.Context, infra *extensionsv1alpha
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
-	clientFactory, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
+	clientFactory, err := openstackclient.NewOpenstackClientFromCredentials(ctx, credentials)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (f *FlowReconciler) Delete(ctx context.Context, infra *extensionsv1alpha1.I
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
-	clientFactory, err := openstackclient.NewOpenstackClientFromCredentials(credentials)
+	clientFactory, err := openstackclient.NewOpenstackClientFromCredentials(ctx, credentials)
 	if err != nil {
 		return err
 	}

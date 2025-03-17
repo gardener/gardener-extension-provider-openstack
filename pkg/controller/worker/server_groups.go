@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 )

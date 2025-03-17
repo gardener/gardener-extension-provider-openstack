@@ -8,21 +8,20 @@ package client
 import (
 	"context"
 
-	"github.com/gophercloud/gophercloud"
-	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/sharenetworks"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/keypairs"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/sharenetworks"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
@@ -90,25 +89,22 @@ type Storage interface {
 
 // Compute describes the operations of a client interacting with OpenStack's Compute service.
 type Compute interface {
-	CreateServerGroup(name, policy string) (*servergroups.ServerGroup, error)
-	GetServerGroup(id string) (*servergroups.ServerGroup, error)
-	DeleteServerGroup(id string) error
+	CreateServerGroup(ctx context.Context, name, policy string) (*servergroups.ServerGroup, error)
+	GetServerGroup(ctx context.Context, id string) (*servergroups.ServerGroup, error)
+	DeleteServerGroup(ctx context.Context, id string) error
 	// Server
-	CreateServer(createOpts servers.CreateOpts) (*servers.Server, error)
-	DeleteServer(id string) error
-	ListServerGroups() ([]servergroups.ServerGroup, error)
-	FindServersByName(name string) ([]servers.Server, error)
-	AssociateFIPWithInstance(serverID string, associateOpts computefip.AssociateOpts) error
-	// FloatingID
-	FindFloatingIDByInstanceID(id string) (string, error)
+	ListServerGroups(ctx context.Context) ([]servergroups.ServerGroup, error)
+	CreateServer(ctx context.Context, createOpts servers.CreateOpts) (*servers.Server, error)
+	DeleteServer(ctx context.Context, id string) error
+	FindServersByName(ctx context.Context, name string) ([]servers.Server, error)
 
 	// Flavor
-	FindFlavorID(name string) (string, error)
+	FindFlavorID(ctx context.Context, name string) (string, error)
 
 	// KeyPairs
-	CreateKeyPair(name, publicKey string) (*keypairs.KeyPair, error)
-	GetKeyPair(name string) (*keypairs.KeyPair, error)
-	DeleteKeyPair(name string) error
+	CreateKeyPair(ctx context.Context, name, publicKey string) (*keypairs.KeyPair, error)
+	GetKeyPair(ctx context.Context, name string) (*keypairs.KeyPair, error)
+	DeleteKeyPair(ctx context.Context, name string) error
 }
 
 // DNS describes the operations of a client interacting with OpenStack's DNS service.
@@ -122,80 +118,83 @@ type DNS interface {
 type Networking interface {
 	// External Network
 	GetExternalNetworkNames(ctx context.Context) ([]string, error)
-	GetExternalNetworkByName(name string) (*networks.Network, error)
+	GetExternalNetworkByName(ctx context.Context, name string) (*networks.Network, error)
 	// Network
-	CreateNetwork(opts networks.CreateOpts) (*networks.Network, error)
-	ListNetwork(listOpts networks.ListOpts) ([]networks.Network, error)
-	UpdateNetwork(networkID string, opts networks.UpdateOpts) (*networks.Network, error)
-	GetNetworkByName(name string) ([]networks.Network, error)
-	GetNetworkByID(id string) (*networks.Network, error)
-	DeleteNetwork(networkID string) error
+	CreateNetwork(ctx context.Context, opts networks.CreateOpts) (*networks.Network, error)
+	ListNetwork(ctx context.Context, listOpts networks.ListOpts) ([]networks.Network, error)
+	UpdateNetwork(ctx context.Context, networkID string, opts networks.UpdateOpts) (*networks.Network, error)
+	GetNetworkByName(ctx context.Context, name string) ([]networks.Network, error)
+	GetNetworkByID(ctx context.Context, id string) (*networks.Network, error)
+	DeleteNetwork(ctx context.Context, networkID string) error
 	// FloatingIP
-	CreateFloatingIP(createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error)
-	DeleteFloatingIP(id string) error
-	ListFip(listOpts floatingips.ListOpts) ([]floatingips.FloatingIP, error)
-	GetFipByName(name string) ([]floatingips.FloatingIP, error)
+	CreateFloatingIP(ctx context.Context, createOpts floatingips.CreateOpts) (*floatingips.FloatingIP, error)
+	DeleteFloatingIP(ctx context.Context, id string) error
+	ListFip(ctx context.Context, listOpts floatingips.ListOpts) ([]floatingips.FloatingIP, error)
+	GetFipByName(ctx context.Context, name string) ([]floatingips.FloatingIP, error)
+	GetFloatingIP(ctx context.Context, listOpts floatingips.ListOpts) (floatingips.FloatingIP, error)
 	// Security Group
-	CreateSecurityGroup(listOpts groups.CreateOpts) (*groups.SecGroup, error)
-	DeleteSecurityGroup(groupID string) error
-	ListSecurityGroup(listOpts groups.ListOpts) ([]groups.SecGroup, error)
-	GetSecurityGroup(groupID string) (*groups.SecGroup, error)
-	GetSecurityGroupByName(name string) ([]groups.SecGroup, error)
+	CreateSecurityGroup(ctx context.Context, listOpts groups.CreateOpts) (*groups.SecGroup, error)
+	DeleteSecurityGroup(ctx context.Context, groupID string) error
+	ListSecurityGroup(ctx context.Context, listOpts groups.ListOpts) ([]groups.SecGroup, error)
+	GetSecurityGroup(ctx context.Context, groupID string) (*groups.SecGroup, error)
+	GetSecurityGroupByName(ctx context.Context, name string) ([]groups.SecGroup, error)
 	// Security Group rules
-	CreateRule(createOpts rules.CreateOpts) (*rules.SecGroupRule, error)
-	ListRules(listOpts rules.ListOpts) ([]rules.SecGroupRule, error)
-	DeleteRule(ruleID string) error
+	CreateRule(ctx context.Context, createOpts rules.CreateOpts) (*rules.SecGroupRule, error)
+	ListRules(ctx context.Context, listOpts rules.ListOpts) ([]rules.SecGroupRule, error)
+	DeleteRule(ctx context.Context, ruleID string) error
 	// Routers
-	GetRouterByID(id string) (*routers.Router, error)
-	ListRouters(listOpts routers.ListOpts) ([]routers.Router, error)
-	UpdateRoutesForRouter(routes []routers.Route, routerID string) (*routers.Router, error)
-	UpdateRouter(routerID string, updateOpts routers.UpdateOpts) (*routers.Router, error)
-	CreateRouter(createOpts routers.CreateOpts) (*routers.Router, error)
-	DeleteRouter(routerID string) error
-	AddRouterInterface(routerID string, addOpts routers.AddInterfaceOpts) (*routers.InterfaceInfo, error)
-	RemoveRouterInterface(routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error)
+	GetRouterByID(ctx context.Context, id string) (*routers.Router, error)
+	ListRouters(ctx context.Context, listOpts routers.ListOpts) ([]routers.Router, error)
+	UpdateRoutesForRouter(ctx context.Context, routes []routers.Route, routerID string) (*routers.Router, error)
+	UpdateRouter(ctx context.Context, routerID string, updateOpts routers.UpdateOpts) (*routers.Router, error)
+	CreateRouter(ctx context.Context, createOpts routers.CreateOpts) (*routers.Router, error)
+	DeleteRouter(ctx context.Context, routerID string) error
+	AddRouterInterface(ctx context.Context, routerID string, addOpts routers.AddInterfaceOpts) (*routers.InterfaceInfo, error)
+	RemoveRouterInterface(ctx context.Context, routerID string, removeOpts routers.RemoveInterfaceOpts) (*routers.InterfaceInfo, error)
 	// Subnets
-	CreateSubnet(createOpts subnets.CreateOpts) (*subnets.Subnet, error)
-	GetSubnetByID(id string) (*subnets.Subnet, error)
-	ListSubnets(listOpts subnets.ListOpts) ([]subnets.Subnet, error)
-	UpdateSubnet(subnetID string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error)
-	DeleteSubnet(subnetID string) error
+	CreateSubnet(ctx context.Context, createOpts subnets.CreateOpts) (*subnets.Subnet, error)
+	GetSubnetByID(ctx context.Context, id string) (*subnets.Subnet, error)
+	ListSubnets(ctx context.Context, listOpts subnets.ListOpts) ([]subnets.Subnet, error)
+	UpdateSubnet(ctx context.Context, id string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error)
+	DeleteSubnet(ctx context.Context, subnetID string) error
 	// Ports
-	GetPort(portID string) (*ports.Port, error)
-	GetRouterInterfacePort(routerID, subnetID string) (*ports.Port, error)
+	GetPort(ctx context.Context, portID string) (*ports.Port, error)
+	GetRouterInterfacePort(ctx context.Context, routerID, subnetID string) (*ports.Port, error)
+	GetInstancePorts(ctx context.Context, instanceID string) ([]ports.Port, error)
+	UpdateFIPWithPort(ctx context.Context, fipID, portID string) error
 }
 
 // Loadbalancing describes the operations of a client interacting with OpenStack's Octavia service.
 type Loadbalancing interface {
-	ListLoadbalancers(opts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error)
-	DeleteLoadbalancer(id string, opts loadbalancers.DeleteOpts) error
-	GetLoadbalancer(id string) (*loadbalancers.LoadBalancer, error)
+	ListLoadbalancers(ctx context.Context, listOpts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error)
+	DeleteLoadbalancer(ctx context.Context, id string, opts loadbalancers.DeleteOpts) error
+	GetLoadbalancer(ctx context.Context, id string) (*loadbalancers.LoadBalancer, error)
 }
 
 // SharedFilesystem describes operations for OpenStack's Manila service.
 type SharedFilesystem interface {
 	// Share Networks
-	GetShareNetwork(id string) (*sharenetworks.ShareNetwork, error)
-	CreateShareNetwork(createOpts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error)
-	ListShareNetworks(listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error)
-	DeleteShareNetwork(id string) error
+	GetShareNetwork(ctx context.Context, id string) (*sharenetworks.ShareNetwork, error)
+	CreateShareNetwork(ctx context.Context, createOpts sharenetworks.CreateOpts) (*sharenetworks.ShareNetwork, error)
+	ListShareNetworks(ctx context.Context, listOpts sharenetworks.ListOpts) ([]sharenetworks.ShareNetwork, error)
+	DeleteShareNetwork(ctx context.Context, id string) error
 }
 
 // FactoryFactory creates instances of Factory.
 type FactoryFactory interface {
 	// NewFactory creates a new instance of Factory for the given Openstack credentials.
-	NewFactory(credentials *openstack.Credentials) (Factory, error)
+	NewFactory(ctx context.Context, credentials *openstack.Credentials) (Factory, error)
 }
 
 // Images describes the operations of a client interacting with images
 type Images interface {
-	ListImages(opts images.ListOpts) ([]images.Image, error)
+	ListImages(ctx context.Context, opts images.ListOpts) ([]images.Image, error)
 }
 
 // FactoryFactoryFunc is a function that implements FactoryFactory.
-type FactoryFactoryFunc func(credentials *openstack.Credentials) (Factory, error)
+type FactoryFactoryFunc func(ctx context.Context, credentials *openstack.Credentials) (Factory, error)
 
 // NewFactory creates a new instance of Factory for the given Openstack credentials.
-func (f FactoryFactoryFunc) NewFactory(credentials *openstack.Credentials) (Factory, error) {
-	return f(credentials)
+func (f FactoryFactoryFunc) NewFactory(ctx context.Context, credentials *openstack.Credentials) (Factory, error) {
+	return f(ctx, credentials)
 }

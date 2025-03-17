@@ -561,12 +561,15 @@ var _ = Describe("ValuesProvider", func() {
 
 		BeforeEach(func() {
 			c.EXPECT().Get(ctx, cpConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfig))
+
+			c.EXPECT().Delete(context.TODO(), &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}})
+			c.EXPECT().Delete(context.TODO(), &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}})
+
 			c.EXPECT().Delete(context.TODO(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "csi-driver-controller-observability-config", Namespace: namespace}})
 			c.EXPECT().Get(context.TODO(), client.ObjectKey{Name: "prometheus-shoot", Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 			By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-provider-openstack-controlplane", Namespace: namespace}})).To(Succeed())
-			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-validation-server", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-controller-manager-server", Namespace: namespace}})).To(Succeed())
 		})
 
@@ -595,13 +598,6 @@ var _ = Describe("ValuesProvider", func() {
 					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,
-					},
-					"csiSnapshotValidationWebhook": map[string]interface{}{
-						"replicas": 1,
-						"secrets": map[string]interface{}{
-							"server": "csi-snapshot-validation-server",
-						},
-						"topologyAwareRoutingEnabled": false,
 					},
 				}),
 				openstack.CSIManilaControllerName: enabledFalse,
@@ -635,13 +631,6 @@ var _ = Describe("ValuesProvider", func() {
 					"csiSnapshotController": map[string]interface{}{
 						"replicas": 1,
 					},
-					"csiSnapshotValidationWebhook": map[string]interface{}{
-						"replicas": 1,
-						"secrets": map[string]interface{}{
-							"server": "csi-snapshot-validation-server",
-						},
-						"topologyAwareRoutingEnabled": false,
-					},
 				}),
 				openstack.CSIManilaControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 					"replicas": 1,
@@ -673,7 +662,7 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		DescribeTable("topologyAwareRoutingEnabled value",
-			func(seedSettings *gardencorev1beta1.SeedSettings, shootControlPlane *gardencorev1beta1.ControlPlane, expected bool) {
+			func(seedSettings *gardencorev1beta1.SeedSettings, shootControlPlane *gardencorev1beta1.ControlPlane) {
 				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
@@ -687,38 +676,31 @@ var _ = Describe("ValuesProvider", func() {
 				values, err := vp.GetControlPlaneChartValues(ctx, cp, cluster, fakeSecretsManager, checksums, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(values).To(HaveKey(openstack.CSIControllerName))
-				Expect(values[openstack.CSIControllerName]).To(HaveKeyWithValue("csiSnapshotValidationWebhook", HaveKeyWithValue("topologyAwareRoutingEnabled", expected)))
 			},
 
 			Entry("seed setting is nil, shoot control plane is not HA",
 				nil,
 				&gardencorev1beta1.ControlPlane{HighAvailability: nil},
-				false,
 			),
 			Entry("seed setting is disabled, shoot control plane is not HA",
 				&gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}},
 				&gardencorev1beta1.ControlPlane{HighAvailability: nil},
-				false,
 			),
 			Entry("seed setting is enabled, shoot control plane is not HA",
 				&gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}},
 				&gardencorev1beta1.ControlPlane{HighAvailability: nil},
-				false,
 			),
 			Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
 				nil,
 				&gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}},
-				false,
 			),
 			Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
 				&gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}},
 				&gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}},
-				false,
 			),
 			Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
 				&gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}},
 				&gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}},
-				true,
 			),
 		)
 	})
@@ -727,7 +709,6 @@ var _ = Describe("ValuesProvider", func() {
 		BeforeEach(func() {
 			By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-provider-openstack-controlplane", Namespace: namespace}})).To(Succeed())
-			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-validation-server", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-controller-manager-server", Namespace: namespace}})).To(Succeed())
 		})
 
@@ -748,10 +729,6 @@ var _ = Describe("ValuesProvider", func() {
 						},
 						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
 						"cloudProviderConfig": cloudProviderDiskConfig,
-						"webhookConfig": map[string]interface{}{
-							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
-							"caBundle": "",
-						},
 					}),
 					openstack.CSIDriverManila: enabledFalse,
 				}))
@@ -774,10 +751,6 @@ var _ = Describe("ValuesProvider", func() {
 						},
 						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
 						"cloudProviderConfig": cloudProviderDiskConfig,
-						"webhookConfig": map[string]interface{}{
-							"url":      "https://csi-snapshot-validation.test/volumesnapshot",
-							"caBundle": "",
-						},
 					}),
 					openstack.CSIDriverManila: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"csimanila": map[string]interface{}{

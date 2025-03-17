@@ -40,8 +40,6 @@ const (
 	CSILivenessProbeImageName = "csi-liveness-probe"
 	// CSISnapshotControllerImageName is the name of the csi-snapshot-controller image.
 	CSISnapshotControllerImageName = "csi-snapshot-controller"
-	// CSISnapshotValidationWebhookImageName is the name of the csi-snapshot-validation-webhook image.
-	CSISnapshotValidationWebhookImageName = "csi-snapshot-validation-webhook"
 	// MachineControllerManagerProviderOpenStackImageName is the name of the MachineControllerManager OpenStack image.
 	MachineControllerManagerProviderOpenStackImageName = "machine-controller-manager-provider-openstack"
 
@@ -127,8 +125,6 @@ const (
 	CSIResizerName = "csi-resizer"
 	// CSISnapshotControllerName is a constant for the name of the csi-snapshot-controller component.
 	CSISnapshotControllerName = "csi-snapshot-controller"
-	// CSISnapshotValidationName is the constant for the name of the csi-snapshot-validation-webhook component.
-	CSISnapshotValidationName = "csi-snapshot-validation"
 	// CSIStorageProvisioner is a constant with the storage provisioner name which is used in storageclasses.
 	CSIStorageProvisioner = "cinder.csi.openstack.org"
 	// CSIManilaStorageProvisionerNFS is a constant with the storage provisioner name which is used in storageclasses for Manila NFS.
@@ -153,6 +149,10 @@ const (
 	SeedAnnotationKeyUseFlow = AnnotationKeyUseFlow
 	// SeedAnnotationUseFlowValueNew is the value to restrict flow reconciliation to new shoot clusters
 	SeedAnnotationUseFlowValueNew = "new"
+
+	// CSISnapshotValidationName is the constant for the name of the csi-snapshot-validation-webhook component.
+	// TODO(AndreasBurger): Clean up once SnapshotValidation is removed everywhere
+	CSISnapshotValidationName = "csi-snapshot-validation"
 )
 
 var (

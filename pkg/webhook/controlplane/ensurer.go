@@ -17,12 +17,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
@@ -79,9 +77,6 @@ func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ gcontex
 func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
 	template := &newObj.Spec.Template
 	ps := &template.Spec
-
-	// TODO: This label approach is deprecated and no longer needed in the future. Remove it as soon as gardener/gardener@v1.75 has been released.
-	metav1.SetMetaDataLabel(&newObj.Spec.Template.ObjectMeta, gutil.NetworkPolicyLabel(openstack.CSISnapshotValidationName, 443), v1beta1constants.LabelNetworkPolicyAllowed)
 
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {

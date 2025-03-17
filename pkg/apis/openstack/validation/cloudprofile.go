@@ -6,9 +6,12 @@ package validation
 
 import (
 	"fmt"
+	"maps"
 	"net"
 	"slices"
 
+	"github.com/gardener/gardener/extensions/pkg/util"
+	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -19,7 +22,7 @@ import (
 )
 
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.
-func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	floatingPoolPath := fldPath.Child("constraints", "floatingPools")
@@ -93,8 +96,9 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	}
 	for i, machineImage := range cloudProfile.MachineImages {
 		idxPath := machineImagesPath.Index(i)
-		allErrs = append(allErrs, ValidateMachineImage(idxPath, machineImage)...)
+		allErrs = append(allErrs, ValidateProviderMachineImage(idxPath, machineImage)...)
 	}
+	allErrs = append(allErrs, validateMachineImageMapping(machineImages, cloudProfile, field.NewPath("spec").Child("machineImages"))...)
 
 	if len(cloudProfile.KeyStoneURL) == 0 && len(cloudProfile.KeyStoneURLs) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("keyStoneURL"), "must provide the URL to KeyStone"))
@@ -153,8 +157,8 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 	return allErrs
 }
 
-// ValidateMachineImage validates a CloudProfileConfig MachineImages entry.
-func ValidateMachineImage(validationPath *field.Path, machineImage api.MachineImages) field.ErrorList {
+// ValidateProviderMachineImage validates a CloudProfileConfig MachineImages entry.
+func ValidateProviderMachineImage(validationPath *field.Path, machineImage api.MachineImages) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImage.Name) == 0 {
@@ -182,6 +186,71 @@ func ValidateMachineImage(validationPath *field.Path, machineImage api.MachineIm
 			}
 			if !slices.Contains(v1beta1constants.ValidArchitectures, ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
 				allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), *region.Architecture, v1beta1constants.ValidArchitectures))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// NewProviderImagesContext creates a new ImagesContext for provider images.
+func NewProviderImagesContext(providerImages []api.MachineImages) *util.ImagesContext[api.MachineImages, api.MachineImageVersion] {
+	return util.NewImagesContext(
+		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
+		func(mi api.MachineImages) map[string]api.MachineImageVersion {
+			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
+		},
+	)
+}
+
+// validateMachineImageMapping validates that for each machine image there is a corresponding cpConfig image.
+func validateMachineImageMapping(machineImages []core.MachineImage, cpConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	providerImages := NewProviderImagesContext(cpConfig.MachineImages)
+
+	// validate machine images
+	for idxImage, machineImage := range machineImages {
+		if len(machineImage.Versions) == 0 {
+			continue
+		}
+		machineImagePath := fldPath.Index(idxImage)
+		// validate that for each machine image there is a corresponding cpConfig image
+		if _, existsInConfig := providerImages.GetImage(machineImage.Name); !existsInConfig {
+			allErrs = append(allErrs, field.Required(machineImagePath,
+				fmt.Sprintf("must provide an image mapping for image %q in providerConfig", machineImage.Name)))
+			continue
+		}
+		// validate that for each machine image version entry a mapped entry in cpConfig exists
+		for idxVersion, version := range machineImage.Versions {
+			machineImageVersionPath := machineImagePath.Child("versions").Index(idxVersion)
+			for _, expectedArchitecture := range version.Architectures {
+				// validate machine image version architectures
+				if !slices.Contains(v1beta1constants.ValidArchitectures, expectedArchitecture) {
+					allErrs = append(allErrs, field.NotSupported(
+						machineImageVersionPath.Child("architectures"),
+						expectedArchitecture, v1beta1constants.ValidArchitectures))
+				}
+				// validate that machine image version exists in cpConfig
+				imageVersion, exists := providerImages.GetImageVersion(machineImage.Name, version.Version)
+				if !exists {
+					allErrs = append(allErrs, field.Required(machineImageVersionPath,
+						fmt.Sprintf("machine image version %s@%s is not defined in the providerConfig",
+							machineImage.Name, version.Version),
+					))
+					continue
+				}
+				// validate that machine image version with architecture x exists in cpConfig
+				architecturesMap := utils.CreateMapFromSlice(imageVersion.Regions, func(re api.RegionIDMapping) string {
+					return ptr.Deref(re.Architecture, v1beta1constants.ArchitectureAMD64)
+				})
+				architectures := slices.Collect(maps.Keys(architecturesMap))
+				if !slices.Contains(architectures, expectedArchitecture) {
+					allErrs = append(allErrs, field.Required(machineImageVersionPath,
+						fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and architecture: %s",
+							machineImage.Name, version.Version, expectedArchitecture),
+					))
+					continue
+				}
 			}
 		}
 	}

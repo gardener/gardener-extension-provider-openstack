@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -20,11 +21,13 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/utils/net"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -236,10 +239,18 @@ func ensurePublicIPAddress(ctx context.Context, opt *Options, log logr.Logger, c
 		return nil, errors.New("no external fixed IPs detected on the router")
 	}
 
+	// locate the first ipv4 address.
+	idx := slices.IndexFunc(router.GatewayInfo.ExternalFixedIPs, func(s routers.ExternalFixedIP) bool {
+		return net.IsIPv4String(s.IPAddress)
+	})
+	if idx == -1 {
+		return nil, fmt.Errorf("failed to locate a suitable ipv4 address in the router external fixed IPs")
+	}
+
 	createOpts := floatingips.CreateOpts{
 		Description:       opt.BastionInstanceName,
 		FloatingNetworkID: infraStatus.Networks.FloatingPool.ID,
-		SubnetID:          router.GatewayInfo.ExternalFixedIPs[0].SubnetID,
+		SubnetID:          router.GatewayInfo.ExternalFixedIPs[idx].SubnetID,
 	}
 
 	fip, err := createFloatingIP(ctx, client, createOpts)

@@ -1,4 +1,4 @@
-{{ if eq (include "runtimeCluster.enabled" .) "true" }}
+{{ if (include "runtimeCluster.enabled" .) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

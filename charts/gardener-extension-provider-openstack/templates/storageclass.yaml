@@ -1,4 +1,4 @@
-{{- if eq .Values.gardener.seed.provider "openstack" -}}
+{{- if eq (include "seed.provider" . ) "openstack" }}
 {{- if .Values.config.etcd.storage.enabled -}}
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

@@ -93,11 +93,11 @@ gardener:
   version: ""
   gardenlet:
     featureGates: {}
-  seed:
-    provider: openstack
-  runtimeCluster:
-    enabled: false
-  # priorityClassName: gardener-garden-system-200
+# seed:
+#   provider: openstack
+# runtimeCluster:
+#   enabled: false
+#   priorityClassName: gardener-garden-system-200
 
 usablePorts:
 - 8080  # metrics

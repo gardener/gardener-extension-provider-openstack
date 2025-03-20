@@ -3,10 +3,15 @@ kind: Deployment
 metadata:
   name: {{ include "name" . }}
   namespace: {{ .Release.Namespace }}
-{{-  if .Values.ignoreResources }}
+  {{- if or .Values.ignoreResources .Values.ignoreHAReplicas }}
   annotations:
+    {{-  if .Values.ignoreResources }}
     resources.gardener.cloud/ignore: "true"
-{{- end }}
+    {{- end }}
+    {{-  if .Values.ignoreHAReplicas }}
+    high-availability-config.resources.gardener.cloud/replicas: "1"
+    {{- end }}
+  {{- end }}
   labels:
 {{ include "labels" . | indent 4 }}
     high-availability-config.resources.gardener.cloud/type: server

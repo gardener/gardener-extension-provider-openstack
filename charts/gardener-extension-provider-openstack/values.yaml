@@ -43,6 +43,9 @@ controllers:
 disableControllers: []
 disableWebhooks: []
 ignoreResources: false
+
+# ignoreHAReplicas will set an annotation to the deployment that will change the HA webhook behavior and set the replicas to 1.
+ignoreHAReplicas: false
 # imageVectorOverwrite: |
 #   images:
 #   - name: pause-container

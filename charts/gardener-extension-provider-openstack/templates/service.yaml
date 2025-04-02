@@ -11,9 +11,6 @@ metadata:
 {{-  if .Values.ignoreResources }}
     resources.gardener.cloud/ignore: "true"
 {{- end }}
-    # TODO: This label approach is deprecated and no longer needed in the future. Remove them as soon as gardener/gardener@v1.75 has been released.
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
-    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ tpl .Values.metricsPort . }},"protocol":"TCP"}]'
   labels:
 {{ include "labels" . | indent 4 }}
 spec:

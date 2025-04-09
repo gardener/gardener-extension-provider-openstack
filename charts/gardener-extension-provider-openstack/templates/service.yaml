@@ -16,7 +16,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-{{ include "labels" . | indent 6 }}
+{{ include "labels" . | indent 4 }}
   ports:
   - port: {{ .Values.webhookConfig.servicePort }}
     protocol: TCP

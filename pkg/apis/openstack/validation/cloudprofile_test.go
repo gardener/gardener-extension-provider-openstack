@@ -361,6 +361,12 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should pass validation even without regions in the machineImage version", func() {
+				cloudProfileConfig.MachineImages[0].Versions[0].Regions = nil
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should enforce that at least one machine image has been defined", func() {
 				cloudProfileConfig.MachineImages = []api.MachineImages{}
 

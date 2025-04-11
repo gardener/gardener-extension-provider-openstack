@@ -239,17 +239,21 @@ func validateMachineImageMapping(machineImages []core.MachineImage, cpConfig *ap
 					))
 					continue
 				}
-				// validate that machine image version with architecture x exists in cpConfig
-				architecturesMap := utils.CreateMapFromSlice(imageVersion.Regions, func(re api.RegionIDMapping) string {
-					return ptr.Deref(re.Architecture, v1beta1constants.ArchitectureAMD64)
-				})
-				architectures := slices.Collect(maps.Keys(architecturesMap))
-				if !slices.Contains(architectures, expectedArchitecture) {
-					allErrs = append(allErrs, field.Required(machineImageVersionPath,
-						fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and architecture: %s",
-							machineImage.Name, version.Version, expectedArchitecture),
-					))
-					continue
+
+				// Regions is an optional field
+				if len(imageVersion.Regions) > 0 {
+					// validate that machine image version with architecture x exists in cpConfig
+					architecturesMap := utils.CreateMapFromSlice(imageVersion.Regions, func(re api.RegionIDMapping) string {
+						return ptr.Deref(re.Architecture, v1beta1constants.ArchitectureAMD64)
+					})
+					architectures := slices.Collect(maps.Keys(architecturesMap))
+					if !slices.Contains(architectures, expectedArchitecture) {
+						allErrs = append(allErrs, field.Required(machineImageVersionPath,
+							fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and architecture: %s",
+								machineImage.Name, version.Version, expectedArchitecture),
+						))
+						continue
+					}
 				}
 			}
 		}

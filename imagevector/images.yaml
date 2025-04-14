@@ -214,7 +214,7 @@ images:
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.30.2"
+  tag: "v1.30.3"
   targetVersion: "1.30.x"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
@@ -228,7 +228,7 @@ images:
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.31.2"
+  tag: "v1.31.3"
   targetVersion: ">= 1.31"
   labels:
     - name: 'gardener.cloud/cve-categorisation'

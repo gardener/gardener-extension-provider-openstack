@@ -1,5 +1,5 @@
 gardener-extension-provider-openstack:
-  templates: 
+  templates:
     helmcharts:
     - &provider-openstack
       name: provider-openstack
@@ -43,6 +43,9 @@ gardener-extension-provider-openstack:
             github_hostname: 'github.com'
       publish:
         oci-builder: 'docker-buildx'
+        platforms:
+        - 'linux/x86_64'
+        - 'linux/arm64'
         dockerimages:
           gardener-extension-provider-openstack:
             image: europe-docker.pkg.dev/gardener-project/snapshots/gardener/extensions/provider-openstack

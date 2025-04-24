@@ -29,7 +29,7 @@ func init() {
 var _ = Describe("Shoot maintenance testing", func() {
 	f := framework.NewGardenerFramework(nil)
 
-	framework.CIt("Testing if Shoot maintainance is successful with flow annotations", func(ctx context.Context) {
+	framework.CIt("Testing if Shoot maintenance is successful with flow annotations", func(ctx context.Context) {
 		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: f.ProjectNamespace, Name: *shootName}}
 		Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ProjectNamespace, Name: *shootName}, shoot)).To(Succeed())
 

@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
@@ -49,7 +49,7 @@ var _ = Describe("Ensurer", func() {
 	Describe("#EnsureETCD", func() {
 		It("should add or modify elements to etcd-main statefulset", func() {
 			var (
-				etcd = &druidv1alpha1.Etcd{
+				etcd = &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain},
 				}
 			)
@@ -66,9 +66,9 @@ var _ = Describe("Ensurer", func() {
 		It("should modify existing elements of etcd-main statefulset", func() {
 			var (
 				r    = resource.MustParse("10Gi")
-				etcd = &druidv1alpha1.Etcd{
+				etcd = &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain},
-					Spec: druidv1alpha1.EtcdSpec{
+					Spec: druidcorev1alpha1.EtcdSpec{
 						StorageCapacity: &r,
 					},
 				}
@@ -85,7 +85,7 @@ var _ = Describe("Ensurer", func() {
 
 		It("should add or modify elements to etcd-events statefulset", func() {
 			var (
-				etcd = &druidv1alpha1.Etcd{
+				etcd = &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents},
 				}
 			)
@@ -102,9 +102,9 @@ var _ = Describe("Ensurer", func() {
 		It("should modify existing elements of etcd-events statefulset", func() {
 			var (
 				r    = resource.MustParse("20Gi")
-				etcd = &druidv1alpha1.Etcd{
+				etcd = &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents},
-					Spec: druidv1alpha1.EtcdSpec{
+					Spec: druidcorev1alpha1.EtcdSpec{
 						StorageCapacity: &r,
 					},
 				}
@@ -121,12 +121,12 @@ var _ = Describe("Ensurer", func() {
 	})
 })
 
-func checkETCDMain(etcd *druidv1alpha1.Etcd) {
+func checkETCDMain(etcd *druidcorev1alpha1.Etcd) {
 	Expect(*etcd.Spec.StorageClass).To(Equal("gardener.cloud-fast"))
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("25Gi")))
 }
 
-func checkETCDEvents(etcd *druidv1alpha1.Etcd) {
+func checkETCDEvents(etcd *druidcorev1alpha1.Etcd) {
 	Expect(*etcd.Spec.StorageClass).To(Equal(""))
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("10Gi")))
 }

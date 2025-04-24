@@ -85,7 +85,6 @@ func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 		return nil
 	}
 	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
-
 		overlayConfig := map[string]interface{}{enabledKey: false}
 		if (*shoot.Spec.Networking.Type == calicoReleaseName && EnableOverlayAsDefaultForCalico) || (*shoot.Spec.Networking.Type == ciliumReleaseName && EnableOverlayAsDefaultForCilium) {
 			overlayConfig = map[string]interface{}{enabledKey: true}

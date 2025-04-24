@@ -477,13 +477,14 @@ func runTest(
 
 	// Update the infra resource to trigger a migration.
 	oldState := infra.Status.State.DeepCopy()
-	if *reconciler == reconcilerMigrateTF {
+	switch *reconciler {
+	case reconcilerUseTF:
 		By("verifying terraform migration")
 		patch := client.MergeFrom(infra.DeepCopy())
 		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, openstack.AnnotationKeyUseFlow, "true")
 		Expect(c.Patch(ctx, infra, patch)).To(Succeed())
-	} else if *reconciler == reconcilerRecoverState {
+	case reconcilerRecoverState:
 		By("drop state for testing recovery")
 
 		patch := client.MergeFrom(infra.DeepCopy())

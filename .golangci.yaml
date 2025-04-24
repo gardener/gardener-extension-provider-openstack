@@ -17,6 +17,8 @@ linters:
         # internal packages
         - pkg: github.com/gardener/gardener-extension-provider-gcp/pkg/apis/openstack
           alias: api
+        - pkg: github/com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1
+          alias: apiv1alpha1
         # External imported packages
         - pkg: k8s.io/api/(\w+)/(v[\w\d]+)
           alias: $1$2

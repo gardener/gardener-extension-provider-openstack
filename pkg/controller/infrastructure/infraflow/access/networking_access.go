@@ -478,7 +478,7 @@ func (a *networkingAccess) UpdateSecurityGroupRules(
 		if desiredRule, _ := a.findMatchingRule(rule, desiredRules); desiredRule == nil {
 			if allowDelete == nil || allowDelete(rule) {
 				if err = a.networking.DeleteRule(ctx, rule.ID); err != nil {
-					err = fmt.Errorf("Error deleting rule for security group %s: %s", rule.ID, err)
+					err = fmt.Errorf("error deleting rule for security group %s: %s", rule.ID, err)
 					return
 				}
 				modified = true

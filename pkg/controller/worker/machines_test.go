@@ -437,7 +437,7 @@ var _ = Describe("Machines", func() {
 						},
 						"operatingSystem": map[string]interface{}{
 							"operatingSystemName":    machineImageName,
-							"operatingSystemVersion": strings.Replace(machineImageVersion, "+", "_", -1),
+							"operatingSystemVersion": strings.ReplaceAll(machineImageVersion, "+", "_"),
 						},
 					}
 					if imageID == "" {

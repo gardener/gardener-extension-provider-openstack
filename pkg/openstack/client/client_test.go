@@ -22,7 +22,7 @@ var _ = Describe("Client", func() {
 				Actual:   404,
 				Body:     nil,
 			}
-			Expect(openstackclient.IgnoreNotFoundError(err)).To(BeNil())
+			Expect(openstackclient.IgnoreNotFoundError(err)).To(Succeed())
 		})
 	})
 })

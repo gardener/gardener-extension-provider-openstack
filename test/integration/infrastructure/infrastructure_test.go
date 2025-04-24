@@ -241,7 +241,7 @@ var _ = BeforeSuite(func() {
 		GlobalDefault: false,
 		Value:         999998300,
 	}
-	Expect(client.IgnoreAlreadyExists(c.Create(ctx, priorityClass))).To(BeNil())
+	Expect(client.IgnoreAlreadyExists(c.Create(ctx, priorityClass))).To(Succeed())
 })
 
 var _ = Describe("Infrastructure tests", func() {

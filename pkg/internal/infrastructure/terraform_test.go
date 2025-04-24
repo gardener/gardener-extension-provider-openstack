@@ -139,7 +139,7 @@ var _ = Describe("Terraform", func() {
 
 		It("should correctly compute the terraformer chart values", func() {
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,
@@ -164,7 +164,7 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["enableSNAT"] = true
 
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,
 				"create":       expectedCreateValues,
@@ -185,7 +185,7 @@ var _ = Describe("Terraform", func() {
 			expectedNetworkValues["id"] = networkID
 
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,
 				"create":       expectedCreateValues,
@@ -209,7 +209,7 @@ var _ = Describe("Terraform", func() {
 			expectedRouterValues["floatingPoolSubnet"] = fipSubnetID
 
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,
 				"create":       expectedCreateValues,
@@ -229,7 +229,7 @@ var _ = Describe("Terraform", func() {
 			expectedOutputKeysValues["shareNetworkName"] = TerraformOutputKeyShareNetworkName
 
 			values, err := ComputeTerraformerTemplateValues(infra, config, cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(values).To(Equal(map[string]interface{}{
 				"openstack":    expectedOpenStackValues,

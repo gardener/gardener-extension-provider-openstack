@@ -87,7 +87,7 @@ var _ = Describe("BasicFlowContext", func() {
 			f := g.Compile()
 			Expect(f.Len()).To(Equal(3))
 			err = f.Run(ctx, flow.Opts{Log: log})
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(c.state.Get("task1")).To(BeNil())
 			Expect(logBuffer.String()).To(ContainSubstring("task2:foo"))

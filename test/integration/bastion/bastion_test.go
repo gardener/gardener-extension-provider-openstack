@@ -657,7 +657,7 @@ func getImageID(imageName string) string {
 		Visibility: "all",
 	})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(len(imageRes)).Should(BeNumerically(">", 0))
+	Expect(imageRes).ShouldNot(BeEmpty())
 
 	return imageRes[0].ID
 }

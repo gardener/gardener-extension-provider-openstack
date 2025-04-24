@@ -5,7 +5,7 @@
 package seedprovider
 
 import (
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
@@ -36,7 +36,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		Kind:     controlplane.KindSeed,
 		Provider: openstack.Type,
 		Types: []extensionswebhook.Type{
-			{Obj: &druidv1alpha1.Etcd{}},
+			{Obj: &druidcorev1alpha1.Etcd{}},
 		},
 		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(&opts.ETCDStorage, logger), nil, nil, nil, logger),
 	})

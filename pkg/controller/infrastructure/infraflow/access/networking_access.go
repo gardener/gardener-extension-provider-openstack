@@ -326,7 +326,7 @@ func (a *networkingAccess) CreateNetwork(ctx context.Context, desired *Network) 
 	return a.toNetwork(raw), nil
 }
 
-// GetNetworkByID retrieves a network by identifer
+// GetNetworkByID retrieves a network by identifier
 func (a *networkingAccess) GetNetworkByID(ctx context.Context, id string) (*Network, error) {
 	networks, err := a.networking.ListNetwork(ctx, networks.ListOpts{ID: id})
 	if err != nil {

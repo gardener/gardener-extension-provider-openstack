@@ -93,7 +93,7 @@ const (
 	CloudProviderCSIDiskConfigName = "cloud-provider-disk-config-csi"
 	// CloudProviderConfigDataKey is the key storing the cloud provider config as value in the cloud provider secret.
 	CloudProviderConfigDataKey = "cloudprovider.conf"
-	// CloudProviderConfigKeyStoneCAKey is teh key storing the KeyStone CA bundle.
+	// CloudProviderConfigKeyStoneCAKey is the key storing the KeyStone CA bundle.
 	CloudProviderConfigKeyStoneCAKey = "keystone-ca.crt"
 	// CloudControllerManagerName is a constant for the name of the CloudController deployed by the worker controller.
 	CloudControllerManagerName = "cloud-controller-manager"

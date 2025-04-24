@@ -100,8 +100,6 @@ github.com/fxamacker/cbor/v2 v2.7.0 h1:iM5WgngdRBanHcxugY4JySA0nk1wZorNOpTgCMedv
 github.com/fxamacker/cbor/v2 v2.7.0/go.mod h1:pxXPTn3joSm21Gbwsv0w9OSA2y1HFR9qXEeXQVeNoDQ=
 github.com/gardener/cert-management v0.17.5 h1:feqNpdgkF2RJP5xPidbkUx2MS15m4mBWGNE5mo3sg34=
 github.com/gardener/cert-management v0.17.5/go.mod h1:jazLDc7bcJ0T8axC96A52X7AqeIYsEyALpYsuTFuhbw=
-github.com/gardener/etcd-druid v0.27.0 h1:vqcusx1O3G01BU3CHke6nZEYvDfiFqgCGS59mQCK0LM=
-github.com/gardener/etcd-druid v0.27.0/go.mod h1:SKjfV8bvdLGF1ynFbWF4ioK2a6M33g7N6lct45p50J8=
 github.com/gardener/etcd-druid/api v0.29.0 h1:EWWjmZc7Qkle87SPxRLK53LnnzRg95PUFpzHAUXxRSk=
 github.com/gardener/etcd-druid/api v0.29.0/go.mod h1:70xxFBajCoQd+ZwreEbMKORVGj0a0nrj4KeB5coPM9U=
 github.com/gardener/gardener v1.117.1 h1:AMx283saik4tS6u/As76eSgK8M7VeJqSIETbv092bps=

@@ -15,7 +15,6 @@ var ErrorMultipleMatches = fmt.Errorf("error multiple matches")
 func findExisting[T any](ctx context.Context, id *string, name string,
 	getter func(ctx context.Context, id string) (*T, error),
 	finder func(ctx context.Context, name string) ([]*T, error)) (*T, error) {
-
 	if id != nil {
 		found, err := getter(ctx, *id)
 		if err != nil {

@@ -136,7 +136,6 @@ func ingressPermissions(bastion *extensionsv1alpha1.Bastion) ([]IngressPermissio
 		} else if ip.To16() != nil {
 			perms = append(perms, IngressPermission{EtherType: rules.EtherType6, CIDR: normalisedCIDR})
 		}
-
 	}
 	return perms, nil
 }

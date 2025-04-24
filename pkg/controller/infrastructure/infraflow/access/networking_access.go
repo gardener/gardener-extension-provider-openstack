@@ -326,7 +326,7 @@ func (a *networkingAccess) CreateNetwork(ctx context.Context, desired *Network) 
 	return a.toNetwork(raw), nil
 }
 
-// GetNetworkByID retrieves a network by identifer
+// GetNetworkByID retrieves a network by identifier
 func (a *networkingAccess) GetNetworkByID(ctx context.Context, id string) (*Network, error) {
 	networks, err := a.networking.ListNetwork(ctx, networks.ListOpts{ID: id})
 	if err != nil {
@@ -478,7 +478,7 @@ func (a *networkingAccess) UpdateSecurityGroupRules(
 		if desiredRule, _ := a.findMatchingRule(rule, desiredRules); desiredRule == nil {
 			if allowDelete == nil || allowDelete(rule) {
 				if err = a.networking.DeleteRule(ctx, rule.ID); err != nil {
-					err = fmt.Errorf("Error deleting rule for security group %s: %s", rule.ID, err)
+					err = fmt.Errorf("error deleting rule for security group %s: %s", rule.ID, err)
 					return
 				}
 				modified = true

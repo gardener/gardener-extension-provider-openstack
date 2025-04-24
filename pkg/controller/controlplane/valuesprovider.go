@@ -14,7 +14,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
-	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	extensionssecretmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
-	autoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -53,8 +53,8 @@ const (
 	cloudControllerManagerServerName = openstack.CloudControllerManagerName + "-server"
 )
 
-func secretConfigsFunc(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
-	return []extensionssecretsmanager.SecretConfigWithOptions{
+func secretConfigsFunc(namespace string) []extensionssecretmanager.SecretConfigWithOptions {
+	return []extensionssecretmanager.SecretConfigWithOptions{
 		{
 			Config: &secretutils.CertificateSecretConfig{
 				Name:       caNameControlPlane,
@@ -115,7 +115,7 @@ var (
 				Objects: []*chart.Object{
 					{Type: &corev1.Service{}, Name: openstack.CloudControllerManagerName},
 					{Type: &appsv1.Deployment{}, Name: openstack.CloudControllerManagerName},
-					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CloudControllerManagerName + "-vpa"},
+					{Type: &vpaautoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CloudControllerManagerName + "-vpa"},
 					{Type: &monitoringv1.ServiceMonitor{}, Name: "shoot-cloud-controller-manager"},
 					{Type: &monitoringv1.PrometheusRule{}, Name: "shoot-cloud-controller-manager"},
 				},
@@ -134,10 +134,10 @@ var (
 				Objects: []*chart.Object{
 					// csi-driver-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSIControllerName},
-					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIControllerName + "-vpa"},
+					{Type: &vpaautoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIControllerName + "-vpa"},
 					// csi-snapshot-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSISnapshotControllerName},
-					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
+					{Type: &vpaautoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSISnapshotControllerName + "-vpa"},
 				},
 			},
 			{
@@ -153,7 +153,7 @@ var (
 				Objects: []*chart.Object{
 					// csi-driver-manila-controller
 					{Type: &appsv1.Deployment{}, Name: openstack.CSIDriverManilaController},
-					{Type: &autoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIDriverManilaController},
+					{Type: &vpaautoscalingv1.VerticalPodAutoscaler{}, Name: openstack.CSIDriverManilaController},
 				},
 			},
 		},
@@ -657,10 +657,7 @@ func (vp *valuesProvider) getControlPlaneChartValues(
 		return nil, err
 	}
 
-	csiCinder, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
-	if err != nil {
-		return nil, err
-	}
+	csiCinder := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
 
 	csiManila, err := vp.getCSIManilaControllerChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, credentials)
 	if err != nil {
@@ -729,7 +726,7 @@ func getCSIControllerChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
-) (map[string]interface{}, error) {
+) map[string]interface{} {
 	values := map[string]interface{}{
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 		"enabled":           true,
@@ -745,7 +742,7 @@ func getCSIControllerChartValues(
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders
 	}
-	return values, nil
+	return values
 }
 
 // getCSIManilaControllerChartValues collects and returns the CSIController chart values.
@@ -875,7 +872,6 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 	cluster *extensionscontroller.Cluster,
 	credentials *openstack.Credentials,
 ) (map[string]interface{}, error) {
-
 	csiManilaEnabled := vp.isCSIManilaEnabled(cpConfig)
 	values := map[string]interface{}{
 		"enabled": csiManilaEnabled,

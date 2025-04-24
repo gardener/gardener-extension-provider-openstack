@@ -9,7 +9,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/go-logr/logr"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -34,7 +34,6 @@ type ReconcilerFactory interface {
 
 // ReconcilerFactoryImpl is an implementation of a ReconcilerFactory
 type ReconcilerFactoryImpl struct {
-	ctx   context.Context
 	log   logr.Logger
 	a     *actuator
 	infra *extensionsv1alpha1.Infrastructure
@@ -72,7 +71,7 @@ var OnRestore = OnDelete
 
 // GetFlowAnnotationValue returns the boolean value of the expected flow annotation. Returns false if the annotation was not found, if it couldn't be converted to bool,
 // or had a "false" value.
-func GetFlowAnnotationValue(o v1.Object) bool {
+func GetFlowAnnotationValue(o metav1.Object) bool {
 	if annotations := o.GetAnnotations(); annotations != nil {
 		for _, k := range openstack.ValidFlowAnnotations {
 			if str, ok := annotations[k]; ok {

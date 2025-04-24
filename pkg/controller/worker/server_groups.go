@@ -87,16 +87,6 @@ func (s *serverGroupDependencySet) deleteByPoolName(pn string) {
 	delete(s.set, pn)
 }
 
-// deleteByID deletes a ServerGroupDependency if it matches the provided ID. It is a no-op if there is no matching entry in the set.
-func (s *serverGroupDependencySet) deleteByID(id string) {
-	for _, v := range s.set {
-		if v.ID == id {
-			delete(s.set, v.PoolName)
-			break
-		}
-	}
-}
-
 // extract produces a slice from the elements contained in the set, sorted by PoolName.
 func (s *serverGroupDependencySet) extract() []api.ServerGroupDependency {
 	if len(s.set) == 0 {

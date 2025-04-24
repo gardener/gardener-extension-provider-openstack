@@ -25,8 +25,7 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/validator"
 	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	apisopenstackv1alpha "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
-	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
 var _ = Describe("Shoot validator", func() {
@@ -55,7 +54,7 @@ var _ = Describe("Shoot validator", func() {
 
 			scheme := runtime.NewScheme()
 			Expect(apisopenstack.AddToScheme(scheme)).To(Succeed())
-			Expect(apisopenstackv1alpha.AddToScheme(scheme)).To(Succeed())
+			Expect(apiv1alpha1.AddToScheme(scheme)).To(Succeed())
 			Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
 
 			c = mockclient.NewMockClient(ctrl)
@@ -102,21 +101,21 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 						InfrastructureConfig: &runtime.RawExtension{
-							Raw: encode(&openstackv1alpha1.InfrastructureConfig{
+							Raw: encode(&apiv1alpha1.InfrastructureConfig{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "InfrastructureConfig",
 								},
-								Networks: openstackv1alpha1.Networks{
+								Networks: apiv1alpha1.Networks{
 									Workers: "10.250.0.0/19",
 								},
 								FloatingPoolName: "pool-1",
 							}),
 						},
 						ControlPlaneConfig: &runtime.RawExtension{
-							Raw: encode(&openstackv1alpha1.ControlPlaneConfig{
+							Raw: encode(&apiv1alpha1.ControlPlaneConfig{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "ControlPlaneConfig",
 								},
 								LoadBalancerProvider: "haproxy",
@@ -174,18 +173,18 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 						ProviderConfig: &runtime.RawExtension{
-							Raw: encode(&apisopenstackv1alpha.CloudProfileConfig{
+							Raw: encode(&apiv1alpha1.CloudProfileConfig{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: apisopenstackv1alpha.SchemeGroupVersion.String(),
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "CloudProfileConfig",
 								},
-								MachineImages: []apisopenstackv1alpha.MachineImages{
+								MachineImages: []apiv1alpha1.MachineImages{
 									{
 										Name: imageName,
-										Versions: []apisopenstackv1alpha.MachineImageVersion{
+										Versions: []apiv1alpha1.MachineImageVersion{
 											{
 												Version: imageVersion,
-												Regions: []apisopenstackv1alpha.RegionIDMapping{
+												Regions: []apiv1alpha1.RegionIDMapping{
 													{
 														Name:         regionName,
 														ID:           "Bar",

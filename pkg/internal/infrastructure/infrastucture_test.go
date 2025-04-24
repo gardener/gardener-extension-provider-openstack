@@ -54,7 +54,7 @@ var _ = Describe("Infrastructure", func() {
 			a.prep()
 			err := CleanupKubernetesRoutes(ctx, nw, routerID, a.workers)
 			if expErr == nil {
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 			} else {
 				Expect(err).To(Equal(expErr))
 			}
@@ -123,7 +123,7 @@ var _ = Describe("Infrastructure", func() {
 				lbclient.EXPECT().GetLoadbalancer(ctx, "k8s").Return(nil, nil),
 			)
 			err := CleanupKubernetesLoadbalancers(ctx, log, lbclient, subnetID, clusterName)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

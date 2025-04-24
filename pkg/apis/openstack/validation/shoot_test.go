@@ -136,7 +136,7 @@ var _ = Describe("Shoot validation", func() {
 					}
 
 					arr, err := json.Marshal(providerConfig)
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Raw: arr,
@@ -162,7 +162,7 @@ var _ = Describe("Shoot validation", func() {
 					}
 
 					arr, err := json.Marshal(providerConfig)
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Raw: arr,
@@ -188,7 +188,7 @@ var _ = Describe("Shoot validation", func() {
 					}
 
 					arr, err := json.Marshal(providerConfig)
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Raw: arr,
@@ -206,7 +206,7 @@ var _ = Describe("Shoot validation", func() {
 					}
 
 					arr, err := json.Marshal(providerConfig)
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Raw: arr,

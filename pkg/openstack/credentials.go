@@ -137,13 +137,12 @@ func getOptional(secret *corev1.Secret, key string, altKey *string) string {
 func getRequired(secret *corev1.Secret, key string, altKey *string) (string, error) {
 	value, ok := secret.Data[key]
 	if !ok {
-		if altKey != nil {
-			value, ok = secret.Data[*altKey]
-			if !ok {
-				return "", fmt.Errorf("missing %q (or %q) data key in secret %s/%s", key, *altKey, secret.Namespace, secret.Name)
-			}
-		} else {
+		if altKey == nil {
 			return "", fmt.Errorf("missing %q data key in secret %s/%s", key, secret.Namespace, secret.Name)
+		}
+		value, ok = secret.Data[*altKey]
+		if !ok {
+			return "", fmt.Errorf("missing %q (or %q) data key in secret %s/%s", key, *altKey, secret.Namespace, secret.Name)
 		}
 	}
 	if len(value) == 0 {

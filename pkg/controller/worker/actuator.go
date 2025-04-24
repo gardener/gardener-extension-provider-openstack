@@ -29,10 +29,9 @@ import (
 )
 
 type delegateFactory struct {
-	seedClient   client.Client
-	restConfig   *rest.Config
-	scheme       *runtime.Scheme
-	gardenReader client.Reader
+	seedClient client.Client
+	restConfig *rest.Config
+	scheme     *runtime.Scheme
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.

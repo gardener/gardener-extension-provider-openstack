@@ -231,32 +231,23 @@ var _ = Describe("Bastion tests", func() {
 		subnetName := bastionName + "-subnet"
 
 		By("setup Infrastructure ")
-		shootSecurityGroupID, err := prepareShootSecurityGroup(ctx, bastionName)
-		Expect(err).NotTo(HaveOccurred())
+		shootSecurityGroupID := prepareShootSecurityGroup(ctx, bastionName)
 
 		framework.AddCleanupAction(func() {
 			By("Tearing down Shoot Security Group")
-			err = teardownShootSecurityGroup(shootSecurityGroupID)
-			Expect(err).NotTo(HaveOccurred())
+			teardownShootSecurityGroup(shootSecurityGroupID)
 		})
 
-		networkID, err := prepareNewNetwork(bastionName)
-		Expect(err).NotTo(HaveOccurred())
-
-		subNetID, err := prepareSubNet(subnetName, networkID)
-		Expect(err).NotTo(HaveOccurred())
-
-		routerID, externalNetworkID, err := prepareNewRouter(cloudRouterName, subNetID)
-		Expect(err).NotTo(HaveOccurred())
+		networkID := prepareNewNetwork(bastionName)
+		subNetID := prepareSubNet(subnetName, networkID)
+		routerID, externalNetworkID := prepareNewRouter(cloudRouterName, subNetID)
 
 		framework.AddCleanupAction(func() {
 			By("Tearing down network")
-			err := teardownNetwork(networkID, routerID, subNetID)
-			Expect(err).NotTo(HaveOccurred())
+			teardownNetwork(networkID, routerID, subNetID)
 
 			By("Tearing down router")
-			err = teardownRouter(routerID)
-			Expect(err).NotTo(HaveOccurred())
+			teardownRouter(routerID)
 		})
 
 		infraStatus := createInfrastructureStatus(shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
@@ -344,7 +335,7 @@ func verifyPort42IsClosed(ctx context.Context, c client.Client, bastion *extensi
 	Expect(conn).To(BeNil())
 }
 
-func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID string, err error) {
+func prepareNewRouter(routerName, subnetID string) (string, string) {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
 	externalNetwork, err := networkClient.GetExternalNetworkByName(ctx, *floatingPoolName)
@@ -368,20 +359,19 @@ func prepareNewRouter(routerName, subnetID string) (routerID, floatingPoolID str
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is created", "routerName", routerName)
-	return router.ID, externalNetwork.ID, nil
+	return router.ID, externalNetwork.ID
 }
 
-func teardownRouter(routerID string) error {
+func teardownRouter(routerID string) {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := networkClient.DeleteRouter(ctx, routerID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is deleted", "routerID", routerID)
-	return nil
 }
 
-func prepareNewNetwork(networkName string) (string, error) {
+func prepareNewNetwork(networkName string) string {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
 	network, err := networkClient.CreateNetwork(ctx, networks.CreateOpts{
@@ -390,10 +380,10 @@ func prepareNewNetwork(networkName string) (string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is created", "networkName", networkName)
-	return network.ID, nil
+	return network.ID
 }
 
-func prepareSubNet(subnetName, networkID string) (string, error) {
+func prepareSubNet(subnetName, networkID string) string {
 	log.Info("Waiting until Subnet is created", "subnetName", subnetName)
 
 	createOpts := subnets.CreateOpts{
@@ -412,11 +402,11 @@ func prepareSubNet(subnetName, networkID string) (string, error) {
 	subnet, err := networkClient.CreateSubnet(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Subnet is created", "subnetName", subnetName)
-	return subnet.ID, nil
+	return subnet.ID
 }
 
 // prepareShootSecurityGroup create fake shoot security group which will be used in EgressAllowSSHToWorker remoteGroupID
-func prepareShootSecurityGroup(ctx context.Context, shootSgName string) (string, error) {
+func prepareShootSecurityGroup(ctx context.Context, shootSgName string) string {
 	log.Info("Waiting until Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
 
 	sGroup, err := networkClient.CreateSecurityGroup(ctx, groups.CreateOpts{
@@ -424,17 +414,16 @@ func prepareShootSecurityGroup(ctx context.Context, shootSgName string) (string,
 	})
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is created", "shootSecurityGroupName", shootSgName)
-	return sGroup.ID, nil
+	return sGroup.ID
 }
 
-func teardownShootSecurityGroup(groupID string) error {
+func teardownShootSecurityGroup(groupID string) {
 	err := networkClient.DeleteSecurityGroup(ctx, groupID)
 	Expect(err).NotTo(HaveOccurred())
 	log.Info("Shoot Security Group is deleted", "shootSecurityGroupID", groupID)
-	return nil
 }
 
-func teardownNetwork(networkID, routerID, subnetID string) error {
+func teardownNetwork(networkID, routerID, subnetID string) {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	_, err := networkClient.RemoveRouterInterface(ctx, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
@@ -444,7 +433,6 @@ func teardownNetwork(networkID, routerID, subnetID string) error {
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)
-	return nil
 }
 
 func setupEnvironmentObjects(ctx context.Context, c client.Client, namespace *corev1.Namespace, secret *corev1.Secret, cluster *extensionsv1alpha1.Cluster, worker *extensionsv1alpha1.Worker) {
@@ -669,7 +657,7 @@ func getImageID(imageName string) string {
 		Visibility: "all",
 	})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(len(imageRes)).Should(BeNumerically(">", 0))
+	Expect(imageRes).ShouldNot(BeEmpty())
 
 	return imageRes[0].ID
 }

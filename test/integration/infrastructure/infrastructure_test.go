@@ -266,14 +266,11 @@ var _ = Describe("Infrastructure tests", func() {
 
 		cloudRouterName := namespace + "-cloud-router"
 
-		routerID, err := prepareNewRouter(log, cloudRouterName)
-		Expect(err).NotTo(HaveOccurred())
+		routerID := prepareNewRouter(log, cloudRouterName)
 
 		var cleanupHandle framework.CleanupActionHandle
 		cleanupHandle = framework.AddCleanupAction(func() {
-			err := teardownRouter(log, *routerID)
-			Expect(err).NotTo(HaveOccurred())
-
+			teardownRouter(log, *routerID)
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
@@ -290,14 +287,11 @@ var _ = Describe("Infrastructure tests", func() {
 
 		networkName := namespace + "-network"
 
-		networkID, err := prepareNewNetwork(log, networkName)
-		Expect(err).NotTo(HaveOccurred())
+		networkID := prepareNewNetwork(log, networkName)
 
 		var cleanupHandle framework.CleanupActionHandle
 		cleanupHandle = framework.AddCleanupAction(func() {
-			err := teardownNetwork(log, *networkID)
-			Expect(err).NotTo(HaveOccurred())
-
+			teardownNetwork(log, *networkID)
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
 
@@ -316,20 +310,16 @@ var _ = Describe("Infrastructure tests", func() {
 		networkName := namespace + "-network"
 		cloudRouterName := namespace + "-cloud-router"
 
-		networkID, err := prepareNewNetwork(log, networkName)
-		Expect(err).NotTo(HaveOccurred())
-		routerID, err := prepareNewRouter(log, cloudRouterName)
-		Expect(err).NotTo(HaveOccurred())
+		networkID := prepareNewNetwork(log, networkName)
+		routerID := prepareNewRouter(log, cloudRouterName)
 
 		var cleanupHandle framework.CleanupActionHandle
 		cleanupHandle = framework.AddCleanupAction(func() {
 			By("Tearing down network")
-			err := teardownNetwork(log, *networkID)
-			Expect(err).NotTo(HaveOccurred())
+			teardownNetwork(log, *networkID)
 
 			By("Tearing down router")
-			err = teardownRouter(log, *routerID)
-			Expect(err).NotTo(HaveOccurred())
+			teardownRouter(log, *routerID)
 
 			framework.RemoveCleanupAction(cleanupHandle)
 		})
@@ -623,7 +613,7 @@ func generateNamespaceName() (string, error) {
 	return "openstack--infra-it--" + suffix, nil
 }
 
-func prepareNewRouter(log logr.Logger, routerName string) (*string, error) {
+func prepareNewRouter(log logr.Logger, routerName string) *string {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
 	createOpts := routers.CreateOpts{
@@ -636,20 +626,19 @@ func prepareNewRouter(log logr.Logger, routerName string) (*string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is created", "routerName", routerName)
-	return &router.ID, nil
+	return &router.ID
 }
 
-func teardownRouter(log logr.Logger, routerID string) error {
+func teardownRouter(log logr.Logger, routerID string) {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
 	err := networkClient.DeleteRouter(ctx, routerID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is deleted", "routerID", routerID)
-	return nil
 }
 
-func prepareNewNetwork(log logr.Logger, networkName string) (*string, error) {
+func prepareNewNetwork(log logr.Logger, networkName string) *string {
 	log.Info("Waiting until network is created", "networkName", networkName)
 
 	createOpts := networks.CreateOpts{
@@ -659,17 +648,16 @@ func prepareNewNetwork(log logr.Logger, networkName string) (*string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is created", "networkName", networkName)
-	return &network.ID, nil
+	return &network.ID
 }
 
-func teardownNetwork(log logr.Logger, networkID string) error {
+func teardownNetwork(log logr.Logger, networkID string) {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
 	err := networkClient.DeleteNetwork(ctx, networkID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)
-	return nil
 }
 
 type infrastructureIdentifiers struct {

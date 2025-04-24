@@ -1031,6 +1031,7 @@ func encode(obj runtime.Object) []byte {
 	return data
 }
 
+// nolint:unparam
 func useDefaultMachineClass(def map[string]interface{}, key string, value interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(def)+1)
 

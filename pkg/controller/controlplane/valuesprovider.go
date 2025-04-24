@@ -657,10 +657,7 @@ func (vp *valuesProvider) getControlPlaneChartValues(
 		return nil, err
 	}
 
-	csiCinder, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
-	if err != nil {
-		return nil, err
-	}
+	csiCinder := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
 
 	csiManila, err := vp.getCSIManilaControllerChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, credentials)
 	if err != nil {
@@ -729,7 +726,7 @@ func getCSIControllerChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
-) (map[string]interface{}, error) {
+) map[string]interface{} {
 	values := map[string]interface{}{
 		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
 		"enabled":           true,
@@ -745,7 +742,7 @@ func getCSIControllerChartValues(
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders
 	}
-	return values, nil
+	return values
 }
 
 // getCSIManilaControllerChartValues collects and returns the CSIController chart values.

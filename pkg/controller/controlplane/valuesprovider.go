@@ -875,7 +875,6 @@ func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(
 	cluster *extensionscontroller.Cluster,
 	credentials *openstack.Credentials,
 ) (map[string]interface{}, error) {
-
 	csiManilaEnabled := vp.isCSIManilaEnabled(cpConfig)
 	values := map[string]interface{}{
 		"enabled": csiManilaEnabled,

@@ -60,16 +60,12 @@ func DoIf(condition bool) TaskOption {
 
 // BasicFlowContext provides logic for persisting the state and add tasks to the flow graph.
 type BasicFlowContext struct {
-	log           logr.Logger
-	timer         Timestamper
-	persistorLock sync.Mutex
-
-	span      bool
-	persistFn flow.TaskFn
-
-	lastPersistedGeneration int64
-	lastPersistedAt         time.Time
-	PersistInterval         time.Duration
+	log             logr.Logger
+	timer           Timestamper
+	persistorLock   sync.Mutex
+	span            bool
+	persistFn       flow.TaskFn
+	PersistInterval time.Duration
 }
 
 // NewBasicFlowContext creates a new `BasicFlowContext`.

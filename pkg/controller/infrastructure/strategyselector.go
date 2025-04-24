@@ -34,7 +34,6 @@ type ReconcilerFactory interface {
 
 // ReconcilerFactoryImpl is an implementation of a ReconcilerFactory
 type ReconcilerFactoryImpl struct {
-	ctx   context.Context
 	log   logr.Logger
 	a     *actuator
 	infra *extensionsv1alpha1.Infrastructure

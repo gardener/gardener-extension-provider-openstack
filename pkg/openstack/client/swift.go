@@ -56,18 +56,6 @@ func (s *StorageClient) DeleteObjectsWithPrefix(ctx context.Context, container, 
 	return err
 }
 
-// deleteObjectIfExists deletes the openstack object with name <objectName> from <container>. If it does not exist,
-// no error is returned.
-func (s *StorageClient) deleteObjectIfExists(ctx context.Context, container, objectName string) error {
-	result := objects.Delete(ctx, s.client, container, objectName, nil)
-	if _, err := result.Extract(); err != nil {
-		if !IsNotFoundError(err) {
-			return err
-		}
-	}
-	return nil
-}
-
 // CreateContainerIfNotExists creates the openstack blob container with name <container>. If it already exist,
 // no error is returned.
 func (s *StorageClient) CreateContainerIfNotExists(ctx context.Context, container string) error {

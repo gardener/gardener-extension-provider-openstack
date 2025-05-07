@@ -84,6 +84,9 @@ spec:
         - --metrics-bind-address=:{{ tpl .Values.metricsPort . }}
         - --health-bind-address=:{{ tpl .Values.healthPort . }}
         - --gardener-version={{ .Values.gardener.version }}
+        {{- if .Values.gardener.autonomousShootCluster }}
+        - --autonomous-shoot-cluster={{ .Values.gardener.autonomousShootCluster }}
+        {{- end }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

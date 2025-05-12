@@ -70,6 +70,8 @@ func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Cred
 		return nil, err
 	}
 
+	provider.UserAgent.Prepend("Gardener Extension for OpenStack provider")
+
 	return &OpenstackClientFactory{
 		providerClient: provider,
 	}, nil

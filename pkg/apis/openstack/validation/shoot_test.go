@@ -420,6 +420,134 @@ var _ = Describe("Shoot validation", func() {
 					})),
 				))
 			})
+
+			It("should forbid changing the providerConfig when update strategy is in-place", func() {
+				workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				workers[0].ProviderConfig = &runtime.RawExtension{
+					Raw: []byte(`{"prov1":"val1"}`),
+				}
+
+				workers[1].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+				workers[1].ProviderConfig = &runtime.RawExtension{
+					Raw: []byte(`{"prov2":"val2"}`),
+				}
+
+				workers = append(workers, core.Worker{
+					Name:           "worker3",
+					UpdateStrategy: ptr.To(core.AutoRollingUpdate),
+					ProviderConfig: &runtime.RawExtension{
+						Raw: []byte(`{"prov3":"val3"}`),
+					},
+				})
+
+				workers = append(workers, core.Worker{
+					Name:           "worker4",
+					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					ProviderConfig: &runtime.RawExtension{
+						Raw: []byte(`{"prov4":"val4"}`),
+					},
+				})
+
+				newWorkers := copyWorkers(workers)
+				newWorkers[0].ProviderConfig = &runtime.RawExtension{
+					Raw: []byte(`{"prov1":"newval1"}`),
+				}
+				newWorkers[1].ProviderConfig = &runtime.RawExtension{
+					Raw: []byte(`{"prov2":"newval2"}`),
+				}
+				newWorkers[2].ProviderConfig = &runtime.RawExtension{
+					Raw: []byte(`{"prov3":"newval3"}`),
+				}
+
+				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[0].providerConfig"),
+						"Detail": Equal("providerConfig is immutable when update strategy is in-place"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[1].providerConfig"),
+						"Detail": Equal("providerConfig is immutable when update strategy is in-place"),
+					})),
+				))
+			})
+
+			It("should forbid changing dataVolumes when update strategy is in-place", func() {
+				workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				workers[0].DataVolumes = []core.DataVolume{
+					{
+						Name:       "volume1",
+						VolumeSize: "10Gi",
+					},
+				}
+
+				workers[1].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+				workers[1].DataVolumes = []core.DataVolume{
+					{
+						Name:       "volume2",
+						VolumeSize: "20Gi",
+					},
+				}
+
+				workers = append(workers, core.Worker{
+					Name:           "worker3",
+					UpdateStrategy: ptr.To(core.AutoRollingUpdate),
+					DataVolumes: []core.DataVolume{
+						{
+							Name:       "volume3",
+							VolumeSize: "30Gi",
+						},
+					},
+				})
+				workers = append(workers, core.Worker{
+					Name:           "worker4",
+					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					DataVolumes: []core.DataVolume{
+						{
+							Name:       "volume4",
+							VolumeSize: "40Gi",
+						},
+					},
+				})
+
+				newWorkers := copyWorkers(workers)
+				newWorkers[0].DataVolumes = []core.DataVolume{
+					{
+						Name:       "volume1",
+						VolumeSize: "15Gi",
+					},
+				}
+				newWorkers[1].DataVolumes = []core.DataVolume{
+					{
+						Name:       "volume2",
+						VolumeSize: "25Gi",
+					},
+				}
+				newWorkers[2].DataVolumes = []core.DataVolume{
+					{
+						Name:       "volume3",
+						VolumeSize: "35Gi",
+					},
+				}
+
+				errorList := ValidateWorkersUpdate(workers, newWorkers, nilPath)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[0].dataVolumes"),
+						"Detail": Equal("dataVolumes is immutable when update strategy is in-place"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[1].dataVolumes"),
+						"Detail": Equal("dataVolumes is immutable when update strategy is in-place"),
+					})),
+				))
+			})
 		})
 
 	})

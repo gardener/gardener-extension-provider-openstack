@@ -15,12 +15,14 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -263,7 +265,10 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 }
 
 func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency, workerConfig *api.WorkerConfig) (string, error) {
-	var additionalHashData []string
+	var (
+		additionalHashData []string
+		hashDataV1         []string
+	)
 
 	// Include the given worker pool dependencies into the hash.
 	if serverGroupDependency != nil {
@@ -289,8 +294,15 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		pool.ProviderConfig = nil
 	}
 
+	if pool.UpdateStrategy != nil && sets.New(gardencorev1beta1.AutoInPlaceUpdate, gardencorev1beta1.ManualInPlaceUpdate).Has(*pool.UpdateStrategy) {
+		// This data is omitted in the hash by gardener if the update strategy is in-place
+		if pool.ProviderConfig != nil && pool.ProviderConfig.Raw != nil {
+			hashDataV1 = append(hashDataV1, string(pool.ProviderConfig.Raw))
+		}
+	}
+
 	// Generate the worker pool hash.
-	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData, additionalHashData)
+	return worker.WorkerPoolHash(pool, w.cluster, append(hashDataV1, additionalHashData...), additionalHashData)
 }
 
 // NormalizeLabelsForMachineClass because metadata in OpenStack resources do not allow for certain characters that present in k8s labels e.g. "/",

@@ -27,6 +27,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -960,19 +961,15 @@ func cleanupSeedLegacyCSISnapshotValidation(
 	client k8sclient.Client,
 	namespace string,
 ) error {
-	if err := kutil.DeleteObject(
+	if err := kutil.DeleteObjects(
 		ctx,
 		client,
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}},
-	); err != nil {
-		return fmt.Errorf("failed to delete legacy csi snapshot validation deployment: %w", err)
-	}
-	if err := kutil.DeleteObject(
-		ctx,
-		client,
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}},
+		&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-webhook-vpa", Namespace: namespace}},
+		&policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: openstack.CSISnapshotValidationName, Namespace: namespace}},
 	); err != nil {
-		return fmt.Errorf("failed to delete legacy csi snapshot validation service: %w", err)
+		return fmt.Errorf("failed to delete legacy csi-snapshot-validation resources: %w", err)
 	}
 
 	return nil

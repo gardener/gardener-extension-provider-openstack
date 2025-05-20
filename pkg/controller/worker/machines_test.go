@@ -378,7 +378,8 @@ var _ = Describe("Machines", func() {
 									zone1,
 									zone2,
 								},
-								UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+								UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+								KubernetesVersion: ptr.To(shootVersion),
 							},
 							{
 								Name:           namePool3,
@@ -404,15 +405,16 @@ var _ = Describe("Machines", func() {
 									zone1,
 									zone2,
 								},
-								UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+								UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+								KubernetesVersion: ptr.To(shootVersion),
 							},
 						},
 					},
 				}
 
-				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil)
-				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
-				workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil)
+				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil, nil)
+				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
+				workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
 			})
@@ -862,9 +864,9 @@ var _ = Describe("Machines", func() {
 						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithServerGroup, cluster, nil)
 
 						// Test workerDelegate.DeployMachineClasses()
-						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, []string{serverGroupID1})
-						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
-						workerPoolHash3, _ := worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil)
+						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, []string{serverGroupID1}, nil)
+						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
+						workerPoolHash3, _ := worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
 						machineClassPool1Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
 							"availabilityZone": zone1,
 							"serverGroupID":    serverGroupID1,

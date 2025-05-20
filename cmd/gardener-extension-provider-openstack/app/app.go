@@ -237,6 +237,16 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add ready check for webhook server to manager: %w", err)
 			}
 
+			// TODO (georgibaltiev): Remove after the release of version 1.50.0
+			if reconcileOpts.ExtensionClass != "garden" {
+				log.Info("Adding migration runnables")
+				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+					return purgeMachineControllerManagerRBACResources(ctx, mgr.GetClient(), log)
+				})); err != nil {
+					return fmt.Errorf("error adding migrations: %w", err)
+				}
+			}
+
 			if err := mgr.Start(ctx); err != nil {
 				return fmt.Errorf("error running manager: %w", err)
 			}

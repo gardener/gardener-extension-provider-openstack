@@ -18,7 +18,7 @@ import (
 
 var nameRegex = regexp.MustCompile("extensions.gardener.cloud:provider-openstack:shoot--.*:machine-controller-manager")
 
-// TODO (georgibaltiev): Remove after the release of version 1.51.0
+// TODO (georgibaltiev): Remove after the release of version 1.50.0
 func purgeMachineControllerManagerRBACResources(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Starting the deletion of obsolete ClusterRoles and ClusterRoleBindings")
 

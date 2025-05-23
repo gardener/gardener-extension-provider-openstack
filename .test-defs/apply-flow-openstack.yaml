@@ -17,3 +17,10 @@ spec:
       --project-namespace=$PROJECT_NAMESPACE
       --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
   image: golang:1.24
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "5Gi"
+      cpu: "1"

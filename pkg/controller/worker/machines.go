@@ -271,8 +271,8 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		additionalHashData = append(additionalHashData, pairs...)
 	}
 
-	// Currently the raw providerConfig is used to generate the hash which has unintended consequences like causing machine
-	// rollouts. Instead the provider-extension should be capable of providing information
+	// Currently the raw providerConfig is used to generate the hash which has unintended consequences of causing machine
+	// rollouts. Instead, the provider-extension should be capable of providing information
 	if !w.hasPreserveAnnotation() {
 		pool.ProviderConfig = nil
 	}

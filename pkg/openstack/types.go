@@ -134,11 +134,6 @@ const (
 	// CSIManilaSecret is a constant for additional role/rolebiding for CSI manila plugin secret
 	CSIManilaSecret = "csi-manila-secret" // #nosec G101 -- No credential.
 
-	// PreserveWorkerHashAnnotation controls whether the providerConfig will be included in the hash calculation for the respective worker pool.
-	// Deprecated: It is only introduced to ease the transition to the new hash calculation.
-	// TODO(KA): Remove in release v1.36
-	PreserveWorkerHashAnnotation = "openstack.provider.extensions.gardener.cloud/worker-preserve-hash"
-
 	// AnnotationKeyUseFlow is the annotation key used to enable reconciliation with flow instead of terraformer.
 	AnnotationKeyUseFlow = "openstack.provider.extensions.gardener.cloud/use-flow"
 	// GlobalAnnotationKeyUseFlow is the annotation key used to enable reconciliation with flow instead of terraformer.

@@ -229,3 +229,16 @@ spec:
       loadBalancerProviders:
       - name: haproxy
 ```
+
+### Rolling Update Triggers
+
+Changes to the `Shoot` worker-pools are applied in-place where possible.
+In case this is not possible a rolling update of the workers will be performed to apply the new configuration,
+as outlined in [the Gardener documentation](https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#in-place-vs-rolling-updates).
+The exact fields that trigger this behavior are defined in the [Gardener doc](https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#rolling-update-triggers),
+with a few additions:
+
+- `.spec.provider.workers[].providerConfig.serverGroup` (ID of the server group)
+- `.spec.provider.workers[].providerConfig.MachineLabels[]` (if `MachineLabels.triggerRollingUpdate` is set to `true`)
+
+The featuregate `NewWorkerPoolHash` has no impact on the hash calculation for now.

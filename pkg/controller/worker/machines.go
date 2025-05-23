@@ -271,11 +271,8 @@ func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		additionalHashData = append(additionalHashData, pairs...)
 	}
 
-	// Currently the raw providerConfig is used to generate the hash which has unintended consequences of causing machine
-	// rollouts. Instead, the provider-extension should be capable of providing information
-	if !w.hasPreserveAnnotation() {
-		pool.ProviderConfig = nil
-	}
+	// hash v1 would otherwise hash the ProviderConfig
+	pool.ProviderConfig = nil
 
 	// Generate the worker pool hash.
 	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData, additionalHashData)
@@ -291,13 +288,6 @@ func NormalizeLabelsForMachineClass(in map[string]string) map[string]string {
 		res[newKey] = v
 	}
 	return res
-}
-
-func (w *workerDelegate) hasPreserveAnnotation() bool {
-	if v, ok := w.cluster.Shoot.Annotations[openstack.PreserveWorkerHashAnnotation]; ok && strings.EqualFold(v, "true") {
-		return true
-	}
-	return false
 }
 
 func addTopologyLabel(labels map[string]string, zone string) map[string]string {

@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/coreos/go-systemd/v22 v22.5.0
-	github.com/gardener/etcd-druid/api v0.29.1
+	github.com/gardener/etcd-druid/api v0.30.1
 	github.com/gardener/gardener v1.119.0
 	github.com/gardener/machine-controller-manager v0.58.0
 	github.com/go-logr/logr v1.4.2

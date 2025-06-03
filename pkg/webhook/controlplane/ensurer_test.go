@@ -458,10 +458,19 @@ WantedBy=multi-user.target
 		var (
 			ensurer    genericmutator.Ensurer
 			deployment *appsv1.Deployment
+			shoot      *gardencorev1beta1.Shoot
 		)
 
 		BeforeEach(func() {
 			deployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "foo"}}
+
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{},
+					},
+				},
+			}
 		})
 
 		BeforeEach(func() {
@@ -475,8 +484,8 @@ WantedBy=multi-user.target
 
 		It("should inject the sidecar container", func() {
 			Expect(deployment.Spec.Template.Spec.Containers).To(BeEmpty())
-			Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), nil, deployment, nil)).To(Succeed())
-			expectedContainer := machinecontrollermanager.ProviderSidecarContainer(deployment.Namespace, "provider-openstack", "foo:bar")
+			Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), eContextK8s127, deployment, nil)).To(Succeed())
+			expectedContainer := machinecontrollermanager.ProviderSidecarContainer(shoot, deployment.Namespace, "provider-openstack", "foo:bar")
 			Expect(deployment.Spec.Template.Spec.Containers).To(ConsistOf(expectedContainer))
 		})
 	})

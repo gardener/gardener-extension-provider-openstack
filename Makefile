@@ -41,6 +41,8 @@ PASSWORD           := .kube-secrets/openstack/password.secret
 APP_ID             := .kube-secrets/openstack/app_id.secret
 APP_NAME           := .kube-secrets/openstack/app_name.secret
 APP_SECRET         := .kube-secrets/openstack/app_secret.secret
+IT_LOGLEVEL := info
+IT_USE_EXISTING_CLUSTER := false # set to true if you want to use an existing cluster for backupbucket integration tests
 
 INFRA_TEST_FLAGS   := --v -ginkgo.v -ginkgo.progress \
                       --kubeconfig=${KUBECONFIG} \
@@ -51,6 +53,20 @@ INFRA_TEST_FLAGS   := --v -ginkgo.v -ginkgo.progress \
                       --tenant-name='$(shell cat $(TENANT_NAME))' \
                       --user-name='$(shell cat $(USER_NAME))' \
                       --region='$(shell cat $(REGION))' \
+                      --app-id='$(shell cat $(APP_ID))' \
+                      --app-name='$(shell cat $(APP_NAME))' \
+                      --app-secret='$(shell cat $(APP_SECRET))'
+
+BACKUPBUCKET_TEST_FLAGS   := --v -ginkgo.v -ginkgo.show-node-events \
+                      --kubeconfig=${KUBECONFIG} \
+                      --auth-url='$(shell cat $(AUTH_URL))' \
+                      --domain-name='$(shell cat $(DOMAIN_NAME))' \
+                      --tenant-name='$(shell cat $(TENANT_NAME))' \
+                      --region='$(shell cat $(REGION))' \
+		                  --use-existing-cluster=$(IT_USE_EXISTING_CLUSTER) \
+		                  --log-level=$(IT_LOGLEVEL) \
+                      --password='$(shell cat $(PASSWORD))' \
+                      --user-name='$(shell cat $(USER_NAME))'
                       --app-id='$(shell cat $(APP_ID))' \
                       --app-name='$(shell cat $(APP_NAME))' \
                       --app-secret='$(shell cat $(APP_SECRET))'
@@ -198,4 +214,9 @@ integration-test-infra:
 integration-test-bastion:
 	@go test -timeout=0 ./test/integration/bastion \
 		$(INFRA_TEST_FLAGS)
+
+.PHONY: integration-test-backupbucket
+integration-test-backupbucket:
+	@go test -timeout=0 ./test/integration/backupbucket \
+		$(BACKUPBUCKET_TEST_FLAGS)
 

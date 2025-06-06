@@ -1,0 +1,26 @@
+kind: TestDefinition
+metadata:
+  name: backupbucket-test
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Integration test for backupbucket creation and deletion
+  activeDeadlineSeconds: 4200
+
+  command: [bash, -c]
+  args:
+    - >-
+      go test -timeout=0 ./test/integration/backupbucket
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
+      --kubeconfig=${TM_KUBECONFIG_PATH}/testmachinery.config
+      --auth-url=${AUTH_URL}
+      --domain-name=${DOMAIN_NAME}
+      --tenant-name=${TENANT_NAME}
+      --app-id=${APPLICATION_CREDENTIAL_ID_BACKUP}
+      --app-name=${APPLICATION_CREDENTIAL_NAME_BACKUP}
+      --app-secret=${APPLICATION_CREDENTIAL_SECRET_BACKUP}
+      --region=${REGION}
+      --use-existing-cluster=${USE_EXISTING_CLUSTER}
+      --log-level=${LOG_LEVEL}
+
+  image: golang:1.24
+

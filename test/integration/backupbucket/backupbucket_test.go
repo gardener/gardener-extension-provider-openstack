@@ -57,9 +57,6 @@ var (
 	userName           = flag.String("user-name", "", "OpenStack user name")
 	password           = flag.String("password", "", "OpenStack password")
 	region             = flag.String("region", "", "OpenStack region")
-	appID              = flag.String("app-id", "", "OpenStack application credential ID")
-	appName            = flag.String("app-name", "", "OpenStack application credential name")
-	appSecret          = flag.String("app-secret", "", "OpenStack application credential secret")
 	logLevel           = flag.String("log-level", "", "Log level (debug, info, error)")
 	useExistingCluster = flag.Bool("use-existing-cluster", true, "Set to true to use an existing cluster for the test")
 )
@@ -108,7 +105,7 @@ var _ = BeforeSuite(func() {
 	validateFlags()
 
 	By("validating OpenStack credentials")
-	err := openstackext.ValidateSecrets(*userName, *password, *appID, *appName, *appSecret)
+	err := openstackext.ValidateSecrets(*userName, *password, "", "", "")
 	if err != nil {
 		Fail(fmt.Sprintf("Failed to validate OpenStack credentials: %s", err.Error()))
 	}
@@ -187,7 +184,6 @@ var _ = BeforeSuite(func() {
 	By("creating OpenStack provider and storage client")
 	providerClient := createProviderClient(ctx,
 		*authURL, *tenantName, *domainName,
-		*appID, *appName, *appSecret,
 		*userName, *password)
 	storageClient := createStorageClient(providerClient, *region)
 
@@ -209,15 +205,12 @@ var _ = BeforeSuite(func() {
 			Namespace: testName,
 		},
 		Data: map[string][]byte{
-			openstackext.AuthURL:                     []byte(*authURL),
-			openstackext.DomainName:                  []byte(*domainName),
-			openstackext.Password:                    []byte(*password),
-			openstackext.Region:                      []byte(*region),
-			openstackext.TenantName:                  []byte(*tenantName),
-			openstackext.UserName:                    []byte(*userName),
-			openstackext.ApplicationCredentialID:     []byte(*appID),
-			openstackext.ApplicationCredentialName:   []byte(*appName),
-			openstackext.ApplicationCredentialSecret: []byte(*appSecret),
+			openstackext.AuthURL:    []byte(*authURL),
+			openstackext.DomainName: []byte(*domainName),
+			openstackext.Password:   []byte(*password),
+			openstackext.Region:     []byte(*region),
+			openstackext.TenantName: []byte(*tenantName),
+			openstackext.UserName:   []byte(*userName),
 		},
 	}
 	createBackupBucketSecret(ctx, c, secret)

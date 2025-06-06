@@ -15,10 +15,9 @@ spec:
       --auth-url=${AUTH_URL}
       --domain-name=${DOMAIN_NAME}
       --tenant-name=${TENANT_NAME}
-      --app-id=${APPLICATION_CREDENTIAL_ID_BACKUP}
-      --app-name=${APPLICATION_CREDENTIAL_NAME_BACKUP}
-      --app-secret=${APPLICATION_CREDENTIAL_SECRET_BACKUP}
       --region=${REGION}
+      --user-name=${USER_NAME_BACKUP}
+      --password=${PASSWORD_BACKUP}
       --use-existing-cluster=${USE_EXISTING_CLUSTER}
       --log-level=${LOG_LEVEL}
 

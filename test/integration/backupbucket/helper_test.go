@@ -46,15 +46,6 @@ func secretsFromEnv() {
 	if len(*region) == 0 {
 		region = ptr.To(os.Getenv("REGION"))
 	}
-	if len(*appID) == 0 {
-		appID = ptr.To(os.Getenv("APP_ID"))
-	}
-	if len(*appName) == 0 {
-		appName = ptr.To(os.Getenv("APP_NAME"))
-	}
-	if len(*appSecret) == 0 {
-		appSecret = ptr.To(os.Getenv("APP_SECRET"))
-	}
 }
 
 func validateFlags() {
@@ -67,11 +58,11 @@ func validateFlags() {
 	if len(*tenantName) == 0 {
 		panic("OpenStack tenant name required. Either provide it via the tenant-name flag or set the TENANT_NAME environment variable")
 	}
-	if len(*userName) == 0 && len(*appID) == 0 {
-		panic("Either OpenStack user name or application credential ID required. Provide one via the respective flags or environment variables")
+	if len(*userName) == 0 {
+		panic("OpenStack user name required. Either provide it via the user-name flag or set the USER_NAME environment variable")
 	}
-	if len(*password) == 0 && len(*appSecret) == 0 {
-		panic("Either OpenStack password or application credential secret required. Provide one via the respective flags or environment variables")
+	if len(*password) == 0 {
+		panic("OpenStack password required. Either provide it via the password flag or set the PASSWORD environment variable")
 	}
 	if len(*region) == 0 {
 		panic("OpenStack region required. Either provide it via the region flag or set the REGION environment variable")
@@ -225,17 +216,13 @@ func randomString() string {
 // createProviderClient creates a provider client for OpenStack
 func createProviderClient(ctx context.Context,
 	authURL, tenantName, domainName,
-	appID, appName, appSecret,
 	username, password string) *gophercloud.ProviderClient {
 	opts := gophercloud.AuthOptions{
-		IdentityEndpoint:            authURL,
-		Username:                    username,
-		Password:                    password,
-		TenantName:                  tenantName,
-		DomainName:                  domainName,
-		ApplicationCredentialID:     appID,
-		ApplicationCredentialName:   appName,
-		ApplicationCredentialSecret: appSecret,
+		IdentityEndpoint: authURL,
+		Username:         username,
+		Password:         password,
+		TenantName:       tenantName,
+		DomainName:       domainName,
 	}
 
 	provider, err := openstack.AuthenticatedClient(ctx, opts)

@@ -67,24 +67,18 @@ spec:
     - name: REGION
       type: env
       value: eu-de-1
-    - name: APPLICATION_CREDENTIAL_ID_BACKUP
+    - name: USER_NAME_BACKUP
       type: env
       valueFrom:
         secretKeyRef:
           name: backup-operator-ccee-cp-eu-de-1
-          key: applicationCredentialID
-    - name: APPLICATION_CREDENTIAL_NAME_BACKUP
+          key: username
+    - name: PASSWORD_BACKUP
       type: env
       valueFrom:
         secretKeyRef:
           name: backup-operator-ccee-cp-eu-de-1
-          key: applicationCredentialName
-    - name: APPLICATION_CREDENTIAL_SECRET_BACKUP
-      type: env
-      valueFrom:
-        secretKeyRef:
-          name: backup-operator-ccee-cp-eu-de-1
-          key: applicationCredentialSecret
+          key: password
 
   testflow:
     - name: infrastructure-test

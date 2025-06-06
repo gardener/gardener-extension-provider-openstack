@@ -67,9 +67,6 @@ BACKUPBUCKET_TEST_FLAGS   := --v -ginkgo.v -ginkgo.show-node-events \
 		                  --log-level=$(IT_LOGLEVEL) \
                       --password='$(shell cat $(PASSWORD))' \
                       --user-name='$(shell cat $(USER_NAME))'
-                      --app-id='$(shell cat $(APP_ID))' \
-                      --app-name='$(shell cat $(APP_NAME))' \
-                      --app-secret='$(shell cat $(APP_SECRET))'
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty

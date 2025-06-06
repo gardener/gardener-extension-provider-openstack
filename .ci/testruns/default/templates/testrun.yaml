@@ -109,9 +109,6 @@ spec:
       definition:
         name: backupbucket-test
         config:
-          - name: REGION
-            type: env
-            value: europe-west1
           - name: LOG_LEVEL
             type: env
             value: debug

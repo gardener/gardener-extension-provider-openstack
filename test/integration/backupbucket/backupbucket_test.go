@@ -185,7 +185,10 @@ var _ = BeforeSuite(func() {
 	Expect(c).NotTo(BeNil())
 
 	By("creating OpenStack provider and storage client")
-	providerClient := createProviderClient(ctx, *authURL, *userName, *password, *tenantName, *domainName)
+	providerClient := createProviderClient(ctx,
+		*authURL, *tenantName, *domainName,
+		*appID, *appName, *appSecret,
+		*userName, *password)
 	storageClient := createStorageClient(providerClient, *region)
 
 	By("creating test namespace")

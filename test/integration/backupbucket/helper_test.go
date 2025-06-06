@@ -223,13 +223,19 @@ func randomString() string {
 }
 
 // createProviderClient creates a provider client for OpenStack
-func createProviderClient(ctx context.Context, authURL, username, password, tenantName, domainName string) *gophercloud.ProviderClient {
+func createProviderClient(ctx context.Context,
+	authURL, tenantName, domainName,
+	appID, appName, appSecret,
+	username, password string) *gophercloud.ProviderClient {
 	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: authURL,
-		Username:         username,
-		Password:         password,
-		TenantName:       tenantName,
-		DomainName:       domainName,
+		IdentityEndpoint:            authURL,
+		Username:                    username,
+		Password:                    password,
+		TenantName:                  tenantName,
+		DomainName:                  domainName,
+		ApplicationCredentialID:     appID,
+		ApplicationCredentialName:   appName,
+		ApplicationCredentialSecret: appSecret,
 	}
 
 	provider, err := openstack.AuthenticatedClient(ctx, opts)

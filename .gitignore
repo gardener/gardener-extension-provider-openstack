@@ -10,6 +10,7 @@ hack/tools/bin
 *.html
 .vscode
 .idea
+*.swp
 .DS_Store
 *~
 

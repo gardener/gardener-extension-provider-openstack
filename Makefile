@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ENSURE_GARDENER_MOD         := $(shell go get github.com/gardener/gardener@$$(go list -m -f "{{.Version}}" github.com/gardener/gardener))
-GARDENER_HACK_DIR    		:= $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener)/hack
+GARDENER_HACK_DIR    		    := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener)/hack
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := provider-openstack
 ADMISSION_NAME              := admission-openstack
@@ -16,9 +16,12 @@ EFFECTIVE_VERSION           := $(VERSION)-$(shell git rev-parse HEAD)
 LD_FLAGS                    := "-w $(shell bash $(GARDENER_HACK_DIR)/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION $(EXTENSION_PREFIX))"
 LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
-PLATFORM 					:= linux/amd64
-EXTENSION_NAMESPACE			:= garden
-TEST_RECONCILER             := tf
+PLATFORM 					          := linux/amd64
+EXTENSION_NAMESPACE			    := garden
+
+TEST_RECONCILER           := tf
+TEST_LOGLEVEL             := info
+TEST_USE_EXISTING_CLUSTER := false # set to true if you want to use an existing cluster for backupbucket integration tests
 
 WEBHOOK_CONFIG_PORT	:= 8443
 WEBHOOK_CONFIG_MODE	:= url
@@ -41,8 +44,6 @@ PASSWORD           := .kube-secrets/openstack/password.secret
 APP_ID             := .kube-secrets/openstack/app_id.secret
 APP_NAME           := .kube-secrets/openstack/app_name.secret
 APP_SECRET         := .kube-secrets/openstack/app_secret.secret
-IT_LOGLEVEL := info
-IT_USE_EXISTING_CLUSTER := false # set to true if you want to use an existing cluster for backupbucket integration tests
 
 INFRA_TEST_FLAGS   := --v -ginkgo.v -ginkgo.progress \
                       --kubeconfig=${KUBECONFIG} \
@@ -63,8 +64,8 @@ BACKUPBUCKET_TEST_FLAGS   := --v -ginkgo.v -ginkgo.show-node-events \
                       --domain-name='$(shell cat $(DOMAIN_NAME))' \
                       --tenant-name='$(shell cat $(TENANT_NAME))' \
                       --region='$(shell cat $(REGION))' \
-		                  --use-existing-cluster=$(IT_USE_EXISTING_CLUSTER) \
-		                  --log-level=$(IT_LOGLEVEL) \
+		                  --use-existing-cluster=$(TEST_USE_EXISTING_CLUSTER) \
+		                  --log-level=$(TEST_LOGLEVEL) \
                       --password='$(shell cat $(PASSWORD))' \
                       --user-name='$(shell cat $(USER_NAME))'
 

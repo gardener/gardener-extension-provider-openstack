@@ -86,30 +86,6 @@ func deleteNamespace(ctx context.Context, c client.Client, namespace *corev1.Nam
 	Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
 }
 
-func ensureGardenNamespace(ctx context.Context, c client.Client) (*corev1.Namespace, bool) {
-	gardenNamespaceAlreadyExists := false
-	gardenNamespace := &corev1.Namespace{}
-	err := c.Get(ctx, client.ObjectKey{Name: gardenNamespaceName}, gardenNamespace)
-	if err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			log.Info("Garden namespace not found, creating it", "namespace", gardenNamespaceName)
-			gardenNamespace = &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gardenNamespaceName,
-				},
-			}
-			Expect(c.Create(ctx, gardenNamespace)).To(Succeed(), "Failed to create garden namespace")
-		} else {
-			log.Error(err, "Failed to check for garden namespace")
-			Expect(err).NotTo(HaveOccurred(), "Unexpected error while checking for garden namespace")
-		}
-	} else {
-		gardenNamespaceAlreadyExists = true
-		log.Info("Garden namespace already exists", "namespace", gardenNamespaceName)
-	}
-	return gardenNamespace, gardenNamespaceAlreadyExists
-}
-
 func createBackupBucketSecret(ctx context.Context, c client.Client, secret *corev1.Secret) {
 	log.Info("Creating secret", "name", secret.Name, "namespace", secret.Namespace)
 	Expect(c.Create(ctx, secret)).To(Succeed(), "Failed to create secret: %s", secret.Name)

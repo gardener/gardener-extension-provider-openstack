@@ -18,30 +18,55 @@ import (
 )
 
 // NewEnsurer creates a new seedprovider ensurer.
-func NewEnsurer(etcdStorage *config.ETCDStorage, logger logr.Logger) genericmutator.Ensurer {
+func NewEnsurer(mainStorage *config.ETCDStorage, eventsStorage *config.ETCDStorage, logger logr.Logger) genericmutator.Ensurer {
 	return &ensurer{
-		etcdStorage: etcdStorage,
-		logger:      logger.WithName("openstack-seedprovider-ensurer"),
+		mainStorage:   mainStorage,
+		eventsStorage: eventsStorage,
+		logger:        logger.WithName("openstack-seedprovider-ensurer"),
 	}
 }
 
 type ensurer struct {
 	genericmutator.NoopEnsurer
-	etcdStorage *config.ETCDStorage
-	logger      logr.Logger
+	mainStorage   *config.ETCDStorage
+	eventsStorage *config.ETCDStorage
+	logger        logr.Logger
 }
 
 // EnsureETCD ensures that the etcd conform to the provider requirements.
 func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj, _ *druidcorev1alpha1.Etcd) error {
-	capacity := resource.MustParse("10Gi")
-	class := ""
+	var (
+		mainStorageConfig   *config.ETCDStorage
+		eventsStorageConfig *config.ETCDStorage
+		capacity            = resource.MustParse("1Gi")
+		class               string
+	)
 
-	if newObj.Name == v1beta1constants.ETCDMain && e.etcdStorage != nil {
-		if e.etcdStorage.Capacity != nil {
-			capacity = *e.etcdStorage.Capacity
+	switch newObj.Name {
+	case v1beta1constants.ETCDMain:
+		mainStorageConfig = e.mainStorage
+	case v1beta1constants.ETCDEvents:
+		eventsStorageConfig = e.eventsStorage
+	default:
+		e.logger.Info("Unknown ETCD name, skipping storage configuration", "name", newObj.Name)
+		return nil
+	}
+
+	if mainStorageConfig != nil {
+		if mainStorageConfig.Capacity != nil {
+			capacity = *mainStorageConfig.Capacity
 		}
-		if e.etcdStorage.ClassName != nil {
-			class = *e.etcdStorage.ClassName
+		if mainStorageConfig.ClassName != nil {
+			class = *mainStorageConfig.ClassName
+		}
+	}
+
+	if eventsStorageConfig != nil {
+		if eventsStorageConfig.Capacity != nil {
+			capacity = *eventsStorageConfig.Capacity
+		}
+		if eventsStorageConfig.ClassName != nil {
+			class = *eventsStorageConfig.ClassName
 		}
 	}
 

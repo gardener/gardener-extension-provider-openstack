@@ -38,7 +38,7 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 	var (
 		mainStorageConfig   *config.ETCDStorage
 		eventsStorageConfig *config.ETCDStorage
-		capacity            = resource.MustParse("1Gi")
+		capacity            = resource.MustParse("10Gi")
 		class               string
 	)
 

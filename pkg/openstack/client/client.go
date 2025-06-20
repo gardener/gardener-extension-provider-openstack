@@ -33,10 +33,15 @@ func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Cred
 		AllowReauth: true,
 	}
 
+	// according to: https://docs.openstack.org/keystone/2023.1/user/application_credentials.html#using-application-credentials
 	if credentials.ApplicationCredentialID != "" {
 		authOpts.ApplicationCredentialID = credentials.ApplicationCredentialID
+		authOpts.ApplicationCredentialSecret = credentials.ApplicationCredentialSecret
+	} else if credentials.ApplicationCredentialName != "" {
 		authOpts.ApplicationCredentialName = credentials.ApplicationCredentialName
 		authOpts.ApplicationCredentialSecret = credentials.ApplicationCredentialSecret
+		authOpts.Username = credentials.Username
+		authOpts.DomainName = credentials.DomainName
 	} else {
 		authOpts.Username = credentials.Username
 		authOpts.Password = credentials.Password

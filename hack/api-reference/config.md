@@ -162,7 +162,7 @@ string
 <tbody>
 <tr>
 <td>
-<code>storage</code></br>
+<code>main</code></br>
 <em>
 <a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ETCDStorage">
 ETCDStorage
@@ -171,6 +171,18 @@ ETCDStorage
 </td>
 <td>
 <p>ETCDStorage is the etcd storage configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>events</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ETCDStorage">
+ETCDStorage
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 <tr>

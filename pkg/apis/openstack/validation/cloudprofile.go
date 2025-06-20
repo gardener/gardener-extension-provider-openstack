@@ -10,10 +10,10 @@ import (
 	"net"
 	"slices"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -194,8 +194,8 @@ func ValidateProviderMachineImage(validationPath *field.Path, machineImage api.M
 }
 
 // NewProviderImagesContext creates a new ImagesContext for provider images.
-func NewProviderImagesContext(providerImages []api.MachineImages) *util.ImagesContext[api.MachineImages, api.MachineImageVersion] {
-	return util.NewImagesContext(
+func NewProviderImagesContext(providerImages []api.MachineImages) *gardener.ImagesContext[api.MachineImages, api.MachineImageVersion] {
+	return gardener.NewImagesContext(
 		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
 		func(mi api.MachineImages) map[string]api.MachineImageVersion {
 			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })

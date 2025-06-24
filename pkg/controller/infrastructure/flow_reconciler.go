@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
 	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
@@ -76,7 +78,7 @@ func (f *FlowReconciler) Reconcile(ctx context.Context, infra *extensionsv1alpha
 	}
 	clientFactory, err := openstackclient.NewOpenstackClientFromCredentials(ctx, credentials)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	fctx, err := infraflow.NewFlowContext(infraflow.Opts{
@@ -107,7 +109,7 @@ func (f *FlowReconciler) Delete(ctx context.Context, infra *extensionsv1alpha1.I
 	}
 	clientFactory, err := openstackclient.NewOpenstackClientFromCredentials(ctx, credentials)
 	if err != nil {
-		return err
+		return util.DetermineError(err, helper.KnownCodes)
 	}
 
 	fctx, err := infraflow.NewFlowContext(infraflow.Opts{

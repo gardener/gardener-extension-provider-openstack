@@ -55,6 +55,10 @@ is_systemd_resolved_system()
     fi
 }
 
+if grep -q "# No DNS servers known." /run/systemd/resolve/resolv.conf; then
+  exit 10
+fi
+
 rm -f "$tmp"
 if is_systemd_resolved_system; then
   if [ "$line" = "" ]; then
@@ -350,6 +354,8 @@ StartLimitIntervalSec=0
 [Service]
 Type=oneshot
 ExecStart=/opt/bin/update-resolv-conf.sh
+RestartForceExitStatus=10
+RestartSec=15
 `
 
 			customPathContent = `[Path]

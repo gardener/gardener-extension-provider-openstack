@@ -55,7 +55,7 @@ is_systemd_resolved_system()
     fi
 }
 
-if grep -q "# No DNS servers known." /run/systemd/resolve/resolv.conf; then
+if ! grep -Eq "^nameserver\s+" /run/systemd/resolve/resolv.conf; then
   exit 10
 fi
 

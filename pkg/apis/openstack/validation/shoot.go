@@ -187,7 +187,8 @@ func validateMachineLabels(worker *core.Worker, workerConfig *api.WorkerConfig, 
 	machineLabelNames := sets.New[string]()
 	for i, ml := range workerConfig.MachineLabels {
 		idxPath := fldPath.Index(i)
-
+		allErrs = append(allErrs, validateResourceName(ml.Name, idxPath.Child("name"))...)
+		allErrs = append(allErrs, validateResourceName(ml.Value, idxPath.Child("value"))...)
 		if machineLabelNames.Has(ml.Name) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), ml.Name))
 		} else if _, found := worker.Labels[ml.Name]; found {

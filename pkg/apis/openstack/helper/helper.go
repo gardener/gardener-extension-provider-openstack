@@ -140,7 +140,7 @@ func FindFloatingPool(floatingPools []api.FloatingPool, floatingPoolNamePattern,
 	for _, f := range floatingPools {
 		var fip = f
 
-		// Check non constraining floating pools with second priority
+		// Check non-constraining floating pools with second priority
 		// which means only when no other floating pool is matching.
 		if fip.NonConstraining != nil && *fip.NonConstraining {
 			nonConstrainingFloatingPools = append(nonConstrainingFloatingPools, fip)
@@ -158,7 +158,7 @@ func FindFloatingPool(floatingPools []api.FloatingPool, floatingPoolNamePattern,
 	}
 
 	// So far no floating pool was matching to the `floatingPoolNamePattern`
-	// therefore try now if there is a non contraining floating pool matching.
+	// therefore try now if there is a non-constraining floating pool matching.
 	for _, f := range nonConstrainingFloatingPools {
 		var fip = f
 		if candidate, score := checkFloatingPoolCandidate(&fip, floatingPoolNamePattern, region, domain); candidate != nil && score > maxCandidateScore {

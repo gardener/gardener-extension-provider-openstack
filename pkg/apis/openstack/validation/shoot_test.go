@@ -239,10 +239,38 @@ var _ = Describe("Shoot validation", func() {
 					}
 
 					errorList := ValidateWorkers(workers, nil, nilPath)
-
 					Expect(errorList).To(BeEmpty())
 				})
 
+				It("should fail for invalid machine labels", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							MachineLabels: []apiv1alpha1.MachineLabel{
+								{Name: "foo\nbar", Value: "bar"},
+								{Name: "m2", Value: "bar\nbaz"},
+							},
+						},
+					}
+
+					errorList := ValidateWorkers(workers, nil, nilPath)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"BadValue": Equal("foo\nbar"),
+							"Field":    Equal("[0].providerConfig.machineLabels[0].name"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("[0].providerConfig.machineLabels[1].value"),
+							"BadValue": Equal("bar\nbaz"),
+						})),
+					))
+
+				})
 				It("should fail on duplicate labels", func() {
 					workers[0].Labels = map[string]string{"l1": "x", "l2": "x"}
 					workers[0].ProviderConfig = &runtime.RawExtension{

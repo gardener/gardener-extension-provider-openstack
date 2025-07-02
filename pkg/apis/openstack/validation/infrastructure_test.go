@@ -23,6 +23,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 	var (
 		nilPath *field.Path
 
+		routerID          = "123e4567-e89b-12d3-a456-426614174000"
 		floatingPoolName1 = "foo"
 
 		infrastructureConfig *api.InfrastructureConfig
@@ -36,7 +37,8 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			FloatingPoolName: floatingPoolName1,
 			Networks: api.Networks{
 				Router: &api.Router{
-					ID: "hugo",
+
+					ID: routerID,
 				},
 				Workers: "10.250.0.0/16",
 			},
@@ -45,8 +47,18 @@ var _ = Describe("InfrastructureConfig validation", func() {
 
 	Describe("#ValidateInfrastructureConfig", func() {
 		It("should forbid invalid floating pool name configuration", func() {
-			infrastructureConfig.FloatingPoolName = ""
+			infrastructureConfig.FloatingPoolName = "not-a-valid-{}-name"
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("floatingPoolName"),
+				})),
+			))
+		})
 
+		It("should forbid empty floating pool name configuration", func() {
+			infrastructureConfig.FloatingPoolName = ""
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
 			Expect(errorList).To(ConsistOfFields(Fields{
@@ -56,6 +68,17 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 
 		It("should forbid invalid router id configuration", func() {
+			infrastructureConfig.Networks.Router = &api.Router{ID: "foo bar"}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.router.id"),
+			}))
+		})
+
+		It("should forbid empty router id configuration", func() {
 			infrastructureConfig.Networks.Router = &api.Router{ID: ""}
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
@@ -67,7 +90,6 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 
 		It("should forbid floating ip subnet when router is specified", func() {
-			infrastructureConfig.Networks.Router = &api.Router{ID: "sample-router-id"}
 			infrastructureConfig.FloatingPoolSubnetName = ptr.To("sample-floating-pool-subnet-id")
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)

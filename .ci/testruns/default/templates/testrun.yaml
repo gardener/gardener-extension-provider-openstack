@@ -67,6 +67,18 @@ spec:
     - name: REGION
       type: env
       value: eu-de-1
+    - name: USER_NAME_BACKUP
+      type: env
+      valueFrom:
+        secretKeyRef:
+          name: backup-operator-ccee-cp-eu-de-1
+          key: username
+    - name: PASSWORD_BACKUP
+      type: env
+      valueFrom:
+        secretKeyRef:
+          name: backup-operator-ccee-cp-eu-de-1
+          key: password
 
   testflow:
     - name: infrastructure-test
@@ -93,6 +105,16 @@ spec:
           - name: RECONCILER
             type: env
             value: recover
+    - name: backupbucket-test
+      definition:
+        name: backupbucket-test
+        config:
+          - name: LOG_LEVEL
+            type: env
+            value: debug
+          - name: USE_EXISTING_CLUSTER
+            type: env
+            value: "true"
     - name: bastion-test
       definition:
         name: bastion-test

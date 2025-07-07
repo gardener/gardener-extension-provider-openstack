@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ENSURE_GARDENER_MOD         := $(shell go get github.com/gardener/gardener@$$(go list -m -f "{{.Version}}" github.com/gardener/gardener))
-GARDENER_HACK_DIR    		:= $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener)/hack
+GARDENER_HACK_DIR           := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener)/hack
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := provider-openstack
 ADMISSION_NAME              := admission-openstack
@@ -16,13 +16,16 @@ EFFECTIVE_VERSION           := $(VERSION)-$(shell git rev-parse HEAD)
 LD_FLAGS                    := "-w $(shell bash $(GARDENER_HACK_DIR)/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION $(EXTENSION_PREFIX))"
 LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
-PLATFORM 					:= linux/amd64
-EXTENSION_NAMESPACE			:= garden
-TEST_RECONCILER             := tf
+PLATFORM                    := linux/amd64
+EXTENSION_NAMESPACE         := garden
 
-WEBHOOK_CONFIG_PORT	:= 8443
-WEBHOOK_CONFIG_MODE	:= url
-WEBHOOK_CONFIG_URL	:= host.docker.internal:$(WEBHOOK_CONFIG_PORT)
+TEST_RECONCILER           := tf
+TEST_LOGLEVEL             := info
+TEST_USE_EXISTING_CLUSTER := false # set to true if you want to use an existing cluster for backupbucket integration tests
+
+WEBHOOK_CONFIG_PORT := 8443
+WEBHOOK_CONFIG_MODE := url
+WEBHOOK_CONFIG_URL  := host.docker.internal:$(WEBHOOK_CONFIG_PORT)
 
 WEBHOOK_PARAM := --webhook-config-url=$(WEBHOOK_CONFIG_URL)
 ifeq ($(WEBHOOK_CONFIG_MODE), service)
@@ -42,18 +45,29 @@ APP_ID             := .kube-secrets/openstack/app_id.secret
 APP_NAME           := .kube-secrets/openstack/app_name.secret
 APP_SECRET         := .kube-secrets/openstack/app_secret.secret
 
-INFRA_TEST_FLAGS   := --v -ginkgo.v -ginkgo.progress \
-                      --kubeconfig=${KUBECONFIG} \
-                      --auth-url='$(shell cat $(AUTH_URL))' \
-                      --domain-name='$(shell cat $(DOMAIN_NAME))' \
-                      --floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
-                      --password='$(shell cat $(PASSWORD))' \
-                      --tenant-name='$(shell cat $(TENANT_NAME))' \
-                      --user-name='$(shell cat $(USER_NAME))' \
-                      --region='$(shell cat $(REGION))' \
-                      --app-id='$(shell cat $(APP_ID))' \
-                      --app-name='$(shell cat $(APP_NAME))' \
-                      --app-secret='$(shell cat $(APP_SECRET))'
+INFRA_TEST_FLAGS := --v -ginkgo.v -ginkgo.progress \
+                    --kubeconfig=${KUBECONFIG} \
+                    --auth-url='$(shell cat $(AUTH_URL))' \
+                    --domain-name='$(shell cat $(DOMAIN_NAME))' \
+                    --floating-pool-name='$(shell cat $(FLOATING_POOL_NAME))' \
+                    --password='$(shell cat $(PASSWORD))' \
+                    --tenant-name='$(shell cat $(TENANT_NAME))' \
+                    --user-name='$(shell cat $(USER_NAME))' \
+                    --region='$(shell cat $(REGION))' \
+                    --app-id='$(shell cat $(APP_ID))' \
+                    --app-name='$(shell cat $(APP_NAME))' \
+                    --app-secret='$(shell cat $(APP_SECRET))'
+
+BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
+                           --kubeconfig=${KUBECONFIG} \
+                           --auth-url='$(shell cat $(AUTH_URL))' \
+                           --domain-name='$(shell cat $(DOMAIN_NAME))' \
+                           --tenant-name='$(shell cat $(TENANT_NAME))' \
+                           --region='$(shell cat $(REGION))' \
+                           --use-existing-cluster=$(TEST_USE_EXISTING_CLUSTER) \
+                           --log-level=$(TEST_LOGLEVEL) \
+                           --password='$(shell cat $(PASSWORD))' \
+                           --user-name='$(shell cat $(USER_NAME))'
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -111,7 +125,7 @@ hook-me:
 .PHONY: install
 install:
 	@LD_FLAGS=$(LD_FLAGS) EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) \
-	bash $(GARDENER_HACK_DIR)/install.sh ./...
+		bash $(GARDENER_HACK_DIR)/install.sh ./...
 
 .PHONY: docker-login
 docker-login:
@@ -198,4 +212,9 @@ integration-test-infra:
 integration-test-bastion:
 	@go test -timeout=0 ./test/integration/bastion \
 		$(INFRA_TEST_FLAGS)
+
+.PHONY: integration-test-backupbucket
+integration-test-backupbucket:
+	@go test -timeout=0 ./test/integration/backupbucket \
+		$(BACKUPBUCKET_TEST_FLAGS)
 

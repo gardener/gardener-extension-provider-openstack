@@ -1,6 +1,6 @@
 replicas: 1
 clusterName: shoot-foo-bar
-kubernetesVersion: 1.27.4
+kubernetesVersion: 1.29.0
 podNetwork: 192.168.0.0/16
 podAnnotations: {}
 podLabels: {}

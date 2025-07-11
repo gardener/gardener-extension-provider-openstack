@@ -56,7 +56,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 				},
 			}
 
-			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.28.2", nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.29.0", nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -70,7 +70,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			controlPlane.Storage = &api.Storage{CSIManila: &api.CSIManila{Enabled: true}}
 			infraConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: false}
 
-			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.28.2", nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.29.0", nilPath)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -84,7 +84,7 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			controlPlane.Storage = &api.Storage{CSIManila: &api.CSIManila{Enabled: true}}
 			infraConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
 
-			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.28.2", nilPath)
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.29.0", nilPath)
 
 			Expect(errorList).To(BeEmpty())
 		})

@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/coreos/go-systemd/v22 v22.5.0
-	github.com/gardener/etcd-druid/api v0.30.1
+	github.com/gardener/etcd-druid/api v0.31.0
 	github.com/gardener/gardener v1.121.1
 	github.com/gardener/machine-controller-manager v0.58.0
 	github.com/go-logr/logr v1.4.2
@@ -22,12 +22,12 @@ require (
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/tools v0.34.0
-	k8s.io/api v0.32.5
+	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.32.5
-	k8s.io/apimachinery v0.32.5
+	k8s.io/apimachinery v0.33.2
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.3.1
 	k8s.io/client-go v0.32.5
-	k8s.io/code-generator v0.32.5
+	k8s.io/code-generator v0.33.2
 	k8s.io/component-base v0.32.5
 	k8s.io/kubelet v0.32.5
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
@@ -70,7 +70,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -154,7 +153,7 @@ require (
 	k8s.io/cluster-bootstrap v0.32.5 // indirect
 	k8s.io/component-helpers v0.32.5 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
-	k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9 // indirect
+	k8s.io/gengo/v2 v2.0.0-20250207200755-1244d31929d7 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.32.5 // indirect

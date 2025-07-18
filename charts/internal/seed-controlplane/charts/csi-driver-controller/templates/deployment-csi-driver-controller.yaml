@@ -50,9 +50,7 @@ spec:
         - --user-agent={{ $userAgentHeader }}
         {{- end }}
         - --v=3
-        {{- if semverCompare ">= 1.28-0" .Values.kubernetesVersion }}
         - --provide-node-service=false
-        {{- end }}
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock

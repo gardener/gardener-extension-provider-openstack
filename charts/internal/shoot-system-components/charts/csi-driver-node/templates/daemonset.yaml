@@ -49,10 +49,8 @@ spec:
         {{- end }}
         - --v=2
         - --vmodule=mount*=4,nodeserver=3,utils=2,driver=4,openstack=4,client=4,server=4,controllerserver=4
-{{- if semverCompare ">= 1.28-0" .Capabilities.KubeVersion.Version }}
         - --node-service-no-os-client=true
         - --provide-controller-service=false
-{{- end }}
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}

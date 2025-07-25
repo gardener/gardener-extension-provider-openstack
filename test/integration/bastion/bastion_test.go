@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -49,11 +50,10 @@ import (
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 const (
-	imageName   = "gardenlinux-1443.9"
+	imageName   = "gardenlinux-1592.11"
 	machineType = "m1.tiny"
 	userData    = "IyEvYmluL2Jhc2gKCnN5c3RlbWN0bCBzdGFydCBzc2g="
 )
@@ -100,7 +100,7 @@ var (
 
 	extensionscluster *extensionsv1alpha1.Cluster
 	controllercluster *controller.Cluster
-	options           *bastionctrl.Options
+	options           bastionctrl.Options
 	bastion           *extensionsv1alpha1.Bastion
 	secret            *corev1.Secret
 
@@ -309,6 +309,9 @@ func verifyPort22IsOpen(ctx context.Context, c client.Client, bastion *extension
 	By("check connection to port 22 open should not error")
 	bastionUpdated := &extensionsv1alpha1.Bastion{}
 	Expect(c.Get(ctx, client.ObjectKey{Namespace: bastion.Namespace, Name: bastion.Name}, bastionUpdated)).To(Succeed())
+	Expect(bastionUpdated).To(Not(BeNil()))
+	Expect(bastionUpdated.Status.Ingress).To(Not(BeNil()))
+	Expect(bastionUpdated.Status.Ingress.IP).To(Not(BeEmpty()))
 
 	ipAddress := bastionUpdated.Status.Ingress.IP
 	address := net.JoinHostPort(ipAddress, "22")
@@ -662,7 +665,7 @@ func getImageID(imageName string) string {
 	return imageRes[0].ID
 }
 
-func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha1.Bastion, *bastionctrl.Options) {
+func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha1.Bastion, bastionctrl.Options) {
 	bastion := &extensionsv1alpha1.Bastion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-bastion",
@@ -683,7 +686,7 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 		},
 	}
 
-	options, err := bastionctrl.DetermineOptions(bastion, cluster)
+	options, err := bastionctrl.NewOpts(bastion, cluster, log)
 	Expect(err).NotTo(HaveOccurred())
 
 	return bastion, options
@@ -715,7 +718,7 @@ func verifyDeletion(name string) {
 	Expect(servers).To(BeEmpty())
 }
 
-func verifyCreation(options *bastionctrl.Options) {
+func verifyCreation(options bastionctrl.Options) {
 	By("checkSecurityGroupExists")
 	sGroups, err := networkClient.GetSecurityGroupByName(ctx, options.SecurityGroup)
 	Expect(err).To(Succeed())
@@ -735,7 +738,7 @@ func verifyCreation(options *bastionctrl.Options) {
 	Expect(servers[0].Name).To(Equal(options.BastionInstanceName))
 
 	By("checking bastion ingress IPs exist")
-	privateIP, externalIP, err := bastionctrl.GetIPs(&servers[0], options)
+	privateIP, externalIP, err := bastionctrl.GetIPs(servers[0], options)
 	Expect(err).To(Succeed())
 	Expect(privateIP).NotTo(BeNil())
 	Expect(externalIP).NotTo(BeNil())

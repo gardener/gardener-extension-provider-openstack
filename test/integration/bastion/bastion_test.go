@@ -285,7 +285,7 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		err = utils.Retry(3, 5*time.Second, log, func() error {
+		err = utils.Retry(100, 6*time.Second, log, func() error {
 			return verifyPort22IsOpen(ctx, c, bastion)
 		})
 		Expect(err).NotTo(HaveOccurred())

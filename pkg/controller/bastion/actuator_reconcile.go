@@ -511,8 +511,12 @@ func ensureSecurityGroup(ctx context.Context, client openstackclient.Networking,
 		return groups.SecGroup{}, err
 	}
 
-	if len(securityGroups) != 0 {
-		opts.Logr.Info("Security Group already exists", "security groups", securityGroups)
+	if len(securityGroups) > 1 {
+		return groups.SecGroup{}, fmt.Errorf("found more than one security group with name %s", opts.SecurityGroup)
+	}
+
+	if len(securityGroups) == 1 {
+		opts.Logr.Info("Security Group already exists", "name", securityGroups[0].Name, "id", securityGroups[0].ID)
 		return securityGroups[0], nil
 	}
 

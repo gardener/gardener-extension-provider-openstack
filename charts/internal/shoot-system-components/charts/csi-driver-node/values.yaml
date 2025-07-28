@@ -1,12 +1,8 @@
-cloudProviderConfig: |
-  <cloud-provider-config>
-
 images:
   csi-driver-cinder: image-repository:image-tag
   csi-node-driver-registrar: image-repository:image-tag
   csi-liveness-probe: image-repository:image-tag
 
-keystoneCACert:
 socketPath: /csi/csi.sock
 userAgentHeaders: []
 

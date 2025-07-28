@@ -389,7 +389,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	if err != nil {
 		return nil, err
 	}
-	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster, secretsReader, checksums)
+	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster, secretsReader)
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
@@ -785,43 +785,23 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	cloudProfileConfig *api.CloudProfileConfig,
 	cluster *extensionscontroller.Cluster,
 	_ secretsmanager.Reader,
-	checksums map[string]string,
 ) (
 	map[string]interface{},
 	error,
 ) {
 	var (
-		cloudProviderDiskConfig []byte
-		userAgentHeader         []string
-		csiNodeDriverValues     map[string]interface{}
+		userAgentHeader     []string
+		csiNodeDriverValues map[string]interface{}
 	)
 
-	// TODO: remove this when v1.27 is removed. From v1.28 onwards, we do not need credentials on the csi-node.
-	// Here we copy the data from the secret in the seed namespace to create the correct cloud-provider-config in the kube-system namespace of the shoot.
-	secret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, k8sclient.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, secret); err != nil {
-		return nil, err
-	}
-
-	cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
-	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
 	credentials, _ := vp.getCredentials(ctx, cp) // ignore missing credentials
 	userAgentHeader = vp.getUserAgentHeaders(credentials, cluster)
 
 	csiNodeDriverValues = map[string]interface{}{
 		"enabled": true,
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-		},
-		"cloudProviderConfig": cloudProviderDiskConfig,
 
 		"rescanBlockStorageOnResize": cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
 		"nodeVolumeAttachLimit":      cloudProfileConfig.NodeVolumeAttachLimit,
-	}
-
-	// add keystone CA bundle
-	if keystoneCA, ok := secret.Data[openstack.CloudProviderConfigKeyStoneCAKey]; ok && len(keystoneCA) > 0 {
-		csiNodeDriverValues["keystoneCACert"] = keystoneCA
 	}
 
 	if userAgentHeader != nil {

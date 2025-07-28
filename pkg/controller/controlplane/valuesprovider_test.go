@@ -711,7 +711,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		Context("shoot control plane chart values", func() {
 			It("should return correct shoot control plane chart when ca is secret found", func() {
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, cluster, fakeSecretsManager, map[string]string{})
@@ -721,18 +720,13 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-						},
-						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-						"cloudProviderConfig": cloudProviderDiskConfig,
+						"userAgentHeaders":           []string{domainName, tenantName, technicalID},
 					}),
 					openstack.CSIDriverManila: enabledFalse,
 				}))
 			})
 
 			It("should return correct shoot control plane chart if CSI Manila is enabled", func() {
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 				cpManila := defaultControlPlaneWithManila(true)
@@ -743,11 +737,7 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-						},
-						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-						"cloudProviderConfig": cloudProviderDiskConfig,
+						"userAgentHeaders":           []string{domainName, tenantName, technicalID},
 					}),
 					openstack.CSIDriverManila: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"csimanila": map[string]interface{}{

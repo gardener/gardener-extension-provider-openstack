@@ -199,6 +199,25 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 		return floatingips.FloatingIP{}, fmt.Errorf("no external fixed IPs detected on the router")
 	}
 
+	if router.Status != "ACTIVE" {
+		opts.Logr.Info("Router not active, retrying until it becomes ACTIVE", "routerID", router.ID, "currentStatus", router.Status)
+		if err := utils.Retry(30, 6*time.Second, opts.Logr, func() error {
+			router, err = client.GetRouterByID(ctx, infraStatus.Networks.Router.ID)
+			if err != nil {
+				return err
+			}
+			if router == nil {
+				return fmt.Errorf("router with ID %s was not found", infraStatus.Networks.Router.ID)
+			}
+			if router.Status != "ACTIVE" {
+				return fmt.Errorf("router not active yet, status: %s", router.Status)
+			}
+			return nil
+		}); err != nil {
+			return floatingips.FloatingIP{}, err
+		}
+	}
+
 	// locate the first ipv4 address.
 	idx := slices.IndexFunc(router.GatewayInfo.ExternalFixedIPs, func(s routers.ExternalFixedIP) bool {
 		return net.IsIPv4String(s.IPAddress)

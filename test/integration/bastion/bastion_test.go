@@ -251,8 +251,7 @@ var _ = Describe("Bastion tests", func() {
 		})
 
 		infraStatus := createInfrastructureStatus(shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
-		worker, err := createWorker(bastionName, infraStatus)
-		Expect(err).NotTo(HaveOccurred())
+		worker := createWorker(bastionName, infraStatus)
 
 		By("create namespace, cluster, secret, worker")
 		setupEnvironmentObjects(ctx, c, namespace(bastionName), secret, extensionscluster, worker)
@@ -262,7 +261,7 @@ var _ = Describe("Bastion tests", func() {
 		})
 
 		By("setup bastion")
-		err = c.Create(ctx, bastion)
+		err := c.Create(ctx, bastion)
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
@@ -354,6 +353,22 @@ func prepareNewRouter(routerName, subnetID string) (string, string) {
 	}
 	router, err := networkClient.CreateRouter(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(router).To(Not(BeNil()))
+
+	if router.Status != "ACTIVE" {
+		err = utils.Retry(30, 6*time.Second, log, func() error {
+			router, err = networkClient.GetRouterByID(ctx, router.ID)
+			if err != nil {
+				return err
+			}
+			Expect(router).To(Not(BeNil()))
+			if router.Status != "ACTIVE" {
+				return fmt.Errorf("router not active yet, status: %s", router.Status)
+			}
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	intOpts := routers.AddInterfaceOpts{
 		SubnetID: subnetID,
@@ -381,6 +396,22 @@ func prepareNewNetwork(networkName string) string {
 		Name: networkName,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	Expect(network).To(Not(BeNil()))
+
+	if network.Status != "ACTIVE" {
+		err = utils.Retry(30, 6*time.Second, log, func() error {
+			network, err = networkClient.GetNetworkByID(ctx, network.ID)
+			if err != nil {
+				return err
+			}
+			Expect(network).To(Not(BeNil()))
+			if network.Status != "ACTIVE" {
+				return fmt.Errorf("network %s is not active yet, current status: %s", networkName, network.Status)
+			}
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	log.Info("Network is created", "networkName", networkName)
 	return network.ID
@@ -505,11 +536,9 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 	return extensionscluster, cluster
 }
 
-func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStatus) (*extensionsv1alpha1.Worker, error) {
+func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStatus) *extensionsv1alpha1.Worker {
 	infrastructureStatusJSON, err := json.Marshal(&infraStatus)
-	if err != nil {
-		return nil, err
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	return &extensionsv1alpha1.Worker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -530,7 +559,7 @@ func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStat
 				Namespace: name,
 			},
 		},
-	}, nil
+	}
 }
 
 func createInfrastructureConfig() *openstackv1alpha1.InfrastructureConfig {

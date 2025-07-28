@@ -37,7 +37,7 @@ func New(mgr manager.Manager, logger logr.Logger) extensionswebhook.Mutator {
 
 // Mutate mutates the given object on creation and adds the annotation `openstack.provider.extensions.gardener.cloud/use-flow=true`
 // if the seed has the label `openstack.provider.extensions.gardener.cloud/use-flow` == `new`.
-func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) error {
+func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
 	if newObj.GetDeletionTimestamp() != nil {
 		return nil
 	}
@@ -79,14 +79,10 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 	} else if v, ok := cluster.Shoot.Annotations[openstack.AnnotationKeyUseFlow]; ok {
 		newInfra.Annotations[openstack.AnnotationKeyUseFlow] = v
 		mutated = true
-	} else if oldObj == nil && cluster.Seed.Annotations[openstack.SeedAnnotationKeyUseFlow] == openstack.SeedAnnotationUseFlowValueNew {
-		newInfra.Annotations[openstack.AnnotationKeyUseFlow] = "true"
-		mutated = true
-	} else if v := cluster.Seed.Annotations[openstack.SeedAnnotationKeyUseFlow]; strings.EqualFold(v, "true") {
+	} else if v := cluster.Seed.Annotations[openstack.SeedAnnotationKeyUseFlow]; !strings.EqualFold(v, "false") {
 		newInfra.Annotations[openstack.AnnotationKeyUseFlow] = "true"
 		mutated = true
 	}
-
 	if mutated {
 		extensionswebhook.LogMutation(logger, newInfra.Kind, newInfra.Namespace, newInfra.Name)
 	}

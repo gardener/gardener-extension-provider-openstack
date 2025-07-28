@@ -59,6 +59,7 @@ const (
 	reconcilerMigrateTF    string = "migrate"
 	reconcilerUseFlow      string = "flow"
 	reconcilerRecoverState string = "recover"
+	kindInfrastructure            = "Infrastructure"
 )
 
 const (
@@ -76,7 +77,7 @@ var (
 	appID            = flag.String("app-id", "", "Application Credential ID for openstack")
 	appName          = flag.String("app-name", "", "Application Credential Name for openstack")
 	appSecret        = flag.String("app-secret", "", "Application Credential Secret for openstack")
-	reconciler       = flag.String("reconciler", reconcilerUseTF, "Set annotation to use flow for reconciliation")
+	reconciler       = flag.String("reconciler", reconcilerUseFlow, "Set annotation to use flow for reconciliation")
 
 	floatingPoolID string
 )
@@ -468,7 +469,7 @@ func runTest(
 		c,
 		log,
 		infra,
-		"Infrastucture",
+		kindInfrastructure,
 		10*time.Second,
 		6*time.Minute,
 		16*time.Minute,
@@ -478,7 +479,7 @@ func runTest(
 	// Update the infra resource to trigger a migration.
 	oldState := infra.Status.State.DeepCopy()
 	switch *reconciler {
-	case reconcilerUseTF:
+	case reconcilerMigrateTF:
 		By("verifying terraform migration")
 		patch := client.MergeFrom(infra.DeepCopy())
 		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
@@ -507,7 +508,7 @@ func runTest(
 		c,
 		log,
 		infra,
-		"Infrastucture",
+		kindInfrastructure,
 		10*time.Second,
 		30*time.Second,
 		16*time.Minute,

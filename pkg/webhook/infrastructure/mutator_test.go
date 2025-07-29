@@ -158,8 +158,8 @@ var _ = Describe("Mutate", func() {
 		})
 
 		Context("update", func() {
-			It("should do nothing if seed annotation use-flow is only for new shoots", func() {
-				cluster.Seed.Annotations[openstack.SeedAnnotationKeyUseFlow] = openstack.SeedAnnotationUseFlowValueNew
+			It("should not mutate the seed if seed annotation is set to false", func() {
+				cluster.Seed.Annotations[openstack.SeedAnnotationKeyUseFlow] = "false"
 				newInfra := &extensionsv1alpha1.Infrastructure{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "dummy",
@@ -169,6 +169,17 @@ var _ = Describe("Mutate", func() {
 				err := mutator.Mutate(ctx, newInfra, newInfra)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(newInfra.Annotations[openstack.AnnotationKeyUseFlow]).To(Equal(""))
+			})
+			It("should mutate the seed if seed annotation is not set to false", func() {
+				newInfra := &extensionsv1alpha1.Infrastructure{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dummy",
+						Namespace: shootNamespace,
+					},
+				}
+				err := mutator.Mutate(ctx, newInfra, newInfra)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(newInfra.Annotations[openstack.AnnotationKeyUseFlow]).To(Equal("true"))
 			})
 
 			It("should mutate if seed annotation is set to all shoots", func() {

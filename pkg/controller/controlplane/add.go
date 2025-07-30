@@ -40,8 +40,8 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	genericActuator, err := genericactuator.NewActuator(mgr, openstack.Name,
-		secretConfigsFunc, shootAccessSecretsFunc, nil, nil,
-		configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassChart, nil,
+		secretConfigsFunc, shootAccessSecretsFunc,
+		configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassChart,
 		NewValuesProvider(mgr), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
 		imagevector.ImageVector(), "", nil, opts.WebhookServerNamespace)
 	if err != nil {

@@ -374,8 +374,8 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
-	secretsReader secretsmanager.Reader,
-	checksums map[string]string,
+	_ secretsmanager.Reader,
+	_ map[string]string,
 ) (map[string]interface{}, error) {
 	// Decode providerConfig
 	cpConfig := &api.ControlPlaneConfig{}
@@ -389,7 +389,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	if err != nil {
 		return nil, err
 	}
-	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster, secretsReader, checksums)
+	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster)
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
@@ -691,11 +691,10 @@ func getCCMChartValues(
 	}
 
 	values := map[string]interface{}{
-		"enabled":           true,
-		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-		"clusterName":       cp.Namespace,
-		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"podNetwork":        strings.Join(extensionscontroller.GetPodNetwork(cluster), ","),
+		"enabled":     true,
+		"replicas":    extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+		"clusterName": cp.Namespace,
+		"podNetwork":  strings.Join(extensionscontroller.GetPodNetwork(cluster), ","),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
 			"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
@@ -729,9 +728,8 @@ func getCSIControllerChartValues(
 	scaledDown bool,
 ) map[string]interface{} {
 	values := map[string]interface{}{
-		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"enabled":           true,
-		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+		"enabled":  true,
+		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
@@ -784,44 +782,23 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	cp *extensionsv1alpha1.ControlPlane,
 	cloudProfileConfig *api.CloudProfileConfig,
 	cluster *extensionscontroller.Cluster,
-	_ secretsmanager.Reader,
-	checksums map[string]string,
 ) (
 	map[string]interface{},
 	error,
 ) {
 	var (
-		cloudProviderDiskConfig []byte
-		userAgentHeader         []string
-		csiNodeDriverValues     map[string]interface{}
+		userAgentHeader     []string
+		csiNodeDriverValues map[string]interface{}
 	)
 
-	// TODO: remove this when v1.27 is removed. From v1.28 onwards, we do not need credentials on the csi-node.
-	// Here we copy the data from the secret in the seed namespace to create the correct cloud-provider-config in the kube-system namespace of the shoot.
-	secret := &corev1.Secret{}
-	if err := vp.client.Get(ctx, k8sclient.ObjectKey{Namespace: cp.Namespace, Name: openstack.CloudProviderCSIDiskConfigName}, secret); err != nil {
-		return nil, err
-	}
-
-	cloudProviderDiskConfig = secret.Data[openstack.CloudProviderConfigDataKey]
-	checksums[openstack.CloudProviderCSIDiskConfigName] = gardenerutils.ComputeChecksum(secret.Data)
 	credentials, _ := vp.getCredentials(ctx, cp) // ignore missing credentials
 	userAgentHeader = vp.getUserAgentHeaders(credentials, cluster)
 
 	csiNodeDriverValues = map[string]interface{}{
 		"enabled": true,
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-		},
-		"cloudProviderConfig": cloudProviderDiskConfig,
 
 		"rescanBlockStorageOnResize": cloudProfileConfig.RescanBlockStorageOnResize != nil && *cloudProfileConfig.RescanBlockStorageOnResize,
 		"nodeVolumeAttachLimit":      cloudProfileConfig.NodeVolumeAttachLimit,
-	}
-
-	// add keystone CA bundle
-	if keystoneCA, ok := secret.Data[openstack.CloudProviderConfigKeyStoneCAKey]; ok && len(keystoneCA) > 0 {
-		csiNodeDriverValues["keystoneCACert"] = keystoneCA
 	}
 
 	if userAgentHeader != nil {

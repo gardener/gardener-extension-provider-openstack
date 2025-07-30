@@ -174,7 +174,7 @@ var _ = Describe("ValuesProvider", func() {
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.28.4",
+						Version: "1.29.0",
 					},
 					Provider: gardencorev1beta1.Provider{
 						InfrastructureConfig: &runtime.RawExtension{
@@ -529,10 +529,9 @@ var _ = Describe("ValuesProvider", func() {
 
 	Describe("#GetControlPlaneChartValues", func() {
 		ccmChartValues := utils.MergeMaps(enabledTrue, map[string]interface{}{
-			"replicas":          1,
-			"kubernetesVersion": "1.28.2",
-			"clusterName":       namespace,
-			"podNetwork":        cidr,
+			"replicas":    1,
+			"clusterName": namespace,
+			"podNetwork":  cidr,
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
 				"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
@@ -583,13 +582,11 @@ var _ = Describe("ValuesProvider", func() {
 					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
 				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
-					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"replicas":          1,
-					"maxEntries":        1000,
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"replicas":   1,
+					"maxEntries": 1000,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
@@ -614,12 +611,10 @@ var _ = Describe("ValuesProvider", func() {
 					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
 				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
-					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"replicas":          1,
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"replicas": 1,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
@@ -711,7 +706,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		Context("shoot control plane chart values", func() {
 			It("should return correct shoot control plane chart when ca is secret found", func() {
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, cluster, fakeSecretsManager, map[string]string{})
@@ -721,18 +715,13 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-						},
-						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-						"cloudProviderConfig": cloudProviderDiskConfig,
+						"userAgentHeaders":           []string{domainName, tenantName, technicalID},
 					}),
 					openstack.CSIDriverManila: enabledFalse,
 				}))
 			})
 
 			It("should return correct shoot control plane chart if CSI Manila is enabled", func() {
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 
 				cpManila := defaultControlPlaneWithManila(true)
@@ -743,11 +732,7 @@ var _ = Describe("ValuesProvider", func() {
 					openstack.CSINodeName: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"rescanBlockStorageOnResize": rescanBlockStorageOnResize,
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
-						"podAnnotations": map[string]interface{}{
-							"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
-						},
-						"userAgentHeaders":    []string{domainName, tenantName, technicalID},
-						"cloudProviderConfig": cloudProviderDiskConfig,
+						"userAgentHeaders":           []string{domainName, tenantName, technicalID},
 					}),
 					openstack.CSIDriverManila: utils.MergeMaps(enabledTrue, map[string]interface{}{
 						"csimanila": map[string]interface{}{

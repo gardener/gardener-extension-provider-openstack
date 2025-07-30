@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var nameRegex = regexp.MustCompile("extensions.gardener.cloud:provider-openstack:shoot--.*:machine-controller-manager")
+var nameRegex = regexp.MustCompile("extensions.gardener.cloud:provider-openstack:shoot-.*:machine-controller-manager")
 
 // TODO (georgibaltiev): Remove after the release of version 1.50.0
 func purgeMachineControllerManagerRBACResources(ctx context.Context, c client.Client, log logr.Logger) error {

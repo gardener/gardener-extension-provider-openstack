@@ -375,7 +375,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 	secretsReader secretsmanager.Reader,
-	checksums map[string]string,
+	_ map[string]string,
 ) (map[string]interface{}, error) {
 	// Decode providerConfig
 	cpConfig := &api.ControlPlaneConfig{}

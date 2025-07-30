@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -49,11 +50,10 @@ import (
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 const (
-	imageName   = "gardenlinux-1443.9"
+	imageName   = "gardenlinux-1592.11"
 	machineType = "m1.tiny"
 	userData    = "IyEvYmluL2Jhc2gKCnN5c3RlbWN0bCBzdGFydCBzc2g="
 )
@@ -100,7 +100,7 @@ var (
 
 	extensionscluster *extensionsv1alpha1.Cluster
 	controllercluster *controller.Cluster
-	options           *bastionctrl.Options
+	options           bastionctrl.Options
 	bastion           *extensionsv1alpha1.Bastion
 	secret            *corev1.Secret
 
@@ -251,8 +251,7 @@ var _ = Describe("Bastion tests", func() {
 		})
 
 		infraStatus := createInfrastructureStatus(shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
-		worker, err := createWorker(bastionName, infraStatus)
-		Expect(err).NotTo(HaveOccurred())
+		worker := createWorker(bastionName, infraStatus)
 
 		By("create namespace, cluster, secret, worker")
 		setupEnvironmentObjects(ctx, c, namespace(bastionName), secret, extensionscluster, worker)
@@ -262,7 +261,7 @@ var _ = Describe("Bastion tests", func() {
 		})
 
 		By("setup bastion")
-		err = c.Create(ctx, bastion)
+		err := c.Create(ctx, bastion)
 		Expect(err).NotTo(HaveOccurred())
 
 		framework.AddCleanupAction(func() {
@@ -285,7 +284,7 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		err = utils.Retry(3, 5*time.Second, log, func() error {
+		err = utils.Retry(100, 6*time.Second, log, func() error {
 			return verifyPort22IsOpen(ctx, c, bastion)
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -309,6 +308,9 @@ func verifyPort22IsOpen(ctx context.Context, c client.Client, bastion *extension
 	By("check connection to port 22 open should not error")
 	bastionUpdated := &extensionsv1alpha1.Bastion{}
 	Expect(c.Get(ctx, client.ObjectKey{Namespace: bastion.Namespace, Name: bastion.Name}, bastionUpdated)).To(Succeed())
+	Expect(bastionUpdated).To(Not(BeNil()))
+	Expect(bastionUpdated.Status.Ingress).To(Not(BeNil()))
+	Expect(bastionUpdated.Status.Ingress.IP).To(Not(BeEmpty()))
 
 	ipAddress := bastionUpdated.Status.Ingress.IP
 	address := net.JoinHostPort(ipAddress, "22")
@@ -351,6 +353,22 @@ func prepareNewRouter(routerName, subnetID string) (string, string) {
 	}
 	router, err := networkClient.CreateRouter(ctx, createOpts)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(router).To(Not(BeNil()))
+
+	if router.Status != "ACTIVE" {
+		err = utils.Retry(30, 6*time.Second, log, func() error {
+			router, err = networkClient.GetRouterByID(ctx, router.ID)
+			if err != nil {
+				return err
+			}
+			Expect(router).To(Not(BeNil()))
+			if router.Status != "ACTIVE" {
+				return fmt.Errorf("router not active yet, status: %s", router.Status)
+			}
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	intOpts := routers.AddInterfaceOpts{
 		SubnetID: subnetID,
@@ -378,6 +396,22 @@ func prepareNewNetwork(networkName string) string {
 		Name: networkName,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	Expect(network).To(Not(BeNil()))
+
+	if network.Status != "ACTIVE" {
+		err = utils.Retry(30, 6*time.Second, log, func() error {
+			network, err = networkClient.GetNetworkByID(ctx, network.ID)
+			if err != nil {
+				return err
+			}
+			Expect(network).To(Not(BeNil()))
+			if network.Status != "ACTIVE" {
+				return fmt.Errorf("network %s is not active yet, current status: %s", networkName, network.Status)
+			}
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	log.Info("Network is created", "networkName", networkName)
 	return network.ID
@@ -502,11 +536,9 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 	return extensionscluster, cluster
 }
 
-func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStatus) (*extensionsv1alpha1.Worker, error) {
+func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStatus) *extensionsv1alpha1.Worker {
 	infrastructureStatusJSON, err := json.Marshal(&infraStatus)
-	if err != nil {
-		return nil, err
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	return &extensionsv1alpha1.Worker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -527,7 +559,7 @@ func createWorker(name string, infraStatus *openstackv1alpha1.InfrastructureStat
 				Namespace: name,
 			},
 		},
-	}, nil
+	}
 }
 
 func createInfrastructureConfig() *openstackv1alpha1.InfrastructureConfig {
@@ -662,7 +694,7 @@ func getImageID(imageName string) string {
 	return imageRes[0].ID
 }
 
-func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha1.Bastion, *bastionctrl.Options) {
+func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha1.Bastion, bastionctrl.Options) {
 	bastion := &extensionsv1alpha1.Bastion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-bastion",
@@ -683,7 +715,7 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 		},
 	}
 
-	options, err := bastionctrl.DetermineOptions(bastion, cluster)
+	options, err := bastionctrl.NewOpts(bastion, cluster, log)
 	Expect(err).NotTo(HaveOccurred())
 
 	return bastion, options
@@ -715,7 +747,7 @@ func verifyDeletion(name string) {
 	Expect(servers).To(BeEmpty())
 }
 
-func verifyCreation(options *bastionctrl.Options) {
+func verifyCreation(options bastionctrl.Options) {
 	By("checkSecurityGroupExists")
 	sGroups, err := networkClient.GetSecurityGroupByName(ctx, options.SecurityGroup)
 	Expect(err).To(Succeed())
@@ -735,7 +767,7 @@ func verifyCreation(options *bastionctrl.Options) {
 	Expect(servers[0].Name).To(Equal(options.BastionInstanceName))
 
 	By("checking bastion ingress IPs exist")
-	privateIP, externalIP, err := bastionctrl.GetIPs(&servers[0], options)
+	privateIP, externalIP, err := bastionctrl.GetIPs(servers[0], options)
 	Expect(err).To(Succeed())
 	Expect(privateIP).NotTo(BeNil())
 	Expect(externalIP).NotTo(BeNil())

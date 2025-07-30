@@ -9,10 +9,10 @@ import (
 )
 
 // IngressAllowSSH ingress allow ssh
-func IngressAllowSSH(opt *Options, etherType rules.RuleEtherType, secGroupID, cidr, remoteGroupID string) rules.CreateOpts {
+func IngressAllowSSH(opts Options, etherType rules.RuleEtherType, secGroupID, cidr, remoteGroupID string) rules.CreateOpts {
 	return rules.CreateOpts{
 		Direction:      "ingress",
-		Description:    ingressAllowSSHResourceName(opt.BastionInstanceName),
+		Description:    ingressAllowSSHResourceName(opts.BastionInstanceName),
 		PortRangeMin:   sshPort,
 		EtherType:      etherType,
 		PortRangeMax:   sshPort,
@@ -24,10 +24,10 @@ func IngressAllowSSH(opt *Options, etherType rules.RuleEtherType, secGroupID, ci
 }
 
 // EgressAllowSSHToWorker egress allow ssh to worker
-func EgressAllowSSHToWorker(opt *Options, secGroupID string, remoteGroupID string) rules.CreateOpts {
+func EgressAllowSSHToWorker(opts Options, secGroupID string, remoteGroupID string) rules.CreateOpts {
 	return rules.CreateOpts{
 		Direction:     "egress",
-		Description:   egressAllowOnlyResourceName(opt.BastionInstanceName),
+		Description:   egressAllowOnlyResourceName(opts.BastionInstanceName),
 		PortRangeMin:  sshPort,
 		EtherType:     rules.EtherType4,
 		PortRangeMax:  sshPort,

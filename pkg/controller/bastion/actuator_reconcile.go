@@ -52,12 +52,12 @@ func (be *bastionEndpoints) ready() bool {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) error {
-	opt, err := DetermineOptions(bastion, cluster)
+	opts, err := NewOpts(bastion, cluster, log)
 	if err != nil {
 		return err
 	}
 
-	credentials, err := openstack.GetCredentials(ctx, a.client, opt.SecretReference, false)
+	credentials, err := openstack.GetCredentials(ctx, a.client, opts.SecretReference, false)
 	if err != nil {
 		return fmt.Errorf("could not get Openstack credentials: %w", err)
 	}
@@ -96,8 +96,8 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		}
 		image := &imageRes[0]
 
-		opt.machineType = a.bastionConfig.FlavorRef
-		opt.imageID = image.ID
+		opts.MachineType = a.bastionConfig.FlavorRef
+		opts.ImageID = image.ID
 	}
 
 	computeClient, err := openstackClientFactory.Compute()
@@ -115,37 +115,27 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return err
 	}
 
-	securityGroup, err := ensureSecurityGroup(ctx, log, networkingClient, opt)
+	securityGroup, err := ensureSecurityGroup(ctx, networkingClient, opts)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	err = ensureSecurityGroupRules(ctx, log, networkingClient, bastion, opt, infraStatus, securityGroup.ID)
+	err = ensureSecurityGroupRules(ctx, networkingClient, bastion, opts, infraStatus, securityGroup.ID)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	err = ensureShootWorkerSecurityGroupRules(ctx, log, networkingClient, opt, infraStatus, securityGroup.ID)
+	err = ensureShootWorkerSecurityGroupRules(ctx, networkingClient, opts, infraStatus, securityGroup.ID)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	instance, err := ensureComputeInstance(ctx, log, computeClient, infraStatus, opt)
-	if err != nil || instance == nil {
+	instance, err := ensureComputeInstance(ctx, computeClient, infraStatus, opts)
+	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	infrastructureConfig := &openstackapi.InfrastructureConfig{}
-
-	if cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw == nil {
-		return errors.New("infrastructureConfig raw must not be empty")
-	}
-
-	if _, _, err := a.decoder.Decode(cluster.Shoot.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
-		return fmt.Errorf("could not decode InfrastructureConfig of cluster Profile': %w", err)
-	}
-
-	fipID, err := ensurePublicIPAddress(ctx, opt, log, networkingClient, infraStatus)
+	fipID, err := ensurePublicIPAddress(ctx, opts, networkingClient, infraStatus)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -155,48 +145,10 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 		return util.DetermineError(err, helper.KnownCodes)
 	}
 
-	// wait until instance and floatingIP are ready
-	err = utils.Retry(3, 10*time.Second, log, func() error {
-		// refresh bastion instance
-		instances, err := getBastionInstance(ctx, computeClient, opt.BastionInstanceName)
-		if err != nil {
-			return util.DetermineError(err, helper.KnownCodes)
-		}
-
-		if len(instances) == 0 {
-			return errors.New("instances must not be empty")
-		}
-		instance = &instances[0]
-
-		// refresh floatingIP
-		fip, err := networkingClient.GetFloatingIP(ctx, floatingips.ListOpts{ID: fipID.ID})
-		if err != nil {
-			return util.DetermineError(err, helper.KnownCodes)
-		}
-		fipID = &fip
-
-		if fipID.Status != "ACTIVE" || instance.Status != "ACTIVE" {
-			return fmt.Errorf("instance or floating ip address not ready yet")
-		}
-		return nil
-	})
-	if err != nil {
-		return util.DetermineError(err, helper.KnownCodes)
-	}
-
 	// check if the instance already exists and has an IP
-	endpoints, err := getInstanceEndpoints(instance, opt)
+	endpoints, err := ensureEndpoints(instance, opts)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
-	}
-
-	if !endpoints.ready() {
-		return &ctrlerror.RequeueAfterError{
-			// requeue rather soon, so that the user (most likely gardenctl eventually)
-			// doesn't have to wait too long for the public endpoint to become available
-			RequeueAfter: 5 * time.Second,
-			Cause:        errors.New("bastion instance has no public/private endpoints yet"),
-		}
 	}
 
 	// once a public endpoint is available, publish the endpoint on the
@@ -206,37 +158,64 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
-func ensurePublicIPAddress(ctx context.Context, opt *Options, log logr.Logger, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (*floatingips.FloatingIP, error) {
-	fips, err := getFipByName(ctx, client, opt.BastionInstanceName)
+func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (floatingips.FloatingIP, error) {
+	opts.Logr.Info("Ensuring public IP address for bastion instance", "name", opts.BastionInstanceName)
+
+	fips, err := findFipByName(ctx, client, opts.BastionInstanceName)
 	if err != nil {
-		return nil, err
+		return floatingips.FloatingIP{}, err
 	}
 
-	if len(fips) != 0 && fips[0].Status == "ACTIVE" {
-		return &fips[0], nil
+	if len(fips) > 1 {
+		return floatingips.FloatingIP{}, fmt.Errorf("bastion instance has more than one public IP address")
 	}
 
-	log.Info("creating new bastion Public IP")
+	if len(fips) == 1 {
+		if fips[0].Status == "ACTIVE" {
+			opts.Logr.Info("Found existing public IP address for bastion instance", "name", opts.BastionInstanceName, "ip", fips[0].FloatingIP)
+			return fips[0], nil
+		}
+		return floatingips.FloatingIP{}, fmt.Errorf("public IP address for %s is not active, status: %s", opts.BastionInstanceName, fips[0].Status)
+	}
 
 	if infraStatus.Networks.FloatingPool.ID == "" {
-		return nil, errors.New("floatingPool must not be empty")
+		return floatingips.FloatingIP{}, fmt.Errorf("floatingPool must not be empty")
 	}
 
 	if infraStatus.Networks.Router.ID == "" {
-		return nil, errors.New("router must not be empty")
+		return floatingips.FloatingIP{}, fmt.Errorf("router must not be empty")
 	}
 
 	router, err := client.GetRouterByID(ctx, infraStatus.Networks.Router.ID)
 	if err != nil {
-		return nil, err
+		return floatingips.FloatingIP{}, err
 	}
 
 	if router == nil {
-		return nil, fmt.Errorf("router with ID %s was not found", infraStatus.Networks.Router.ID)
+		return floatingips.FloatingIP{}, fmt.Errorf("router with ID %s was not found", infraStatus.Networks.Router.ID)
 	}
 
 	if len(router.GatewayInfo.ExternalFixedIPs) == 0 {
-		return nil, errors.New("no external fixed IPs detected on the router")
+		return floatingips.FloatingIP{}, fmt.Errorf("no external fixed IPs detected on the router")
+	}
+
+	if router.Status != "ACTIVE" {
+		opts.Logr.Info("Router not active, retrying until it becomes ACTIVE", "routerID", router.ID, "currentStatus", router.Status)
+		if err := utils.Retry(30, 6*time.Second, opts.Logr, func() error {
+			router, err = client.GetRouterByID(ctx, infraStatus.Networks.Router.ID)
+			if err != nil {
+				return err
+			}
+			if router == nil {
+				return fmt.Errorf("router with ID %s was not found", infraStatus.Networks.Router.ID)
+			}
+			if router.Status != "ACTIVE" {
+				return fmt.Errorf("router not active yet, status: %s", router.Status)
+			}
+			return nil
+		}); err != nil {
+			return floatingips.FloatingIP{}, err
+		}
 	}
 
 	// locate the first ipv4 address.
@@ -244,86 +223,115 @@ func ensurePublicIPAddress(ctx context.Context, opt *Options, log logr.Logger, c
 		return net.IsIPv4String(s.IPAddress)
 	})
 	if idx == -1 {
-		return nil, fmt.Errorf("failed to locate a suitable ipv4 address in the router external fixed IPs")
+		return floatingips.FloatingIP{}, fmt.Errorf("failed to locate a suitable ipv4 address in the router external fixed IPs")
 	}
 
 	createOpts := floatingips.CreateOpts{
-		Description:       opt.BastionInstanceName,
+		Description:       opts.BastionInstanceName,
 		FloatingNetworkID: infraStatus.Networks.FloatingPool.ID,
 		SubnetID:          router.GatewayInfo.ExternalFixedIPs[idx].SubnetID,
 	}
 
+	opts.Logr.Info("Creating public IP address", "name", opts.BastionInstanceName, "subnetID", createOpts.SubnetID, "floatingNetworkID", createOpts.FloatingNetworkID)
 	fip, err := createFloatingIP(ctx, client, createOpts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get (create) public ip address: %w", err)
+		return floatingips.FloatingIP{}, fmt.Errorf("failed to create public ip address: %w", err)
 	}
+	opts.Logr.Info("Public IP address created", "name", opts.BastionInstanceName, "ip", fip.FloatingIP)
 
-	return fip, nil
+	// wait until floating IP is active
+	err = utils.Retry(30, 5*time.Second, opts.Logr, func() error {
+		fip, err = client.GetFloatingIP(ctx, floatingips.ListOpts{ID: fip.ID})
+		if err != nil {
+			return err
+		}
+
+		if fip.Status != "ACTIVE" {
+			return fmt.Errorf("fip not active yet, status: %s", fip.Status)
+		}
+
+		return nil
+	})
+
+	return fip, err
 }
 
-func ensureComputeInstance(ctx context.Context, log logr.Logger, client openstackclient.Compute, infraStatus *openstackapi.InfrastructureStatus, opt *Options) (*servers.Server, error) {
-	instances, err := getBastionInstance(ctx, client, opt.BastionInstanceName)
+func ensureComputeInstance(ctx context.Context, client openstackclient.Compute, infraStatus *openstackapi.InfrastructureStatus, opts Options) (servers.Server, error) {
+	opts.Logr.Info("Ensuring bastion compute instance", "name", opts.BastionInstanceName)
+
+	instances, err := findBastionInstances(ctx, client, opts.BastionInstanceName)
 	if openstackclient.IgnoreNotFoundError(err) != nil {
-		return nil, err
+		return servers.Server{}, err
 	}
 
-	if len(instances) != 0 {
-		return &instances[0], nil
+	if len(instances) == 1 {
+		opts.Logr.Info("Found existing bastion compute instance", "name", opts.BastionInstanceName, "id", instances[0].ID)
+		return instances[0], nil
 	}
-
-	log.Info("Creating new bastion compute instance")
 
 	if infraStatus.Networks.ID == "" {
-		return nil, errors.New("network id not found")
+		return servers.Server{}, errors.New("network id not found")
 	}
 
-	flavorID, err := client.FindFlavorID(ctx, opt.machineType)
+	flavorID, err := client.FindFlavorID(ctx, opts.MachineType)
 	if err != nil {
-		return nil, err
+		return servers.Server{}, err
 	}
 
 	if flavorID == "" {
-		return nil, errors.New("flavorID not found")
+		return servers.Server{}, errors.New("flavorID not found")
 	}
 
 	createOpts := servers.CreateOpts{
-		Name:           opt.BastionInstanceName,
+		Name:           opts.BastionInstanceName,
 		FlavorRef:      flavorID,
-		ImageRef:       opt.imageID,
-		SecurityGroups: []string{opt.SecurityGroup},
+		ImageRef:       opts.ImageID,
+		SecurityGroups: []string{opts.SecurityGroup},
 		Networks:       []servers.Network{{UUID: infraStatus.Networks.ID}},
-		UserData:       opt.UserData,
+		UserData:       opts.UserData,
 	}
 
+	opts.Logr.Info("Starting bastion compute instance creation", "name", opts.BastionInstanceName)
 	instance, err := createBastionInstance(ctx, client, createOpts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create bastion compute instance: %w ", err)
+		return servers.Server{}, fmt.Errorf("failed to create bastion compute instance: %w ", err)
 	}
 
-	return instance, nil
+	// wait until instance and floatingIP are ready
+	err = utils.Retry(60, 10*time.Second, opts.Logr, func() error {
+		// refresh bastion instance
+		instance, err = getBastionInstance(ctx, client, opts.BastionInstanceName)
+		if err != nil {
+			return util.DetermineError(err, helper.KnownCodes)
+		}
+
+		if instance.Status != "ACTIVE" {
+			return fmt.Errorf("bastion instance not active yet, status: %s, progress %d", instance.Status, instance.Progress)
+		}
+
+		return nil
+	})
+
+	return instance, err
 }
 
-func getInstanceEndpoints(instance *servers.Server, opt *Options) (*bastionEndpoints, error) {
-	if instance == nil {
-		return nil, errors.New("compute instance can't be nil")
-	}
-
+func getInstanceEndpoints(instance servers.Server, opts Options) (bastionEndpoints, error) {
 	if instance.Status != "ACTIVE" {
-		return nil, errors.New("compute instance not active yet")
+		return bastionEndpoints{}, errors.New("compute instance not active yet")
 	}
 
-	endpoints := &bastionEndpoints{}
+	endpoints := bastionEndpoints{}
 
-	privateIP, externalIP, err := GetIPs(instance, opt)
+	privateIP, externalIP, err := GetIPs(instance, opts)
 	if err != nil {
-		return nil, fmt.Errorf("no IP found: %w", err)
+		return bastionEndpoints{}, fmt.Errorf("no IP found: %w", err)
 	}
 
-	if ingress := addressToIngress(nil, &privateIP); ingress != nil {
+	if ingress := addressToIngress("", privateIP); ingress != nil {
 		endpoints.private = ingress
 	}
 
-	if ingress := addressToIngress(nil, &externalIP); ingress != nil {
+	if ingress := addressToIngress("", externalIP); ingress != nil {
 		endpoints.public = ingress
 	}
 	return endpoints, nil
@@ -334,31 +342,23 @@ func IngressReady(ingress *corev1.LoadBalancerIngress) bool {
 	return ingress != nil && (ingress.Hostname != "" || ingress.IP != "")
 }
 
-// addressToIngress converts the IP address into a
-// corev1.LoadBalancerIngress resource. If both arguments are nil, then
-// nil is returned.
-func addressToIngress(dnsName *string, ipAddress *string) *corev1.LoadBalancerIngress {
-	var ingress *corev1.LoadBalancerIngress
-
-	if ipAddress != nil || dnsName != nil {
-		ingress = &corev1.LoadBalancerIngress{}
-		if dnsName != nil {
-			ingress.Hostname = *dnsName
-		}
-
-		if ipAddress != nil {
-			ingress.IP = *ipAddress
-		}
+// addressToIngress converts the IP address into a corev1.LoadBalancerIngress resource.
+// If both arguments are nil, then nil is returned.
+func addressToIngress(dnsName string, ipAddress string) *corev1.LoadBalancerIngress {
+	if dnsName == "" && ipAddress == "" {
+		return nil
 	}
-
+	ingress := &corev1.LoadBalancerIngress{}
+	if dnsName != "" {
+		ingress.Hostname = dnsName
+	}
+	if ipAddress != "" {
+		ingress.IP = ipAddress
+	}
 	return ingress
 }
 
-func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
-	if floatingIP == nil {
-		return fmt.Errorf("floatingIP must not be nil")
-	}
-
+func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance servers.Server, floatingIP floatingips.FloatingIP) error {
 	// the floatingIP is already associated
 	if floatingIP.PortID != "" {
 		return nil
@@ -367,7 +367,7 @@ func ensureAssociateFIPWithInstance(ctx context.Context, networkClient openstack
 	return associateFIPWithInstance(ctx, networkClient, instance, floatingIP)
 }
 
-func associateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance *servers.Server, floatingIP *floatingips.FloatingIP) error {
+func associateFIPWithInstance(ctx context.Context, networkClient openstackclient.Networking, instance servers.Server, floatingIP floatingips.FloatingIP) error {
 	instancePorts, err := networkClient.GetInstancePorts(ctx, instance.ID)
 	if err != nil {
 		return err
@@ -393,7 +393,7 @@ func associateFIPWithInstance(ctx context.Context, networkClient openstackclient
 	return networkClient.UpdateFIPWithPort(ctx, floatingIP.ID, instancePort.ID)
 }
 
-func ensureSecurityGroupRules(ctx context.Context, log logr.Logger, client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
+func ensureSecurityGroupRules(ctx context.Context, client openstackclient.Networking, bastion *extensionsv1alpha1.Bastion, opts Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
 	ingressPermissions, err := ingressPermissions(bastion)
 	if err != nil {
 		return err
@@ -408,10 +408,10 @@ func ensureSecurityGroupRules(ctx context.Context, log logr.Logger, client opens
 	var wantedRules []rules.CreateOpts
 	for _, ingressPermission := range ingressPermissions {
 		wantedRules = append(wantedRules,
-			IngressAllowSSH(opt, ingressPermission.EtherType, secGroupID, ingressPermission.CIDR, ""),
+			IngressAllowSSH(opts, ingressPermission.EtherType, secGroupID, ingressPermission.CIDR, ""),
 		)
 	}
-	wantedRules = append(wantedRules, EgressAllowSSHToWorker(opt, secGroupID, infraStatus.SecurityGroups[0].ID))
+	wantedRules = append(wantedRules, EgressAllowSSHToWorker(opts, secGroupID, infraStatus.SecurityGroups[0].ID))
 
 	currentRules, err := listRules(ctx, client, secGroupID)
 	if err != nil {
@@ -421,7 +421,8 @@ func ensureSecurityGroupRules(ctx context.Context, log logr.Logger, client opens
 	rulesToAdd, rulesToDelete := rulesSymmetricDifference(wantedRules, currentRules)
 
 	for _, rule := range rulesToAdd {
-		if err := createSecurityGroupRuleIfNotExist(ctx, log, client, rule); err != nil {
+		opts.Logr.Info("Creating security group rule", "rule", rule.Description)
+		if err := createSecurityGroupRuleIfNotExist(ctx, opts.Logr, client, rule); err != nil {
 			return fmt.Errorf("failed to add security group rule %s: %w", rule.Description, err)
 		}
 	}
@@ -433,7 +434,7 @@ func ensureSecurityGroupRules(ctx context.Context, log logr.Logger, client opens
 			}
 			return fmt.Errorf("failed to delete security group rule %s (%s): %w", rule.Description, rule.ID, err)
 		}
-		log.Info("Unwanted security group rule deleted", "rule", rule.Description, "ruleID", rule.ID)
+		opts.Logr.Info("Unwanted security group rule deleted", "rule", rule.Description, "ruleID", rule.ID)
 	}
 
 	return nil
@@ -512,6 +513,7 @@ func ruleEqual(a rules.CreateOpts, b rules.SecGroupRule) bool {
 func createSecurityGroupRuleIfNotExist(ctx context.Context, log logr.Logger, client openstackclient.Networking, createOpts rules.CreateOpts) error {
 	if _, err := createRules(ctx, client, createOpts); err != nil {
 		if gophercloud.ResponseCodeIs(err, http.StatusConflict) {
+			log.Info("Security Group Rule already exists", "rule", createOpts.Description)
 			return nil
 		}
 		return fmt.Errorf("failed to create Security Group rule %s: %w", createOpts.Description, err)
@@ -520,38 +522,67 @@ func createSecurityGroupRuleIfNotExist(ctx context.Context, log logr.Logger, cli
 	return nil
 }
 
-func ensureSecurityGroup(ctx context.Context, log logr.Logger, client openstackclient.Networking, opt *Options) (groups.SecGroup, error) {
-	securityGroups, err := getSecurityGroups(ctx, client, opt.SecurityGroup)
+func ensureSecurityGroup(ctx context.Context, client openstackclient.Networking, opts Options) (groups.SecGroup, error) {
+	opts.Logr.Info("Ensuring security group for bastion", "name", opts.SecurityGroup)
+
+	securityGroups, err := getSecurityGroups(ctx, client, opts.SecurityGroup)
 	if err != nil {
 		return groups.SecGroup{}, err
 	}
 
-	if len(securityGroups) != 0 {
+	if len(securityGroups) > 1 {
+		return groups.SecGroup{}, fmt.Errorf("found more than one security group with name %s", opts.SecurityGroup)
+	}
+
+	if len(securityGroups) == 1 {
+		opts.Logr.Info("Security Group already exists", "name", securityGroups[0].Name, "id", securityGroups[0].ID)
 		return securityGroups[0], nil
 	}
 
+	opts.Logr.Info("Creating new security group", "security group", opts.SecurityGroup)
 	result, err := createSecurityGroup(ctx, client, groups.CreateOpts{
-		Name:        opt.SecurityGroup,
-		Description: opt.SecurityGroup,
+		Name:        opts.SecurityGroup,
+		Description: opts.SecurityGroup,
 	})
 	if err != nil {
 		return groups.SecGroup{}, err
 	}
+	opts.Logr.Info("Security Group created", "security group", result.Name)
 
-	log.Info("Security Group created", "security group", result.Name)
 	return *result, nil
 }
 
-func ensureShootWorkerSecurityGroupRules(ctx context.Context, log logr.Logger, client openstackclient.Networking, opt *Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
+func ensureShootWorkerSecurityGroupRules(ctx context.Context, client openstackclient.Networking, opts Options, infraStatus *openstackapi.InfrastructureStatus, secGroupID string) error {
 	if len(infraStatus.SecurityGroups) == 0 {
 		return errors.New("shoot security groups not found")
 	}
 
-	allowSSHRule := IngressAllowSSH(opt, rules.EtherType4, infraStatus.SecurityGroups[0].ID, "", secGroupID)
-	if err := createSecurityGroupRuleIfNotExist(ctx, log, client, allowSSHRule); err != nil {
+	allowSSHRule := IngressAllowSSH(opts, rules.EtherType4, infraStatus.SecurityGroups[0].ID, "", secGroupID)
+	if err := createSecurityGroupRuleIfNotExist(ctx, opts.Logr, client, allowSSHRule); err != nil {
 		return fmt.Errorf("failed to add shoot worker security group rule for %s: %w", allowSSHRule.Description, err)
 	}
 	return nil
+}
+
+func ensureEndpoints(instance servers.Server, opts Options) (bastionEndpoints, error) {
+	// check if the instance already exists and has an IP
+	endpoints, err := getInstanceEndpoints(instance, opts)
+	if err != nil {
+		return bastionEndpoints{}, err
+	}
+
+	if !endpoints.ready() {
+		return bastionEndpoints{}, &ctrlerror.RequeueAfterError{
+			// requeue rather soon, so that the user (most likely gardenctl eventually)
+			// doesn't have to wait too long for the public endpoint to become available
+			RequeueAfter: 5 * time.Second,
+			Cause:        errors.New("bastion instance has no public/private endpoints yet"),
+		}
+	}
+
+	opts.Logr.Info("bastion endpoints ready")
+
+	return endpoints, nil
 }
 
 func getInfrastructureStatus(ctx context.Context, c client.Client, cluster *controller.Cluster) (*openstackapi.InfrastructureStatus, error) {

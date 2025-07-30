@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -36,6 +37,7 @@ func TestBastion(t *testing.T) {
 
 var _ = Describe("Bastion", func() {
 	var (
+		log            = logf.Log.WithName("bastion-test")
 		cluster        *extensions.Cluster
 		bastion        *extensionsv1alpha1.Bastion
 		providerImages []openstack.MachineImages
@@ -51,7 +53,7 @@ var _ = Describe("Bastion", func() {
 
 	Describe("DetermineOptions", func() {
 		It("should return options", func() {
-			options, err := DetermineOptions(bastion, cluster)
+			options, err := NewOpts(bastion, cluster, log)
 			Expect(err).To(Not(HaveOccurred()))
 
 			Expect(options.ShootName).To(Equal("cluster1"))

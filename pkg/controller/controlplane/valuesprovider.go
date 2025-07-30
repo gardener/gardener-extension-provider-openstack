@@ -374,7 +374,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
-	secretsReader secretsmanager.Reader,
+	_ secretsmanager.Reader,
 	_ map[string]string,
 ) (map[string]interface{}, error) {
 	// Decode providerConfig
@@ -389,7 +389,7 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	if err != nil {
 		return nil, err
 	}
-	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster, secretsReader)
+	return vp.getControlPlaneShootChartValues(ctx, cpConfig, cp, cloudProfileConfig, cluster)
 }
 
 // GetStorageClassesChartValues returns the values for the shoot storageclasses chart applied by the generic actuator.
@@ -691,11 +691,10 @@ func getCCMChartValues(
 	}
 
 	values := map[string]interface{}{
-		"enabled":           true,
-		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-		"clusterName":       cp.Namespace,
-		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"podNetwork":        strings.Join(extensionscontroller.GetPodNetwork(cluster), ","),
+		"enabled":     true,
+		"replicas":    extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+		"clusterName": cp.Namespace,
+		"podNetwork":  strings.Join(extensionscontroller.GetPodNetwork(cluster), ","),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
 			"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
@@ -729,9 +728,8 @@ func getCSIControllerChartValues(
 	scaledDown bool,
 ) map[string]interface{} {
 	values := map[string]interface{}{
-		"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
-		"enabled":           true,
-		"replicas":          extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+		"enabled":  true,
+		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 		},
@@ -784,7 +782,6 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 	cp *extensionsv1alpha1.ControlPlane,
 	cloudProfileConfig *api.CloudProfileConfig,
 	cluster *extensionscontroller.Cluster,
-	_ secretsmanager.Reader,
 ) (
 	map[string]interface{},
 	error,

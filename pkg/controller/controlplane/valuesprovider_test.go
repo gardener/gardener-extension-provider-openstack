@@ -529,10 +529,9 @@ var _ = Describe("ValuesProvider", func() {
 
 	Describe("#GetControlPlaneChartValues", func() {
 		ccmChartValues := utils.MergeMaps(enabledTrue, map[string]interface{}{
-			"replicas":          1,
-			"kubernetesVersion": "1.29.0",
-			"clusterName":       namespace,
-			"podNetwork":        cidr,
+			"replicas":    1,
+			"clusterName": namespace,
+			"podNetwork":  cidr,
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-" + v1beta1constants.SecretNameCloudProvider: checksums[v1beta1constants.SecretNameCloudProvider],
 				"checksum/secret-" + openstack.CloudProviderConfigName:        checksums[openstack.CloudProviderConfigName],
@@ -583,13 +582,11 @@ var _ = Describe("ValuesProvider", func() {
 					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
 				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
-					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"replicas":          1,
-					"maxEntries":        1000,
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"replicas":   1,
+					"maxEntries": 1000,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},
@@ -614,12 +611,10 @@ var _ = Describe("ValuesProvider", func() {
 					"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecretName,
 				},
 				openstack.CloudControllerManagerName: utils.MergeMaps(ccmChartValues, map[string]interface{}{
-					"userAgentHeaders":  []string{domainName, tenantName, technicalID},
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"userAgentHeaders": []string{domainName, tenantName, technicalID},
 				}),
 				openstack.CSIControllerName: utils.MergeMaps(enabledTrue, map[string]interface{}{
-					"replicas":          1,
-					"kubernetesVersion": cluster.Shoot.Spec.Kubernetes.Version,
+					"replicas": 1,
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-" + openstack.CloudProviderCSIDiskConfigName: checksums[openstack.CloudProviderCSIDiskConfigName],
 					},

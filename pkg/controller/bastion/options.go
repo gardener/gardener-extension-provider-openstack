@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	corev1 "k8s.io/api/core/v1"
 
@@ -26,30 +27,35 @@ const (
 	maxLengthForBaseName = 33
 )
 
+// BaseOptions contain the information needed for deleting a Bastion on Azure.
+type BaseOptions struct {
+	BastionInstanceName string
+	SecurityGroup       string
+	SecretReference     corev1.SecretReference
+	Logr                logr.Logger
+}
+
 // Options contains provider-related information required for setting up
 // a bastion instance. This struct combines precomputed values like the
 // bastion instance name with the IDs of pre-existing cloud provider
-// resources, like the nic name, subnet name etc.
+// resources, like the VPC ID, subnet ID etc.
 type Options struct {
-	BastionInstanceName string
-	Region              string
-	ShootName           string
-	SecretReference     corev1.SecretReference
-	SecurityGroup       string
-	UserData            []byte
-	imageID             string
-	machineType         string
+	Region      string
+	ShootName   string
+	ImageID     string
+	MachineType string
+	UserData    []byte
+	// needed for creation and deletion
+	BaseOptions
 }
 
-// DetermineOptions determines the required information that are required to reconcile a Bastion on Openstack. This
-// function does not create any IaaS resources.
-func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster) (*Options, error) {
+// NewBaseOpts determines base opts that are required for creating and deleting a Bastion.
+func NewBaseOpts(bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster, log logr.Logger) (BaseOptions, error) {
 	clusterName := cluster.ObjectMeta.Name
-	region := cluster.Shoot.Spec.Region
 
 	baseResourceName, err := generateBastionBaseResourceName(clusterName, bastion.Name)
 	if err != nil {
-		return nil, err
+		return BaseOptions{}, err
 	}
 
 	secretReference := corev1.SecretReference{
@@ -57,35 +63,51 @@ func DetermineOptions(bastion *extensionsv1alpha1.Bastion, cluster *controller.C
 		Name:      v1beta1constants.SecretNameCloudProvider,
 	}
 
+	return BaseOptions{
+		BastionInstanceName: baseResourceName,
+		SecretReference:     secretReference,
+		SecurityGroup:       securityGroupName(baseResourceName),
+		Logr:                log,
+	}, nil
+}
+
+// NewOpts determines the information that is required to reconcile a Bastion.
+func NewOpts(bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster, log logr.Logger) (Options, error) {
+	baseOpts, err := NewBaseOpts(bastion, cluster, log)
+	if err != nil {
+		return Options{}, err
+	}
+
+	clusterName := cluster.ObjectMeta.Name
+	region := cluster.Shoot.Spec.Region
+
 	machineSpec, err := extensionsbastion.GetMachineSpecFromCloudProfile(cluster.CloudProfile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine VM details for bastion host: %w", err)
+		return Options{}, fmt.Errorf("failed to determine VM details for bastion host: %w", err)
 	}
 
 	cloudProfileConfig, err := helper.CloudProfileConfigFromCluster(cluster)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract cloud provider config from cluster: %w", err)
+		return Options{}, fmt.Errorf("failed to extract cloud provider config from cluster: %w", err)
 	}
 
 	machineImage, err := getProviderSpecificImage(cloudProfileConfig.MachineImages, machineSpec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract image from provider config: %w", err)
+		return Options{}, fmt.Errorf("failed to extract image from provider config: %w", err)
 	}
 
 	imageId, err := findImageIdByRegion(machineImage, machineSpec.ImageBaseName, region)
 	if err != nil {
-		return nil, err
+		return Options{}, err
 	}
 
-	return &Options{
-		ShootName:           clusterName,
-		BastionInstanceName: baseResourceName,
-		SecretReference:     secretReference,
-		SecurityGroup:       securityGroupName(baseResourceName),
-		Region:              region,
-		UserData:            bastion.Spec.UserData,
-		imageID:             imageId,
-		machineType:         machineSpec.MachineTypeName,
+	return Options{
+		ShootName:   clusterName,
+		Region:      region,
+		UserData:    bastion.Spec.UserData,
+		ImageID:     imageId,
+		MachineType: machineSpec.MachineTypeName,
+		BaseOptions: baseOpts,
 	}, nil
 }
 

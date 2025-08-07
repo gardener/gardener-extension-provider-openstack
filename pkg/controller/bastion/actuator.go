@@ -16,6 +16,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -45,21 +46,33 @@ func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.Fac
 	}
 }
 
-func getBastionInstance(ctx context.Context, client openstackclient.Compute, name string) ([]servers.Server, error) {
+func findBastionInstances(ctx context.Context, client openstackclient.Compute, name string) ([]servers.Server, error) {
 	return client.FindServersByName(ctx, name)
 }
 
-func createBastionInstance(ctx context.Context, client openstackclient.Compute, parameters servers.CreateOpts) (*servers.Server, error) {
-	return client.CreateServer(ctx, parameters)
+func getBastionInstance(ctx context.Context, client openstackclient.Compute, name string) (servers.Server, error) {
+	instances, err := findBastionInstances(ctx, client, name)
+	if err != nil {
+		return servers.Server{}, fmt.Errorf("failed to get bastion instance: %w", err)
+	}
+	if len(instances) != 1 {
+		return servers.Server{}, fmt.Errorf("expected exactly one bastion instance, got %d", len(instances))
+	}
+	return instances[0], nil
+}
+
+func createBastionInstance(ctx context.Context, client openstackclient.Compute, parameters servers.CreateOpts) (servers.Server, error) {
+	server, err := client.CreateServer(ctx, parameters)
+	return ptr.Deref(server, servers.Server{}), err
 }
 
 func deleteBastionInstance(ctx context.Context, client openstackclient.Compute, id string) error {
 	return client.DeleteServer(ctx, id)
 }
 
-// GetIPs return privateip, publicip
-func GetIPs(s *servers.Server, opt *Options) (string, string, error) {
-	var privateIP, publicIp string
+// GetIPs returns the first found private and public IPs for the given server and options.
+func GetIPs(s servers.Server, opts Options) (string, string, error) {
+	var privateIP, publicIP string
 
 	type InstanceNic struct {
 		MacAddr string `json:"OS-EXT-IPS-MAC:mac_addr"`
@@ -68,13 +81,13 @@ func GetIPs(s *servers.Server, opt *Options) (string, string, error) {
 		Type    string `json:"OS-EXT-IPS:type"`
 	}
 
-	instanceNic := []InstanceNic{}
+	var instanceNic []InstanceNic
 
-	if len(s.Addresses) == 0 {
-		return "", "", fmt.Errorf("NIC not ready yet")
+	addresses, ok := s.Addresses[opts.ShootName]
+	if !ok {
+		return "", "", fmt.Errorf("network %q not found in server addresses", opts.ShootName)
 	}
-
-	bytes, err := json.Marshal(s.Addresses[opt.ShootName])
+	bytes, err := json.Marshal(addresses)
 	if err != nil {
 		return "", "", err
 	}
@@ -83,26 +96,39 @@ func GetIPs(s *servers.Server, opt *Options) (string, string, error) {
 		return "", "", err
 	}
 
-	for i, v := range instanceNic {
-		if v.Type == "fixed" {
-			privateIP = instanceNic[i].Addr
-		} else {
-			publicIp = instanceNic[i].Addr
+	for _, v := range instanceNic {
+		switch v.Type {
+		case "fixed":
+			if privateIP == "" {
+				privateIP = v.Addr
+			}
+		case "floating":
+			if publicIP == "" {
+				publicIP = v.Addr
+			}
 		}
 	}
 
-	return privateIP, publicIp, nil
+	if privateIP == "" {
+		return "", "", fmt.Errorf("no private IP found")
+	}
+	if publicIP == "" {
+		return "", "", fmt.Errorf("no public IP found")
+	}
+
+	return privateIP, publicIP, nil
 }
 
-func createFloatingIP(ctx context.Context, client openstackclient.Networking, parameters floatingips.CreateOpts) (*floatingips.FloatingIP, error) {
-	return client.CreateFloatingIP(ctx, parameters)
+func createFloatingIP(ctx context.Context, client openstackclient.Networking, parameters floatingips.CreateOpts) (floatingips.FloatingIP, error) {
+	fip, err := client.CreateFloatingIP(ctx, parameters)
+	return ptr.Deref(fip, floatingips.FloatingIP{}), err
 }
 
 func deleteFloatingIP(ctx context.Context, client openstackclient.Networking, id string) error {
 	return client.DeleteFloatingIP(ctx, id)
 }
 
-func getFipByName(ctx context.Context, client openstackclient.Networking, name string) ([]floatingips.FloatingIP, error) {
+func findFipByName(ctx context.Context, client openstackclient.Networking, name string) ([]floatingips.FloatingIP, error) {
 	return client.GetFipByName(ctx, name)
 }
 

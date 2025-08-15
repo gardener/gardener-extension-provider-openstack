@@ -9,5 +9,5 @@ runs:
     - name: make-generate
       shell: bash
       run: |
-        set -eu
+        set -euo pipefail
         make generate

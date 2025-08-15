@@ -124,7 +124,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: run-verify
         run: |
-          set -eu
+          set -euo pipefail
           .ci/verify
           # verify calls `make sast-report`, which generates `gosec-report.sarif`
           mkdir /tmp/blobs.d

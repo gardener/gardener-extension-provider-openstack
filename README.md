@@ -1,5 +1,7 @@
 # [Gardener Extension for OpenStack provider](https://gardener.cloud)
 
+DUMMY
+
 [![REUSE status](https://api.reuse.software/badge/github.com/gardener/gardener-extension-provider-openstack)](https://api.reuse.software/info/github.com/gardener/gardener-extension-provider-openstack)
 [![CI Build status](https://concourse.ci.gardener.cloud/api/v1/teams/gardener/pipelines/gardener-extension-provider-openstack-master/jobs/master-head-update-job/badge)](https://concourse.ci.gardener.cloud/teams/gardener/pipelines/gardener-extension-provider-openstack-master/jobs/master-head-update-job)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener-extension-provider-openstack)](https://goreportcard.com/report/github.com/gardener/gardener-extension-provider-openstack)

@@ -138,8 +138,16 @@ If you don't want to configure anything for the `cloudControllerManager` simply 
 
 The optional `storage.csiManila.enabled` field is used to enable the deployment of the CSI Manila driver to support NFS persistent volumes.
 In this case, please ensure to set `networks.shareNetwork.enabled=true` in the `InfrastructureConfig`, too.
-Additionally, if CSI Manila driver is enabled, for each availability zone a NFS `StorageClass` will be created on the shoot 
-named like `csi-manila-nfs-<zone>`.
+Additionally, if CSI Manila driver is enabled, several StorageClasses are deployed:
+- `csi-manila-nfs`: 
+  - Useful if you don’t care about which AZ the volume lands in, e.g. small clusters or test workloads.
+  - This StorageClass is not tied to a specific availability zone.
+- `csi-manila-nfs-auto`:
+  - `autoTopology: "true"` -> Driver automatically decides AZ.
+  - Similar to `csi-manila-nfs`, but the CSI driver automatically chooses the best availability zone based on where the pod is scheduled.
+- `csi-manila-nfs-<zone>`:
+  - `availability: <zone>` -> Each AZ gets its own StorageClass.
+  - Useful for workloads that should live in a specific AZ for performance, latency, or regulatory reasons.
 
 ## `WorkerConfig`
 

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- base
+
+patches:
+- patch: |
+    - op: add
+      path: /metadata/annotations/security.gardener.cloud~1pod-security-enforce
+      value: baseline
+  target:
+    kind: Extension
+    name: provider-openstack
+- patch: |
+    - op: replace
+      path: /spec/resources/4/type
+      value: openstack-designate
+  target:
+    kind: Extension
+    name: provider-openstack

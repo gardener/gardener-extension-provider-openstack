@@ -1,0 +1,35 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-openstack
+spec:
+  deployment:
+    admission:
+      runtimeCluster:
+        helm:
+          ociRepository:
+            ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/admission-openstack-runtime:v1.49.0-dev
+      virtualCluster:
+        helm:
+          ociRepository:
+            ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/admission-openstack-application:v1.49.0-dev
+    extension:
+      helm:
+        ociRepository:
+          ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/provider-openstack:v1.49.0-dev
+      injectGardenKubeconfig: true
+  resources:
+  - kind: BackupBucket
+    type: openstack
+  - kind: BackupEntry
+    type: openstack
+  - kind: Bastion
+    type: openstack
+  - kind: ControlPlane
+    type: openstack
+  - kind: DNSRecord
+    type: openstack
+  - kind: Infrastructure
+    type: openstack
+  - kind: Worker
+    type: openstack

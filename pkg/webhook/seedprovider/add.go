@@ -24,7 +24,8 @@ var (
 // AddOptions are options to apply when adding the Openstack seedprovider webhook to the manager.
 type AddOptions struct {
 	// ETCDStorage is the etcd storage configuration.
-	ETCDStorage config.ETCDStorage
+	ETCDStorage       config.ETCDStorage
+	ETCDEventsStorage config.ETCDStorage
 }
 
 var logger = log.Log.WithName("openstack-seedprovider-webhook")
@@ -38,7 +39,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		Types: []extensionswebhook.Type{
 			{Obj: &druidcorev1alpha1.Etcd{}},
 		},
-		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(&opts.ETCDStorage, logger), nil, nil, nil, logger),
+		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(&opts.ETCDStorage, &opts.ETCDEventsStorage, logger), nil, nil, nil, logger),
 	})
 }
 

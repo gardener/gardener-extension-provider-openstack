@@ -1,9 +1,16 @@
 name: Build
 on:
   push:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
   pull_request_target:
     types:
       - labeled
+  merge_group:
 
 jobs:
   build:

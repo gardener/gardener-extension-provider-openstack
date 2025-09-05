@@ -5,6 +5,7 @@
 package helper_test
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
@@ -290,6 +291,20 @@ var _ = Describe("Helper", func() {
 		Entry("return fip even if there is a non-constraing fip with better score", []api.FloatingPool{{Name: "fip-*", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: ptr.To(true)}}, "fip-1", regionName, nil, ptr.To("fip-*")),
 		Entry("return non-constraing fip as there is no other matching fip", []api.FloatingPool{{Name: "nofip-1", Region: &regionName}, {Name: "fip-1", Region: &regionName, NonConstraining: ptr.To(true)}}, "fip-1", regionName, nil, ptr.To("fip-1")),
 	)
+
+	Describe("#ErrorCodes", func() {
+		Context("dependenciesRegexp", func() {
+			It("should match original network deletion error", func() {
+				errorMsg := "Unable to complete operation on network 1bf12f9b-5re4-56e1-b240-687c8fa05b0c. There are one or more ports still in use on the network, id for these ports is: 9e46c0a8-6098-49b0-ab4d-y6d07c340f23."
+				Expect(KnownCodes[gardencorev1beta1.ErrorInfraDependencies](errorMsg)).To(BeTrue())
+			})
+
+			It("should not match unrelated error", func() {
+				msg := "Some other error message"
+				Expect(KnownCodes[gardencorev1beta1.ErrorInfraDependencies](msg)).To(BeFalse())
+			})
+		})
+	})
 })
 
 func expectResults(result, expected interface{}, err error, expectErr bool) {

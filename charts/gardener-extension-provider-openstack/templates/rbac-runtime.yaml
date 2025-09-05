@@ -21,18 +21,6 @@ rules:
     - patch
     - update
   - apiGroups:
-    - resources.gardener.cloud
-    resources:
-    - managedresources
-    verbs:
-    - create
-    - get
-    - list
-    - watch
-    - patch
-    - update
-    - delete
-  - apiGroups:
     - coordination.k8s.io
     resources:
     - leases
@@ -55,16 +43,13 @@ rules:
     - ""
     resources:
     - secrets
-    - events
     verbs:
     - create
     - get
     - list
     - watch
     - patch
-    - update
     - delete
-    - deletecollection
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

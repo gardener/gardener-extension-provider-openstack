@@ -56,7 +56,7 @@ is_systemd_resolved_system()
 }
 
 if ! grep -Eq "^nameserver\s+" /run/systemd/resolve/resolv.conf; then
-  exit 10
+  exit 78
 fi
 
 rm -f "$tmp"
@@ -354,7 +354,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=oneshot
 ExecStart=/opt/bin/update-resolv-conf.sh
-RestartForceExitStatus=10
+RestartForceExitStatus=78
 RestartSec=15
 `
 

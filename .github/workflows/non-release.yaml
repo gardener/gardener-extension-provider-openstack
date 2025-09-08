@@ -11,6 +11,7 @@ on:
     types:
       - labeled
   merge_group:
+  workflow_dispatch:
 
 jobs:
   build:

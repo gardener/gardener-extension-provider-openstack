@@ -14,22 +14,16 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // NewShootMutator returns a new instance of a shoot mutator.
-func NewShootMutator(mgr manager.Manager) extensionswebhook.Mutator {
-	return &shoot{
-		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
-	}
+func NewShootMutator() extensionswebhook.Mutator {
+	return &shoot{}
 }
 
-type shoot struct {
-	decoder runtime.Decoder
-}
+type shoot struct{}
 
 const (
 	overlayKey         = "overlay"

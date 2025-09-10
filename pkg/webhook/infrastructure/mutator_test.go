@@ -62,7 +62,7 @@ var _ = Describe("Mutate", func() {
 		)
 
 		BeforeEach(func() {
-			mutator = New(mgr, logger)
+			mutator = New(mgr)
 			ctx = context.TODO()
 
 			c.EXPECT().Get(ctx, client.ObjectKey{Name: shootNamespace}, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).

@@ -72,7 +72,7 @@ var _ = Describe("Machines", func() {
 
 	Context("workerDelegate", func() {
 		BeforeEach(func() {
-			workerDelegate, _ = NewWorkerDelegate(nil, scheme, nil, "", nil, nil, nil)
+			workerDelegate, _ = NewWorkerDelegate(nil, scheme, nil, nil, nil, nil)
 		})
 
 		Describe("#TestLabelNormalization", func() {
@@ -426,7 +426,7 @@ var _ = Describe("Machines", func() {
 				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
 				workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
 
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, clusterWithoutImages, nil)
 			})
 
 			expectedUserDataSecretRefRead := func() {
@@ -691,7 +691,7 @@ var _ = Describe("Machines", func() {
 
 				It("should return the expected machine deployments for profile image types", func() {
 					setup(region, machineImage, "", archAMD)
-					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 					// Test workerDelegate.DeployMachineClasses()
 					expectedUserDataSecretRefRead()
@@ -748,7 +748,7 @@ var _ = Describe("Machines", func() {
 
 				It("should return the expected machine deployments for profile image types with id", func() {
 					setup(regionWithImages, "", machineImageID, archARM)
-					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithRegion, clusterWithRegion, nil)
+					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
 
 					// Test workerDelegate.DeployMachineClasses()
@@ -877,7 +877,7 @@ var _ = Describe("Machines", func() {
 							},
 						}
 
-						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithServerGroup, cluster, nil)
+						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithServerGroup, cluster, nil)
 
 						// Test workerDelegate.DeployMachineClasses()
 						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, []string{serverGroupID1}, nil)
@@ -974,7 +974,7 @@ var _ = Describe("Machines", func() {
 							},
 						}
 
-						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", workerWithServerGroup, cluster, nil)
+						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithServerGroup, cluster, nil)
 						err := workerDelegate.DeployMachineClasses(ctx)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal(`server group is required for pool "pool-1", but no server group dependency found`))
@@ -1015,7 +1015,7 @@ var _ = Describe("Machines", func() {
 							w.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
 								Raw: encode(workerConfig),
 							}
-							workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+							workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 							expectedUserDataSecretRefRead()
 
@@ -1097,7 +1097,7 @@ var _ = Describe("Machines", func() {
 
 			It("should fail because the version is invalid", func() {
 				clusterWithoutImages.Shoot.Spec.Kubernetes.Version = "invalid"
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
@@ -1107,7 +1107,7 @@ var _ = Describe("Machines", func() {
 			It("should fail because the infrastructure status cannot be decoded", func() {
 				w.Spec.InfrastructureProviderStatus = &runtime.RawExtension{}
 
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
@@ -1119,7 +1119,7 @@ var _ = Describe("Machines", func() {
 					Raw: encode(&api.InfrastructureStatus{}),
 				}
 
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
@@ -1129,7 +1129,7 @@ var _ = Describe("Machines", func() {
 			It("should fail because the machine image for this cloud profile cannot be found", func() {
 				clusterWithoutImages.CloudProfile.Name = "another-cloud-profile"
 
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, clusterWithoutImages, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, clusterWithoutImages, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
@@ -1150,7 +1150,7 @@ var _ = Describe("Machines", func() {
 					NodeConditions:         testNodeConditions,
 				}
 
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 				expectedUserDataSecretRefRead()
 
@@ -1175,7 +1175,7 @@ var _ = Describe("Machines", func() {
 					ScaleDownUtilizationThreshold:    ptr.To("0.5"),
 				}
 				w.Spec.Pools[1].ClusterAutoscaler = nil
-				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, "", w, cluster, nil)
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 				expectedUserDataSecretRefRead()
 

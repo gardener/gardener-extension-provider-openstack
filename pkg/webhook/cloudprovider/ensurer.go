@@ -10,7 +10,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -22,15 +21,13 @@ import (
 )
 
 // NewEnsurer creates cloudprovider ensurer.
-func NewEnsurer(mgr manager.Manager, logger logr.Logger) cloudprovider.Ensurer {
+func NewEnsurer(mgr manager.Manager) cloudprovider.Ensurer {
 	return &ensurer{
 		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
-		logger:  logger,
 	}
 }
 
 type ensurer struct {
-	logger  logr.Logger
 	decoder runtime.Decoder
 }
 

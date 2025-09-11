@@ -10,6 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
+var (
+	secretGVK = corev1.SchemeGroupVersion.WithKind("Secret")
+
+	allowedGVKs = sets.New(secretGVK)
+	validGVKs   = []string{secretGVK.String()}
+)
+
 // ValidateBackupBucketCredentialsRef validates credentialsRef is set to supported kind of credentials.
 func ValidateBackupBucketCredentialsRef(credentialsRef *corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -17,13 +24,6 @@ func ValidateBackupBucketCredentialsRef(credentialsRef *corev1.ObjectReference, 
 	if credentialsRef == nil {
 		return append(allErrs, field.Required(fldPath, "must be set"))
 	}
-
-	var (
-		secretGVK = corev1.SchemeGroupVersion.WithKind("Secret")
-
-		allowedGVKs = sets.New(secretGVK)
-		validGVKs   = []string{secretGVK.String()}
-	)
 
 	if !allowedGVKs.Has(credentialsRef.GroupVersionKind()) {
 		allErrs = append(allErrs, field.NotSupported(fldPath, credentialsRef.String(), validGVKs))

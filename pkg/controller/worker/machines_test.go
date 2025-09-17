@@ -368,7 +368,7 @@ var _ = Describe("Machines", func() {
 								Name:           namePool2,
 								Minimum:        minPool2,
 								Maximum:        maxPool2,
-								Priority:       ptr.To(priorityPool2),
+								Priority:       priorityPool2,
 								MaxSurge:       maxSurgePool2,
 								Architecture:   &archAMD,
 								MaxUnavailable: maxUnavailablePool2,
@@ -395,7 +395,7 @@ var _ = Describe("Machines", func() {
 								Name:           namePool3,
 								Minimum:        minPool2,
 								Maximum:        maxPool2,
-								Priority:       ptr.To(priorityPool2),
+								Priority:       priorityPool2,
 								MaxSurge:       maxSurgePool2,
 								Architecture:   &archAMD,
 								MaxUnavailable: maxUnavailablePool2,
@@ -604,7 +604,7 @@ var _ = Describe("Machines", func() {
 							SecretName: machineClassWithHashPool2Zone1,
 							Minimum:    worker.DistributeOverZones(0, minPool2, 2),
 							Maximum:    worker.DistributeOverZones(0, maxPool2, 2),
-							Priority:   ptr.To(priorityPool2),
+							Priority:   priorityPool2,
 							PoolName:   namePool2,
 							Strategy: machinev1alpha1.MachineDeploymentStrategy{
 								Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
@@ -626,7 +626,7 @@ var _ = Describe("Machines", func() {
 							SecretName: machineClassWithHashPool2Zone2,
 							Minimum:    worker.DistributeOverZones(1, minPool2, 2),
 							Maximum:    worker.DistributeOverZones(1, maxPool2, 2),
-							Priority:   ptr.To(priorityPool2),
+							Priority:   priorityPool2,
 							PoolName:   namePool2,
 							Strategy: machinev1alpha1.MachineDeploymentStrategy{
 								Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
@@ -648,7 +648,7 @@ var _ = Describe("Machines", func() {
 							SecretName: machineClassWithHashPool3Zone1,
 							Minimum:    worker.DistributeOverZones(0, minPool2, 2),
 							Maximum:    worker.DistributeOverZones(0, maxPool2, 2),
-							Priority:   ptr.To(priorityPool2),
+							Priority:   priorityPool2,
 							PoolName:   namePool3,
 							Strategy: machinev1alpha1.MachineDeploymentStrategy{
 								Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
@@ -670,7 +670,7 @@ var _ = Describe("Machines", func() {
 							SecretName: machineClassWithHashPool3Zone2,
 							Minimum:    worker.DistributeOverZones(1, minPool2, 2),
 							Maximum:    worker.DistributeOverZones(1, maxPool2, 2),
-							Priority:   ptr.To(priorityPool2),
+							Priority:   priorityPool2,
 							PoolName:   namePool3,
 							Strategy: machinev1alpha1.MachineDeploymentStrategy{
 								Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,

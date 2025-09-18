@@ -95,8 +95,9 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
 			Expect(errorList).To(ConsistOfFields(Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("floatingPoolSubnetName"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("router"),
+				"Detail": Equal("router cannot be set when a floating subnet name is provided"),
 			}))
 		})
 	})

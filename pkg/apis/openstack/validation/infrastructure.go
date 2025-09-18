@@ -64,7 +64,7 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		allErrs = append(allErrs, validateResourceName(*infra.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)
 
 		if infra.Networks.Router != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("floatingPoolSubnetName"), *infra.FloatingPoolSubnetName, "router id must be empty when a floating subnet name is provided"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("router"), "router cannot be set when a floating subnet name is provided"))
 		}
 	}
 

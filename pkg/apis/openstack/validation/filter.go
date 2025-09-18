@@ -44,7 +44,7 @@ func regex(regex string) validateFunc[string] {
 			return allErrs
 		}
 		if !compiled.MatchString(name) {
-			allErrs = append(allErrs, field.Invalid(fld, name, fmt.Sprintf("does not match expected regex %s", compiled.String())))
+			allErrs = append(allErrs, field.Invalid(fld, name, fmt.Sprintf("does not match expected regex %q", compiled.String())))
 		}
 		return allErrs
 	}
@@ -52,7 +52,7 @@ func regex(regex string) validateFunc[string] {
 
 func notEmpty(name string, fld *field.Path) field.ErrorList {
 	if utf8.RuneCountInString(name) == 0 {
-		return field.ErrorList{field.Required(fld, name)}
+		return field.ErrorList{field.Required(fld, "cannot be empty")}
 	}
 	return nil
 }

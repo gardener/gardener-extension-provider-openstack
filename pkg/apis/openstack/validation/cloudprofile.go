@@ -269,6 +269,20 @@ func validateLoadBalancerClass(lbClass api.LoadBalancerClass, fldPath *field.Pat
 	if lbClass.Purpose != nil && *lbClass.Purpose != api.DefaultLoadBalancerClass && *lbClass.Purpose != api.PrivateLoadBalancerClass && *lbClass.Purpose != api.VPNLoadBalancerClass {
 		allErrs = append(allErrs, field.Invalid(fldPath, *lbClass.Purpose, fmt.Sprintf("invalid LoadBalancerClass purpose. Valid values are %q or %q", api.DefaultLoadBalancerClass, api.PrivateLoadBalancerClass)))
 	}
+	if lbClass.FloatingNetworkID != nil {
+		allErrs = append(allErrs, uuid(*lbClass.FloatingNetworkID, fldPath.Child("floatingNetworkID"))...)
+	}
+	if lbClass.FloatingSubnetID != nil {
+		allErrs = append(allErrs, uuid(*lbClass.FloatingSubnetID, fldPath.Child("floatingSubnetID"))...)
+	}
+
+	allErrs = append(allErrs, validateResourceName(lbClass.Name, fldPath.Child("name"))...)
+	if lbClass.FloatingSubnetName != nil {
+		allErrs = append(allErrs, validateResourceName(*lbClass.FloatingSubnetName, fldPath.Child("floatingSubnetName"))...)
+	}
+	if lbClass.FloatingSubnetTags != nil {
+		allErrs = append(allErrs, validateResourceName(*lbClass.FloatingSubnetTags, fldPath.Child("floatingSubnetTags"))...)
+	}
 
 	if lbClass.FloatingSubnetID != nil && lbClass.FloatingSubnetName != nil && lbClass.FloatingSubnetTags != nil {
 		return append(allErrs, field.Forbidden(fldPath, "cannot select floating subnet by id, name and tags in parallel"))

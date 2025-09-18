@@ -9,7 +9,6 @@ import (
 	"sort"
 
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	"github.com/google/uuid"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -21,10 +20,7 @@ import (
 // ValidateInfrastructureConfig validates a InfrastructureConfig object.
 func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	if len(infra.FloatingPoolName) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("floatingPoolName"), "must provide the name of a floating pool"))
-	}
+	allErrs = append(allErrs, validateResourceName(infra.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 
 	networkingPath := field.NewPath("networking")
 	var nodes cidrvalidation.CIDR
@@ -54,17 +50,22 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 	}
 
 	if infra.Networks.ID != nil {
-		if _, err := uuid.Parse(*infra.Networks.ID); err != nil {
-			allErrs = append(allErrs, field.Invalid(networksPath.Child("id"), infra.Networks.ID, "if network ID is provided it must be a valid OpenStack UUID"))
+		allErrs = append(allErrs, uuid(*infra.Networks.ID, networksPath.Child("id"))...)
+	}
+	if infra.Networks.Router != nil {
+		if infra.Networks.Router.ID == "" {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("router", "id"), infra.Networks.Router.ID, "router id must not be empty when router key is provided"))
+		} else {
+			allErrs = append(allErrs, uuid(infra.Networks.Router.ID, networksPath.Child("router").Child("id"))...)
 		}
 	}
 
-	if infra.Networks.Router != nil && len(infra.Networks.Router.ID) == 0 {
-		allErrs = append(allErrs, field.Invalid(networksPath.Child("router", "id"), infra.Networks.Router.ID, "router id must not be empty when router key is provided"))
-	}
+	if infra.FloatingPoolSubnetName != nil {
+		allErrs = append(allErrs, validateResourceName(*infra.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)
 
-	if infra.FloatingPoolSubnetName != nil && infra.Networks.Router != nil && len(infra.Networks.Router.ID) > 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("floatingPoolSubnetName"), infra.FloatingPoolSubnetName, "router id must be empty when a floating subnet name is provided"))
+		if infra.Networks.Router != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("router"), "router cannot be set when a floating subnet name is provided"))
+		}
 	}
 
 	return allErrs

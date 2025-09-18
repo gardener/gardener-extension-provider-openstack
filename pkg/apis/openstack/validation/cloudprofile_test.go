@@ -546,11 +546,13 @@ var _ = Describe("LoadBalancerClass validation", func() {
 	var (
 		loadBalancerClasses []api.LoadBalancerClass
 		fieldPath           *field.Path
+		testUUID            string
 	)
 
 	BeforeEach(func() {
 		fieldPath = field.NewPath("loadBalancerClasses")
 
+		testUUID = "123e4567-e89b-12d3-a456-426614174000"
 		loadBalancerClasses = []api.LoadBalancerClass{{
 			Name: "test1",
 		}}
@@ -573,7 +575,7 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by id, name and tags in parallel", func() {
-			loadBalancerClasses[0].FloatingSubnetID = ptr.To("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetID = ptr.To(testUUID)
 			loadBalancerClasses[0].FloatingSubnetName = ptr.To("floating-subnet-name")
 			loadBalancerClasses[0].FloatingSubnetTags = ptr.To("floating-subnet-tags")
 
@@ -585,7 +587,7 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by id and name", func() {
-			loadBalancerClasses[0].FloatingSubnetID = ptr.To("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetID = ptr.To(testUUID)
 			loadBalancerClasses[0].FloatingSubnetName = ptr.To("floating-subnet-name")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
@@ -596,7 +598,7 @@ var _ = Describe("LoadBalancerClass validation", func() {
 		})
 
 		It("should fail as LoadBalancerClass specifies floating subnet by id and tags", func() {
-			loadBalancerClasses[0].FloatingSubnetID = ptr.To("floating-subnet-id")
+			loadBalancerClasses[0].FloatingSubnetID = ptr.To(testUUID)
 			loadBalancerClasses[0].FloatingSubnetTags = ptr.To("floating-subnet-tags")
 
 			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)

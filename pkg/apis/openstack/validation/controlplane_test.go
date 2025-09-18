@@ -37,6 +37,31 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			Expect(ValidateControlPlaneConfig(controlPlane, infraConfig, "", nilPath)).To(BeEmpty())
 		})
 
+		It("should fail if the network does not have valid uuid", func() {
+			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{
+				{
+					Name:              "foo",
+					FloatingNetworkID: ptr.To("invalid-uuid"),
+				},
+			}
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "", nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("loadBalancerClasses[0].floatingNetworkID"),
+			}))))
+		})
+
+		It("should succeed for valid LB classes", func() {
+			controlPlane.LoadBalancerClasses = []api.LoadBalancerClass{
+				{
+					Name:              "foo",
+					FloatingNetworkID: ptr.To("123e4567-e89b-12d3-a456-426614174000"),
+				},
+			}
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "", nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should require the name of a load balancer provider", func() {
 			controlPlane.LoadBalancerProvider = ""
 

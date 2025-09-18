@@ -17,7 +17,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -55,16 +54,6 @@ func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actu
 }
 
 func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (genericactuator.WorkerDelegate, error) {
-	clientset, err := kubernetes.NewForConfig(d.restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	serverVersion, err := clientset.Discovery().ServerVersion()
-	if err != nil {
-		return nil, err
-	}
-
 	seedChartApplier, err := gardener.NewChartApplierForConfig(d.restConfig)
 	if err != nil {
 		return nil, err
@@ -90,7 +79,6 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		d.scheme,
 
 		seedChartApplier,
-		serverVersion.GitVersion,
 
 		worker,
 		cluster,
@@ -104,7 +92,6 @@ type workerDelegate struct {
 	decoder    runtime.Decoder
 
 	seedChartApplier gardener.ChartApplier
-	serverVersion    string
 
 	cloudProfileConfig *api.CloudProfileConfig
 	cluster            *extensionscontroller.Cluster
@@ -123,7 +110,6 @@ func NewWorkerDelegate(
 	scheme *runtime.Scheme,
 
 	seedChartApplier gardener.ChartApplier,
-	serverVersion string,
 
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,
@@ -140,7 +126,6 @@ func NewWorkerDelegate(
 		decoder:    serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder(),
 
 		seedChartApplier: seedChartApplier,
-		serverVersion:    serverVersion,
 
 		cloudProfileConfig: config,
 		cluster:            cluster,

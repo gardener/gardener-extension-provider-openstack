@@ -18,6 +18,7 @@ LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := true
 PLATFORM                    := linux/amd64
 EXTENSION_NAMESPACE         := garden
+GARDEN_KUBECONFIG           ?=
 
 TEST_RECONCILER           := tf
 TEST_LOGLEVEL             := info
@@ -86,7 +87,10 @@ include $(GARDENER_HACK_DIR)/tools.mk
 
 .PHONY: start
 start:
-	@LEADER_ELECTION_NAMESPACE=$(EXTENSION_NAMESPACE) go run \
+	@LEADER_ELECTION_NAMESPACE=$(EXTENSION_NAMESPACE) \
+		GARDEN_KUBECONFIG=$(GARDEN_KUBECONFIG) \
+		GARDENER_SHOOT_CLIENT="external" \
+		go run \
 		-ldflags $(LD_FLAGS) \
 		./cmd/$(EXTENSION_PREFIX)-$(NAME) \
 		--config-file=./example/00-componentconfig.yaml \
@@ -105,7 +109,8 @@ start:
 
 .PHONY: start-admission
 start-admission:
-	@go run \
+	@LEADER_ELECTION_NAMESPACE=$(EXTENSION_NAMESPACE) \
+		go run \
 		-ldflags $(LD_FLAGS) \
 		./cmd/$(EXTENSION_PREFIX)-$(ADMISSION_NAME) \
 		--webhook-config-server-host=0.0.0.0 \
@@ -217,4 +222,3 @@ integration-test-bastion:
 integration-test-backupbucket:
 	@go test -timeout=0 ./test/integration/backupbucket \
 		$(BACKUPBUCKET_TEST_FLAGS)
-

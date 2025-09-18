@@ -6,7 +6,6 @@ package cloudprovider
 
 import (
 	"context"
-	"testing"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
@@ -25,11 +24,6 @@ import (
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	types "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
-
-func TestController(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "CloudProvider Webhook Suite")
-}
 
 var _ = Describe("Ensurer", func() {
 	var (
@@ -76,7 +70,7 @@ var _ = Describe("Ensurer", func() {
 
 		ectx = gcontext.NewInternalGardenContext(cluster)
 
-		ensurer = NewEnsurer(mgr, logger)
+		ensurer = NewEnsurer(mgr)
 	})
 
 	It("Should ensure auth_url if present in cluster object", func() {

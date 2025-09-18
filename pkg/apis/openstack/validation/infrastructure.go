@@ -20,9 +20,6 @@ import (
 // ValidateInfrastructureConfig validates a InfrastructureConfig object.
 func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if len(infra.FloatingPoolName) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("floatingPoolName"), "must provide the name of a floating pool"))
-	}
 	allErrs = append(allErrs, validateResourceName(infra.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 
 	networkingPath := field.NewPath("networking")

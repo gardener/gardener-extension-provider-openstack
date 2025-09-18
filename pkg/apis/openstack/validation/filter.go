@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	// genericNameRegex is used to validate openstack resource names. They generally do not impose any restrictions on the characters used, but we constrain curly braces or newlines.
+	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets,braces and newlines.
 	genericNameRegex     = `^[^{}\[\]\n]+$`
-	validateResourceName = combineValidationFuncs(regex(genericNameRegex), maxLength(255))
+	validateResourceName = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
 )
 
 type validateFunc[T any] func(T, *field.Path) field.ErrorList
@@ -33,12 +33,15 @@ func combineValidationFuncs[T any](filters ...validateFunc[T]) validateFunc[T] {
 }
 
 // regex returns a filterFunc that validates a string against a regular expression.
+// regex allows empty strings to pass through to allow combining with other checks for clearer error messages. Use
+// notEmpty() to check for emptiness.
 func regex(regex string) validateFunc[string] {
 	compiled := regexp.MustCompile(regex)
 	return func(name string, fld *field.Path) field.ErrorList {
 		var allErrs field.ErrorList
 		if name == "" {
-			return allErrs // Allow empty strings to pass through
+			// allow empty strings to pass through, use notEmpty() to check for emptiness.
+			return allErrs
 		}
 		if !compiled.MatchString(name) {
 			allErrs = append(allErrs, field.Invalid(fld, name, fmt.Sprintf("does not match expected regex %s", compiled.String())))
@@ -47,11 +50,18 @@ func regex(regex string) validateFunc[string] {
 	}
 }
 
+func notEmpty(name string, fld *field.Path) field.ErrorList {
+	if utf8.RuneCountInString(name) == 0 {
+		return field.ErrorList{field.Required(fld, name)}
+	}
+	return nil
+}
+
 func maxLength(max int) validateFunc[string] {
 	return func(name string, fld *field.Path) field.ErrorList {
 		var allErrs field.ErrorList
-		if utf8.RuneCountInString(name) > max {
-			return field.ErrorList{field.Invalid(fld, name, fmt.Sprintf("must not be more than %d characters, got %d", max, len(name)))}
+		if l := utf8.RuneCountInString(name); l > max {
+			return field.ErrorList{field.Invalid(fld, name, fmt.Sprintf("must not be more than %d characters, got %d", max, l))}
 		}
 		return allErrs
 	}

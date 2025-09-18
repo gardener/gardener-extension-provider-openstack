@@ -286,12 +286,12 @@ is_systemd_resolved_system()
     fi
 }
 
-if ! grep -Eq "^nameserver\s+" /run/systemd/resolve/resolv.conf; then
-  exit 78
-fi
-
 rm -f "$tmp"
 if is_systemd_resolved_system; then
+  if ! grep -Eq "^nameserver\s+" /run/systemd/resolve/resolv.conf; then
+    echo "/run/systemd/resolve/resolv.conf does not contain a nameserver line, delaying update..."
+    exit 78
+  fi
   if [ "$line" = "" ]; then
     ln -s /run/systemd/resolve/resolv.conf "$tmp"
   else

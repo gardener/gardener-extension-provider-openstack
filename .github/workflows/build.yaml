@@ -3,6 +3,9 @@ name: Build
 on:
   workflow_call:
     inputs:
+      release-version:
+        type: string
+        default: set-prerelease
       mode:
         required: true
         type: string
@@ -16,10 +19,11 @@ jobs:
     uses: gardener/cc-utils/.github/workflows/prepare.yaml@master
     with:
       mode: ${{ inputs.mode }}
+      version-operation: ${{ inputs.release-version }}
       version-commit-callback-action-path: .github/actions/prepare-release
     permissions:
       contents: read
-      pull-requests: write # needed to rm `reviewed/ok-to-test` label
+      pull-requests: write
 
   oci-images:
     name: Build OCI-Images
@@ -54,7 +58,7 @@ jobs:
               value:
                 network_exposure: protected
                 authentication_enforced: false
-                user_interaction: end-user
+                user_interaction: gardener-operator
                 confidentiality_requirement: high
                 integrity_requirement: high
                 availability_requirement: high
@@ -105,7 +109,6 @@ jobs:
                 attribute: image.repository
               - ref: ocm-resource:gardener-extension-admission-openstack.tag
                 attribute: image.tag
-
     with:
       name: ${{ matrix.args.name }}
       dir: ${{ matrix.args.dir }}
@@ -120,44 +123,34 @@ jobs:
     steps:
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           remove-trusted-label: false
       - name: run-verify
         run: |
           set -euo pipefail
-          mkdir /tmp/blobs.d
-          .ci/verify |& tee /tmp/blobs.d/verify-log.txt
+          .ci/verify
           # verify calls `make sast-report`, which generates `gosec-report.sarif`
-          tar czf /tmp/blobs.d/verify-log.tar.gz -C /tmp/blobs.d verify-log.txt
+          mkdir /tmp/blobs.d
           tar czf /tmp/blobs.d/gosec-report.tar.gz gosec-report.sarif
-      - name: add-reports-to-component-descriptor
+      - name: add-sast-report-to-component-descriptor
         uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
-            - name: gosec-report
-              relation: local
-              access:
-                type: localBlob
-                localReference: gosec-report.tar.gz
-              labels:
-                - name: gardener.cloud/purposes
-                  value:
-                    - lint
-                    - sast
-                    - gosec
-                - name: gardener.cloud/comment
-                  value: |
-                    we use gosec (linter) for SAST scans
-                    see: https://github.com/securego/gosec
-            - name: test-results
-              relation: local
-              access:
-                type: localBlob
-                localReference: verify-log.tar.gz
-              labels:
-                - name: gardener.cloud/purposes
-                  value:
-                    - test
+            name: gosec-report
+            relation: local
+            access:
+              type: localBlob
+              localReference: gosec-report.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - gosec
+              - name: gardener.cloud/comment
+                value: |
+                  we use gosec (linter) for SAST scans
+                  see: https://github.com/securego/gosec

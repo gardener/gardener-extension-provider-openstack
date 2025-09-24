@@ -1,35 +1,52 @@
+
 name: Release
 on:
   workflow_dispatch:
     inputs:
+      release-version:
+        type: choice
+        options:
+          - set-prerelease
+          - noop
+        description: 'Select whether to modify the release version.'
       next-version:
         type: choice
         options:
           - bump-minor
           - bump-patch
-
+        description: 'Select the type of version bump for the next release.'
 
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
     permissions:
       contents: write
-      id-token: write
       packages: write
+      id-token: write
+      pull-requests: write
     with:
       mode: release
+      release-version: ${{ inputs.release-version }}
+
+  integration-tests:
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/run-integrationtests.yaml
 
   release-to-github-and-bump:
     uses: gardener/cc-utils/.github/workflows/release.yaml@master
     needs:
       - build
-    secrets: inherit
-    permissions:
-      contents: write
-      id-token: write
-      packages: write
+      - integration-tests
+    secrets:
+      github-app-secret-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
     with:
       release-commit-target: branch
       next-version: ${{ inputs.next-version }}
       next-version-callback-action-path: .github/actions/prepare-release
-      slack-channel-id: C9CEBQPGE # #sap-tech-gardener
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      pull-requests: write

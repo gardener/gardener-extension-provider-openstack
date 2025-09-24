@@ -12,7 +12,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -61,7 +60,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 			if routerID == nil {
 				return nil
 			}
-			return infrastructure.CleanupKubernetesRoutes(ctx, fctx.networking, *routerID, infrastructure.WorkersCIDR(fctx.config))
+			return fctx.cleanupKubernetesRoutes(ctx, *routerID)
 		},
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(recoverIDs),
@@ -72,7 +71,7 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 			if subnetID == nil {
 				return nil
 			}
-			return infrastructure.CleanupKubernetesLoadbalancers(ctx, shared.LogFromContext(ctx), fctx.loadbalancing, *subnetID, fctx.infra.Namespace)
+			return fctx.cleanupKubernetesLoadbalancers(ctx, shared.LogFromContext(ctx), *subnetID)
 		},
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(recoverIDs),

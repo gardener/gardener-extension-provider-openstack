@@ -29,7 +29,6 @@ import (
 	workercontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	cloudproviderwebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/cloudprovider"
 	controlplanewebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplane"
-	infrastructurewebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/infrastructure"
 	seedproviderwebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/seedprovider"
 )
 
@@ -54,6 +53,5 @@ func WebhookSwitchOptions() *webhookcmd.SwitchOptions {
 		webhookcmd.Switch(extensioncontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
 		webhookcmd.Switch(extensioncontrolplanewebhook.SeedProviderWebhookName, seedproviderwebhook.AddToManager),
 		webhookcmd.Switch(extensionscloudproviderwebhook.WebhookName, cloudproviderwebhook.AddToManager),
-		webhookcmd.Switch(infrastructurewebhook.WebhookName, infrastructurewebhook.AddToManager),
 	)
 }

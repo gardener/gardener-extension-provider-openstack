@@ -11,7 +11,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/utils"
 )
 
 // FindSubnetByPurpose takes a list of subnets and tries to find the first entry

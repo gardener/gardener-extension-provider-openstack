@@ -38,10 +38,3 @@ func init() {
 func ImageVector() imagevector.ImageVector {
 	return imageVector
 }
-
-// TerraformerImage returns the terraformer image name.
-func TerraformerImage() string {
-	image, err := imageVector.FindImage(TerraformerImageName)
-	runtime.Must(err)
-	return image.String()
-}

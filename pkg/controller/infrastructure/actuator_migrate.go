@@ -13,15 +13,13 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/internal"
-	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 )
 
 // Migrate deletes the k8s infrastructure resources without deleting the corresponding resources in the IaaS provider.
 func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, _ *controller.Cluster) error {
-	tf, err := internal.NewTerraformer(log, a.restConfig, infrainternal.TerraformerPurpose, infra, a.disableProjectedTokenMount)
+	tf, err := newTerraformer(log, a.restConfig, terraformerPurpose, infra, a.disableProjectedTokenMount)
 	if err != nil {
 		return err
 	}
-	return util.DetermineError(CleanupTerraformerResources(ctx, tf), helper.KnownCodes)
+	return util.DetermineError(cleanupTerraformerResources(ctx, tf), helper.KnownCodes)
 }

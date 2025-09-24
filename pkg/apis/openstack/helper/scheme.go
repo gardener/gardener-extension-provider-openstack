@@ -5,17 +5,21 @@
 package helper
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
+	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
 var (
@@ -99,4 +103,45 @@ func WorkerConfigFromRawExtension(raw *runtime.RawExtension) (*api.WorkerConfig,
 	}
 
 	return poolConfig, nil
+}
+
+// HasFlowState returns true if the group version of the State field in the provided
+// `extensionsv1alpha1.InfrastructureStatus` is openstack.provider.extensions.gardener.cloud/v1alpha1.
+func HasFlowState(status extensionsv1alpha1.InfrastructureStatus) (bool, error) {
+	if status.State == nil {
+		return true, nil
+	}
+
+	flowState := unstructured.Unstructured{}
+	stateJson, err := status.State.MarshalJSON()
+	if err != nil {
+		return false, err
+	}
+
+	if err := json.Unmarshal(stateJson, &flowState); err != nil {
+		return false, err
+	}
+
+	flowState.GetAPIVersion()
+	return flowState.GroupVersionKind() == schema.GroupVersionKind{
+		Group:   apiv1alpha1.SchemeGroupVersion.Group,
+		Version: apiv1alpha1.SchemeGroupVersion.Version,
+		Kind:    "InfrastructureState",
+	}, nil
+}
+
+// InfrastructureStateFromRaw extracts the state from the Infrastructure. If no state was available, it returns a "zero" value InfrastructureState object.
+func InfrastructureStateFromRaw(raw *runtime.RawExtension) (*api.InfrastructureState, error) {
+	state := &api.InfrastructureState{}
+	if raw != nil && raw.Raw != nil {
+		if _, _, err := lenientDecoder.Decode(raw.Raw, nil, state); err != nil {
+			return nil, err
+		}
+	}
+
+	if state.Data == nil {
+		state.Data = make(map[string]string)
+	}
+
+	return state, nil
 }

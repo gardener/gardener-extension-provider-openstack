@@ -15,6 +15,7 @@ import (
 	gardenerv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -49,17 +50,13 @@ import (
 	openstackinstall "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 const (
-	reconcilerUseTF        string = "tf"
-	reconcilerMigrateTF    string = "migrate"
-	reconcilerUseFlow      string = "flow"
-	reconcilerRecoverState string = "recover"
-	kindInfrastructure            = "Infrastructure"
+	kindInfrastructure = "Infrastructure"
 )
 
 const (
@@ -77,7 +74,6 @@ var (
 	appID            = flag.String("app-id", "", "Application Credential ID for openstack")
 	appName          = flag.String("app-name", "", "Application Credential Name for openstack")
 	appSecret        = flag.String("app-secret", "", "Application Credential Secret for openstack")
-	reconciler       = flag.String("reconciler", reconcilerUseFlow, "Set annotation to use flow for reconciliation")
 
 	floatingPoolID string
 )
@@ -256,7 +252,7 @@ var _ = Describe("Infrastructure tests", func() {
 		namespace, err := generateNamespaceName()
 		Expect(err).NotTo(HaveOccurred())
 
-		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		err = runTest(ctx, log, c, namespace, providerConfig, cloudProfileConfig)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -278,7 +274,7 @@ var _ = Describe("Infrastructure tests", func() {
 		providerConfig := newProviderConfig(*routerID, nil)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
-		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		err = runTest(ctx, log, c, namespace, providerConfig, cloudProfileConfig)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -299,7 +295,7 @@ var _ = Describe("Infrastructure tests", func() {
 		providerConfig := newProviderConfig("", networkID)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
-		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		err = runTest(ctx, log, c, namespace, providerConfig, cloudProfileConfig)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -328,7 +324,7 @@ var _ = Describe("Infrastructure tests", func() {
 		providerConfig := newProviderConfig(*routerID, networkID)
 		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
 
-		err = runTest(ctx, log, c, namespace, providerConfig, decoder, cloudProfileConfig)
+		err = runTest(ctx, log, c, namespace, providerConfig, cloudProfileConfig)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
@@ -339,7 +335,6 @@ func runTest(
 	c client.Client,
 	namespaceName string,
 	providerConfig *openstackv1alpha1.InfrastructureConfig,
-	decoder runtime.Decoder,
 	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
 ) error {
 	var (
@@ -431,7 +426,7 @@ func runTest(
 		return err
 	}
 
-	By("deploy cloudprovider secret into namespace")
+	By("deploy cloud provider secret into namespace")
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cloudprovider",
@@ -449,7 +444,8 @@ func runTest(
 			openstack.ApplicationCredentialSecret: []byte(*appSecret),
 		},
 	}
-	if err := c.Create(ctx, secret); err != nil {
+
+	if err := getAndCreateOrPatchSpec(ctx, c, secret); err != nil {
 		return err
 	}
 
@@ -459,7 +455,7 @@ func runTest(
 		return err
 	}
 
-	if err := c.Create(ctx, infra); err != nil {
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
 		return err
 	}
 
@@ -475,34 +471,14 @@ func runTest(
 		16*time.Minute,
 		nil,
 	)).To(Succeed())
+	infraIdentifiers = verifyCreation(infra.Status, providerConfig)
 
-	// Update the infra resource to trigger a migration.
-	oldState := infra.Status.State.DeepCopy()
-	switch *reconciler {
-	case reconcilerMigrateTF:
-		By("verifying terraform migration")
-		patch := client.MergeFrom(infra.DeepCopy())
-		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, openstack.AnnotationKeyUseFlow, "true")
-		Expect(c.Patch(ctx, infra, patch)).To(Succeed())
-	case reconcilerRecoverState:
-		By("drop state for testing recovery")
-
-		patch := client.MergeFrom(infra.DeepCopy())
-		infra.Status.LastOperation = nil
-		infra.Status.ProviderStatus = nil
-		infra.Status.State = nil
-		Expect(c.Status().Patch(ctx, infra, patch)).To(Succeed())
-
-		Expect(c.Get(ctx, client.ObjectKey{Namespace: infra.Namespace, Name: infra.Name}, infra)).To(Succeed())
-
-		patch = client.MergeFrom(infra.DeepCopy())
-		metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		err = c.Patch(ctx, infra, patch)
-		Expect(err).To(Succeed())
+	By("test second reconciliation")
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
+		return err
 	}
 
-	By("wait until infrastructure is reconciled")
+	By("wait until infrastructure is reconciled for the second time")
 	Expect(extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c,
@@ -514,18 +490,39 @@ func runTest(
 		16*time.Minute,
 		nil,
 	)).To(Succeed())
+	infraIdentifiers2 := verifyCreation(infra.Status, providerConfig)
+	Expect(infraIdentifiers2).To(Equal(infraIdentifiers))
 
-	infraIdentifiers, providerStatus := verifyCreation(infra.Status, providerConfig)
+	By("drop state for testing recovery")
+	previousState := infra.Status.State.DeepCopy()
+	previousProviderStatus := infra.Status.ProviderStatus.DeepCopy()
 
-	if *reconciler == reconcilerRecoverState {
-		By("check state recovery")
-		Expect(infra.Status.State).To(Equal(oldState))
-		newProviderStatus := openstackv1alpha1.InfrastructureStatus{}
-		if _, _, err := decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &newProviderStatus); err != nil {
-			return err
-		}
-		Expect(newProviderStatus).To(Equal(providerStatus))
+	patch := client.MergeFrom(infra.DeepCopy())
+	infra.Status.LastOperation = nil
+	infra.Status.ProviderStatus = nil
+	infra.Status.State = nil
+	Expect(c.Status().Patch(ctx, infra, patch)).To(Succeed())
+
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
+		return err
 	}
+	By("wait until infrastructure is reconciled for the recovery")
+	Expect(extensions.WaitUntilExtensionObjectReady(
+		ctx,
+		c,
+		log,
+		infra,
+		kindInfrastructure,
+		10*time.Second,
+		30*time.Second,
+		16*time.Minute,
+		nil,
+	)).To(Succeed())
+	infraIdentifiersRecovery := verifyCreation(infra.Status, providerConfig)
+	By("check state recovery")
+	Expect(infraIdentifiersRecovery).To(Equal(infraIdentifiers))
+	Expect(infra.Status.State).To(Equal(previousState))
+	Expect(infra.Status.ProviderStatus).To(Equal(previousProviderStatus))
 
 	return nil
 }
@@ -600,9 +597,6 @@ func newInfrastructure(namespace string, providerConfig *openstackv1alpha1.Infra
 			SSHPublicKey: []byte(sshPublicKey),
 		},
 	}
-	if usesFlow(reconciler) {
-		infra.Annotations = map[string]string{openstack.AnnotationKeyUseFlow: "true"}
-	}
 	return infra, nil
 }
 
@@ -670,7 +664,8 @@ type infrastructureIdentifiers struct {
 	routerID   *string
 }
 
-func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers, providerStatus openstackv1alpha1.InfrastructureStatus) {
+func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, providerConfig *openstackv1alpha1.InfrastructureConfig) (infrastructureIdentifier infrastructureIdentifiers) {
+	providerStatus := openstackv1alpha1.InfrastructureStatus{}
 	_, _, err := decoder.Decode(infraStatus.ProviderStatus.Raw, nil, &providerStatus)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -720,9 +715,9 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	infrastructureIdentifier.keyPair = ptr.To(keyPair.Name)
 
 	// verify egressCIDRs
-	Expect(infraStatus.EgressCIDRs).To(ContainElements(utils.ComputeEgressCIDRs(providerStatus.Networks.Router.ExternalFixedIPs)))
+	Expect(infraStatus.EgressCIDRs).To(ContainElements(infraflow.ComputeEgressCIDRs(providerStatus.Networks.Router.ExternalFixedIPs)))
 
-	return infrastructureIdentifier, providerStatus
+	return infrastructureIdentifier
 }
 
 func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, providerConfig *openstackv1alpha1.InfrastructureConfig) {
@@ -767,10 +762,19 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 	}
 }
 
-func usesFlow(reconciler *string) bool {
-	if rec := ptr.Deref(reconciler, reconcilerUseTF); rec == reconcilerUseTF || rec == reconcilerMigrateTF {
-		return false
+func getAndCreateOrPatchSpec(ctx context.Context, c client.Client, obj client.Object) error {
+	o2 := obj.DeepCopyObject()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, obj, func() error {
+		switch o := obj.(type) {
+		case *extensionsv1alpha1.Infrastructure:
+			metav1.SetMetaDataAnnotation(&o.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			o.Spec = o2.(*extensionsv1alpha1.Infrastructure).Spec
+		case *corev1.Secret:
+			o.Data = o2.(*corev1.Secret).Data
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
-
-	return true
+	return nil
 }

@@ -145,3 +145,12 @@ type InfrastructureState struct {
 
 	Data map[string]string
 }
+
+// WorkersCIDR returns the CIDR for worker nodes.
+func (cfg InfrastructureConfig) WorkersCIDR() string {
+	s := cfg.Networks.Worker
+	if workers := cfg.Networks.Workers; workers != "" {
+		s = workers
+	}
+	return s
+}

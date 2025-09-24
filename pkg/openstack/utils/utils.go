@@ -5,12 +5,7 @@
 package utils
 
 import (
-	"fmt"
 	"strings"
-	"time"
-
-	"github.com/go-logr/logr"
-	utilsnet "k8s.io/utils/net"
 )
 
 // IsEmptyString checks whether a string is empty
@@ -18,14 +13,14 @@ func IsEmptyString(s *string) bool {
 	return s == nil || *s == ""
 }
 
-// IsStringPtrValueEqual checks whether the value of string pointer `a` is equal to value of string `b`.
-func IsStringPtrValueEqual(a *string, b string) bool {
-	return a != nil && *a == b
-}
-
 // StringEqual compares to strings
 func StringEqual(a, b *string) bool {
 	return a == b || (a != nil && b != nil && *a == *b)
+}
+
+// IsStringPtrValueEqual checks whether the value of string pointer `a` is equal to value of string `b`.
+func IsStringPtrValueEqual(a *string, b string) bool {
+	return a != nil && *a == b
 }
 
 // SetStringValue sets an optional string value in a string map
@@ -57,32 +52,4 @@ func SimpleMatch(pattern, text string) (bool, int) {
 	}
 
 	return false, 0
-}
-
-// ComputeEgressCIDRs converts an IP to a CIDR depending on the IP family.
-func ComputeEgressCIDRs(ips []string) []string {
-	var result []string
-	for _, ip := range ips {
-		switch {
-		case utilsnet.IsIPv4String(ip):
-			result = append(result, fmt.Sprintf("%s/32", ip))
-		case utilsnet.IsIPv6String(ip):
-			result = append(result, fmt.Sprintf("%s/128", ip))
-		}
-	}
-	return result
-}
-
-// Retry performs a function with retries, delay, and a max number of attempts
-func Retry(maxRetries int, delay time.Duration, log logr.Logger, fn func() error) error {
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		log.Info(fmt.Sprintf("Attempt %d failed, retrying in %v: %v", i+1, delay, err))
-		time.Sleep(delay)
-	}
-	return err
 }

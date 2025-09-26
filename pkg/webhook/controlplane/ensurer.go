@@ -239,8 +239,6 @@ StartLimitIntervalSec=0
 [Service]
 Type=oneshot
 ExecStart=/opt/bin/update-resolv-conf.sh
-RestartForceExitStatus=78
-RestartSec=15
 `
 	)
 
@@ -288,10 +286,10 @@ is_systemd_resolved_system()
 
 rm -f "$tmp"
 if is_systemd_resolved_system; then
-  if ! grep -Eq "^nameserver\s+" /run/systemd/resolve/resolv.conf; then
+  while ! grep -Eq "^nameserver\s+" /run/systemd/resolve/resolv.conf; do
     echo "/run/systemd/resolve/resolv.conf does not contain a nameserver line, delaying update..."
-    exit 78
-  fi
+    sleep 15
+  done
   if [ "$line" = "" ]; then
     ln -s /run/systemd/resolve/resolv.conf "$tmp"
   else

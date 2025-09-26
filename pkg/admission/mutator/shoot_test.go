@@ -12,10 +12,8 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -29,8 +27,6 @@ var _ = Describe("Shoot mutator", func() {
 		const namespace = "garden-dev"
 
 		var (
-			ctrl         *gomock.Controller
-			mgr          *mockmanager.MockManager
 			shootMutator extensionswebhook.Mutator
 			shoot        *gardencorev1beta1.Shoot
 			oldShoot     *gardencorev1beta1.Shoot
@@ -39,15 +35,7 @@ var _ = Describe("Shoot mutator", func() {
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-
-			scheme := runtime.NewScheme()
-			Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
-
-			mgr = mockmanager.NewMockManager(ctrl)
-			mgr.EXPECT().GetScheme().Return(scheme)
-
-			shootMutator = mutator.NewShootMutator(mgr)
+			shootMutator = mutator.NewShootMutator()
 
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{

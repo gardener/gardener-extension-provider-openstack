@@ -25,13 +25,11 @@ import (
 // NewNamespacedCloudProfileMutator returns a new instance of a NamespacedCloudProfile mutator.
 func NewNamespacedCloudProfileMutator(mgr manager.Manager) extensionswebhook.Mutator {
 	return &namespacedCloudProfile{
-		client:  mgr.GetClient(),
 		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 	}
 }
 
 type namespacedCloudProfile struct {
-	client  client.Client
 	decoder runtime.Decoder
 }
 

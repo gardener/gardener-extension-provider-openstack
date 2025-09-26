@@ -15,7 +15,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -23,15 +22,13 @@ import (
 )
 
 type mutator struct {
-	logger logr.Logger
 	client client.Client
 }
 
 // New returns a new Infrastructure mutator that uses mutateFunc to perform the mutation.
-func New(mgr manager.Manager, logger logr.Logger) extensionswebhook.Mutator {
+func New(mgr manager.Manager) extensionswebhook.Mutator {
 	return &mutator{
 		client: mgr.GetClient(),
-		logger: logger,
 	}
 }
 

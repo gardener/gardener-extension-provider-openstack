@@ -14,8 +14,6 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -30,8 +28,7 @@ const (
 )
 
 type actuator struct {
-	client  client.Client
-	decoder runtime.Decoder
+	client client.Client
 
 	openstackClientFactory openstackclient.FactoryFactory
 	bastionConfig          *controllerconfig.BastionConfig
@@ -40,7 +37,6 @@ type actuator struct {
 func newActuator(mgr manager.Manager, openstackClientFactory openstackclient.FactoryFactory, bastionConfig *controllerconfig.BastionConfig) bastion.Actuator {
 	return &actuator{
 		client:                 mgr.GetClient(),
-		decoder:                serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		openstackClientFactory: openstackClientFactory,
 		bastionConfig:          bastionConfig,
 	}

@@ -33,7 +33,7 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		{Obj: &extensionsv1alpha1.Infrastructure{}},
 	}
 
-	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(New(mgr, logger), types...).Build()
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(New(mgr), types...).Build()
 	if err != nil {
 		return nil, err
 	}

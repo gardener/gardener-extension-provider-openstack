@@ -9,7 +9,7 @@ spec:
     kind: Deployment
     name: cloud-controller-manager
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
     - containerName: openstack-cloud-controller-manager

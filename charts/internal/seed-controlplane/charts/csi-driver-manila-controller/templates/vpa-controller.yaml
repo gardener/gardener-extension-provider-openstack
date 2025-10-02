@@ -24,4 +24,4 @@ spec:
     kind: Deployment
     name: csi-driver-manila-controller
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate

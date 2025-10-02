@@ -11,7 +11,7 @@ resources: {}
 vpa:
   enabled: true
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Recreate"
 
 metricsPort: "{{ index .Values.usablePorts 0 }}"
 healthPort: "{{ index .Values.usablePorts 2 }}"

@@ -1,0 +1,15 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  gardener-extension-provider-openstack-reviewers:
+  - AndreasBurger
+  - hebelsan
+  - kon-angelo
+  - matthias-horne
+  - wpross
+  gardener-extension-provider-openstack-approvers:
+  - AndreasBurger
+  - hebelsan
+  - kon-angelo
+  - matthias-horne
+  - wpross

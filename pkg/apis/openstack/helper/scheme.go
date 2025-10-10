@@ -122,7 +122,6 @@ func HasFlowState(status extensionsv1alpha1.InfrastructureStatus) (bool, error) 
 		return false, err
 	}
 
-	flowState.GetAPIVersion()
 	return flowState.GroupVersionKind() == schema.GroupVersionKind{
 		Group:   apiv1alpha1.SchemeGroupVersion.Group,
 		Version: apiv1alpha1.SchemeGroupVersion.Version,

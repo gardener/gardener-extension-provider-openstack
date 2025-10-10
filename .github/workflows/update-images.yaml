@@ -1,0 +1,22 @@
+#
+# SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: Auto-update Image Versions
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 0' # Runs at 6:00 AM UTC every Sunday
+
+jobs:
+  update-images:
+    uses: gardener/cc-utils/.github/workflows/update-extension-provider-images.yaml@master
+    # Pass all available secrets (like the private key)
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+
+

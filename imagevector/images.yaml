@@ -1,347 +1,366 @@
 images:
-- name: terraformer
-  sourceRepository: github.com/gardener/terraformer
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/terraformer-openstack
-  tag: "v2.28.0"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'protected'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.29.1"
-  targetVersion: "1.29.x"
+  tag: v1.29.1
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'protected'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.29.x
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.30.3"
-  targetVersion: "1.30.x"
+  tag: v1.30.3
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'protected'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.30.x
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.31.3"
-  targetVersion: "1.31.x"
+  tag: v1.31.4
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'protected'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.31.x
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.32.0"
-  targetVersion: "1.32.x"
+  tag: v1.32.1
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'protected'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.32.x
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
-  tag: "v1.33.0"
-  targetVersion: ">= 1.33"
+  tag: v1.33.1
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'protected'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-
-- name: machine-controller-manager-provider-openstack
-  sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-openstack
-  tag: "v0.24.0"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'protected'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-
-- name: csi-driver-cinder
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.29.1"
-  targetVersion: "1.29.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-cinder
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.30.3"
-  targetVersion: "1.30.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-cinder
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.31.3"
-  targetVersion: "1.31.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-cinder
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.32.0"
-  targetVersion: "1.32.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-cinder
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/cinder-csi-plugin
-  tag: "v1.33.0"
-  targetVersion: ">= 1.33"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-
-- name: csi-driver-manila
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.29.1"
-  targetVersion: "1.29.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-manila
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.30.3"
-  targetVersion: "1.30.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-manila
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.31.3"
-  targetVersion: "1.31.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-manila
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.32.0"
-  targetVersion: "1.32.x"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-- name: csi-driver-manila
-  sourceRepository: github.com/kubernetes/cloud-provider-openstack
-  repository: registry.k8s.io/provider-os/manila-csi-plugin
-  tag: "v1.33.0"
-  targetVersion: ">= 1.33"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-
-- name: csi-driver-nfs
-  sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
-  repository: registry.k8s.io/sig-storage/nfsplugin
-  tag: "v4.11.0"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'protected'
-        authentication_enforced: false
-        user_interaction: 'end-user'
-        confidentiality_requirement: 'high'
-        integrity_requirement: 'high'
-        availability_requirement: 'low'
-
-- name: csi-provisioner
-  sourceRepository: github.com/kubernetes-csi/external-provisioner
-  repository: registry.k8s.io/sig-storage/csi-provisioner
-  tag: "v5.2.0"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'private'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: '>= 1.33'
 - name: csi-attacher
   sourceRepository: github.com/kubernetes-csi/external-attacher
   repository: registry.k8s.io/sig-storage/csi-attacher
-  tag: "v4.8.1"
+  tag: v4.10.0
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'private'
+      network_exposure: private
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-snapshotter
-  sourceRepository: github.com/kubernetes-csi/external-snapshotter
-  repository: registry.k8s.io/sig-storage/csi-snapshotter
-  tag: "v8.2.1"
+      user_interaction: gardener-operator
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: v1.29.1
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'private'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-snapshot-controller
-  sourceRepository: github.com/kubernetes-csi/external-snapshotter
-  repository: registry.k8s.io/sig-storage/snapshot-controller
-  tag: "v8.2.1"
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.29.x
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: v1.30.3
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'private'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-resizer
-  sourceRepository: github.com/kubernetes-csi/external-resizer
-  repository: registry.k8s.io/sig-storage/csi-resizer
-  tag: "v1.13.2"
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.30.x
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: v1.31.4
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'private'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: csi-node-driver-registrar
-  sourceRepository: github.com/kubernetes-csi/node-driver-registrar
-  repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
-  tag: "v2.13.0"
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.31.x
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: v1.32.1
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'private'
+      network_exposure: protected
       authentication_enforced: false
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.32.x
+- name: csi-driver-cinder
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/cinder-csi-plugin
+  tag: v1.33.1
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: '>= 1.33'
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: v1.29.1
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.29.x
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: v1.30.3
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.30.x
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: v1.31.4
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.31.x
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: v1.32.1
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: 1.32.x
+- name: csi-driver-manila
+  sourceRepository: github.com/kubernetes/cloud-provider-openstack
+  repository: registry.k8s.io/provider-os/manila-csi-plugin
+  tag: v1.33.1
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: '>= 1.33'
+- name: csi-driver-nfs
+  sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
+  repository: registry.k8s.io/sig-storage/nfsplugin
+  tag: v4.12.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
 - name: csi-liveness-probe
   sourceRepository: github.com/kubernetes-csi/livenessprobe
   repository: registry.k8s.io/sig-storage/livenessprobe
-  tag: "v2.15.0"
+  tag: v2.17.0
   labels:
-  - name: 'gardener.cloud/cve-categorisation'
+  - name: gardener.cloud/cve-categorisation
     value:
-      network_exposure: 'private'
+      network_exposure: private
       authentication_enforced: false
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
+      user_interaction: end-user
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: csi-node-driver-registrar
+  sourceRepository: github.com/kubernetes-csi/node-driver-registrar
+  repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
+  tag: v2.15.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: private
+      authentication_enforced: false
+      user_interaction: end-user
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: csi-provisioner
+  sourceRepository: github.com/kubernetes-csi/external-provisioner
+  repository: registry.k8s.io/sig-storage/csi-provisioner
+  tag: v5.3.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: private
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: csi-resizer
+  sourceRepository: github.com/kubernetes-csi/external-resizer
+  repository: registry.k8s.io/sig-storage/csi-resizer
+  tag: v1.14.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: private
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: csi-snapshot-controller
+  sourceRepository: github.com/kubernetes-csi/external-snapshotter
+  repository: registry.k8s.io/sig-storage/snapshot-controller
+  tag: v8.3.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: private
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: csi-snapshotter
+  sourceRepository: github.com/kubernetes-csi/external-snapshotter
+  repository: registry.k8s.io/sig-storage/csi-snapshotter
+  tag: v8.3.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: private
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: machine-controller-manager-provider-openstack
+  sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-openstack
+  tag: v0.24.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+- name: terraformer
+  sourceRepository: github.com/gardener/terraformer
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/terraformer-openstack
+  tag: v2.28.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false

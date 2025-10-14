@@ -51,6 +51,8 @@ spec:
         {{- end }}
         - --v=3
         - --provide-node-service=false
+        - --kube-api-qps=100
+        - --kube-api-burst=200
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock
@@ -99,6 +101,8 @@ spec:
         - --leader-election-namespace=kube-system
         - --timeout={{ .Values.timeout }}
         - --v=5
+        - --kube-api-qps=100
+        - --kube-api-burst=200
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock
@@ -126,6 +130,8 @@ spec:
         - --timeout={{ .Values.timeout }}
         - --v=5
         - --max-entries={{ .Values.maxEntries }}
+        - --kube-api-qps=100
+        - --kube-api-burst=200
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock
@@ -152,6 +158,8 @@ spec:
         - --leader-election-namespace=kube-system
         - --timeout={{ .Values.timeout }}
         - --snapshot-name-prefix={{ .Release.Namespace }}
+        - --kube-api-qps=100
+        - --kube-api-burst=200
         env:
         - name: CSI_ENDPOINT
           value: {{ .Values.socketPath }}/csi.sock
@@ -179,6 +187,8 @@ spec:
         - --timeout={{ .Values.timeout }}
         - --handle-volume-inuse-error=false
         - --v=5
+        - --kube-api-qps=100
+        - --kube-api-burst=200
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock

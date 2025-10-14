@@ -38,6 +38,8 @@ spec:
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --leader-election=true
         - --leader-election-namespace=kube-system
+        - --kube-api-qps=100
+        - --kube-api-burst=200
 {{- if .Values.csiSnapshotController.resources }}
         resources:
 {{ toYaml .Values.csiSnapshotController.resources | indent 10 }}

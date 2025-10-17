@@ -251,14 +251,19 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 		return nil
 	}
 
+	sharedFilesystemClient, err := fctx.openstackClientFactory.SharedFilesystem(client.WithRegion(fctx.infra.Spec.Region))
+	if err != nil {
+		return err
+	}
+
 	log := shared.LogFromContext(ctx)
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	subnetID := ptr.Deref(fctx.state.Get(IdentifierSubnet), "")
 	current, err := findExisting(ctx, fctx.state.Get(IdentifierShareNetwork),
 		fctx.defaultSharedNetworkName(),
-		fctx.sharedFilesystem.GetShareNetwork,
+		sharedFilesystemClient.GetShareNetwork,
 		func(ctx context.Context, name string) ([]*sharenetworks.ShareNetwork, error) {
-			list, err := fctx.sharedFilesystem.ListShareNetworks(ctx, sharenetworks.ListOpts{
+			list, err := sharedFilesystemClient.ListShareNetworks(ctx, sharenetworks.ListOpts{
 				Name:            name,
 				NeutronNetID:    networkID,
 				NeutronSubnetID: subnetID,
@@ -273,7 +278,7 @@ func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
 	}
 	if current != nil {
 		log.Info("deleting...", "shareNetwork", current.ID)
-		if err := fctx.sharedFilesystem.DeleteShareNetwork(ctx, current.ID); client.IgnoreNotFoundError(err) != nil {
+		if err := sharedFilesystemClient.DeleteShareNetwork(ctx, current.ID); client.IgnoreNotFoundError(err) != nil {
 			return err
 		}
 	}

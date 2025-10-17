@@ -72,7 +72,6 @@ machineImages:
 # - 10.10.10.11
 # - 10.10.10.12
 # requestTimeout: 60s
-# useOctavia: true
 # useSNAT: true
 # rescanBlockStorageOnResize: true
 # ignoreVolumeAZ: true

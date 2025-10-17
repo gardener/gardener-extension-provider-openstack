@@ -137,7 +137,6 @@ var _ = Describe("ValuesProvider", func() {
 		cp = defaultControlPlane()
 
 		cidr                             = "10.250.0.0/19"
-		useOctavia                       = true
 		rescanBlockStorageOnResize       = true
 		ignoreVolumeAZ                   = true
 		nodeVoluemAttachLimit      int32 = 25
@@ -147,7 +146,6 @@ var _ = Describe("ValuesProvider", func() {
 			KeyStoneURL:                authURL,
 			DHCPDomain:                 dhcpDomain,
 			RequestTimeout:             requestTimeout,
-			UseOctavia:                 ptr.To(useOctavia),
 			RescanBlockStorageOnResize: ptr.To(rescanBlockStorageOnResize),
 			IgnoreVolumeAZ:             ptr.To(ignoreVolumeAZ),
 			NodeVolumeAttachLimit:      ptr.To[int32](nodeVoluemAttachLimit),
@@ -321,7 +319,6 @@ var _ = Describe("ValuesProvider", func() {
 			"authUrl":                     authURL,
 			"dhcpDomain":                  dhcpDomain,
 			"requestTimeout":              requestTimeout,
-			"useOctavia":                  useOctavia,
 			"ignoreVolumeAZ":              ignoreVolumeAZ,
 			"applicationCredentialID":     "",
 			"applicationCredentialSecret": "",

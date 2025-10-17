@@ -205,19 +205,6 @@ int32
 </tr>
 <tr>
 <td>
-<code>useOctavia</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
-Deprecated: This field will be removed in future release.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>useSNAT</code></br>
 <em>
 bool

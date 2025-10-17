@@ -59,3 +59,8 @@ csiSnapshotController:
     requests:
       cpu: 11m
       memory: 32Mi
+
+# if enabled add the flags --kube-api-qps=100 and --kube-api-burst=200 to the csi-driver-controller
+# only supported for Kubernetes versions >= 1.32
+# TODO @hebelsan: remove highQpsMode can be removed when Gardener removes support for Kubernetes versions 1.31
+highQpsMode: false

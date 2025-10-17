@@ -58,8 +58,10 @@ spec:
             {{- range $userAgentHeader := .Values.userAgentHeaders }}
             - --user-agent={{ $userAgentHeader }}
             {{- end }}
+            {{- if .Values.highQpsMode }}
             - --kube-api-qps=100
             - --kube-api-burst=200
+            {{- end }}
           env:
             - name: DRIVER_NAME
               value: nfs.manila.csi.openstack.org

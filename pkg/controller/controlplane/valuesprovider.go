@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
@@ -24,6 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -658,7 +660,10 @@ func (vp *valuesProvider) getControlPlaneChartValues(
 		return nil, err
 	}
 
-	csiCinder := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	csiCinder, err := getCSIControllerChartValues(cluster, secretsReader, userAgentHeaders, checksums, scaledDown)
+	if err != nil {
+		return nil, err
+	}
 
 	csiManila, err := vp.getCSIManilaControllerChartValues(cpConfig, cp, cluster, userAgentHeaders, checksums, scaledDown, credentials)
 	if err != nil {
@@ -726,7 +731,7 @@ func getCSIControllerChartValues(
 	userAgentHeaders []string,
 	checksums map[string]string,
 	scaledDown bool,
-) map[string]interface{} {
+) (map[string]interface{}, error) {
 	values := map[string]interface{}{
 		"enabled":  true,
 		"replicas": extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
@@ -741,7 +746,16 @@ func getCSIControllerChartValues(
 	if userAgentHeaders != nil {
 		values["userAgentHeaders"] = userAgentHeaders
 	}
-	return values
+
+	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+	if versionutils.ConstraintK8sGreaterEqual132.Check(k8sVersion) {
+		values["highQpsMode"] = true
+	}
+
+	return values, nil
 }
 
 // getCSIManilaControllerChartValues collects and returns the CSIController chart values.
@@ -769,6 +783,14 @@ func (vp *valuesProvider) getCSIManilaControllerChartValues(
 		}
 		if err := vp.addCSIManilaValues(values, cp, cluster, credentials); err != nil {
 			return nil, err
+		}
+
+		k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+		if err != nil {
+			return nil, err
+		}
+		if versionutils.ConstraintK8sGreaterEqual132.Check(k8sVersion) {
+			values["highQpsMode"] = true
 		}
 	}
 

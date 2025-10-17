@@ -1,0 +1,15 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager-provider-openstack
+  component_version: v0.24.1
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: aaronfern
+  category: other
+  contents: Upgrade dependency gardener/machine-controller-manager from v0.60.0 to
+    v0.60.1
+  mimetype: text/markdown
+  reference: '[#325](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/325)'
+  type: standard

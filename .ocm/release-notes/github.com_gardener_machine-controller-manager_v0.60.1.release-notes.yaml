@@ -1,0 +1,15 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.60.1
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: takoverflow
+  category: bugfix
+  contents: Added a safeguard to delay deletion of machines that are undergoing a
+    `Create` Request to prevent orphaning of VMs.
+  mimetype: text/markdown
+  reference: '[#1045](https://github.com/gardener/machine-controller-manager/pull/1045)'
+  type: standard

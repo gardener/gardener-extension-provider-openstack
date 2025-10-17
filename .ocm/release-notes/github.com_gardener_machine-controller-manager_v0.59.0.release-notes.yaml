@@ -1,0 +1,27 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.59.0
+release_notes:
+- audience: null
+  author: null
+  category: null
+  contents: |
+    # [gardener/machine-controller-manager]
+
+    ## ✨ New Features
+
+    - `[OPERATOR]` machine-controller-manager can manage machines without a target cluster by specifying `--target-kubeconfig=none`. See the [documentation](https://github.com/gardener/machine-controller-manager/blob/master/docs/FAQ.md#how-to-run-mcm-in-different-cluster-setups) for more details. by @timebertt [#1004]
+    ## 🐛 Bug Fixes
+
+    - `[OPERATOR]` Fix a bug where MCM does not check if a pod has already been evicted before reattempting eviction blindly by @aaronfern [#979]
+    - `[OPERATOR]` Fixed a bug in the MachineSet controller where the machine status was set to `Terminating` even if attempt to delete the machine object failed. by @takoverflow [#995]
+    ## 🏃 Others
+
+    - `[OPERATOR]` add new label `node_name` to the `mcm_machine_info` metric by @aaronfern [#1000]
+    - `[OPERATOR]` machine-controller-manager base image is updated to `gcr.io/distroless/static-debian12:nonroot`. by @aaronfern [#991]
+
+    ## Container (OCI) Images
+    - machine-controller-manager: `europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager:v0.59.0`
+  mimetype: text/markdown
+  reference: null
+  type: prerendered

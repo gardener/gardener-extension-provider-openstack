@@ -66,3 +66,8 @@ csimanila:
   # You may set ID of the cluster where manila-csi is deployed. This value will be appended
   # to share metadata in newly provisioned shares as `manila.csi.openstack.org/cluster=<cluster ID>`.
   clusterID: ""
+
+# if enabled add the flags --kube-api-qps=100 and --kube-api-burst=200 to the csi-driver-controller
+# only supported for Kubernetes versions >= 1.32
+# TODO @hebelsan remove highQpsMode can be removed when Gardener removes support for Kubernetes versions 1.31
+highQpsMode: false

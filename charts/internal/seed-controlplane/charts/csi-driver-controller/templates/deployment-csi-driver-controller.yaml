@@ -51,8 +51,10 @@ spec:
         {{- end }}
         - --v=3
         - --provide-node-service=false
+        {{- if .Values.highQpsMode }}
         - --kube-api-qps=100
         - --kube-api-burst=200
+        {{- end }}
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock

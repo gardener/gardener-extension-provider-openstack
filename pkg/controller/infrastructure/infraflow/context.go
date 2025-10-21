@@ -77,17 +77,17 @@ type Opts struct {
 
 // FlowContext contains the logic to reconcile or delete the infrastructure.
 type FlowContext struct {
-	state              shared.Whiteboard
-	client             client.Client
-	log                logr.Logger
-	infra              *extensionsv1alpha1.Infrastructure
-	config             *openstackapi.InfrastructureConfig
-	cloudProfileConfig *openstackapi.CloudProfileConfig
-	networking         osclient.Networking
-	loadbalancing      osclient.Loadbalancing
-	sharedFilesystem   osclient.SharedFilesystem
-	access             access.NetworkingAccess
-	compute            osclient.Compute
+	state                  shared.Whiteboard
+	client                 client.Client
+	openstackClientFactory osclient.Factory
+	log                    logr.Logger
+	infra                  *extensionsv1alpha1.Infrastructure
+	config                 *openstackapi.InfrastructureConfig
+	cloudProfileConfig     *openstackapi.CloudProfileConfig
+	networking             osclient.Networking
+	loadbalancing          osclient.Loadbalancing
+	access                 access.NetworkingAccess
+	compute                osclient.Compute
 
 	*shared.BasicFlowContext
 }
@@ -115,11 +115,6 @@ func NewFlowContext(opts Opts) (*FlowContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	sharedFilesytem, err := opts.ClientFactory.SharedFilesystem(osclient.WithRegion(opts.Infrastructure.Spec.Region))
-	if err != nil {
-		return nil, err
-	}
-
 	infraConfig, err := helper.InfrastructureConfigFromInfrastructure(opts.Infrastructure)
 	if err != nil {
 		return nil, err
@@ -130,17 +125,17 @@ func NewFlowContext(opts Opts) (*FlowContext, error) {
 	}
 
 	flowContext := &FlowContext{
-		state:              whiteboard,
-		infra:              opts.Infrastructure,
-		config:             infraConfig,
-		cloudProfileConfig: cloudProfileConfig,
-		networking:         networking,
-		loadbalancing:      loadbalancing,
-		access:             access,
-		compute:            compute,
-		sharedFilesystem:   sharedFilesytem,
-		log:                opts.Log,
-		client:             opts.Client,
+		state:                  whiteboard,
+		infra:                  opts.Infrastructure,
+		config:                 infraConfig,
+		cloudProfileConfig:     cloudProfileConfig,
+		networking:             networking,
+		loadbalancing:          loadbalancing,
+		access:                 access,
+		compute:                compute,
+		log:                    opts.Log,
+		client:                 opts.Client,
+		openstackClientFactory: opts.ClientFactory,
 	}
 	return flowContext, nil
 }

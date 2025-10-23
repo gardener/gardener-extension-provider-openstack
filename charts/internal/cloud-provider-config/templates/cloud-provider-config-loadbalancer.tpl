@@ -10,7 +10,6 @@ lb-provider="{{ .Values.lbProvider }}"
 lb-method="SOURCE_IP_PORT"
 {{- end }}
 floating-network-id="{{ .Values.floatingNetworkID }}"
-use-octavia="{{ .Values.useOctavia }}"
 {{- if .Values.floatingSubnetID }}
 floating-subnet-id="{{ .Values.floatingSubnetID }}"
 {{- end }}

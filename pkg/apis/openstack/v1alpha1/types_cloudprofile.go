@@ -53,10 +53,6 @@ type CloudProfileConfig struct {
 	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
 	// +optional
 	NodeVolumeAttachLimit *int32 `json:"nodeVolumeAttachLimit,omitempty"`
-	// UseOctavia specifies whether the OpenStack Octavia network load balancing is used.
-	// Deprecated: This field will be removed in future release.
-	// +optional
-	UseOctavia *bool `json:"useOctavia,omitempty"`
 	// UseSNAT specifies whether S-NAT is supposed to be used for the Gardener managed OpenStack router.
 	// +optional
 	UseSNAT *bool `json:"useSNAT,omitempty"`

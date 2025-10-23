@@ -17,7 +17,6 @@ lbProvider: foobar
 # floatingSubnetName: "*abc*"
 # floatingSubnetTags: tag1,tag2
 # subnetID: foo-bar-123
-useOctavia: false
 # floatingClasses:
 # - name: A
 #   floatingNetworkID: "1234"

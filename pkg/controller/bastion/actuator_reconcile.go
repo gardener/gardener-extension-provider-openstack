@@ -40,7 +40,7 @@ import (
 type bastionEndpoints struct {
 	// private is the private endpoint of the bastion. It is required when opening a port on the worker node to allow SSH access from the bastion
 	private *corev1.LoadBalancerIngress
-	//  public is the public endpoint where the enduser connects to establish the SSH connection.
+	// public is the public endpoint where the enduser connects to establish the SSH connection.
 	public *corev1.LoadBalancerIngress
 }
 

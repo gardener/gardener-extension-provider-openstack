@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/utils"
 )
 
 // ValidateInfrastructureConfig validates a InfrastructureConfig object.

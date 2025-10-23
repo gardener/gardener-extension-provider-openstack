@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/access"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow/shared"
-	infrainternal "github.com/gardener/gardener-extension-provider-openstack/pkg/internal/infrastructure"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -43,7 +42,7 @@ func (fctx *FlowContext) Reconcile(ctx context.Context) error {
 
 	state := fctx.computeInfrastructureState()
 	status := fctx.computeInfrastructureStatus()
-	return infrainternal.PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, status, state)
+	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, status, state)
 }
 
 func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
@@ -289,7 +288,7 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	desired := &subnets.Subnet{
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
-		CIDR:           fctx.workerCIDR(),
+		CIDR:           fctx.workersCIDR(),
 		IPVersion:      4,
 		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
 	}

@@ -34,14 +34,13 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 // bastionEndpoints holds the endpoints the bastion host provides
 type bastionEndpoints struct {
 	// private is the private endpoint of the bastion. It is required when opening a port on the worker node to allow SSH access from the bastion
 	private *corev1.LoadBalancerIngress
-	//  public is the public endpoint where the enduser connects to establish the SSH connection.
+	// public is the public endpoint where the enduser connects to establish the SSH connection.
 	public *corev1.LoadBalancerIngress
 }
 
@@ -158,6 +157,20 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	return a.client.Status().Patch(ctx, bastion, patch)
 }
 
+// Retry performs a function with retries, delay, and a max number of attempts
+func Retry(maxRetries int, delay time.Duration, log logr.Logger, fn func() error) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+		log.Info(fmt.Sprintf("Attempt %d failed, retrying in %v: %v", i+1, delay, err))
+		time.Sleep(delay)
+	}
+	return err
+}
+
 func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (floatingips.FloatingIP, error) {
 	opts.Logr.Info("Ensuring public IP address for bastion instance", "name", opts.BastionInstanceName)
 
@@ -201,7 +214,7 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 
 	if router.Status != "ACTIVE" {
 		opts.Logr.Info("Router not active, retrying until it becomes ACTIVE", "routerID", router.ID, "currentStatus", router.Status)
-		if err := utils.Retry(30, 6*time.Second, opts.Logr, func() error {
+		if err := Retry(30, 6*time.Second, opts.Logr, func() error {
 			router, err = client.GetRouterByID(ctx, infraStatus.Networks.Router.ID)
 			if err != nil {
 				return err
@@ -240,7 +253,7 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 	opts.Logr.Info("Public IP address created", "name", opts.BastionInstanceName, "ip", fip.FloatingIP)
 
 	// wait until floating IP is active
-	err = utils.Retry(30, 5*time.Second, opts.Logr, func() error {
+	err = Retry(30, 5*time.Second, opts.Logr, func() error {
 		fip, err = client.GetFloatingIP(ctx, floatingips.ListOpts{ID: fip.ID})
 		if err != nil {
 			return err
@@ -298,7 +311,7 @@ func ensureComputeInstance(ctx context.Context, client openstackclient.Compute, 
 	}
 
 	// wait until instance and floatingIP are ready
-	err = utils.Retry(60, 10*time.Second, opts.Logr, func() error {
+	err = Retry(60, 10*time.Second, opts.Logr, func() error {
 		// refresh bastion instance
 		instance, err = getBastionInstance(ctx, client, opts.BastionInstanceName)
 		if err != nil {

@@ -5,10 +5,7 @@
 package infrastructure
 
 import (
-	"context"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
-	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -27,15 +24,4 @@ func NewActuator(mgr manager.Manager, disableProjectedTokenMount bool) infrastru
 		client:                     mgr.GetClient(),
 		restConfig:                 mgr.GetConfig(),
 	}
-}
-
-// CleanupTerraformerResources deletes terraformer artifacts (config, state, secrets).
-func CleanupTerraformerResources(ctx context.Context, tf terraformer.Terraformer) error {
-	if err := tf.EnsureCleanedUp(ctx); err != nil {
-		return err
-	}
-	if err := tf.CleanupConfiguration(ctx); err != nil {
-		return err
-	}
-	return tf.RemoveTerraformerFinalizerFromConfig(ctx)
 }

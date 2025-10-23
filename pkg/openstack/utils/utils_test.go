@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
+	. "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/utils"
 )
 
 var _ = Describe("Utils", func() {

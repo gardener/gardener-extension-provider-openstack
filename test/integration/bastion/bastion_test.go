@@ -49,7 +49,6 @@ import (
 	bastionctrl "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/bastion"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 const (
@@ -284,7 +283,7 @@ var _ = Describe("Bastion tests", func() {
 			nil,
 		)).To(Succeed())
 
-		err = utils.Retry(100, 6*time.Second, log, func() error {
+		err = bastionctrl.Retry(100, 6*time.Second, log, func() error {
 			return verifyPort22IsOpen(ctx, c, bastion)
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -356,7 +355,7 @@ func prepareNewRouter(routerName, subnetID string) (string, string) {
 	Expect(router).To(Not(BeNil()))
 
 	if router.Status != "ACTIVE" {
-		err = utils.Retry(30, 6*time.Second, log, func() error {
+		err = bastionctrl.Retry(30, 6*time.Second, log, func() error {
 			router, err = networkClient.GetRouterByID(ctx, router.ID)
 			if err != nil {
 				return err
@@ -399,7 +398,7 @@ func prepareNewNetwork(networkName string) string {
 	Expect(network).To(Not(BeNil()))
 
 	if network.Status != "ACTIVE" {
-		err = utils.Retry(30, 6*time.Second, log, func() error {
+		err = bastionctrl.Retry(30, 6*time.Second, log, func() error {
 			network, err = networkClient.GetNetworkByID(ctx, network.ID)
 			if err != nil {
 				return err

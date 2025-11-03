@@ -93,7 +93,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
 		})
 
-		FIt("should succeed if the NamespacedCloudProfile correctly defines new machine images and types", func() {
+		It("should succeed if the NamespacedCloudProfile correctly defines new machine images and types", func() {
 
 			imageIDMappings := `"regions":[{"name":"image-region-1","id":"id-img-reg-1"}]`
 			namespacedImageIDMappings := `{"name":"image-1","versions":[{"version":"1.1","regions":[{"name":"image-region-1","id":"id-img-reg-1"}]}]},
@@ -146,18 +146,25 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 		})
 
 		It("should fail for NamespacedCloudProfile trying to override an already existing machine image version", func() {
+
+			regionIDMappings := `"regions":[{"name":"image-region-1","id":"id-img-reg-1"}]`
+
+			if isCapabilitiesCloudProfile {
+				regionIDMappings = `"capabilityFlavors":[{"regions":[{"name":"image-region-1","id":"id-img-reg-1"}]}]`
+			}
+
 			cloudProfile.Spec.MachineImages = []v1beta1.MachineImage{
 				{Name: "image-1", Versions: []v1beta1.MachineImageVersion{{ExpirableVersion: v1beta1.ExpirableVersion{Version: "1.0"}}}},
 			}
 			cloudProfile.Spec.MachineTypes = []v1beta1.MachineType{{Name: "type-1"}}
 
-			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
 "kind":"CloudProfileConfig",
 "machineImages":[
-  {"name":"image-1","versions":[{"version":"1.0","image":"image-name-1","regions":[{"name":"image-region-1","id":"id-img-reg-1"}]}]}
+  {"name":"image-1","versions":[{"version":"1.0","image":"image-name-1",%s}]}
 ]
-}`)}
+}`, regionIDMappings))}
 			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 				{
 					Name: "image-1",

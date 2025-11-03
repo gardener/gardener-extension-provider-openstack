@@ -106,7 +106,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 			cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
 "kind":"CloudProfileConfig",
-"machineImages":[{"name":"image-1","versions":[{"version":"1.0",%s}]}]
+"machineImages":[{"name":"image-1","versions":[{"version":"1.0","image":"image-name-1", %s}]}]
 }`, imageIDMappings))}
 
 			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{
@@ -162,7 +162,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
 "kind":"CloudProfileConfig",
 "machineImages":[
-  {"name":"image-1","versions":[{"version":"1.0","image":"image-name-1",%s}]}
+  {"name":"image-1","versions":[{"version":"1.0","image":"image-name-1", %s}]}
 ]
 }`, regionIDMappings))}
 			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
@@ -184,14 +184,20 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 			}))))
 		})
 
-		It("should fail for NamespacedCloudProfile specifying provider config without the according version in the spec.machineImages", func() {
-			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+		FIt("should fail for NamespacedCloudProfile specifying provider config without the according version in the spec.machineImages", func() {
+			imageIDMappings := `"regions":[{"name":"image-region-1","id":"id-img-reg-1"}]`
+			if isCapabilitiesCloudProfile {
+				imageIDMappings = `"capabilityFlavors":[{"regions":[{"name":"image-region-1","id":"id-img-reg-1"}]}]`
+			}
+
+			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
 "kind":"CloudProfileConfig",
 "machineImages":[
-  {"name":"image-1","versions":[{"version":"1.1","image":"image-name-1","regions":[{"name":"image-region-1","id":"id-img-reg-1"}]}]}
+  {"name":"image-1","versions":[{"version":"1.1","image":"image-name-1", %s}]}
 ]
-}`)}
+}`, imageIDMappings))}
+
 			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 				{
 					Name: "image-1",

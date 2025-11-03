@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
 
@@ -67,6 +68,11 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, newObj, _ client.
 	}
 	parentProfile := &gardencorev1beta1.CloudProfile{}
 	if err := p.client.Get(ctx, client.ObjectKey{Name: parentCloudProfile.Name}, parentProfile); err != nil {
+		return err
+	}
+
+	// TODO(Riesop): Remove TransformSpecToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
+	if err := helper.SimulateTransformToParentFormat(cpConfig, profile, parentProfile.Spec.MachineCapabilities); err != nil {
 		return err
 	}
 
@@ -113,6 +119,7 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 				field.NewPath("spec.providerConfig.machineImages"),
 				fmt.Sprintf("machine image %s is not defined in the NamespacedCloudProfile providerConfig", machineImage.Name),
 			))
+
 			continue
 		}
 		for _, version := range machineImage.Versions {
@@ -123,6 +130,9 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 					field.NewPath("spec.providerConfig.machineImages"),
 					fmt.Sprintf("machine image version %s@%s is not defined in the NamespacedCloudProfile providerConfig", machineImage.Name, version.Version),
 				))
+
+				// no need to check the capabilities and architectures if the version is not defined in the providerConfig
+				continue
 			}
 
 			if len(parentSpec.MachineCapabilities) == 0 {

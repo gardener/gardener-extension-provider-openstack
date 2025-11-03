@@ -175,6 +175,8 @@ type MachineImages struct {
 type MachineImageVersion struct {
 	// Version is the version of the image.
 	Version string
+	// Image is the name of the image.
+	Image string
 	// TODO @Roncossek add "// deprecated" once aws cloudprofiles are migrated to use CapabilityFlavors
 
 	// Regions is a mapping to the correct ID for the machine image in the supported regions.
@@ -187,6 +189,9 @@ type MachineImageVersion struct {
 type MachineImageFlavor struct {
 	// Regions is a mapping to the correct ID for the machine image in the supported regions.
 	Regions []RegionIDMapping
+
+	Image string
+
 	// Capabilities that are supported by the IDs in this set.
 	Capabilities gardencorev1beta1.Capabilities
 }

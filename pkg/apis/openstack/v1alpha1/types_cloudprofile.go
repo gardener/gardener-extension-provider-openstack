@@ -167,6 +167,8 @@ type MachineImageVersion struct {
 type MachineImageFlavor struct {
 	// Regions is a mapping to the correct AMI for the machine image in the supported regions.
 	Regions []RegionIDMapping `json:"regions,omitempty"`
+	// Image is the name of the image.
+	Image string `json:"image,omitempty"`
 	// Capabilities that are supported by the AMIs in this set.
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }

@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -18,16 +19,37 @@ import (
 )
 
 var _ = Describe("CloudProfileConfig validation", func() {
-	Describe("#ValidateCloudProfileConfig", func() {
+	DescribeTableSubtree("#ValidateCloudProfileConfig", func(isCapabilitiesCloudProfile bool) {
 		var (
-			cloudProfileConfig  *api.CloudProfileConfig
-			machineImages       []core.MachineImage
-			machineImageName    string
-			machineImageVersion string
-			fldPath             *field.Path
+			capabilityDefinitions []v1beta1.CapabilityDefinition
+			cloudProfileConfig    *api.CloudProfileConfig
+			machineImages         []core.MachineImage
+			machineImageName      string
+			machineImageVersion   string
+			fldPath               *field.Path
 		)
 
 		BeforeEach(func() {
+			regions := []api.RegionIDMapping{{
+				Name: "eu01",
+				ID:   "9afa968b-ed9e-4ba0-a394-f74cbb0313w2",
+			}}
+			var capabilityFlavors []api.MachineImageFlavor
+
+			if isCapabilitiesCloudProfile {
+				capabilityDefinitions = []v1beta1.CapabilityDefinition{{
+					Name:   v1beta1constants.ArchitectureName,
+					Values: []string{"amd64"},
+				}}
+				capabilityFlavors = []api.MachineImageFlavor{{
+					Regions: regions,
+					Capabilities: v1beta1.Capabilities{
+						v1beta1constants.ArchitectureName: []string{"amd64"},
+					}}}
+				regions = nil
+			} else {
+				regions[0].Architecture = ptr.To("amd64")
+			}
 			machineImageName = "ubuntu"
 			machineImageVersion = "1.2.3"
 			cloudProfileConfig = &api.CloudProfileConfig{
@@ -49,13 +71,10 @@ var _ = Describe("CloudProfileConfig validation", func() {
 						Name: machineImageName,
 						Versions: []api.MachineImageVersion{
 							{
-								Version: machineImageVersion,
-								Image:   "ubuntu-1.2.3",
-								Regions: []api.RegionIDMapping{{
-									Name:         "eu01",
-									ID:           "9afa968b-ed9e-4ba0-a394-f74cbb0313w2",
-									Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-								}},
+								Version:           machineImageVersion,
+								Image:             "ubuntu-1.2.3",
+								Regions:           regions,
+								CapabilityFlavors: capabilityFlavors,
 							},
 						},
 					},
@@ -539,7 +558,9 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				}))))
 			})
 		})
-	})
+	},
+		Entry("CloudProfile uses regions only", false),
+		Entry("CloudProfile uses capabilities", true))
 })
 
 var _ = Describe("LoadBalancerClass validation", func() {

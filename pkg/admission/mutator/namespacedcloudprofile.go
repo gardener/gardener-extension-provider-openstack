@@ -44,13 +44,9 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return nil
 	}
 
-	specConfig := &v1alpha1.CloudProfileConfig{}
-	if _, _, err := p.decoder.Decode(profile.Spec.ProviderConfig.Raw, nil, specConfig); err != nil {
-		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile spec for '%s': %w", profile.Name, err)
-	}
-	statusConfig := &v1alpha1.CloudProfileConfig{}
-	if _, _, err := p.decoder.Decode(profile.Status.CloudProfileSpec.ProviderConfig.Raw, nil, statusConfig); err != nil {
-		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
+	specConfig, statusConfig, err := p.decodeConfigs(profile)
+	if err != nil {
+		return err
 	}
 
 	statusConfig.MachineImages = mergeMachineImages(specConfig.MachineImages, statusConfig.MachineImages)
@@ -61,6 +57,26 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 	}
 	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
 
+	return nil
+}
+
+func (p *namespacedCloudProfile) decodeConfigs(profile *gardencorev1beta1.NamespacedCloudProfile) (*v1alpha1.CloudProfileConfig, *v1alpha1.CloudProfileConfig, error) {
+	specConfig := &v1alpha1.CloudProfileConfig{}
+	statusConfig := &v1alpha1.CloudProfileConfig{}
+
+	if err := p.decodeProviderConfig(profile.Spec.ProviderConfig.Raw, specConfig, "spec"); err != nil {
+		return nil, nil, err
+	}
+	if err := p.decodeProviderConfig(profile.Status.CloudProfileSpec.ProviderConfig.Raw, statusConfig, "status"); err != nil {
+		return nil, nil, err
+	}
+
+	return specConfig, statusConfig, nil
+}
+func (p *namespacedCloudProfile) decodeProviderConfig(raw []byte, into *v1alpha1.CloudProfileConfig, configType string) error {
+	if _, _, err := p.decoder.Decode(raw, nil, into); err != nil {
+		return fmt.Errorf("could not decode providerConfig of %s: %w", configType, err)
+	}
 	return nil
 }
 

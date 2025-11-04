@@ -71,16 +71,35 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, newObj, _ client.
 		return err
 	}
 
+	allErrs := field.ErrorList{}
+	if err := p.validateMachineImagesOnlyInNamespacedCloudProfile(cpConfig); err != nil {
+		allErrs = append(allErrs, err.(*field.Error))
+	}
+
 	// TODO(Riesop): Remove TransformSpecToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
 	if err := helper.SimulateTransformToParentFormat(cpConfig, profile, parentProfile.Spec.MachineCapabilities); err != nil {
 		return err
 	}
+	allErrs = append(allErrs, p.validateMachineImages(cpConfig, profile.Spec.MachineImages, parentProfile.Spec)...)
+	return allErrs.ToAggregate()
+}
 
-	return p.validateNamespacedCloudProfileProviderConfig(cpConfig, profile.Spec, parentProfile.Spec).ToAggregate()
+// validateNamespacedCloudProfileProviderConfig checks that only machineImages are set in the CloudProfileConfig passed with a NamespacedCloudProfile.
+func (p *namespacedCloudProfile) validateMachineImagesOnlyInNamespacedCloudProfile(providerConfig *api.CloudProfileConfig) error {
+	validationProviderConfig := &api.CloudProfileConfig{
+		MachineImages: providerConfig.MachineImages,
+	}
+	if !equality.Semantic.DeepEqual(validationProviderConfig, providerConfig) {
+		return field.Forbidden(
+			field.NewPath("spec.providerConfig"),
+			"must only set machineImages",
+		)
+	}
+	return nil
 }
 
 // validateNamespacedCloudProfileProviderConfig validates the CloudProfileConfig passed with a NamespacedCloudProfile.
-func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, profileSpec core.NamespacedCloudProfileSpec, parentSpec gardencorev1beta1.CloudProfileSpec) field.ErrorList {
+func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfigLegacy(providerConfig *api.CloudProfileConfig, profileSpec core.NamespacedCloudProfileSpec, parentSpec gardencorev1beta1.CloudProfileSpec) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	validationProviderConfig := &api.CloudProfileConfig{
@@ -92,8 +111,6 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 			"must only set machineImages",
 		))
 	}
-
-	allErrs = append(allErrs, p.validateMachineImages(providerConfig, profileSpec.MachineImages, parentSpec)...)
 
 	return allErrs
 }

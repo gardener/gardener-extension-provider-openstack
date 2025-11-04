@@ -173,6 +173,11 @@ type MachineImageFlavor struct {
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }
 
+// GetCapabilities returns the Capabilities of a MachineImageFlavor
+func (cs *MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
+	return cs.Capabilities
+}
+
 // RegionIDMapping is a mapping to the correct ID for the machine image in the given region.
 type RegionIDMapping struct {
 	// Name is the name of the region.

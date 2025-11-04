@@ -40,9 +40,7 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return fmt.Errorf("wrong object type %T", newObj)
 	}
 
-	// Ignore NamespacedCloudProfiles being deleted and wait for core mutator to patch the status.
-	if profile.DeletionTimestamp != nil || profile.Generation != profile.Status.ObservedGeneration ||
-		profile.Spec.ProviderConfig == nil || profile.Status.CloudProfileSpec.ProviderConfig == nil {
+	if shouldSkipMutation(profile) {
 		return nil
 	}
 
@@ -64,6 +62,13 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
 
 	return nil
+}
+
+func shouldSkipMutation(profile *gardencorev1beta1.NamespacedCloudProfile) bool {
+	return profile.DeletionTimestamp != nil ||
+		profile.Generation != profile.Status.ObservedGeneration ||
+		profile.Spec.ProviderConfig == nil ||
+		profile.Status.CloudProfileSpec.ProviderConfig == nil
 }
 
 func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.MachineImages) []v1alpha1.MachineImages {

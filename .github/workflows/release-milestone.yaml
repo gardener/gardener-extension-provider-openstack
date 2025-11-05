@@ -7,22 +7,25 @@ on:
     - synchronize
     - labeled
     - unlabeled
+    - milestoned
+    - demilestoned
 
 jobs:
   check-release-milestone:
     name: Check Release Milestone
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
       with:
+        ref: master
         path: './'
 
     - id: version
       run: |
-        echo "::set-output name=version::$(cat ./VERSION)"
+        echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
     - name: Block merge if release milestone is missing
-      uses: actions/github-script@v4
+      uses: actions/github-script@v8
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -35,7 +38,14 @@ jobs:
           }
           const nextMinorVersion = match[1];
 
-          const milestones = await github.issues.listMilestones({
+          // Fetch current PR data to get latest milestone info
+          const { data: pullRequest } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.payload.pull_request.number
+          });
+
+          const milestones = await github.rest.issues.listMilestones({
             owner: context.repo.owner,
             repo: context.repo.repo,
             state: 'open',
@@ -53,8 +63,14 @@ jobs:
             // milestone found, check if PR is associated
             milestoneForNextMinorReleaseFound = true;
 
-            if (context.payload.pull_request.milestone == null) {
+            if (pullRequest.milestone == null) {
               core.setFailed('Milestone for next minor release ' + nextMinorVersion + ' found, however, PR is not milestoned for it. Merge is not allowed.');
+              return
+            }
+
+            // Check if milestone matches
+            if (pullRequest.milestone.title != nextMinorVersion) {
+              core.setFailed('PR has milestone "' + pullRequest.milestone.title + '" but should have "' + nextMinorVersion + '". Merge is not allowed.');
               return
             }
           }

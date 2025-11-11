@@ -238,14 +238,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			if reconcileOpts.ExtensionClass != "garden" {
-				// TODO (georgibaltiev): Remove after the release of version 1.50.0
-				log.Info("Adding migration runnables")
-				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-					return purgeMachineControllerManagerRBACResources(ctx, mgr.GetClient(), log)
-				})); err != nil {
-					return fmt.Errorf("error adding migrations: %w", err)
-				}
-
 				// TODO (kon-angelo): Remove after the release of version 1.46.0
 				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 					return purgeTerraformerRBACResources(ctx, mgr.GetClient(), log)

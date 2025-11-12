@@ -17,7 +17,7 @@ var (
 	rateLimitsExceededRegexp            = regexp.MustCompile(`(?i)(RequestLimitExceeded|Throttling|Too many requests)`)
 	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|Conflict|inactive billing state|timeout while waiting for state to become|InvalidCidrBlock|already busy for|A resource with the ID|There are not enough hosts available|No Router found|There are one or more ports still in use on the network)`)
 	retryableDependenciesRegexp         = regexp.MustCompile(`(?i)(RetryableError|internal server error)`)
-	resourcesDepletedRegexp             = regexp.MustCompile(`(?i)(not available in the current hardware cluster|out of stock)`)
+	resourcesDepletedRegexp             = regexp.MustCompile(`(?i)(not available in the current hardware cluster|out of stock|ResourceExhausted)`)
 	configurationProblemRegexp          = regexp.MustCompile(`(?i)(missing expected router|Policy doesn't allow .* to be performed|overlaps with cidr|not supported in your requested Availability Zone|notFound|Invalid value|violates constraint|no attached internet gateway found|Your query returned no results|invalid VPC attributes|unrecognized feature gate|runtime-config invalid key|strict decoder error|not allowed to configure an unsupported|error during apply of object .* is invalid:|duplicate zones|overlapping zones)`)
 	retryableConfigurationProblemRegexp = regexp.MustCompile(`(?i)(is misconfigured and requires zero voluntary evictions|SDK.CanNotResolveEndpoint|The requested configuration is currently not supported)`)
 

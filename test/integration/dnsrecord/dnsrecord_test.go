@@ -39,12 +39,7 @@ import (
 
 // IMPORTANT:
 // In order for this test to work you have to pre create
-// a DNS zone in the correct OpenStack project and store its name in preCreatedDnsZoneName
-
-const (
-	// preCreatedDnsZoneName is the name of the dns Zone that must be pre-created in OpenStack for the tests to run.
-	preCreatedDnsZoneName = "gardener-dev-team-test.c.eu-de-1.cloud.sap."
-)
+// a DNS zone in the correct OpenStack project and pass its name with --existing-dns-zone
 
 var (
 	ctx       = context.Background()
@@ -69,6 +64,8 @@ var (
 	appID      = flag.String("app-id", "", "Application Credential ID for openstack")
 	appName    = flag.String("app-name", "", "Application Credential Name for openstack")
 	appSecret  = flag.String("app-secret", "", "Application Credential Secret for openstack")
+	// TODO remove default
+	existingDnsZone = flag.String("existing-dns-zone", "", "Name of the dns Zone that must be pre-created in OpenStack")
 )
 
 var _ = BeforeSuite(func() {
@@ -178,7 +175,7 @@ var _ = BeforeSuite(func() {
 	}
 	createNamespace(ctx, c, namespace)
 
-	By("created secret into namespace")
+	By("creating test secret")
 	secret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "dnsrecord",
@@ -250,7 +247,7 @@ var _ = BeforeSuite(func() {
 	createCluster(ctx, c, cluster)
 
 	By("retrieving pre created OpenStack DNS hosted zone")
-	zoneID = getPreCreatedDNSHostedZone(ctx, dnsClient, preCreatedDnsZoneName)
+	zoneID = getPreCreatedDNSHostedZone(ctx, dnsClient, *existingDnsZone)
 })
 
 var runTest = func(dns *extensionsv1alpha1.DNSRecord, newValues []string, beforeCreate, beforeUpdate, beforeDelete func()) {

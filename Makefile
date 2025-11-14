@@ -79,7 +79,8 @@ DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.progress \
                         --region='$(shell cat $(REGION))' \
                         --app-id='$(shell cat $(APP_ID))' \
                         --app-name='$(shell cat $(APP_NAME))' \
-                        --app-secret='$(shell cat $(APP_SECRET))'
+                        --app-secret='$(shell cat $(APP_SECRET))' \
+                        --existing-dns-zone='' # gardener-dev-team-test.c.eu-de-1.cloud.sap.
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty

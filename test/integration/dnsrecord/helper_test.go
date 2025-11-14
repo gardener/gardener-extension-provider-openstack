@@ -42,6 +42,9 @@ func validateFlags() {
 	if len(*tenantName) == 0 {
 		panic("--tenant-name flag is not specified")
 	}
+	if len(*existingDnsZone) == 0 {
+		panic("--existing-dns-zone flag is not specified")
+	}
 
 	By("validating OpenStack credentials")
 	err := openstackext.ValidateSecrets(*userName, *password, *appID, *appName, *appSecret)
@@ -119,7 +122,7 @@ func newDNSRecord(recordType extensionsv1alpha1.DNSRecordType, values []string, 
 				Namespace: testName,
 			},
 			Zone:       &zoneID,
-			Name:       recordName + "." + preCreatedDnsZoneName,
+			Name:       recordName + "." + *existingDnsZone,
 			RecordType: recordType,
 			Values:     values,
 			TTL:        ttl,

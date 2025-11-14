@@ -69,7 +69,17 @@ BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                            --password='$(shell cat $(PASSWORD))' \
                            --user-name='$(shell cat $(USER_NAME))'
 
-DNSRECORD_TEST_FLAGS := $(filter-out --floating-pool-name=%,$(INFRA_TEST_FLAGS))
+DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.progress \
+                        --kubeconfig=${KUBECONFIG} \
+                        --auth-url='$(shell cat $(AUTH_URL))' \
+                        --domain-name='$(shell cat $(DOMAIN_NAME))' \
+                        --password='$(shell cat $(PASSWORD))' \
+                        --tenant-name='$(shell cat $(TENANT_NAME))' \
+                        --user-name='$(shell cat $(USER_NAME))' \
+                        --region='$(shell cat $(REGION))' \
+                        --app-id='$(shell cat $(APP_ID))' \
+                        --app-name='$(shell cat $(APP_NAME))' \
+                        --app-secret='$(shell cat $(APP_SECRET))'
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty

@@ -139,7 +139,7 @@ var _ = BeforeSuite(func() {
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed(), "Failed to add extensionsv1alpha1 scheme to manager")
 	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed(), "Failed to add OpenStack scheme to manager")
 
-	Expect(dnsrecordctrl.AddToManagerWithOptions(ctx, mgr, dnsrecordctrl.AddOptions{})).To(Succeed(), "Failed to add BackupBucket controller to manager")
+	Expect(dnsrecordctrl.AddToManagerWithOptions(ctx, mgr, dnsrecordctrl.AddOptions{})).To(Succeed(), "Failed to add DnsRecord controller to manager")
 
 	By("starting manager")
 	go func() {
@@ -272,12 +272,12 @@ var runTest = func(dns *extensionsv1alpha1.DNSRecord, newValues []string, before
 		By("waiting until dnsrecord is deleted")
 		waitUntilDNSRecordDeleted(ctx, c, log, dns)
 
-		By("verifying that the GCP DNS recordset does not exist")
+		By("verifying that the OpenStack DNS recordset does not exist")
 		verifyDNSRecordSetDeleted(ctx, dnsClient, dns)
 	}()
 
 	framework.AddCleanupAction(func() {
-		By("deleting the GCP DNS recordset if it still exists")
+		By("deleting the OpenStack DNS recordset if it still exists")
 		deleteDNSRecordSet(ctx, dnsClient, dns)
 	})
 
@@ -287,7 +287,7 @@ var runTest = func(dns *extensionsv1alpha1.DNSRecord, newValues []string, before
 	By("getting dnsrecord and verifying its status")
 	getDNSRecordAndVerifyStatus(ctx, c, dns, zoneID)
 
-	By("verifying that the GCP DNS recordset exists and matches dnsrecord")
+	By("verifying that the OpenStack DNS recordset exists and matches dnsrecord")
 	verifyDNSRecordSet(ctx, dnsClient, dns)
 
 	if len(newValues) > 0 {
@@ -307,7 +307,7 @@ var runTest = func(dns *extensionsv1alpha1.DNSRecord, newValues []string, before
 		By("getting dnsrecord and verifying its status")
 		getDNSRecordAndVerifyStatus(ctx, c, dns, zoneID)
 
-		By("verifying that the GCP DNS recordset exists and matches dnsrecord")
+		By("verifying that the OpenStack DNS recordset exists and matches dnsrecord")
 		verifyDNSRecordSet(ctx, dnsClient, dns)
 	}
 }
@@ -339,11 +339,11 @@ var _ = Describe("DNSRecord tests", func() {
 				[]string{"3.3.3.3", "1.1.1.1"},
 				nil,
 				func() {
-					By("creating GCP DNS recordset")
+					By("creating OpenStack DNS recordset")
 					updateDNSRecordSet(ctx, dnsClient, dns, []string{"8.8.8.8"})
 				},
 				func() {
-					By("creating GCP DNS recordset")
+					By("creating OpenStack DNS recordset")
 					updateDNSRecordSet(ctx, dnsClient, dns, []string{"8.8.8.8"})
 				},
 			)
@@ -358,13 +358,13 @@ var _ = Describe("DNSRecord tests", func() {
 				dns,
 				nil,
 				func() {
-					By("creating GCP DNS recordset")
+					By("creating OpenStack DNS recordset")
 					createDNSRecordSet(ctx, dnsClient, dns.Spec.Name,
 						string(dns.Spec.RecordType), 120, dns.Spec.Values)
 				},
 				nil,
 				func() {
-					By("deleting GCP DNS recordset")
+					By("deleting OpenStack DNS recordset")
 					deleteDNSRecordSet(ctx, dnsClient, dns)
 				},
 			)

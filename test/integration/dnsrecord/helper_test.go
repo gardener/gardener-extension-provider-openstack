@@ -36,9 +36,6 @@ func validateFlags() {
 	if len(*domainName) == 0 {
 		panic("--domain-name flag is not specified")
 	}
-	if len(*floatingPoolName) == 0 {
-		panic("--floating-pool-name is not specified")
-	}
 	if len(*region) == 0 {
 		panic("--region flag is not specified")
 	}
@@ -53,6 +50,7 @@ func validateFlags() {
 	}
 }
 
+// Kube client helper functions
 func createNamespace(ctx context.Context, c client.Client, namespace *corev1.Namespace) {
 	log.Info("Creating namespace", "namespace", namespace.Name)
 	Expect(c.Create(ctx, namespace)).To(Succeed(), "Failed to create namespace: %s", namespace.Name)
@@ -64,6 +62,19 @@ func deleteNamespace(ctx context.Context, c client.Client, namespace *corev1.Nam
 	}
 	log.Info("Deleting namespace", "namespace", namespace.Name)
 	Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
+}
+
+func createSecret(ctx context.Context, c client.Client, secret *corev1.Secret) {
+	log.Info("Creating secret", "secret", secret.Name)
+	Expect(c.Create(ctx, secret)).To(Succeed())
+}
+
+func deleteSecret(ctx context.Context, c client.Client, secret *corev1.Secret) {
+	if c == nil || secret == nil {
+		return
+	}
+	log.Info("Deleting secret", "secret", secret.Name)
+	Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
 }
 
 func createCluster(ctx context.Context, c client.Client, cluster *extensionsv1alpha1.Cluster) {
@@ -91,33 +102,13 @@ func deleteDNSRecord(ctx context.Context, c client.Client, dns *extensionsv1alph
 	Expect(client.IgnoreNotFound(c.Delete(ctx, dns))).To(Succeed())
 }
 
-func createDNSHostedZone(ctx context.Context, dnsService *gophercloud.ServiceClient, zoneName string) string {
-	zone, err := zones.Create(ctx, dnsService, zones.CreateOpts{
-		Name:        zoneName,
-		Description: "DNS Test Hosted Zone",
-		Email:       "test-gardener-os-extension@sap.com",
-	}).Extract()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(zone).NotTo(BeNil())
-	return zone.ID
-}
-
-func deleteDNSHostedZone(ctx context.Context, dnsService *gophercloud.ServiceClient, zoneID string) {
-	if dnsService == nil || zoneID == "" {
-		return
-	}
-	_, err := zones.Delete(ctx, dnsService, zoneID).Extract()
-	Expect(err).NotTo(HaveOccurred())
-}
-
-func newDNSRecord(namespace string, recordType extensionsv1alpha1.DNSRecordType, values []string, ttl *int64) *extensionsv1alpha1.DNSRecord {
-	name := "dnsrecord-" + randomString()
-	zone := testName + "/" + zoneName
+func newDNSRecord(recordType extensionsv1alpha1.DNSRecordType, values []string, ttl *int64) *extensionsv1alpha1.DNSRecord {
+	recordName := "dnsrecord-" + randomString()
 
 	return &extensionsv1alpha1.DNSRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      recordName,
+			Namespace: testName,
 		},
 		Spec: extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -125,10 +116,10 @@ func newDNSRecord(namespace string, recordType extensionsv1alpha1.DNSRecordType,
 			},
 			SecretRef: corev1.SecretReference{
 				Name:      "dnsrecord",
-				Namespace: namespace,
+				Namespace: testName,
 			},
-			Zone:       &zone,
-			Name:       name + "." + zoneName,
+			Zone:       &zoneID,
+			Name:       recordName + "." + preCreatedDnsZoneName,
 			RecordType: recordType,
 			Values:     values,
 			TTL:        ttl,
@@ -136,14 +127,18 @@ func newDNSRecord(namespace string, recordType extensionsv1alpha1.DNSRecordType,
 	}
 }
 
-func verifyDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
-	rrs, err := recordsets.Get(ctx, dnsService, *dns.Spec.Zone, dns.Spec.Name).Extract()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(rrs).NotTo(BeNil())
+func getDNSRecordAndVerifyStatus(ctx context.Context, c client.Client, dns *extensionsv1alpha1.DNSRecord, zoneID string) {
+	Expect(c.Get(ctx, client.ObjectKey{Namespace: dns.Namespace, Name: dns.Name}, dns)).To(Succeed())
+	Expect(dns.Status.Zone).To(PointTo(Equal(zoneID)))
+}
 
+func verifyDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
+	recordSets := getDnsRecordSetByName(ctx, dnsService, dns)
+	Expect(recordSets).To(HaveLen(1))
+	rrs := recordSets[0]
 	Expect(rrs.Name).To(Equal(ensureTrailingDot(dns.Spec.Name)))
 	Expect(rrs.Type).To(Equal(string(dns.Spec.RecordType)))
-	Expect(rrs.TTL).To(Equal(ptr.Deref(dns.Spec.TTL, 120)))
+	Expect(int64(rrs.TTL)).To(Equal(ptr.Deref(dns.Spec.TTL, 120)))
 
 	Expect(rrs.Records).To(WithTransform(func(in []string) []string {
 		// TODO check
@@ -161,26 +156,7 @@ func verifyDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClie
 	}, ConsistOf(dns.Spec.Values)))
 }
 
-func getDNSRecordAndVerifyStatus(ctx context.Context, c client.Client, dns *extensionsv1alpha1.DNSRecord, zoneID string) {
-	Expect(c.Get(ctx, client.ObjectKey{Namespace: dns.Namespace, Name: dns.Name}, dns)).To(Succeed())
-	Expect(dns.Status.Zone).To(PointTo(Equal(zoneID)))
-}
-
-func verifyDNSRecordSetDeleted(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
-	// TODO check rrsetID
-	_, err := recordsets.Get(ctx, dnsService, *dns.Spec.Zone, dns.Spec.Name).Extract()
-	Expect(openstackclient.IsNotFoundError(err)).To(BeTrue())
-}
-
-func deleteDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
-	// TODO check rrsetID
-	err := recordsets.Delete(ctx, dnsService, *dns.Spec.Zone, dns.Spec.Name).ExtractErr()
-	if openstackclient.IsNotFoundError(err) {
-		return
-	}
-	Expect(err).NotTo(HaveOccurred())
-}
-
+// extensionsv1alpha1.DNSRecord helper functions
 func waitUntilDNSRecordReady(ctx context.Context, c client.Client, log logr.Logger, dns *extensionsv1alpha1.DNSRecord) {
 	Expect(extensions.WaitUntilExtensionObjectReady(
 		ctx,
@@ -195,26 +171,6 @@ func waitUntilDNSRecordReady(ctx context.Context, c client.Client, log logr.Logg
 	)).To(Succeed())
 }
 
-// createProviderClient creates a provider client for OpenStack
-func createProviderClient(ctx context.Context, credentials *openstackext.Credentials) *gophercloud.ProviderClient {
-	provider, err := openstackclient.NewProviderClient(ctx, credentials)
-	Expect(err).NotTo(HaveOccurred())
-
-	provider.UserAgent.Prepend("Gardener Extension for OpenStack DNS Entry test provider")
-
-	return provider
-}
-
-func createDnsClient(providerClient *gophercloud.ProviderClient, region string) *gophercloud.ServiceClient {
-	opts := gophercloud.EndpointOpts{}
-	opts.Region = region
-
-	newDnsClient, err := openstack.NewDNSV2(providerClient, opts)
-	Expect(err).NotTo(HaveOccurred(), "Failed to create OpenStack DNS client", "Error", err)
-
-	return newDnsClient
-}
-
 func waitUntilDNSRecordDeleted(ctx context.Context, c client.Client, log logr.Logger, dns *extensionsv1alpha1.DNSRecord) {
 	Expect(extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
@@ -227,6 +183,93 @@ func waitUntilDNSRecordDeleted(ctx context.Context, c client.Client, log logr.Lo
 	)).To(Succeed())
 }
 
+func verifyDNSRecordSetDeleted(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
+	recordSets := getDnsRecordSetByName(ctx, dnsService, dns)
+	Expect(recordSets).To(HaveLen(0))
+}
+
+func createDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient,
+	name, recordType string, ttl int, records []string) {
+	createOpts := recordsets.CreateOpts{
+		Name:    name,
+		Records: records,
+		TTL:     ttl,
+		Type:    recordType,
+	}
+
+	_, err := recordsets.Create(ctx, dnsService, zoneID, createOpts).Extract()
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func updateDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord, newRecords []string) {
+	recordSets := getDnsRecordSetByName(ctx, dnsService, dns)
+	Expect(recordSets).To(HaveLen(1))
+	rrs := recordSets[0]
+
+	updateOpts := recordsets.UpdateOpts{
+		Records: newRecords,
+	}
+
+	_, err := recordsets.Update(ctx, dnsService, zoneID, rrs.ID, updateOpts).Extract()
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func deleteDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
+	recordSets := getDnsRecordSetByName(ctx, dnsService, dns)
+	if len(recordSets) > 0 {
+		Expect(recordSets).To(HaveLen(1))
+		rrs := recordSets[0]
+		err := recordsets.Delete(ctx, dnsService, zoneID, rrs.ID).ExtractErr()
+		if openstackclient.IsNotFoundError(err) {
+			return
+		}
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func getDnsRecordSetByName(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) []recordsets.RecordSet {
+	page, err := recordsets.ListByZone(dnsService, zoneID, recordsets.ListOpts{
+		Name: dns.Spec.Name,
+	}).AllPages(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	recordSets, err := recordsets.ExtractRecordSets(page)
+	Expect(err).NotTo(HaveOccurred())
+	return recordSets
+}
+
+// gophercloud helper functions
+func createDnsClient(providerClient *gophercloud.ProviderClient, region string) *gophercloud.ServiceClient {
+	opts := gophercloud.EndpointOpts{}
+	opts.Region = region
+
+	newDnsClient, err := openstack.NewDNSV2(providerClient, opts)
+	Expect(err).NotTo(HaveOccurred(), "Failed to create OpenStack DNS client", "Error", err)
+
+	return newDnsClient
+}
+
+func createProviderClient(ctx context.Context, credentials *openstackext.Credentials) *gophercloud.ProviderClient {
+	provider, err := openstackclient.NewProviderClient(ctx, credentials)
+	Expect(err).NotTo(HaveOccurred())
+
+	provider.UserAgent.Prepend("Gardener Extension for OpenStack DNS Entry test provider")
+
+	return provider
+}
+
+func getPreCreatedDNSHostedZone(ctx context.Context, dnsService *gophercloud.ServiceClient, zoneName string) string {
+	page, err := zones.List(dnsService, zones.ListOpts{
+		Name: zoneName,
+	}).AllPages(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(page).NotTo(BeNil())
+	zonesList, err := zones.ExtractZones(page)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(zonesList).To(HaveLen(1))
+	return zonesList[0].ID
+}
+
+// other helper functions
 func randomString() string {
 	rs, err := gardenerutils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())

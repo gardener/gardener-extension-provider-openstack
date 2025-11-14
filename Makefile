@@ -69,6 +69,8 @@ BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                            --password='$(shell cat $(PASSWORD))' \
                            --user-name='$(shell cat $(USER_NAME))'
 
+DNSRECORD_TEST_FLAGS := $(filter-out --floating-pool-name=%,$(INFRA_TEST_FLAGS))
+
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
 endif
@@ -224,4 +226,4 @@ integration-test-backupbucket:
 .PHONY: integration-test-dnsrecord
 integration-test-dnsrecord:
 	@go test -timeout=0 ./test/integration/dnsrecord \
-		$(INFRA_TEST_FLAGS)
+		$(DNSRECORD_TEST_FLAGS)

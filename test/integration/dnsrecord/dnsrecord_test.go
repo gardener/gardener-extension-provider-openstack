@@ -37,6 +37,15 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
+// IMPORTANT:
+// In order for this test to work you have to pre create
+// a DNS zone in the correct OpenStack project and store its name in preCreatedDnsZoneName
+
+const (
+	// preCreatedDnsZoneName is the name of the dns Zone that must be pre-created in OpenStack for the tests to run.
+	preCreatedDnsZoneName = "gardener-dev-team-test.c.eu-de-1.cloud.sap."
+)
+
 var (
 	ctx       = context.Background()
 	log       logr.Logger
@@ -46,21 +55,20 @@ var (
 
 	testName  string
 	dnsClient *gophercloud.ServiceClient
-	zoneName  string
 	zoneID    string
 	cluster   *extensionsv1alpha1.Cluster
 	namespace *corev1.Namespace
+	secret    *corev1.Secret
 
-	authURL          = flag.String("auth-url", "", "Authorization URL for openstack")
-	domainName       = flag.String("domain-name", "", "Domain name for openstack")
-	floatingPoolName = flag.String("floating-pool-name", "", "Floating pool name for creating router")
-	region           = flag.String("region", "", "Openstack region")
-	tenantName       = flag.String("tenant-name", "", "Tenant name for openstack")
-	userName         = flag.String("user-name", "", "User name for openstack")
-	password         = flag.String("password", "", "Password for openstack")
-	appID            = flag.String("app-id", "", "Application Credential ID for openstack")
-	appName          = flag.String("app-name", "", "Application Credential Name for openstack")
-	appSecret        = flag.String("app-secret", "", "Application Credential Secret for openstack")
+	authURL    = flag.String("auth-url", "", "Authorization URL for openstack")
+	domainName = flag.String("domain-name", "", "Domain name for openstack")
+	region     = flag.String("region", "", "Openstack region")
+	tenantName = flag.String("tenant-name", "", "Tenant name for openstack")
+	userName   = flag.String("user-name", "", "User name for openstack")
+	password   = flag.String("password", "", "Password for openstack")
+	appID      = flag.String("app-id", "", "Application Credential ID for openstack")
+	appName    = flag.String("app-name", "", "Application Credential Name for openstack")
+	appSecret  = flag.String("app-secret", "", "Application Credential Secret for openstack")
 )
 
 var _ = BeforeSuite(func() {
@@ -85,11 +93,11 @@ var _ = BeforeSuite(func() {
 		By("running cleanup actions")
 		framework.RunCleanupActions()
 
-		By("deleting Openstack DNS hosted zone")
-		deleteDNSHostedZone(ctx, dnsClient, zoneID)
-
 		By("deleting test cluster")
 		deleteCluster(ctx, c, cluster)
+
+		By("deleting secret")
+		deleteSecret(ctx, c, secret)
 
 		By("deleting test namespace")
 		deleteNamespace(ctx, c, namespace)
@@ -102,7 +110,6 @@ var _ = BeforeSuite(func() {
 
 	By("generating randomized dnsrecord test resource identifiers")
 	testName = fmt.Sprintf("os-dnsrecord-it--%s", randomString())
-	zoneName = testName + ".gardener.cloud."
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
@@ -142,7 +149,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	By("getting k8s client")
-	c, err := client.New(cfg, client.Options{
+	c, err = client.New(cfg, client.Options{
 		Scheme: mgr.GetScheme(),
 		Mapper: mgr.GetRESTMapper(),
 	})
@@ -170,6 +177,26 @@ var _ = BeforeSuite(func() {
 		},
 	}
 	createNamespace(ctx, c, namespace)
+
+	By("created secret into namespace")
+	secret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dnsrecord",
+			Namespace: testName,
+		},
+		Data: map[string][]byte{
+			openstackext.AuthURL:                     []byte(*authURL),
+			openstackext.DomainName:                  []byte(*domainName),
+			openstackext.Password:                    []byte(*password),
+			openstackext.Region:                      []byte(*region),
+			openstackext.TenantName:                  []byte(*tenantName),
+			openstackext.UserName:                    []byte(*userName),
+			openstackext.ApplicationCredentialID:     []byte(*appID),
+			openstackext.ApplicationCredentialName:   []byte(*appName),
+			openstackext.ApplicationCredentialSecret: []byte(*appSecret),
+		},
+	}
+	createSecret(ctx, c, secret)
 
 	By("creating test cluster")
 	cloudProfileConfig := openstackv1alpha1.CloudProfileConfig{
@@ -222,8 +249,8 @@ var _ = BeforeSuite(func() {
 	}
 	createCluster(ctx, c, cluster)
 
-	By("creating OpenStack DNS hosted zone")
-	zoneID = createDNSHostedZone(ctx, dnsClient, zoneName)
+	By("retrieving pre created OpenStack DNS hosted zone")
+	zoneID = getPreCreatedDNSHostedZone(ctx, dnsClient, preCreatedDnsZoneName)
 })
 
 var runTest = func(dns *extensionsv1alpha1.DNSRecord, newValues []string, beforeCreate, beforeUpdate, beforeDelete func()) {
@@ -288,91 +315,59 @@ var runTest = func(dns *extensionsv1alpha1.DNSRecord, newValues []string, before
 var _ = Describe("DNSRecord tests", func() {
 	Context("when a DNS recordset doesn't exist and is not changed or deleted before dnsrecord deletion", func() {
 		It("should successfully create and delete a dnsrecord of type A", func() {
-			dns := newDNSRecord(testName, extensionsv1alpha1.DNSRecordTypeA, []string{"1.1.1.1", "2.2.2.2"}, ptr.To[int64](300))
+			dns := newDNSRecord(extensionsv1alpha1.DNSRecordTypeA, []string{"1.1.1.1", "2.2.2.2"}, ptr.To[int64](300))
 			runTest(dns, nil, nil, nil, nil)
 		})
 
 		It("should successfully create and delete a dnsrecord of type CNAME", func() {
-			dns := newDNSRecord(testName, extensionsv1alpha1.DNSRecordTypeCNAME, []string{"foo.example.com."}, ptr.To[int64](600))
+			dns := newDNSRecord(extensionsv1alpha1.DNSRecordTypeCNAME, []string{"foo.example.com."}, ptr.To[int64](600))
 			runTest(dns, nil, nil, nil, nil)
 		})
 
 		It("should successfully create and delete a dnsrecord of type TXT", func() {
-			dns := newDNSRecord(testName, extensionsv1alpha1.DNSRecordTypeTXT, []string{"foo", "bar"}, nil)
+			dns := newDNSRecord(extensionsv1alpha1.DNSRecordTypeTXT, []string{"foo", "bar"}, nil)
 			runTest(dns, nil, nil, nil, nil)
 		})
 	})
 
-	//Context("when a DNS recordset exists and is changed before dnsrecord update and deletion", func() {
-	//	It("should successfully create, update, and delete a dnsrecord", func() {
-	//		dns := newDNSRecord(testName, zoneDnsName, zoneID, extensionsv1alpha1.DNSRecordTypeA, []string{"1.1.1.1", "2.2.2.2"}, ptr.To[int64](300))
-	//
-	//		updateDNS := func() {
-	//			By("updating GCP DNS recordset")
-	//			_, err := dnsService.Changes.Create(project, zoneName, &googledns.Change{
-	//				Deletions: []*googledns.ResourceRecordSet{{
-	//					Name:    dns.Spec.Name,
-	//					Type:    string(dns.Spec.RecordType),
-	//					Ttl:     ptr.Deref(dns.Spec.TTL, 120),
-	//					Rrdatas: dns.Spec.Values,
-	//				}},
-	//				Additions: []*googledns.ResourceRecordSet{{
-	//					Name:    dns.Spec.Name,
-	//					Type:    string(dns.Spec.RecordType),
-	//					Ttl:     ptr.Deref(dns.Spec.TTL, 120),
-	//					Rrdatas: []string{"8.8.8.8"},
-	//				}},
-	//			}).Do()
-	//			Expect(err).ToNot(HaveOccurred())
-	//		}
-	//
-	//		runTest(
-	//			dns,
-	//			[]string{"3.3.3.3", "1.1.1.1"},
-	//			func() {
-	//				By("creating GCP DNS recordset")
-	//				_, err := dnsService.ResourceRecordSets.Create(project, zoneName, &googledns.ResourceRecordSet{
-	//					Name:    dns.Spec.Name,
-	//					Type:    string(dns.Spec.RecordType),
-	//					Ttl:     ptr.Deref(dns.Spec.TTL, 120),
-	//					Rrdatas: []string{"8.8.8.8"},
-	//				}).Do()
-	//				Expect(err).ToNot(HaveOccurred())
-	//			},
-	//			updateDNS,
-	//			updateDNS,
-	//		)
-	//	})
-	//})
-	//
-	//Context("when a DNS recordset exists and is deleted before dnsrecord deletion", func() {
-	//	It("should successfully create and delete a dnsrecord", func() {
-	//		dns := newDNSRecord(testName, zoneDnsName, zoneID, extensionsv1alpha1.DNSRecordTypeA, []string{"1.1.1.1", "2.2.2.2"}, ptr.To[int64](300))
-	//
-	//		runTest(
-	//			dns,
-	//			nil,
-	//			func() {
-	//				By("creating GCP DNS recordset")
-	//				_, err := dnsService.ResourceRecordSets.Create(project, zoneName, &googledns.ResourceRecordSet{
-	//					Name:    dns.Spec.Name,
-	//					Type:    string(dns.Spec.RecordType),
-	//					Ttl:     ptr.Deref(dns.Spec.TTL, 120),
-	//					Rrdatas: []string{"8.8.8.8"},
-	//				}).Do()
-	//				Expect(err).ToNot(HaveOccurred())
-	//			},
-	//			nil,
-	//			func() {
-	//				By("deleting GCP DNS recordset")
-	//				_, err := dnsService.ResourceRecordSets.Delete(
-	//					project,
-	//					zoneName,
-	//					dns.Spec.Name,
-	//					string(dns.Spec.RecordType)).Do()
-	//				Expect(err).ToNot(HaveOccurred())
-	//			},
-	//		)
-	//	})
-	//})
+	Context("when a DNS recordset exists and is changed before dnsrecord update and deletion", func() {
+		It("should successfully create, update, and delete a dnsrecord", func() {
+			dns := newDNSRecord(extensionsv1alpha1.DNSRecordTypeA, []string{"1.1.1.1", "2.2.2.2"}, ptr.To[int64](300))
+
+			runTest(
+				dns,
+				[]string{"3.3.3.3", "1.1.1.1"},
+				nil,
+				func() {
+					By("creating GCP DNS recordset")
+					updateDNSRecordSet(ctx, dnsClient, dns, []string{"8.8.8.8"})
+				},
+				func() {
+					By("creating GCP DNS recordset")
+					updateDNSRecordSet(ctx, dnsClient, dns, []string{"8.8.8.8"})
+				},
+			)
+		})
+	})
+
+	Context("when a DNS recordset exists and is deleted before dnsrecord deletion", func() {
+		It("should successfully create and delete a dnsrecord", func() {
+			dns := newDNSRecord(extensionsv1alpha1.DNSRecordTypeA, []string{"1.1.1.1", "2.2.2.2"}, ptr.To[int64](300))
+
+			runTest(
+				dns,
+				nil,
+				func() {
+					By("creating GCP DNS recordset")
+					createDNSRecordSet(ctx, dnsClient, dns.Spec.Name,
+						string(dns.Spec.RecordType), 120, dns.Spec.Values)
+				},
+				nil,
+				func() {
+					By("deleting GCP DNS recordset")
+					deleteDNSRecordSet(ctx, dnsClient, dns)
+				},
+			)
+		})
+	})
 })

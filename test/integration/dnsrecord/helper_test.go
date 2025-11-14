@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	openstackext "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -27,6 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	openstackext "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 func validateFlags() {
@@ -188,7 +189,7 @@ func waitUntilDNSRecordDeleted(ctx context.Context, c client.Client, log logr.Lo
 
 func verifyDNSRecordSetDeleted(ctx context.Context, dnsService *gophercloud.ServiceClient, dns *extensionsv1alpha1.DNSRecord) {
 	recordSets := getDnsRecordSetByName(ctx, dnsService, dns)
-	Expect(recordSets).To(HaveLen(0))
+	Expect(recordSets).To(BeEmpty())
 }
 
 func createDNSRecordSet(ctx context.Context, dnsService *gophercloud.ServiceClient,

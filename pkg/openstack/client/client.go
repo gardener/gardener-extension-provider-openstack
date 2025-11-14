@@ -21,6 +21,7 @@ import (
 	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
+// NewProviderClient creates a new gophercloud ProviderClient from the given OpenStack credentials.
 func NewProviderClient(ctx context.Context, credentials *os.Credentials) (*gophercloud.ProviderClient, error) {
 	authOpts := gophercloud.AuthOptions{
 		IdentityEndpoint: credentials.AuthURL,

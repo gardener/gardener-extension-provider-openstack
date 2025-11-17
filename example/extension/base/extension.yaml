@@ -8,15 +8,15 @@ spec:
       runtimeCluster:
         helm:
           ociRepository:
-            ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/admission-openstack-runtime:v1.51.0
+            ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/admission-openstack-runtime:v1.52.0-dev
       virtualCluster:
         helm:
           ociRepository:
-            ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/admission-openstack-application:v1.51.0
+            ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/admission-openstack-application:v1.52.0-dev
     extension:
       helm:
         ociRepository:
-          ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/provider-openstack:v1.51.0
+          ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/provider-openstack:v1.52.0-dev
       injectGardenKubeconfig: true
   resources:
   - kind: BackupBucket

@@ -214,9 +214,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &openstackdnsrecord.DefaultAddOptions.ExtensionClass)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
-			openstackworker.DefaultAddOptions.AutonomousShootCluster = generalOpts.Completed().AutonomousShootCluster
+			openstackworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
 
-			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil, generalOpts.Completed().AutonomousShootCluster); err != nil {
+			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil, generalOpts.Completed().SelfHostedShootCluster); err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}
 			openstackcontrolplane.DefaultAddOptions.WebhookServerNamespace = webhookOptions.Server.Namespace

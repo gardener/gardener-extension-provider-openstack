@@ -66,5 +66,5 @@ func (w *workerDelegate) updateMachineDependenciesStatus(ctx context.Context, wo
 
 // ClusterTechnicalName returns the technical name of the cluster this worker belongs.
 func (w *workerDelegate) ClusterTechnicalName() string {
-	return w.cluster.ObjectMeta.Name
+	return w.cluster.Shoot.Status.TechnicalID
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"strings"
 	"time"
@@ -70,7 +71,7 @@ var _ = Describe("Machines", func() {
 		ctrl.Finish()
 	})
 
-	Context("workerDelegate", func() {
+	Context("WorkerDelegate", func() {
 		BeforeEach(func() {
 			workerDelegate, _ = NewWorkerDelegate(nil, scheme, nil, nil, nil, nil)
 		})
@@ -693,7 +694,7 @@ var _ = Describe("Machines", func() {
 					setup(region, machineImage, "", archAMD)
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
-					// Test workerDelegate.DeployMachineClasses()
+					// Test WorkerDelegate.DeployMachineClasses()
 					expectedUserDataSecretRefRead()
 
 					chartApplier.
@@ -711,7 +712,7 @@ var _ = Describe("Machines", func() {
 					err := workerDelegate.DeployMachineClasses(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Test workerDelegate.UpdateMachineDeployments()
+					// Test WorkerDelegate.UpdateMachineDeployments()
 
 					expectedImages := &apiv1alpha1.WorkerStatus{
 						TypeMeta: metav1.TypeMeta{
@@ -739,7 +740,7 @@ var _ = Describe("Machines", func() {
 					err = workerDelegate.UpdateMachineImagesStatus(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Test workerDelegate.GenerateMachineDeployments()
+					// Test WorkerDelegate.GenerateMachineDeployments()
 
 					result, err := workerDelegate.GenerateMachineDeployments(ctx)
 					Expect(err).NotTo(HaveOccurred())
@@ -751,7 +752,7 @@ var _ = Describe("Machines", func() {
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
 
-					// Test workerDelegate.DeployMachineClasses()
+					// Test WorkerDelegate.DeployMachineClasses()
 					expectedUserDataSecretRefRead()
 
 					chartApplier.
@@ -769,7 +770,7 @@ var _ = Describe("Machines", func() {
 					err := workerDelegate.DeployMachineClasses(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Test workerDelegate.GetMachineImages()
+					// Test WorkerDelegate.GetMachineImages()
 					expectedImages := &apiv1alpha1.WorkerStatus{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
@@ -797,7 +798,7 @@ var _ = Describe("Machines", func() {
 					err = workerDelegate.UpdateMachineImagesStatus(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Test workerDelegate.GenerateMachineDeployments()
+					// Test WorkerDelegate.GenerateMachineDeployments()
 
 					result, err := workerDelegate.GenerateMachineDeployments(ctx)
 					Expect(err).NotTo(HaveOccurred())
@@ -879,7 +880,7 @@ var _ = Describe("Machines", func() {
 
 						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithServerGroup, cluster, nil)
 
-						// Test workerDelegate.DeployMachineClasses()
+						// Test WorkerDelegate.DeployMachineClasses()
 						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, []string{serverGroupID1}, nil)
 						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
 						workerPoolHash3, _ := worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
@@ -1112,6 +1113,50 @@ var _ = Describe("Machines", func() {
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
+			})
+
+			It("should generate machine classes with core, extended (Capacity) and virtual resources (virtualCapacity) in the nodeTemplate", func() {
+				ephemeralStorageQuant := resource.MustParse("30Gi")
+				dongleName := corev1.ResourceName("resources.com/dongle")
+				dongleQuant := resource.MustParse("4")
+				virtualResourceName := corev1.ResourceName("subdomain.domain.com/virtual-resource-name")
+				virtualResourceQuant := resource.MustParse("1024")
+				customResources := corev1.ResourceList{
+					corev1.ResourceEphemeralStorage: ephemeralStorageQuant,
+					dongleName:                      dongleQuant,
+				}
+				customVirtualResources := corev1.ResourceList{
+					virtualResourceName: virtualResourceQuant,
+				}
+
+				w.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
+					Raw: encode(&api.WorkerConfig{
+						NodeTemplate: &extensionsv1alpha1.NodeTemplate{
+							Capacity:        customResources,
+							VirtualCapacity: customVirtualResources,
+						},
+					}),
+				}
+				expectedNodeTemplateCapacity := w.Spec.Pools[0].NodeTemplate.Capacity.DeepCopy()
+				maps.Copy(expectedNodeTemplateCapacity, customResources)
+
+				wd, err := NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
+				Expect(err).NotTo(HaveOccurred())
+				expectedUserDataSecretRefRead()
+				_, err = wd.GenerateMachineDeployments(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				workerDelegate := wd.(*WorkerDelegate)
+				mClasses := workerDelegate.GetMachineClasses()
+				for _, mClz := range mClasses {
+					className := mClz["name"].(string)
+					if strings.Contains(className, namePool1) {
+						nt := mClz["nodeTemplate"].(machinev1alpha1.NodeTemplate)
+						Expect(nt.Capacity).To(Equal(expectedNodeTemplateCapacity))
+						Expect(nt.VirtualCapacity).To(Equal(customVirtualResources))
+						GinkgoWriter.Printf("MachineClass: %s, NodeTemplate.Capacity: %s, NodeTempalte.VirtualCapacity: %s \n", className, nt.Capacity, nt.VirtualCapacity)
+					}
+				}
+
 			})
 
 			It("should fail because the security group cannot be found", func() {

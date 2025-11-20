@@ -12,6 +12,7 @@ import (
 	corehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
+	"gopkg.in/inf.v0"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -162,10 +163,16 @@ func validateNodeTemplate(nodeTemplate *extensionsv1alpha1.NodeTemplate, fldPath
 	for _, capacityAttribute := range []corev1.ResourceName{corev1.ResourceCPU, "gpu", corev1.ResourceMemory} {
 		value, ok := nodeTemplate.Capacity[capacityAttribute]
 		if !ok {
-			allErrs = append(allErrs, field.Required(fldPath.Child("capacity"), fmt.Sprintf("%s is a mandatory field", capacityAttribute)))
+			// Core resources such as "cpu", "gpu", "memory" need not all be explicitly specified in workerConfig.NodeTemplate.
+			// Now, this will fall back to the worker pool's NodeTemplate if missing.
 			continue
 		}
 		allErrs = append(allErrs, validateResourceQuantityValue(capacityAttribute, value, fldPath.Child("capacity").Child(string(capacityAttribute)))...)
+	}
+
+	for capacityAttribute, value := range nodeTemplate.VirtualCapacity {
+		// extended resources are required to be whole numbers https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#consuming-extended-resources
+		allErrs = append(allErrs, validateResourceQuantityWholeNumber(capacityAttribute, value, fldPath.Child("virtualCapacity").Child(string(capacityAttribute)))...)
 	}
 
 	return allErrs
@@ -178,6 +185,16 @@ func validateResourceQuantityValue(key corev1.ResourceName, value resource.Quant
 		allErrs = append(allErrs, field.Invalid(fldPath, value.String(), fmt.Sprintf("%s value must not be negative", key)))
 	}
 
+	return allErrs
+}
+func validateResourceQuantityWholeNumber(key corev1.ResourceName, value resource.Quantity, fldPath *field.Path) field.ErrorList {
+	allErrs := validateResourceQuantityValue(key, value, fldPath)
+	dec := value.AsDec()
+	var roundedDec inf.Dec
+	// if dec has a fractional component, Round() returns nil.
+	if roundedDec.Round(dec, 0, inf.RoundExact) == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, value.String(), fmt.Sprintf("%s value must be a whole number", key)))
+	}
 	return allErrs
 }
 

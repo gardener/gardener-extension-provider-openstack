@@ -304,7 +304,7 @@ var _ = Describe("Shoot validation", func() {
 			})
 
 			Describe("#validateWorkerConfig", func() {
-				It("should return no errors for a valid nodetemplate configuration", func() {
+				It("should return no errors for a valid nodeTemplate configuration", func() {
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Object: &apiv1alpha1.WorkerConfig{
 							TypeMeta: metav1.TypeMeta{
@@ -322,7 +322,19 @@ var _ = Describe("Shoot validation", func() {
 					Expect(ValidateWorkers(workers, nil, nilPath)).To(BeEmpty())
 				})
 
-				It("should return error when all resources not specified", func() {
+				It("should return no error for an empty nodeTemplate", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					}
+					Expect(ValidateWorkers(workers, nil, nilPath)).To(BeEmpty())
+				})
+
+				It("should return errors for resource values in virtualCapacity which are not whole numbers", func() {
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Object: &apiv1alpha1.WorkerConfig{
 							TypeMeta: metav1.TypeMeta{
@@ -330,25 +342,43 @@ var _ = Describe("Shoot validation", func() {
 								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
 							},
 							NodeTemplate: &extensionsv1alpha1.NodeTemplate{
-								Capacity: corev1.ResourceList{
-									"gpu": resource.MustParse("0"),
+								VirtualCapacity: corev1.ResourceList{
+									"foo": resource.MustParse("1500m"), // equal to 1.5 and thus not a whole number
 								},
 							},
 						},
 					}
+					errorList := ValidateWorkers(workers, nil, nilPath)
 
-					Expect(ValidateWorkers(workers, nil, nilPath)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeRequired),
-							"Field":  Equal("[0].providerConfig.nodeTemplate.capacity"),
-							"Detail": Equal("cpu is a mandatory field"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeRequired),
-							"Field":  Equal("[0].providerConfig.nodeTemplate.capacity"),
-							"Detail": Equal("memory is a mandatory field"),
-						})),
-					))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[0].providerConfig.nodeTemplate.virtualCapacity.foo"),
+						"Detail": Equal("foo value must be a whole number"),
+					}))))
+				})
+
+				It("should return errors for negative resource value in nodeTemplate virtualCapacity", func() {
+					workers[0].ProviderConfig = &runtime.RawExtension{
+						Object: &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							NodeTemplate: &extensionsv1alpha1.NodeTemplate{
+								VirtualCapacity: corev1.ResourceList{
+									"foo": resource.MustParse("-1"),
+									"bar": resource.MustParse("50Gi"),
+								},
+							},
+						},
+					}
+					errorList := ValidateWorkers(workers, nil, nilPath)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("[0].providerConfig.nodeTemplate.virtualCapacity.foo"),
+						"Detail": Equal("foo value must not be negative"),
+					}))))
 				})
 
 				It("should return error when resource value is negative", func() {

@@ -161,9 +161,13 @@ serverGroup:
   policy: soft-anti-affinity
 # nodeTemplate: # (to be specified only if the node capacity would be different from cloudprofile info during runtime)
 #   capacity:
-#     cpu: 2
-#     gpu: 0
-#     memory: 50Gi
+#     cpu: 2 # inherited from pool's machine type if un-specified
+#     gpu: 0 # inherited from pool's machine type if un-specified
+#     memory: 50Gi # inherited from pool's machine type if un-specified
+#    ephemeral-storage: 10Gi # override to specify explicit ephemeral-storage for scale from zero
+#    resource.com/dongle: 4 # example of a custom, extended resource.
+#    virtualCapacity:
+#      subdomain.domain.com/resource-name: 1234567 # should be hot-updated in worker pool's node.Status.Capacity without rollout
 # machineLabels:
 #  - name: my-label
 #    value: foo

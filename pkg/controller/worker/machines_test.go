@@ -96,6 +96,7 @@ var _ = Describe("Machines", func() {
 		Describe("#GenerateMachineDeployments, #DeployMachineClasses", func() {
 			var (
 				namespace        string
+				technicalID      string
 				cloudProfileName string
 
 				openstackAuthURL string
@@ -159,7 +160,8 @@ var _ = Describe("Machines", func() {
 			)
 
 			BeforeEach(func() {
-				namespace = "shoot--foobar--openstack"
+				namespace = "control-plane-namespace"
+				technicalID = "shoot--foobar--openstack"
 				cloudProfileName = "openstack"
 
 				region = "eu-de-1"
@@ -265,6 +267,9 @@ var _ = Describe("Machines", func() {
 							Kubernetes: gardencorev1beta1.Kubernetes{
 								Version: shootVersion,
 							},
+						},
+						Status: gardencorev1beta1.ShootStatus{
+							TechnicalID: technicalID,
 						},
 					},
 				}
@@ -476,8 +481,8 @@ var _ = Describe("Machines", func() {
 						"podNetworkCIDRs": []string{podCIDR},
 						"securityGroups":  []string{securityGroupName},
 						"tags": map[string]string{
-							fmt.Sprintf("kubernetes.io-cluster-%s", namespace): "1",
-							"kubernetes.io-role-node":                          "1",
+							fmt.Sprintf("kubernetes.io-cluster-%s", technicalID): "1",
+							"kubernetes.io-role-node":                            "1",
 						},
 						"secret": map[string]interface{}{
 							"cloudConfig": string(userData),
@@ -517,12 +522,12 @@ var _ = Describe("Machines", func() {
 						machineClassPool3Zone1 = useDefaultMachineClass(defaultMachineClass, "availabilityZone", zone1)
 						machineClassPool3Zone2 = useDefaultMachineClass(defaultMachineClass, "availabilityZone", zone2)
 
-						machineClassNamePool1Zone1 = fmt.Sprintf("%s-%s-z1", namespace, namePool1)
-						machineClassNamePool1Zone2 = fmt.Sprintf("%s-%s-z2", namespace, namePool1)
-						machineClassNamePool2Zone1 = fmt.Sprintf("%s-%s-z1", namespace, namePool2)
-						machineClassNamePool2Zone2 = fmt.Sprintf("%s-%s-z2", namespace, namePool2)
-						machineClassNamePool3Zone1 = fmt.Sprintf("%s-%s-z1", namespace, namePool3)
-						machineClassNamePool3Zone2 = fmt.Sprintf("%s-%s-z2", namespace, namePool3)
+						machineClassNamePool1Zone1 = fmt.Sprintf("%s-%s-z1", technicalID, namePool1)
+						machineClassNamePool1Zone2 = fmt.Sprintf("%s-%s-z2", technicalID, namePool1)
+						machineClassNamePool2Zone1 = fmt.Sprintf("%s-%s-z1", technicalID, namePool2)
+						machineClassNamePool2Zone2 = fmt.Sprintf("%s-%s-z2", technicalID, namePool2)
+						machineClassNamePool3Zone1 = fmt.Sprintf("%s-%s-z1", technicalID, namePool3)
+						machineClassNamePool3Zone2 = fmt.Sprintf("%s-%s-z2", technicalID, namePool3)
 
 						machineClassWithHashPool1Zone1 = fmt.Sprintf("%s-%s", machineClassNamePool1Zone1, workerPoolHash1)
 						machineClassWithHashPool1Zone2 = fmt.Sprintf("%s-%s", machineClassNamePool1Zone2, workerPoolHash1)
@@ -907,12 +912,12 @@ var _ = Describe("Machines", func() {
 							"availabilityZone": zone2,
 							"serverGroupID":    serverGroupID3,
 						})
-						machineClassNamePool1Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool1)
-						machineClassNamePool1Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool1)
-						machineClassNamePool2Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool2)
-						machineClassNamePool2Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool2)
-						machineClassNamePool3Zone1 := fmt.Sprintf("%s-%s-z1", namespace, namePool3)
-						machineClassNamePool3Zone2 := fmt.Sprintf("%s-%s-z2", namespace, namePool3)
+						machineClassNamePool1Zone1 := fmt.Sprintf("%s-%s-z1", technicalID, namePool1)
+						machineClassNamePool1Zone2 := fmt.Sprintf("%s-%s-z2", technicalID, namePool1)
+						machineClassNamePool2Zone1 := fmt.Sprintf("%s-%s-z1", technicalID, namePool2)
+						machineClassNamePool2Zone2 := fmt.Sprintf("%s-%s-z2", technicalID, namePool2)
+						machineClassNamePool3Zone1 := fmt.Sprintf("%s-%s-z1", technicalID, namePool3)
+						machineClassNamePool3Zone2 := fmt.Sprintf("%s-%s-z2", technicalID, namePool3)
 						machineClassWithHashPool1Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone1, workerPoolHash1)
 						machineClassWithHashPool1Zone2 := fmt.Sprintf("%s-%s", machineClassNamePool1Zone2, workerPoolHash1)
 						machineClassWithHashPool2Zone1 := fmt.Sprintf("%s-%s", machineClassNamePool2Zone1, workerPoolHash2)

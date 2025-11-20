@@ -17,7 +17,8 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
-func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
+// UpdateMachineImagesStatus updates the machine images inside the worker status. It generates the machine images if not yet generated.
+func (w *WorkerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	if w.machineImages == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
 			return fmt.Errorf("unable to generate the machine config: %w", err)
@@ -38,7 +39,7 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) findMachineImage(name, version, architecture string) (*api.MachineImage, error) {
+func (w *WorkerDelegate) findMachineImage(name, version, architecture string) (*api.MachineImage, error) {
 	image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, w.cluster.Shoot.Spec.Region, architecture)
 	if err == nil {
 		return image, nil

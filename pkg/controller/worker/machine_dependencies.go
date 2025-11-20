@@ -18,18 +18,18 @@ import (
 
 // DeployMachineDependencies implements genericactuator.WorkerDelegate.
 // Deprecated: Do not use this func. It is deprecated in genericactuator.WorkerDelegate.
-func (w *workerDelegate) DeployMachineDependencies(_ context.Context) error {
+func (w *WorkerDelegate) DeployMachineDependencies(_ context.Context) error {
 	return nil
 }
 
 // CleanupMachineDependencies implements genericactuator.WorkerDelegate.
 // Deprecated: Do not use this func. It is deprecated in genericactuator.WorkerDelegate.
-func (w *workerDelegate) CleanupMachineDependencies(_ context.Context) error {
+func (w *WorkerDelegate) CleanupMachineDependencies(_ context.Context) error {
 	return nil
 }
 
 // PreReconcileHook implements genericactuator.WorkerDelegate.
-func (w *workerDelegate) PreReconcileHook(ctx context.Context) error {
+func (w *WorkerDelegate) PreReconcileHook(ctx context.Context) error {
 	computeClient, err := w.openstackClient.Compute(osclient.WithRegion(w.worker.Spec.Region))
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func (w *workerDelegate) PreReconcileHook(ctx context.Context) error {
 	return w.updateMachineDependenciesStatus(ctx, workerStatus, serverGroupDepSet.extract(), err)
 }
 
-func (w *workerDelegate) reconcileServerGroups(ctx context.Context, computeClient osclient.Compute, workerStatus *api.WorkerStatus) (serverGroupDependencySet, error) {
+func (w *WorkerDelegate) reconcileServerGroups(ctx context.Context, computeClient osclient.Compute, workerStatus *api.WorkerStatus) (serverGroupDependencySet, error) {
 	serverGroupDepSet := newServerGroupDependencySet(workerStatus.ServerGroupDependencies)
 	for _, pool := range w.worker.Spec.Pools {
 		serverGroupDependencyStatus, err := w.reconcilePoolServerGroup(ctx, computeClient, pool, serverGroupDepSet)
@@ -56,7 +56,7 @@ func (w *workerDelegate) reconcileServerGroups(ctx context.Context, computeClien
 	return serverGroupDepSet, nil
 }
 
-func (w *workerDelegate) reconcilePoolServerGroup(ctx context.Context, computeClient osclient.Compute, pool extensionsv1alpha1.WorkerPool, set serverGroupDependencySet) (*api.ServerGroupDependency, error) {
+func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeClient osclient.Compute, pool extensionsv1alpha1.WorkerPool, set serverGroupDependencySet) (*api.ServerGroupDependency, error) {
 	poolProviderConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
 	if err != nil {
 		return nil, err
@@ -97,17 +97,17 @@ func (w *workerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 }
 
 // PostReconcileHook implements genericactuator.WorkerDelegate.
-func (w *workerDelegate) PostReconcileHook(ctx context.Context) error {
+func (w *WorkerDelegate) PostReconcileHook(ctx context.Context) error {
 	return w.cleanupMachineDependencies(ctx)
 }
 
 // PreDeleteHook implements genericactuator.WorkerDelegate.
-func (w *workerDelegate) PreDeleteHook(_ context.Context) error {
+func (w *WorkerDelegate) PreDeleteHook(_ context.Context) error {
 	return nil
 }
 
 // PostDeleteHook implements genericactuator.WorkerDelegate.
-func (w *workerDelegate) PostDeleteHook(ctx context.Context) error {
+func (w *WorkerDelegate) PostDeleteHook(ctx context.Context) error {
 	return w.cleanupMachineDependencies(ctx)
 }
 
@@ -118,7 +118,7 @@ func (w *workerDelegate) PostDeleteHook(ctx context.Context) error {
 // deleted (logic applicable for PostDeleteHook) and is not being deleted (logic applicable for PostReconcileHook).
 // Refactor this so that PostDeleteHook executes only the handling for Worker being deleted and PostReconcileHook executes only
 // the handling for Worker reconciled (not being deleted).
-func (w *workerDelegate) cleanupMachineDependencies(ctx context.Context) error {
+func (w *WorkerDelegate) cleanupMachineDependencies(ctx context.Context) error {
 	computeClient, err := w.openstackClient.Compute(osclient.WithRegion(w.worker.Spec.Region))
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (w *workerDelegate) cleanupMachineDependencies(ctx context.Context) error {
 // b) worker pool is deleted
 // c) worker pool's server group configuration (e.g. policy) changed
 // d) worker pool no longer requires use of server groups
-func (w *workerDelegate) cleanupServerGroupDependencies(ctx context.Context, computeClient osclient.Compute, set serverGroupDependencySet) error {
+func (w *WorkerDelegate) cleanupServerGroupDependencies(ctx context.Context, computeClient osclient.Compute, set serverGroupDependencySet) error {
 	groups, err := computeClient.ListServerGroups(ctx)
 	if err != nil {
 		return err

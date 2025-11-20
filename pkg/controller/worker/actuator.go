@@ -86,7 +86,8 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 	)
 }
 
-type workerDelegate struct {
+// WorkerDelegate is a delegate for the worker actuator that contains all information needed to reconcile a worker.
+type WorkerDelegate struct {
 	seedClient client.Client
 	scheme     *runtime.Scheme
 	decoder    runtime.Decoder
@@ -120,7 +121,7 @@ func NewWorkerDelegate(
 		return nil, err
 	}
 
-	return &workerDelegate{
+	return &WorkerDelegate{
 		seedClient: seedClient,
 		scheme:     scheme,
 		decoder:    serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder(),
@@ -132,4 +133,10 @@ func NewWorkerDelegate(
 		worker:             worker,
 		openstackClient:    openstackClient,
 	}, nil
+}
+
+// GetMachineClasses returns the slice of machine classes contained inside the worker delegate.
+// Introduced for Unit-testing.
+func (w *WorkerDelegate) GetMachineClasses() []map[string]any {
+	return w.machineClasses
 }

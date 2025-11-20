@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
-func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error) {
+func (w *WorkerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error) {
 	workerStatus := &api.WorkerStatus{}
 
 	if w.worker.Status.ProviderStatus == nil {
@@ -34,7 +34,7 @@ func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error)
 	return workerStatus, nil
 }
 
-func (w *workerDelegate) updateWorkerProviderStatus(ctx context.Context, workerStatus *api.WorkerStatus) error {
+func (w *WorkerDelegate) updateWorkerProviderStatus(ctx context.Context, workerStatus *api.WorkerStatus) error {
 	var workerStatusV1alpha1 = &v1alpha1.WorkerStatus{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
@@ -51,7 +51,7 @@ func (w *workerDelegate) updateWorkerProviderStatus(ctx context.Context, workerS
 	return w.seedClient.Status().Patch(ctx, w.worker, patch)
 }
 
-func (w *workerDelegate) updateMachineDependenciesStatus(ctx context.Context, workerStatus *api.WorkerStatus, serverGroupDependencies []api.ServerGroupDependency, err error) error {
+func (w *WorkerDelegate) updateMachineDependenciesStatus(ctx context.Context, workerStatus *api.WorkerStatus, serverGroupDependencies []api.ServerGroupDependency, err error) error {
 	workerStatus.ServerGroupDependencies = serverGroupDependencies
 	if statusUpdateErr := w.updateWorkerProviderStatus(ctx, workerStatus); statusUpdateErr != nil {
 		if err != nil {
@@ -65,6 +65,6 @@ func (w *workerDelegate) updateMachineDependenciesStatus(ctx context.Context, wo
 }
 
 // ClusterTechnicalName returns the technical name of the cluster this worker belongs.
-func (w *workerDelegate) ClusterTechnicalName() string {
+func (w *WorkerDelegate) ClusterTechnicalName() string {
 	return w.cluster.ObjectMeta.Name
 }

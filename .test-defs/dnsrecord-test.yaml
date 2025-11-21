@@ -9,7 +9,7 @@ spec:
   command: [bash, -c]
   args:
     - >-
-      go test -timeout=0 ./test/integration/infrastructure
+      go test -timeout=0 ./test/integration/dnsrecord
       --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
       --kubeconfig=$TM_KUBECONFIG_PATH/testmachinery.config
       --region="$REGION"

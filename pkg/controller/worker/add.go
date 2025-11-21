@@ -34,8 +34,8 @@ type AddOptions struct {
 	GardenCluster cluster.Cluster
 	// ExtensionClass defines the extension class this extension is responsible for.
 	ExtensionClass extensionsv1alpha1.ExtensionClass
-	// AutonomousShootCluster indicates whether the extension runs in an autonomous shoot cluster.
-	AutonomousShootCluster bool
+	// SelfHostedShootCluster indicates whether the extension runs in an self-hosted shoot cluster.
+	SelfHostedShootCluster bool
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
@@ -55,7 +55,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Predicates:             worker.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:                   openstack.Type,
 		ExtensionClass:         opts.ExtensionClass,
-		AutonomousShootCluster: opts.AutonomousShootCluster,
+		SelfHostedShootCluster: opts.SelfHostedShootCluster,
 	})
 }
 

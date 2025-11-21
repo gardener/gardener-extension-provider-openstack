@@ -97,3 +97,6 @@ spec:
     - name: bastion-test
       definition:
         name: bastion-test
+    - name: dnsrecord-test
+      definition:
+        name: dnsrecord-test

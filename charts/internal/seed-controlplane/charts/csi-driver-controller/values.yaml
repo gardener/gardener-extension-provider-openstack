@@ -21,27 +21,21 @@ global:
 resources:
   driver:
     requests:
-      cpu: 20m
       memory: 50Mi
   provisioner:
     requests:
-      cpu: 11m
       memory: 38Mi
   attacher:
     requests:
-      cpu: 11m
       memory: 36Mi
   snapshotter:
     requests:
-      cpu: 11m
       memory: 36Mi
   resizer:
     requests:
-      cpu: 11m
       memory: 32Mi
   livenessProbe:
     requests:
-      cpu: 11m
       memory: 32Mi
 vpa:
   resourcePolicy:
@@ -57,7 +51,6 @@ csiSnapshotController:
   podAnnotations: {}
   resources:
     requests:
-      cpu: 11m
       memory: 32Mi
 
 # if enabled add the flags --kube-api-qps=100 and --kube-api-burst=200 to the csi-driver-controller

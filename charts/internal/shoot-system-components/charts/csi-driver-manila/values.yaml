@@ -29,15 +29,12 @@ openstack:
 resources:
   driverNode:
     requests:
-      cpu: 15m
       memory: 42Mi
   nodeDriverRegistrar:
     requests:
-      cpu: 11m
       memory: 32Mi
   livenessProbe:
     requests:
-      cpu: 11m
       memory: 32Mi
 
 # Enabled Manila share protocols

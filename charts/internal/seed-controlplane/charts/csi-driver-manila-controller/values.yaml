@@ -17,27 +17,21 @@ openstack:
 resources:
   driverController:
     requests:
-      cpu: 20m
       memory: 50Mi
   driverNFSController:
     requests:
-      cpu: 20m
       memory: 50Mi
   provisioner:
     requests:
-      cpu: 11m
       memory: 38Mi
   snapshotter:
     requests:
-      cpu: 11m
       memory: 36Mi
   resizer:
     requests:
-      cpu: 11m
       memory: 32Mi
   livenessProbe:
     requests:
-      cpu: 11m
       memory: 32Mi
 
 vpa:

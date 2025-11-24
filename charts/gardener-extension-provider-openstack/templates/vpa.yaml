@@ -9,6 +9,7 @@ spec:
     containerPolicies:
       - containerName: '*'
         controlledValues: RequestsOnly
+        controlledResources: ["memory"]
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

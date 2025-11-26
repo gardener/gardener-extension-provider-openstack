@@ -1,0 +1,53 @@
+name: Reusable - Close Milestone
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: "The milestone name to close"
+        required: true
+        type: string
+      strip_patch:
+        description: "Whether to strip the patch version (last .X) from the name"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  close-milestone:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Prepare milestone name
+      id: prepare_name
+      run: |
+        MILESTONE="${{ inputs.name }}"
+        
+        if [ "${{ inputs.strip_patch }}" = "true" ]; then
+          # Remove last .X (patch) from the version
+          MILESTONE="${MILESTONE%.*}"
+        fi
+        
+        echo "milestone_name=$MILESTONE" >> $GITHUB_OUTPUT
+
+    - name: Check milestone exists
+      id: check
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+        milestone_id=$(gh api repos/${{ github.repository }}/milestones \
+          --jq '.[] | select(.title=="'${{ steps.prepare_name.outputs.milestone_name }}'") | .number')
+        if [ -n "$milestone_id" ]; then
+          echo "id=$milestone_id" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Close milestone if found
+      if: steps.check.outputs.id != ''
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh api \
+          -X PATCH \
+          -F state=closed \
+          repos/${{ github.repository }}/milestones/${{ steps.check.outputs.id }}
+        echo "Closed milestone '${{ steps.prepare_name.outputs.milestone_name }}'."

@@ -50,6 +50,7 @@ jobs:
       release-commit-target: branch
       next-version: ${{ inputs.next-version }}
       next-version-callback-action-path: .github/actions/prepare-release
+      slack-channel-id: C9CEBQPGE # #sap-tech-gardener
       create-release-branch: true
       cleanup-release-branches: true
 

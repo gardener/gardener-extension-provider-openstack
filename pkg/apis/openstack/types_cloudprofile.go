@@ -177,7 +177,7 @@ type MachineImageVersion struct {
 	Version string
 	// Image is the name of the image.
 	Image string
-	// TODO @Roncossek add "// deprecated" once aws cloudprofiles are migrated to use CapabilityFlavors
+	// TODO @Roncossek add "// deprecated" once openstack cloudprofiles are migrated to use CapabilityFlavors
 
 	// Regions is a mapping to the correct ID for the machine image in the supported regions.
 	Regions []RegionIDMapping

@@ -155,7 +155,7 @@ type MachineImageVersion struct {
 	Version string `json:"version"`
 	// Image is the name of the image.
 	Image string `json:"image,omitempty"`
-	// TODO @Riesop add "// deprecated" once aws cloudprofiles are migrated to use CapabilityFlavors
+	// TODO @Riesop add "// deprecated" once openstack cloudprofiles are migrated to use CapabilityFlavors
 
 	// Regions is an optional mapping to the correct Image ID for the machine image in the supported regions.
 	Regions []RegionIDMapping `json:"regions,omitempty"`
@@ -165,11 +165,11 @@ type MachineImageVersion struct {
 
 // MachineImageFlavor groups all RegionAMIMappings for a specific set of capabilities.
 type MachineImageFlavor struct {
-	// Regions is a mapping to the correct AMI for the machine image in the supported regions.
+	// Regions is a mapping to the correct Image ID for the machine image in the supported regions.
 	Regions []RegionIDMapping `json:"regions,omitempty"`
 	// Image is the name of the image.
 	Image string `json:"image,omitempty"`
-	// Capabilities that are supported by the AMIs in this set.
+	// Capabilities that are supported by the Image ID in this set.
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }
 
@@ -184,7 +184,7 @@ type RegionIDMapping struct {
 	Name string `json:"name"`
 	// ID is the ID for the machine image in the given region.
 	ID string `json:"id"`
-	// TODO @Riesop add "// deprecated" once aws cloudprofiles are migrated to use CapabilityFlavors
+	// TODO @Riesop add "// deprecated" once openstack cloudprofiles are migrated to use CapabilityFlavors
 
 	// Architecture is the CPU architecture of the machine image
 	// +optional

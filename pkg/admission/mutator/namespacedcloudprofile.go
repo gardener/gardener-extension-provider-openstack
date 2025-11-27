@@ -11,6 +11,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -44,39 +45,34 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return nil
 	}
 
-	specConfig, statusConfig, err := p.decodeConfigs(profile)
-	if err != nil {
-		return err
-	}
-
-	statusConfig.MachineImages = mergeMachineImages(specConfig.MachineImages, statusConfig.MachineImages)
-
-	modifiedStatusConfig, err := json.Marshal(statusConfig)
-	if err != nil {
-		return err
-	}
-	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
-
-	return nil
-}
-
-func (p *namespacedCloudProfile) decodeConfigs(profile *gardencorev1beta1.NamespacedCloudProfile) (*v1alpha1.CloudProfileConfig, *v1alpha1.CloudProfileConfig, error) {
 	specConfig := &v1alpha1.CloudProfileConfig{}
+	if _, _, err := p.decoder.Decode(profile.Spec.ProviderConfig.Raw, nil, specConfig); err != nil {
+		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile spec for '%s': %w", profile.Name, err)
+	}
 	statusConfig := &v1alpha1.CloudProfileConfig{}
-
-	if err := p.decodeProviderConfig(profile.Spec.ProviderConfig.Raw, specConfig, "spec"); err != nil {
-		return nil, nil, err
-	}
-	if err := p.decodeProviderConfig(profile.Status.CloudProfileSpec.ProviderConfig.Raw, statusConfig, "status"); err != nil {
-		return nil, nil, err
+	if _, _, err := p.decoder.Decode(profile.Status.CloudProfileSpec.ProviderConfig.Raw, nil, statusConfig); err != nil {
+		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
 
-	return specConfig, statusConfig, nil
+	uniformSpecConfig := helper.TransformProviderConfigToParentFormat(specConfig, profile.Status.CloudProfileSpec.MachineCapabilities)
+	statusConfig.MachineImages = mergeMachineImages(uniformSpecConfig.MachineImages, statusConfig.MachineImages)
+
+	return p.updateProfileStatus(profile, statusConfig)
 }
+
 func (p *namespacedCloudProfile) decodeProviderConfig(raw []byte, into *v1alpha1.CloudProfileConfig, configType string) error {
 	if _, _, err := p.decoder.Decode(raw, nil, into); err != nil {
 		return fmt.Errorf("could not decode providerConfig of %s: %w", configType, err)
 	}
+	return nil
+}
+
+func (p *namespacedCloudProfile) updateProfileStatus(profile *gardencorev1beta1.NamespacedCloudProfile, config *v1alpha1.CloudProfileConfig) error {
+	modifiedStatusConfig, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal status config: %w", err)
+	}
+	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
 	return nil
 }
 

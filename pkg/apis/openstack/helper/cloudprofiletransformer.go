@@ -78,6 +78,7 @@ func transformImageVersions(versions []v1alpha1.MachineImageVersion, capabilityD
 
 	for _, version := range versions {
 		transformed := v1alpha1.MachineImageVersion{Version: version.Version}
+		transformed.Image = version.Image
 		if len(capabilityDefinitions) != 0 {
 			transformed.CapabilityFlavors = transformToCapabilityFormat(version, capabilityDefinitions)
 		} else {

@@ -1075,6 +1075,17 @@ string
 <p>Architecture is the CPU architecture of the machine image</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+</em>
+</td>
+<td>
+<p>Capabilities of the machine image.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">MachineImageFlavor
@@ -1104,7 +1115,18 @@ string
 </em>
 </td>
 <td>
-<p>Regions is a mapping to the correct AMI for the machine image in the supported regions.</p>
+<p>Regions is a mapping to the correct Image ID for the machine image in the supported regions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>image</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Image is the name of the image.</p>
 </td>
 </tr>
 <tr>
@@ -1115,7 +1137,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </em>
 </td>
 <td>
-<p>Capabilities that are supported by the AMIs in this set.</p>
+<p>Capabilities that are supported by the Image ID in this set.</p>
 </td>
 </tr>
 </tbody>

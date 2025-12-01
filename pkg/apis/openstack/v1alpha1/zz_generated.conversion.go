@@ -730,6 +730,7 @@ func autoConvert_v1alpha1_MachineImage_To_openstack_MachineImage(in *MachineImag
 	out.Image = in.Image
 	out.ID = in.ID
 	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
+	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
@@ -744,6 +745,7 @@ func autoConvert_openstack_MachineImage_To_v1alpha1_MachineImage(in *openstack.M
 	out.Image = in.Image
 	out.ID = in.ID
 	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
+	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
@@ -754,6 +756,7 @@ func Convert_openstack_MachineImage_To_v1alpha1_MachineImage(in *openstack.Machi
 
 func autoConvert_v1alpha1_MachineImageFlavor_To_openstack_MachineImageFlavor(in *MachineImageFlavor, out *openstack.MachineImageFlavor, s conversion.Scope) error {
 	out.Regions = *(*[]openstack.RegionIDMapping)(unsafe.Pointer(&in.Regions))
+	out.Image = in.Image
 	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
@@ -765,6 +768,7 @@ func Convert_v1alpha1_MachineImageFlavor_To_openstack_MachineImageFlavor(in *Mac
 
 func autoConvert_openstack_MachineImageFlavor_To_v1alpha1_MachineImageFlavor(in *openstack.MachineImageFlavor, out *MachineImageFlavor, s conversion.Scope) error {
 	out.Regions = *(*[]RegionIDMapping)(unsafe.Pointer(&in.Regions))
+	out.Image = in.Image
 	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }

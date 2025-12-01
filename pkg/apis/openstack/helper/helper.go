@@ -118,13 +118,14 @@ func FindImageInCloudProfile(
 
 	capabilitySet, err := findMachineImageFlavor(machineImages, name, version, region, arch, machineCapabilities, capabilityDefinitions)
 	if err != nil {
-		return nil, fmt.Errorf("could not find an AMI for region %q, image %q, version %q that supports %v: %w", region, name, version, machineCapabilities, err)
+		return nil, fmt.Errorf("could not find an Image ID for region %q, image %q, version %q that supports %v: %w", region, name, version, machineCapabilities, err)
 	}
 
-	if capabilitySet != nil && len(capabilitySet.Regions) > 0 && capabilitySet.Regions[0].ID != "" {
+	// TODO: what if imageName is used?
+	if capabilitySet != nil && len(capabilitySet.Regions) > 0 && (capabilitySet.Regions[0].ID != "" || capabilitySet.Image != "") {
 		return capabilitySet, nil
 	}
-	return nil, fmt.Errorf("could not find an AMI for region %q, image %q, version %q that supports %v", region, name, version, machineCapabilities)
+	return nil, fmt.Errorf("could not find an Image ID for region %q, image %q, version %q that supports %v", region, name, version, machineCapabilities)
 }
 
 // FindImageInWorkerStatus takes a list of machine images from the worker status and tries to find the first entry
@@ -173,10 +174,12 @@ func findMachineImageFlavor(
 				continue
 			}
 
+			// No capability definitions means legacy format, so we match Architecture field of region
 			if len(capabilityDefinitions) == 0 {
 				for _, mapping := range version.Regions {
 					if region == mapping.Name && ptr.Equal(arch, mapping.Architecture) {
 						return &api.MachineImageFlavor{
+							Image:        version.Image,
 							Regions:      []api.RegionIDMapping{mapping},
 							Capabilities: gardencorev1beta1.Capabilities{},
 						}, nil
@@ -185,6 +188,7 @@ func findMachineImageFlavor(
 				continue
 			}
 
+			// TODO VR: filteredCapabilityFlavors.Image is empty. We need to set it here if it exists
 			filteredCapabilityFlavors := filterCapabilityFlavorsByRegion(version.CapabilityFlavors, region)
 			bestMatch, err := worker.FindBestImageFlavor(filteredCapabilityFlavors, machineCapabilities, capabilityDefinitions)
 			if err != nil {
@@ -212,6 +216,7 @@ func filterCapabilityFlavorsByRegion(capabilityFlavors []api.MachineImageFlavor,
 		if regionIDMapping != nil {
 			compatibleFlavors = append(compatibleFlavors, &api.MachineImageFlavor{
 				Regions:      []api.RegionIDMapping{*regionIDMapping},
+				Image:        capabilityFlavor.Image,
 				Capabilities: capabilityFlavor.Capabilities,
 			})
 		}

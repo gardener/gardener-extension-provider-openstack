@@ -60,13 +60,6 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 	return p.updateProfileStatus(profile, statusConfig)
 }
 
-func (p *namespacedCloudProfile) decodeProviderConfig(raw []byte, into *v1alpha1.CloudProfileConfig, configType string) error {
-	if _, _, err := p.decoder.Decode(raw, nil, into); err != nil {
-		return fmt.Errorf("could not decode providerConfig of %s: %w", configType, err)
-	}
-	return nil
-}
-
 func (p *namespacedCloudProfile) updateProfileStatus(profile *gardencorev1beta1.NamespacedCloudProfile, config *v1alpha1.CloudProfileConfig) error {
 	modifiedStatusConfig, err := json.Marshal(config)
 	if err != nil {

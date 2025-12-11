@@ -1543,31 +1543,3 @@ func addNameAndSecretToMachineClass(class map[string]interface{}, name string, c
 		"namespace": credentialsSecretRef.Namespace,
 	}
 }
-
-func strPtrToString(s *string) string {
-	if s == nil {
-		return "<nil>"
-	}
-	return *s
-}
-
-func printMachineClasses(machineClasses map[string]interface{}) {
-	// Extract the slice
-	if mcs, ok := machineClasses["machineClasses"].([]map[string]interface{}); ok {
-		for i, mc := range mcs {
-			fmt.Printf("MachineClass[%d]:\n", i)
-			for key, val := range mc {
-				switch v := val.(type) {
-				case *string:
-					fmt.Printf("  %s: %s\n", key, strPtrToString(v))
-				case string:
-					fmt.Printf("  %s: %s\n", key, v)
-				default:
-					fmt.Printf("  %s: %+v\n", key, v)
-				}
-			}
-		}
-	} else {
-		fmt.Println("machineClasses[\"machineClasses\"] is not the expected type")
-	}
-}

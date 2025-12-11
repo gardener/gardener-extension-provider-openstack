@@ -55,8 +55,7 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, r
 		}
 
 		if len(selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName]) > 0 {
-			var selectedArch *string
-			selectedArch = &selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName][0]
+			var selectedArch = &selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName][0]
 			// Verify that selectedMachineImage has correct architecture
 			if selectedArch == nil || arch != nil && *selectedArch != *arch {
 				return nil, fmt.Errorf("architecture does not match for machine image")

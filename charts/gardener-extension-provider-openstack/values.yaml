@@ -98,7 +98,7 @@ gardener:
 # runtimeCluster:
 #   enabled: false
 #   priorityClassName: gardener-garden-system-200
-# autonomousShootCluster: false
+# selfHostedShootCluster: false
 
 usablePorts:
 - 8080  # metrics

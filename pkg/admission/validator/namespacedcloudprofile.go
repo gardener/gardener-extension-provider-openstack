@@ -98,23 +98,6 @@ func (p *namespacedCloudProfile) validateMachineImagesOnlyInNamespacedCloudProfi
 	return nil
 }
 
-// validateNamespacedCloudProfileProviderConfig validates the CloudProfileConfig passed with a NamespacedCloudProfile.
-func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfigLegacy(providerConfig *api.CloudProfileConfig, profileSpec core.NamespacedCloudProfileSpec, parentSpec gardencorev1beta1.CloudProfileSpec) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	validationProviderConfig := &api.CloudProfileConfig{
-		MachineImages: providerConfig.MachineImages,
-	}
-	if !equality.Semantic.DeepEqual(validationProviderConfig, providerConfig) {
-		allErrs = append(allErrs, field.Forbidden(
-			field.NewPath("spec.providerConfig"),
-			"must only set machineImages",
-		))
-	}
-
-	return allErrs
-}
-
 func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentSpec gardencorev1beta1.CloudProfileSpec) field.ErrorList {
 	allErrs := field.ErrorList{}
 

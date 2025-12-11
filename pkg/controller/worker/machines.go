@@ -28,7 +28,6 @@ import (
 
 	"github.com/gardener/gardener-extension-provider-openstack/charts"
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
@@ -336,8 +335,8 @@ func addTopologyLabel(labels map[string]string, zone string) map[string]string {
 }
 
 // EnsureUniformMachineImages ensures that all machine images are in the same format, either with or without Capabilities.
-func EnsureUniformMachineImages(images []openstackapi.MachineImage, definitions []gardencorev1beta1.CapabilityDefinition) []openstackapi.MachineImage {
-	var uniformMachineImages []openstackapi.MachineImage
+func EnsureUniformMachineImages(images []api.MachineImage, definitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
+	var uniformMachineImages []api.MachineImage
 
 	if len(definitions) == 0 {
 		// transform images that were added with Capabilities to the legacy format without Capabilities
@@ -353,7 +352,7 @@ func EnsureUniformMachineImages(images []openstackapi.MachineImage, definitions 
 				architecture = &img.Capabilities[v1beta1constants.ArchitectureName][0]
 			}
 			// TODO: make uniform for imageID is not set BUT the global image name is set
-			uniformMachineImages = appendMachineImage(uniformMachineImages, openstackapi.MachineImage{
+			uniformMachineImages = appendMachineImage(uniformMachineImages, api.MachineImage{
 				Name:         img.Name,
 				Version:      img.Version,
 				ID:           img.ID,
@@ -371,7 +370,7 @@ func EnsureUniformMachineImages(images []openstackapi.MachineImage, definitions 
 		} else {
 			// add image as a capability set with defaulted Architecture
 			architecture := ptr.Deref(img.Architecture, v1beta1constants.ArchitectureAMD64)
-			uniformMachineImages = appendMachineImage(uniformMachineImages, openstackapi.MachineImage{
+			uniformMachineImages = appendMachineImage(uniformMachineImages, api.MachineImage{
 				Name:         img.Name,
 				Version:      img.Version,
 				ID:           img.ID,

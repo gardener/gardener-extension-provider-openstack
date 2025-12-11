@@ -17,7 +17,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -176,14 +175,14 @@ func ValidateProviderMachineImage(providerImage api.MachineImages, capabilityDef
 	// Validate each version
 	for j, version := range providerImage.Versions {
 		jdxPath := validationPath.Child("versions").Index(j)
-		allErrs = append(allErrs, validateMachineImageVersion(providerImage, capabilityDefinitions, version, jdxPath)...)
+		allErrs = append(allErrs, validateMachineImageVersion(capabilityDefinitions, version, jdxPath)...)
 	}
 
 	return allErrs
 }
 
-// validateMachineImageVersion validates a specific machine image version
-func validateMachineImageVersion(providerImage api.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, version api.MachineImageVersion, jdxPath *field.Path) field.ErrorList {
+// validates a specific machine image version
+func validateMachineImageVersion(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, version api.MachineImageVersion, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(version.Version) == 0 {
@@ -191,9 +190,9 @@ func validateMachineImageVersion(providerImage api.MachineImages, capabilityDefi
 	}
 
 	if len(capabilityDefinitions) > 0 {
-		allErrs = append(allErrs, validateCapabilityFlavors(providerImage, version, capabilityDefinitions, jdxPath)...)
+		allErrs = append(allErrs, validateCapabilityFlavors(version, capabilityDefinitions, jdxPath)...)
 	} else {
-		allErrs = append(allErrs, validateRegions(version.Regions, providerImage.Name, version.Version, capabilityDefinitions, jdxPath)...)
+		allErrs = append(allErrs, validateRegions(version.Regions, capabilityDefinitions, jdxPath)...)
 		if len(version.CapabilityFlavors) > 0 {
 			allErrs = append(allErrs, field.Forbidden(jdxPath.Child("capabilityFlavors"), "must not be set as CloudProfile does not define capabilities. Use regions instead."))
 		}
@@ -201,8 +200,8 @@ func validateMachineImageVersion(providerImage api.MachineImages, capabilityDefi
 	return allErrs
 }
 
-// validateCapabilityFlavors validates the capability flavors of a machine image version.
-func validateCapabilityFlavors(providerImage api.MachineImages, version api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
+// validates the capability flavors of a machine image version.
+func validateCapabilityFlavors(version api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// When using capabilities, regions must not be set
@@ -213,14 +212,14 @@ func validateCapabilityFlavors(providerImage api.MachineImages, version api.Mach
 	// Validate each flavor's capabilities and regions
 	for k, capabilitySet := range version.CapabilityFlavors {
 		kdxPath := jdxPath.Child("capabilityFlavors").Index(k)
-		allErrs = append(allErrs, gutil.ValidateCapabilities(capabilitySet.Capabilities, capabilityDefinitions, kdxPath.Child("capabilities"))...)
-		allErrs = append(allErrs, validateRegions(capabilitySet.Regions, providerImage.Name, version.Version, capabilityDefinitions, kdxPath)...)
+		allErrs = append(allErrs, gardener.ValidateCapabilities(capabilitySet.Capabilities, capabilityDefinitions, kdxPath.Child("capabilities"))...)
+		allErrs = append(allErrs, validateRegions(capabilitySet.Regions, capabilityDefinitions, kdxPath)...)
 	}
 	return allErrs
 }
 
-// validateRegions validates the regions of a machine image version or capability flavor.
-func validateRegions(regions []api.RegionIDMapping, name, version string, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
+// validates the regions of a machine image version or capability flavor.
+func validateRegions(regions []api.RegionIDMapping, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for k, region := range regions {
@@ -246,42 +245,6 @@ func validateRegions(regions []api.RegionIDMapping, name, version string, capabi
 			}
 		}
 	}
-	return allErrs
-}
-
-// ValidateProviderMachineImageLegacy validates a CloudProfileConfig MachineImages entry.
-func ValidateProviderMachineImageLegacy(validationPath *field.Path, machineImage api.MachineImages) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(machineImage.Name) == 0 {
-		allErrs = append(allErrs, field.Required(validationPath.Child("name"), "must provide a name"))
-	}
-
-	if len(machineImage.Versions) == 0 {
-		allErrs = append(allErrs, field.Required(validationPath.Child("versions"), fmt.Sprintf("must provide at least one version for machine image %q", machineImage.Name)))
-	}
-	for j, version := range machineImage.Versions {
-		jdxPath := validationPath.Child("versions").Index(j)
-
-		if len(version.Version) == 0 {
-			allErrs = append(allErrs, field.Required(jdxPath.Child("version"), "must provide a version"))
-		}
-
-		for k, region := range version.Regions {
-			kdxPath := jdxPath.Child("regions").Index(k)
-
-			if len(region.Name) == 0 {
-				allErrs = append(allErrs, field.Required(kdxPath.Child("name"), "must provide a name"))
-			}
-			if len(region.ID) == 0 {
-				allErrs = append(allErrs, field.Required(kdxPath.Child("id"), "must provide an image ID"))
-			}
-			if !slices.Contains(v1beta1constants.ValidArchitectures, ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64)) {
-				allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), *region.Architecture, v1beta1constants.ValidArchitectures))
-			}
-		}
-	}
-
 	return allErrs
 }
 

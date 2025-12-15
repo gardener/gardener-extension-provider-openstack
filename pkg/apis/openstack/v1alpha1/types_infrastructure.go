@@ -20,6 +20,10 @@ type InfrastructureConfig struct {
 	// in the Floating IP Pool where the router should be attached to.
 	// +optional
 	FloatingPoolSubnetName *string `json:"floatingPoolSubnetName,omitempty"`
+	// SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
+	// If not specified, IPv6 subnets will be allocated from the default subnet pool.
+	// +optional
+	SubnetPoolID *string `json:"subnetPoolID,omitempty"`
 	// Networks is the OpenStack specific network configuration
 	Networks Networks `json:"networks"`
 }

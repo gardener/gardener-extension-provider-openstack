@@ -54,7 +54,10 @@ providerSpec:
 {{- end }}
     networkID: {{ $machineClass.networkID }}
     subnetID: {{ $machineClass.subnetID }}
-    podNetworkCIDRs: {{ $machineClass.podNetworkCIDRs }}
+    subnetIDs:
+{{ toYaml $machineClass.subnetIDs | indent 6 }}
+    podNetworkCIDRs:
+{{ toYaml $machineClass.podNetworkCIDRs | indent 6 }}
 {{- if $machineClass.rootDiskSize }}
     rootDiskSize: {{ $machineClass.rootDiskSize }}
 {{- end }}

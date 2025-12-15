@@ -378,13 +378,30 @@ func (a *networkingAccess) toNetwork(raw *networks.Network) *Network {
 }
 
 func (a *networkingAccess) CreateSubnet(ctx context.Context, desired *subnets.Subnet) (*subnets.Subnet, error) {
-	raw, err := a.networking.CreateSubnet(ctx, subnets.CreateOpts{
+	opts := subnets.CreateOpts{
 		NetworkID:      desired.NetworkID,
-		CIDR:           desired.CIDR,
 		Name:           desired.Name,
 		IPVersion:      gophercloud.IPVersion(desired.IPVersion),
 		DNSNameservers: desired.DNSNameservers,
-	})
+	}
+
+	if desired.CIDR != "" {
+		opts.CIDR = desired.CIDR
+	}
+
+	if desired.SubnetPoolID != "" {
+		opts.SubnetPoolID = desired.SubnetPoolID
+	}
+
+	// Set IPv6 specific options if provided
+	if desired.IPv6RAMode != "" {
+		opts.IPv6RAMode = desired.IPv6RAMode
+	}
+	if desired.IPv6AddressMode != "" {
+		opts.IPv6AddressMode = desired.IPv6AddressMode
+	}
+
+	raw, err := a.networking.CreateSubnet(ctx, opts)
 	if err != nil {
 		return nil, err
 	}

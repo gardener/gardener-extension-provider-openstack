@@ -92,7 +92,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		return err
 	}
 
-	subnet, err := helper.FindSubnetByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
+	subnets, err := helper.FindSubnetsByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,14 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				},
 			}
 
-			machineClassSpec["subnetID"] = subnet.ID
+			// Collect all subnet IDs
+			var subnetIDs []string
+			for _, subnet := range subnets {
+				subnetIDs = append(subnetIDs, subnet.ID)
+			}
+
+			machineClassSpec["subnetID"] = subnets[0].ID
+			machineClassSpec["subnetIDs"] = subnetIDs
 
 			if volumeSize > 0 {
 				machineClassSpec["rootDiskSize"] = volumeSize

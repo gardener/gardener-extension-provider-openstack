@@ -297,6 +297,11 @@ func (in *InfrastructureConfig) DeepCopyInto(out *InfrastructureConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.SubnetPoolID != nil {
+		in, out := &in.SubnetPoolID, &out.SubnetPoolID
+		*out = new(string)
+		**out = **in
+	}
 	in.Networks.DeepCopyInto(&out.Networks)
 	return
 }

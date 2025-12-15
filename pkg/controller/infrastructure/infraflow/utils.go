@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
@@ -196,6 +197,10 @@ func (fctx *FlowContext) defaultSubnetName() string {
 	return fctx.infra.Namespace
 }
 
+func (fctx *FlowContext) defaultSubnetIPv6Name() string {
+	return fctx.infra.Namespace + "-ipv6"
+}
+
 func (fctx *FlowContext) defaultSecurityGroupName() string {
 	return fctx.infra.Namespace
 }
@@ -206,4 +211,10 @@ func (fctx *FlowContext) defaultSharedNetworkName() string {
 
 func (fctx *FlowContext) workersCIDR() string {
 	return fctx.config.WorkersCIDR()
+}
+
+// isDualStack returns true if the cluster is configured for dual-stack networking
+// or has migrated from dual-stack to single-stack (indicated by having 2 node CIDRs).
+func (fctx *FlowContext) isDualStack() bool {
+	return !gardencorev1beta1.IsIPv4SingleStack(fctx.shootNetworking.IPFamilies)
 }

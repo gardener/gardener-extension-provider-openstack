@@ -105,6 +105,7 @@ spec:
         - --v=5
         - --kube-api-qps=100
         - --kube-api-burst=200
+        - --strict-topology
         env:
         - name: ADDRESS
           value: {{ .Values.socketPath }}/csi.sock

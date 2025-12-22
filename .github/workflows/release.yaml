@@ -41,12 +41,25 @@ jobs:
       - integration-tests
     secrets:
       github-app-secret-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
-    with:
-      release-commit-target: branch
-      next-version: ${{ inputs.next-version }}
-      next-version-callback-action-path: .github/actions/prepare-release
     permissions:
       contents: write
       packages: write
       id-token: write
       pull-requests: write
+    with:
+      release-commit-target: branch
+      next-version: ${{ inputs.next-version }}
+      next-version-callback-action-path: .github/actions/prepare-release
+      slack-channel-id: C9CEBQPGE # #sap-tech-gardener
+      create-release-branch: true
+      cleanup-release-branches: true
+
+  close-release-milestone:
+    if: ${{ inputs.next-version == 'bump-minor' && inputs.release-version == 'set-prerelease' }}
+    needs:
+      - release-to-github-and-bump
+    uses: ./.github/workflows/close-milestone.yaml
+    with:
+      name: ${{ needs.release-to-github-and-bump.outputs.component-descriptor.version }}
+      strip_patch: true
+    secrets: inherit

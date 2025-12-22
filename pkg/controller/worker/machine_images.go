@@ -9,8 +9,9 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"k8s.io/utils/ptr"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -38,10 +39,32 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) findMachineImage(name, version, architecture string) (*api.MachineImage, error) {
-	image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, w.cluster.Shoot.Spec.Region, architecture)
-	if err == nil {
-		return image, nil
+func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, region string, arch *string, machineCapabilities gardencorev1beta1.Capabilities) (*api.MachineImage, error) {
+	selectedMachineImage := &api.MachineImage{
+		Name:    name,
+		Version: version,
+	}
+
+	if capabilitySet, err := helper.FindImageInCloudProfile(w.cloudProfileConfig, name, version, region, arch, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities); err == nil {
+		selectedMachineImage.Capabilities = capabilitySet.Capabilities
+		// ID takes precedence over Image attribute. Reminder: Image is global name while ID is region specific.
+		if capabilitySet.Regions[0].ID == "" {
+			selectedMachineImage.Image = capabilitySet.Image
+		} else {
+			selectedMachineImage.ID = capabilitySet.Regions[0].ID
+		}
+
+		if len(selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName]) > 0 {
+			var selectedArch = &selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName][0]
+			// Verify that selectedMachineImage has correct architecture
+			if selectedArch == nil || arch != nil && *selectedArch != *arch {
+				return nil, fmt.Errorf("architecture does not match for machine image")
+			}
+		} else {
+			selectedMachineImage.Architecture = capabilitySet.Regions[0].Architecture
+		}
+
+		return selectedMachineImage, nil
 	}
 
 	// Try to look up machine image in worker provider status as it was not found in componentconfig.
@@ -51,27 +74,46 @@ func (w *workerDelegate) findMachineImage(name, version, architecture string) (*
 			return nil, fmt.Errorf("could not decode worker status of worker '%s': %w", k8sclient.ObjectKeyFromObject(w.worker), err)
 		}
 
-		machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version, architecture)
-		if err != nil {
-			return nil, worker.ErrorMachineImageNotFound(name, version)
-		}
-
-		// The architecture field might not be present in the WorkerStatus if the Shoot has been created before introduction
-		// of the field. Hence, initialize it if it's empty.
-		machineImage = machineImage.DeepCopy()
-		if machineImage.Architecture == nil {
-			machineImage.Architecture = &architecture
-		}
-
-		return machineImage, nil
+		return helper.FindImageInWorkerStatus(workerStatus.MachineImages, name, version, arch, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities)
 	}
 
-	return nil, worker.ErrorMachineImageNotFound(name, version)
+	return nil, worker.ErrorMachineImageNotFound(name, version, *arch, region)
 }
 
-func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage) []api.MachineImage {
-	if _, err := helper.FindMachineImage(machineImages, machineImage.Name, machineImage.Version, ptr.Deref(machineImage.Architecture, v1beta1constants.ArchitectureAMD64)); err != nil {
-		return append(machineImages, machineImage)
+func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
+	// support for cloudprofile machine images without capabilities
+	if len(capabilityDefinitions) == 0 {
+		for _, image := range machineImages {
+			if image.Name == machineImage.Name && image.Version == machineImage.Version && machineImage.Architecture == image.Architecture {
+				// If the image already exists without capabilities, we can just return the existing list.
+				return machineImages
+			}
+		}
+		return append(machineImages, api.MachineImage{
+			Name:         machineImage.Name,
+			Version:      machineImage.Version,
+			ID:           machineImage.ID,
+			Architecture: machineImage.Architecture,
+		})
 	}
+
+	defaultedCapabilities := gardencorev1beta1.GetCapabilitiesWithAppliedDefaults(machineImage.Capabilities, capabilityDefinitions)
+
+	for _, existingMachineImage := range machineImages {
+		existingDefaultedCapabilities := gardencorev1beta1.GetCapabilitiesWithAppliedDefaults(existingMachineImage.Capabilities, capabilityDefinitions)
+		if existingMachineImage.Name == machineImage.Name && existingMachineImage.Version == machineImage.Version && gardencorev1beta1helper.AreCapabilitiesEqual(defaultedCapabilities, existingDefaultedCapabilities) {
+			// If the image already exists with the same capabilities return the existing list.
+			return machineImages
+		}
+	}
+
+	// If the image does not exist, we create a new machine image entry with the capabilities.
+	machineImages = append(machineImages, api.MachineImage{
+		Name:         machineImage.Name,
+		Version:      machineImage.Version,
+		ID:           machineImage.ID,
+		Capabilities: machineImage.Capabilities,
+	})
+
 	return machineImages
 }

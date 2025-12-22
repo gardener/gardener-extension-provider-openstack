@@ -6,10 +6,12 @@ package validation_test
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -18,16 +20,37 @@ import (
 )
 
 var _ = Describe("CloudProfileConfig validation", func() {
-	Describe("#ValidateCloudProfileConfig", func() {
+	DescribeTableSubtree("#ValidateCloudProfileConfig", func(isCapabilitiesCloudProfile bool) {
 		var (
-			cloudProfileConfig  *api.CloudProfileConfig
-			machineImages       []core.MachineImage
-			machineImageName    string
-			machineImageVersion string
-			fldPath             *field.Path
+			capabilityDefinitions []v1beta1.CapabilityDefinition
+			cloudProfileConfig    *api.CloudProfileConfig
+			machineImages         []core.MachineImage
+			machineImageName      string
+			machineImageVersion   string
+			fldPath               *field.Path
 		)
 
 		BeforeEach(func() {
+			regions := []api.RegionIDMapping{{
+				Name: "eu01",
+				ID:   "9afa968b-ed9e-4ba0-a394-f74cbb0313w2",
+			}}
+			var capabilityFlavors []api.MachineImageFlavor
+
+			if isCapabilitiesCloudProfile {
+				capabilityDefinitions = []v1beta1.CapabilityDefinition{{
+					Name:   v1beta1constants.ArchitectureName,
+					Values: []string{"amd64"},
+				}}
+				capabilityFlavors = []api.MachineImageFlavor{{
+					Regions: regions,
+					Capabilities: v1beta1.Capabilities{
+						v1beta1constants.ArchitectureName: []string{"amd64"},
+					}}}
+				regions = nil
+			} else {
+				regions[0].Architecture = ptr.To("amd64")
+			}
 			machineImageName = "ubuntu"
 			machineImageVersion = "1.2.3"
 			cloudProfileConfig = &api.CloudProfileConfig{
@@ -49,13 +72,10 @@ var _ = Describe("CloudProfileConfig validation", func() {
 						Name: machineImageName,
 						Versions: []api.MachineImageVersion{
 							{
-								Version: machineImageVersion,
-								Image:   "ubuntu-1.2.3",
-								Regions: []api.RegionIDMapping{{
-									Name:         "eu01",
-									ID:           "9afa968b-ed9e-4ba0-a394-f74cbb0313w2",
-									Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-								}},
+								Version:           machineImageVersion,
+								Image:             "ubuntu-1.2.3",
+								Regions:           regions,
+								CapabilityFlavors: capabilityFlavors,
 							},
 						},
 					},
@@ -79,7 +99,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should enforce that at least one pool has been defined", func() {
 				cloudProfileConfig.Constraints.FloatingPools = []api.FloatingPool{}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -96,7 +116,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -140,7 +160,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -165,7 +185,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should enforce that at least one provider has been defined", func() {
 				cloudProfileConfig.Constraints.LoadBalancerProviders = []api.LoadBalancerProvider{}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -181,7 +201,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -204,7 +224,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
@@ -224,7 +244,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -239,7 +259,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(BeEmpty())
 			})
@@ -263,7 +283,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				},
 			}
 
-			errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+			errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -273,7 +293,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.KeyStoneURL = ""
 				cloudProfileConfig.KeyStoneURLs = nil
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -285,7 +305,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.KeyStoneURL = ""
 				cloudProfileConfig.KeyStoneURLs = []api.KeyStoneURL{{}}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -309,7 +329,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
@@ -321,7 +341,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		It("should forbid invalid keystone CA Certs", func() {
 			cloudProfileConfig.KeyStoneCACert = ptr.To("foo")
 
-			errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+			errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("root.caCert"),
@@ -333,7 +353,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should forbid not invalid dns server ips", func() {
 				cloudProfileConfig.DNSServers = []string{"not-a-valid-ip"}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -346,7 +366,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should forbid not specifying a value when the key is present", func() {
 				cloudProfileConfig.DHCPDomain = ptr.To("")
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -357,20 +377,20 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 		Context("machine image validation", func() {
 			It("should pass validation", func() {
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should pass validation even without regions in the machineImage version", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].Regions = nil
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should enforce that at least one machine image has been defined", func() {
 				cloudProfileConfig.MachineImages = []api.MachineImages{}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -384,7 +404,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should forbid unsupported machine image configuration", func() {
 				cloudProfileConfig.MachineImages = []api.MachineImages{{}}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -406,7 +426,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -417,109 +437,100 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				}))))
 			})
 
-			It("should forbid missing architecture mapping", func() {
-				machineImages[0].Versions[0].Architectures = []string{"arm64"}
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
-
+			It("should forbid missing architecture or capabilitySet mapping", func() {
+				var fieldMatcher types.GomegaMatcher
+				if isCapabilitiesCloudProfile {
+					machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+					}
+					fieldMatcher = Equal("spec.machineImages[0].versions[0].capabilityFlavors[0]")
+				} else {
+					machineImages[0].Versions[0].Architectures = []string{"arm64"}
+					fieldMatcher = Equal("spec.machineImages[0].versions[0]")
+				}
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0].versions[0]"),
-					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeRequired), "Field": fieldMatcher})),
 				))
 			})
-
-			It("should automatically use amd64", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].Regions[0].Architecture = nil
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+			It("should automatically use amd64 (or default to capabilityDefinitions)", func() {
+				if !isCapabilitiesCloudProfile {
+					cloudProfileConfig.MachineImages[0].Versions[0].Regions[0].Architecture = nil
+				}
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			Context("region mapping validation", func() {
 				It("should forbid empty region name", func() {
-					cloudProfileConfig.MachineImages = []api.MachineImages{
-						{
-							Name: "abc",
-							Versions: []api.MachineImageVersion{{
-								Version: "foo",
-								Regions: []api.RegionIDMapping{{
-									ID: "abc_foo",
-								}},
-							}},
-						},
+					var fieldMatcher string
+					var regions = []api.RegionIDMapping{{
+						ID: "abc_foo",
+					}}
+
+					if isCapabilitiesCloudProfile {
+						fieldMatcher = "root.machineImages[0].versions[0].capabilityFlavors[0].regions[0].name"
+						cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Regions = regions
+					} else {
+						fieldMatcher = "root.machineImages[0].versions[0].regions[0].name"
+						cloudProfileConfig.MachineImages[0].Versions[0].Regions = regions
 					}
 
-					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("root.machineImages[0].versions[0].regions[0].name"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0]"),
+						"Field": Equal(fieldMatcher),
 					}))))
 				})
 
 				It("should forbid empty image ID", func() {
-					cloudProfileConfig.MachineImages = []api.MachineImages{
-						{
-							Name: "abc",
-							Versions: []api.MachineImageVersion{{
-								Version: "foo",
-								Regions: []api.RegionIDMapping{{
-									Name: "eu01",
-								}},
-							}},
-						},
+					var fieldMatcher string
+
+					var regions = []api.RegionIDMapping{{
+						Name: "eu01",
+					}}
+					if isCapabilitiesCloudProfile {
+						fieldMatcher = "root.machineImages[0].versions[0].capabilityFlavors[0].regions[0].id"
+						cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Regions = regions
+					} else {
+						fieldMatcher = "root.machineImages[0].versions[0].regions[0].id"
+						cloudProfileConfig.MachineImages[0].Versions[0].Regions = regions
 					}
 
-					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("root.machineImages[0].versions[0].regions[0].id"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0]"),
+						"Field": Equal(fieldMatcher),
 					}))))
 				})
 
 				It("should forbid unknown architectures", func() {
-					cloudProfileConfig.MachineImages = []api.MachineImages{
-						{
-							Name: "abc",
-							Versions: []api.MachineImageVersion{{
-								Version: "foo",
-								Regions: []api.RegionIDMapping{
-									{
-										Name:         "eu01",
-										ID:           "abc_foo_amd64",
-										Architecture: ptr.To("amd64"),
-									},
-									{
-										Name:         "eu01",
-										ID:           "abc_foo_arm64",
-										Architecture: ptr.To("arm64"),
-									},
-									{
-										Name:         "eu01",
-										ID:           "abc_foo_ppc64",
-										Architecture: ptr.To("ppc64"),
-									},
-								},
-							}},
-						},
-					}
 
-					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+					var notSupportedField, requiredField types.GomegaMatcher
+					if isCapabilitiesCloudProfile {
+						cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities = v1beta1.Capabilities{
+							v1beta1constants.ArchitectureName: []string{"foo"},
+						}
+						notSupportedField = Equal("root.machineImages[0].versions[0].capabilityFlavors[0].capabilities.architecture[0]")
+						requiredField = Equal("spec.machineImages[0].versions[0].capabilityFlavors[0]")
+					} else {
+						cloudProfileConfig.MachineImages[0].Versions[0].Regions[0].Architecture = ptr.To("foo")
+						notSupportedField = Equal("root.machineImages[0].versions[0].regions[0].architecture")
+						requiredField = Equal("spec.machineImages[0].versions[0]")
+
+					}
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("root.machineImages[0].versions[0].regions[2].architecture"),
+						"Field": notSupportedField,
 					})), PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0]"),
+						"Field": requiredField,
 					}))))
+
 				})
 			})
 		})
@@ -531,7 +542,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					"",
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, fldPath)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -539,7 +550,9 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				}))))
 			})
 		})
-	})
+	},
+		Entry("CloudProfile uses regions only", false),
+		Entry("CloudProfile uses capabilities", true))
 })
 
 var _ = Describe("LoadBalancerClass validation", func() {

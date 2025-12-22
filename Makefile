@@ -20,7 +20,6 @@ PLATFORM                    := linux/amd64
 EXTENSION_NAMESPACE         := garden
 GARDEN_KUBECONFIG           ?=
 
-TEST_RECONCILER           := tf
 TEST_LOGLEVEL             := info
 TEST_USE_EXISTING_CLUSTER := false # set to true if you want to use an existing cluster for backupbucket integration tests
 
@@ -69,6 +68,19 @@ BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                            --log-level=$(TEST_LOGLEVEL) \
                            --password='$(shell cat $(PASSWORD))' \
                            --user-name='$(shell cat $(USER_NAME))'
+
+DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.progress \
+                        --kubeconfig=${KUBECONFIG} \
+                        --auth-url='$(shell cat $(AUTH_URL))' \
+                        --domain-name='$(shell cat $(DOMAIN_NAME))' \
+                        --password='$(shell cat $(PASSWORD))' \
+                        --tenant-name='$(shell cat $(TENANT_NAME))' \
+                        --user-name='$(shell cat $(USER_NAME))' \
+                        --region='$(shell cat $(REGION))' \
+                        --app-id='$(shell cat $(APP_ID))' \
+                        --app-name='$(shell cat $(APP_NAME))' \
+                        --app-secret='$(shell cat $(APP_SECRET))' \
+                        --existing-dns-zone='' # gardener-dev-team-test.c.eu-de-1.cloud.sap.
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -210,7 +222,6 @@ verify-extended: check-generate check format test-cov test-clean sast-report
 .PHONY: integration-test-infra
 integration-test-infra:
 	@go test -timeout=0 ./test/integration/infrastructure \
-		--reconciler='$(TEST_RECONCILER)' \
 		$(INFRA_TEST_FLAGS)
 
 .PHONY: integration-test-bastion
@@ -222,3 +233,8 @@ integration-test-bastion:
 integration-test-backupbucket:
 	@go test -timeout=0 ./test/integration/backupbucket \
 		$(BACKUPBUCKET_TEST_FLAGS)
+
+.PHONY: integration-test-dnsrecord
+integration-test-dnsrecord:
+	@go test -timeout=0 ./test/integration/dnsrecord \
+		$(DNSRECORD_TEST_FLAGS)

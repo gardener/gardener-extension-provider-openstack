@@ -1,0 +1,24 @@
+kind: TestDefinition
+metadata:
+  name: dnsrecord-test
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Integration test for dnsrecord creation, update, and deletion
+  activeDeadlineSeconds: 1800
+
+  command: [bash, -c]
+  args:
+    - >-
+      go test -timeout=0 ./test/integration/dnsrecord
+      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
+      --kubeconfig=$TM_KUBECONFIG_PATH/testmachinery.config
+      --region="$REGION"
+      --auth-url="$AUTH_URL"
+      --domain-name="$DOMAIN_NAME"
+      --tenant-name="$TENANT_NAME"
+      --app-id="$APPLICATION_CREDENTIAL_ID"
+      --app-name="$APPLICATION_CREDENTIAL_NAME"
+      --app-secret="$APPLICATION_CREDENTIAL_SECRET"
+      --existing-dns-zone="gardener-it-test.c.eu-de-1.cloud.sap."
+
+  image: golang:1.25

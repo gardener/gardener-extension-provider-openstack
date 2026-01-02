@@ -11,12 +11,10 @@ metadata:
 {{-  if .Values.ignoreResources }}
     resources.gardener.cloud/ignore: "true"
 {{- end }}
-  labels:
-{{ include "labels" . | indent 4 }}
+  labels: {{- include "labels" . | nindent 4 }}
 spec:
   type: ClusterIP
-  selector:
-{{ include "labels" . | indent 4 }}
+  selector: {{- include "labels" . | nindent 4 }}
   ports:
   - port: {{ .Values.webhookConfig.servicePort }}
     protocol: TCP

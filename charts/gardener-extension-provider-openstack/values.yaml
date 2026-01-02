@@ -32,8 +32,8 @@ controllers:
     concurrentSyncs: 5
   healthcheck:
     concurrentSyncs: 5
-  heartbeat: 
-    renewIntervalSeconds: 30 
+  heartbeat:
+    renewIntervalSeconds: 30
   infrastructure:
     concurrentSyncs: 5
   worker:

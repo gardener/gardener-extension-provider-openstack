@@ -3,8 +3,7 @@ kind: ConfigMap
 metadata:
   name: {{ include "name" . }}-configmap
   namespace: {{ .Release.Namespace }}
-  labels:
-{{ include "labels" . | indent 4 }}
+  labels: {{ include "labels" . | nindent 4 }}
 data:
   config.yaml: |
     ---
@@ -23,7 +22,7 @@ data:
         className: {{ .Values.config.etcd.storage.className }}
         capacity: {{ .Values.config.etcd.storage.capacity }}
 {{- if .Values.config.etcd.backup }}
-{{ toYaml .Values.config.etcd.backup | indent 6 }}
+  {{- toYaml .Values.config.etcd.backup | nindent 6 }}
 {{- end }}
     bastionConfig:
       imageRef:  {{ .Values.config.bastionConfig.imageRef }}

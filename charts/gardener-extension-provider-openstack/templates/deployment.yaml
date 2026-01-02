@@ -86,6 +86,14 @@ spec:
 {{- if .Values.gardener.selfHostedShootCluster }}
         - --self-hosted-shoot-cluster={{ .Values.gardener.selfHostedShootCluster }}
 {{- end }}
+{{- if .Values.logging }}
+  {{- if .Values.logging.level }}
+        - --log-level={{ .Values.logging.level }}
+  {{- end }}
+  {{- if .Values.logging.format }}
+        - --log-format={{ .Values.logging.format }}
+  {{- end }}
+{{- end }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

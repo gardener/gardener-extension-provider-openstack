@@ -56,16 +56,15 @@ var (
 	namespace *corev1.Namespace
 	secret    *corev1.Secret
 
-	authURL    = flag.String("auth-url", "", "Authorization URL for openstack")
-	domainName = flag.String("domain-name", "", "Domain name for openstack")
-	region     = flag.String("region", "", "Openstack region")
-	tenantName = flag.String("tenant-name", "", "Tenant name for openstack")
-	userName   = flag.String("user-name", "", "User name for openstack")
-	password   = flag.String("password", "", "Password for openstack")
-	appID      = flag.String("app-id", "", "Application Credential ID for openstack")
-	appName    = flag.String("app-name", "", "Application Credential Name for openstack")
-	appSecret  = flag.String("app-secret", "", "Application Credential Secret for openstack")
-	// TODO remove default
+	authURL         = flag.String("auth-url", "", "Authorization URL for openstack")
+	domainName      = flag.String("domain-name", "", "Domain name for openstack")
+	region          = flag.String("region", "", "Openstack region")
+	tenantName      = flag.String("tenant-name", "", "Tenant name for openstack")
+	userName        = flag.String("user-name", "", "User name for openstack")
+	password        = flag.String("password", "", "Password for openstack")
+	appID           = flag.String("app-id", "", "Application Credential ID for openstack")
+	appName         = flag.String("app-name", "", "Application Credential Name for openstack")
+	appSecret       = flag.String("app-secret", "", "Application Credential Secret for openstack")
 	existingDnsZone = flag.String("existing-dns-zone", "", "Name of the dns Zone that must be pre-created in OpenStack")
 )
 

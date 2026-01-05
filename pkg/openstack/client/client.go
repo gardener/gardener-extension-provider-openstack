@@ -21,10 +21,8 @@ import (
 	os "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
-// NewOpenstackClientFromCredentials returns a Factory implementation that can be used to create clients for OpenStack services.
-// TODO: respect CloudProfile's requestTimeout for the OpenStack client.
-// see https://github.com/kubernetes/cloud-provider-openstack/blob/c44d941cdb5c7fe651f5cb9191d0af23e266c7cb/pkg/openstack/openstack.go#L257
-func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Credentials) (Factory, error) {
+// NewProviderClient creates a new gophercloud ProviderClient from the given OpenStack credentials.
+func NewProviderClient(ctx context.Context, credentials *os.Credentials) (*gophercloud.ProviderClient, error) {
 	authOpts := gophercloud.AuthOptions{
 		IdentityEndpoint: credentials.AuthURL,
 		// AllowReauth should be set to true if you grant permission for Gophercloud to
@@ -66,11 +64,18 @@ func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Cred
 		Transport: transport,
 	}
 
-	provider, err := config.NewProviderClient(
+	return config.NewProviderClient(
 		ctx,
 		authOpts,
 		config.WithTLSConfig(tlsConfig),
 		config.WithHTTPClient(httpClient))
+}
+
+// NewOpenstackClientFromCredentials returns a Factory implementation that can be used to create clients for OpenStack services.
+// TODO: respect CloudProfile's requestTimeout for the OpenStack client.
+// see https://github.com/kubernetes/cloud-provider-openstack/blob/c44d941cdb5c7fe651f5cb9191d0af23e266c7cb/pkg/openstack/openstack.go#L257
+func NewOpenstackClientFromCredentials(ctx context.Context, credentials *os.Credentials) (Factory, error) {
+	provider, err := NewProviderClient(ctx, credentials)
 	if err != nil {
 		return nil, err
 	}

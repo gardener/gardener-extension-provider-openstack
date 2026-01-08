@@ -7,14 +7,21 @@ updates:
   schedule:
     interval: "weekly"
   groups:
-  # Group all version-updates, except Gardener. Gardener-components should receive their own PR this way. Security updates will
-  # also receive their own individual PRs.
     non-gardener-dependencies:
       applies-to: "version-updates"
       patterns:
       - "*"
       exclude-patterns:
       - "github.com/gardener*"
+      - "github.com/gophercloud/*"
+    provider-sdk-dependencies:
+      applies-to: "version-updates"
+      patterns:
+      - "github.com/gophercloud/*"
+  ignore:
+  - dependency-name: "k8s.io/*"
+  - dependency-name: "sigs.k8s.io/*"
+  - dependency-name: "github.com/gardener/etcd-druid/*"
 - package-ecosystem: "docker"
   directory: "/"
   schedule:

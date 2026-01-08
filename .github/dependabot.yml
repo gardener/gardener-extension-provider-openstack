@@ -21,6 +21,7 @@ updates:
   ignore:
   - dependency-name: "k8s.io/*"
   - dependency-name: "sigs.k8s.io/*"
+  - dependency-name: "github.com/prometheus-operator/*"
   - dependency-name: "github.com/gardener/etcd-druid/*"
 - package-ecosystem: "docker"
   directory: "/"

@@ -9,16 +9,22 @@ spec:
     containerPolicies:
     - containerName: openstack-csi-driver
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
     - containerName: openstack-csi-provisioner
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
     - containerName: openstack-csi-attacher
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
     - containerName: openstack-csi-snapshotter
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
     - containerName: openstack-csi-resizer
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
     - containerName: openstack-csi-liveness-probe
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

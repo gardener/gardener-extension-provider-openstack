@@ -9,6 +9,7 @@ spec:
     containerPolicies:
     - containerName: openstack-csi-snapshot-controller
       controlledValues: RequestsOnly
+      controlledResources: ["memory"]
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

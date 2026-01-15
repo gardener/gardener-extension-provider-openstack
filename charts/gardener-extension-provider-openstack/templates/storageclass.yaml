@@ -1,20 +1,16 @@
-{{- if eq (include "seed.provider" . ) "openstack" }}
-{{- if .Values.config.etcd.storage.enabled -}}
+{{- if and (eq (include "seed.provider" . ) "openstack") .Values.config.etcd.storage.enabled }}
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: {{ .Values.config.etcd.storage.className }}
   annotations:
     resources.gardener.cloud/delete-on-invalid-update: "true"
-  labels:
-{{ include "labels" . | indent 4 }}
+  labels: {{- include "labels" . | nindent 4 }}
 {{- if .Values.config.etcd.storage.parameters }}
-parameters:
-  {{- toYaml .Values.config.etcd.storage.parameters | nindent 2 }}
+parameters: {{- toYaml .Values.config.etcd.storage.parameters | nindent 2 }}
 {{- end }}
 provisioner: {{ .Values.config.etcd.storage.provisioner }}
 allowVolumeExpansion: true
 volumeBindingMode: {{ .Values.config.etcd.storage.volumeBindingMode }}
 reclaimPolicy: {{ .Values.config.etcd.storage.reclaimPolicy | default "Delete" }}
-{{- end -}}
 {{- end -}}

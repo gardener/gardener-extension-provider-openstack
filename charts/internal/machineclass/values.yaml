@@ -1,7 +1,7 @@
 machineClasses:
 - name: class-1
-# labels:
-#   foo: bar
+  # labels:
+  #   foo: bar
   region: europe-1
   availabilityZone: europe-1a
   machineType: medium_2_4

@@ -6,8 +6,7 @@ metadata:
   name: {{ $machineClass.name }}
   namespace: {{ $.Release.Namespace }}
 {{- if $machineClass.labels }}
-  labels:
-{{ toYaml $machineClass.labels | indent 4 }}
+  labels: {{- toYaml $machineClass.labels | nindent 4 }}
 {{- end }}
 type: Opaque
 data:
@@ -18,19 +17,18 @@ kind: MachineClass
 metadata:
   name: {{ $machineClass.name }}
   namespace: {{ $.Release.Namespace }}
-  labels:
-    {{- if $machineClass.labels }}
-{{ toYaml $machineClass.labels | indent 4 }}
-    {{- end }}
-    {{- if $machineClass.operatingSystem }}
-{{ toYaml $machineClass.operatingSystem | indent 4 }}
-    {{- end }}
+{{- if and $machineClass.operatingSystem $machineClass.labels }}
+  labels: {{- merge $machineClass.operatingSystem $machineClass.labels | toYaml | nindent 4 }}
+{{- else if $machineClass.operatingSystem }}
+  labels: {{- toYaml $machineClass.operatingSystem | nindent 4 }}
+{{- else if $machineClass.labels }}
+  labels: {{- toYaml $machineClass.labels | nindent 4 }}
+{{- end }}
 provider: "OpenStack"
 {{- if $machineClass.nodeTemplate }}
 nodeTemplate:
   architecture: {{ $machineClass.nodeTemplate.architecture }}
-  capacity:
-{{ toYaml $machineClass.nodeTemplate.capacity | indent 4 }}
+  capacity: {{- toYaml $machineClass.nodeTemplate.capacity | nindent 4 }}
   instanceType: {{ $machineClass.nodeTemplate.instanceType }}
   region: {{ $machineClass.nodeTemplate.region }}
   zone: {{ $machineClass.nodeTemplate.zone }}
@@ -66,10 +64,8 @@ providerSpec:
 {{- if $machineClass.serverGroupID }}
     serverGroupID: {{ $machineClass.serverGroupID }}
 {{- end }}
-    securityGroups:
-{{ toYaml $machineClass.securityGroups | indent 4 }}
+    securityGroups: {{- toYaml $machineClass.securityGroups | nindent 4 }}
 {{- if $machineClass.tags }}
-    tags:
-{{ toYaml $machineClass.tags | indent 6 }}
+    tags: {{- toYaml $machineClass.tags | nindent 6 }}
 {{- end }}
 {{- end }}

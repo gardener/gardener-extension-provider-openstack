@@ -7,6 +7,7 @@ package openstack
 import (
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/utils"
@@ -176,8 +177,28 @@ type MachineImageVersion struct {
 	Version string
 	// Image is the name of the image.
 	Image string
-	// Regions is an optional mapping to the correct Image ID for the machine image in the supported regions.
+	// TODO @Roncossek add "// deprecated" once openstack cloudprofiles are migrated to use CapabilityFlavors
+
+	// Regions is a mapping to the correct ID for the machine image in the supported regions.
 	Regions []RegionIDMapping
+	// CapabilityFlavors is grouping of region Ids by capabilities.
+	CapabilityFlavors []MachineImageFlavor
+}
+
+// MachineImageFlavor groups all RegionIDMappings for a specific set of capabilities.
+type MachineImageFlavor struct {
+	// Regions is a mapping to the correct ID for the machine image in the supported regions.
+	Regions []RegionIDMapping
+
+	Image string
+
+	// Capabilities that are supported by the IDs in this set.
+	Capabilities gardencorev1beta1.Capabilities
+}
+
+// GetCapabilities returns the Capabilities of a MachineImageFlavor
+func (cs MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
+	return cs.Capabilities
 }
 
 // RegionIDMapping is a mapping to the correct ID for the machine image in the given region.

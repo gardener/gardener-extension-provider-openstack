@@ -15,6 +15,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -99,12 +100,20 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones)) // #nosec: G115 - We validate if num pool zones exceeds max_int32.
 
+		//TODO: this returns a capability with arch amd64, but worker pool defined architecture arm64.
+		machineTypeFromCloudProfile := gardencorev1beta1helper.FindMachineTypeByName(w.cluster.CloudProfile.Spec.MachineTypes, pool.MachineType)
+		if machineTypeFromCloudProfile == nil {
+			return fmt.Errorf("machine type %q not found in cloud profile %q", pool.MachineType, w.cluster.CloudProfile.Name)
+		}
+
 		architecture := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
-		machineImage, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version, architecture)
+		machineImage, err := w.selectMachineImageForWorkerPool(pool.MachineImage.Name, pool.MachineImage.Version, w.worker.Spec.Region, &architecture, machineTypeFromCloudProfile.Capabilities)
 		if err != nil {
 			return err
 		}
-		machineImages = appendMachineImage(machineImages, *machineImage)
+
+		machineImages = EnsureUniformMachineImages(machineImages, w.cluster.CloudProfile.Spec.MachineCapabilities)
+		machineImages = appendMachineImage(machineImages, *machineImage, w.cluster.CloudProfile.Spec.MachineCapabilities)
 
 		var volumeSize int
 		if pool.Volume != nil {
@@ -323,4 +332,51 @@ func addTopologyLabel(labels map[string]string, zone string) map[string]string {
 		openstack.CSIDiskDriverTopologyKey:   zone,
 		openstack.CSIManilaDriverTopologyKey: zone,
 	})
+}
+
+// EnsureUniformMachineImages ensures that all machine images are in the same format, either with or without Capabilities.
+func EnsureUniformMachineImages(images []api.MachineImage, definitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
+	var uniformMachineImages []api.MachineImage
+
+	if len(definitions) == 0 {
+		// transform images that were added with Capabilities to the legacy format without Capabilities
+		for _, img := range images {
+			if len(img.Capabilities) == 0 {
+				// image is already legacy format
+				uniformMachineImages = appendMachineImage(uniformMachineImages, img, definitions)
+				continue
+			}
+			// transform to legacy format by using the Architecture capability if it exists
+			var architecture *string
+			if len(img.Capabilities[v1beta1constants.ArchitectureName]) > 0 {
+				architecture = &img.Capabilities[v1beta1constants.ArchitectureName][0]
+			}
+			// TODO: make uniform for imageID is not set BUT the global image name is set
+			uniformMachineImages = appendMachineImage(uniformMachineImages, api.MachineImage{
+				Name:         img.Name,
+				Version:      img.Version,
+				ID:           img.ID,
+				Architecture: architecture,
+			}, definitions)
+		}
+		return uniformMachineImages
+	}
+
+	// transform images that were added without Capabilities to contain a MachineImageFlavor with defaulted Architecture
+	for _, img := range images {
+		if len(img.Capabilities) > 0 {
+			// image is already in the new format with Capabilities
+			uniformMachineImages = appendMachineImage(uniformMachineImages, img, definitions)
+		} else {
+			// add image as a capability set with defaulted Architecture
+			architecture := ptr.Deref(img.Architecture, v1beta1constants.ArchitectureAMD64)
+			uniformMachineImages = appendMachineImage(uniformMachineImages, api.MachineImage{
+				Name:         img.Name,
+				Version:      img.Version,
+				ID:           img.ID,
+				Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{architecture}},
+			}, definitions)
+		}
+	}
+	return uniformMachineImages
 }

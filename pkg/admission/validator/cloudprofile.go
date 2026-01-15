@@ -10,6 +10,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -47,5 +48,10 @@ func (cp *cloudProfile) Validate(_ context.Context, newObj, _ client.Object) err
 		return err
 	}
 
-	return openstackvalidation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, providerConfigPath).ToAggregate()
+	capabilityDefinitions, err := gardencorev1beta1helper.ConvertV1beta1CapabilityDefinitions(cloudProfile.Spec.MachineCapabilities)
+	if err != nil {
+		return field.InternalError(field.NewPath("spec").Child("machineCapabilities"), err)
+	}
+
+	return openstackvalidation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, capabilityDefinitions, providerConfigPath).ToAggregate()
 }

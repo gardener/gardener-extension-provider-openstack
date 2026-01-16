@@ -177,7 +177,7 @@ func findMachineImageFlavor(
 			// No capability definitions means legacy format, so we match Architecture field of region
 			if len(capabilityDefinitions) == 0 {
 				for _, mapping := range version.Regions {
-					if region == mapping.Name && ptr.Equal(arch, mapping.Architecture) {
+					if region == mapping.Name && *arch == ptr.Deref(mapping.Architecture, v1beta1constants.ArchitectureAMD64) {
 						return &api.MachineImageFlavor{
 							Image:        version.Image,
 							Regions:      []api.RegionIDMapping{mapping},

@@ -321,6 +321,7 @@ var _ = Describe("Helper", func() {
 			Entry("profile entry not found (version does not exist)", makeProfileMachineImages("ubuntu", "2", region, "0", ptr.To("amd64"), imageCapabilities), "ubuntu", "1", region, ptr.To("amd64"), ""),
 			Entry("profile entry not found (architecture does not exist)", makeProfileMachineImages("ubuntu", "1", region, "0", ptr.To("amd64"), imageCapabilities), "ubuntu", "1", region, ptr.To("arm64"), ""),
 			Entry("profile entry", makeProfileMachineImages("ubuntu", "1", region, "id-1234", ptr.To("amd64"), imageCapabilities), "ubuntu", "1", region, ptr.To("amd64"), "id-1234"),
+			Entry("profile entry (architecture not defined)", makeProfileMachineImages("ubuntu", "1", region, "id-1234", nil, imageCapabilities), "ubuntu", "1", region, ptr.To("amd64"), "id-1234"),
 			Entry("profile non matching region", makeProfileMachineImages("ubuntu", "1", region, "id-1234", ptr.To("amd64"), imageCapabilities), "ubuntu", "1", "china", ptr.To("amd64"), ""),
 		)
 

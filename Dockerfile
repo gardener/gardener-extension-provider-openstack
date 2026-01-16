@@ -1,5 +1,5 @@
 ############# builder
-FROM golang:1.25.5 AS builder
+FROM golang:1.26rc2 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener-extension-provider-openstack
 

@@ -194,8 +194,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			log.Info("Adding controllers to manager")
-			configFileOpts.Completed().ApplyETCDMain(&openstackseedprovider.DefaultAddOptions.ETCDStorage)
-			configFileOpts.Completed().ApplyETCDEvents(&openstackseedprovider.DefaultAddOptions.ETCDEventsStorage)
+			configFileOpts.Completed().ApplyETCDStorage(&openstackseedprovider.DefaultAddOptions.ETCDStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
 			configFileOpts.Completed().ApplyBastionConfig(&openstackbastion.DefaultAddOptions.BastionConfig)
 			healthCheckCtrlOpts.Completed().Apply(&healthcheck.DefaultAddOptions.Controller)
@@ -214,6 +213,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupentry.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &openstackdnsrecord.DefaultAddOptions.ExtensionClass)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
+			openstackseedprovider.DefaultAddOptions.ETCDEventsStorage = configFileOpts.Completed().GetETCDEventsStorage()
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
 			openstackworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
 

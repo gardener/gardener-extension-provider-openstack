@@ -35,43 +35,35 @@ type ensurer struct {
 
 // EnsureETCD ensures that the etcd conform to the provider requirements.
 func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj, _ *druidcorev1alpha1.Etcd) error {
-	var (
-		mainStorageConfig   *config.ETCDStorage
-		eventsStorageConfig *config.ETCDStorage
-		capacity            = resource.MustParse("1Gi")
-		class               string
-	)
+	capacity := resource.MustParse("10Gi")
+	class := ""
 
+	var cfg *config.ETCDStorage
 	switch newObj.Name {
 	case v1beta1constants.ETCDMain:
-		mainStorageConfig = e.mainStorage
+		cfg = e.mainStorage
 	case v1beta1constants.ETCDEvents:
-		eventsStorageConfig = e.eventsStorage
+		cfg = e.eventsStorage
 	default:
 		e.logger.Info("Unknown ETCD name, skipping storage configuration", "name", newObj.Name)
 		return nil
 	}
 
-	if mainStorageConfig != nil {
-		if mainStorageConfig.Capacity != nil {
-			capacity = *mainStorageConfig.Capacity
+	if cfg != nil {
+		if cfg.Capacity != nil {
+			capacity = *cfg.Capacity
 		}
-		if mainStorageConfig.ClassName != nil {
-			class = *mainStorageConfig.ClassName
-		}
-	}
-
-	if eventsStorageConfig != nil {
-		if eventsStorageConfig.Capacity != nil {
-			capacity = *eventsStorageConfig.Capacity
-		}
-		if eventsStorageConfig.ClassName != nil {
-			class = *eventsStorageConfig.ClassName
+		if cfg.ClassName != nil {
+			class = *cfg.ClassName
 		}
 	}
 
-	newObj.Spec.StorageClass = &class
-	newObj.Spec.StorageCapacity = &capacity
+	if newObj.Spec.StorageCapacity != nil {
+		newObj.Spec.StorageCapacity = &capacity
+		if class != "" {
+			newObj.Spec.StorageClass = &class
+		}
+	}
 
 	return nil
 }

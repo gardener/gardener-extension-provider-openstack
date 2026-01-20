@@ -36,8 +36,9 @@ type ControllerConfiguration struct {
 // ETCD is an etcd configuration.
 type ETCD struct {
 	// ETCDStorage is the etcd storage configuration.
-	Main   ETCDStorage `json:"main"`
-	Events ETCDStorage `json:"events"`
+	Storage ETCDStorage `json:"storage"`
+	// Optional storage config for etcd events.
+	Events *ETCDStorage `json:"events,omitempty"`
 	// ETCDBackup is the etcd backup configuration.
 	Backup ETCDBackup `json:"backup"`
 }

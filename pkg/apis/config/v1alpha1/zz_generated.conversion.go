@@ -133,12 +133,10 @@ func Convert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(
 }
 
 func autoConvert_v1alpha1_ETCD_To_config_ETCD(in *ETCD, out *config.ETCD, s conversion.Scope) error {
-	if err := Convert_v1alpha1_ETCDStorage_To_config_ETCDStorage(&in.Main, &out.Main, s); err != nil {
+	if err := Convert_v1alpha1_ETCDStorage_To_config_ETCDStorage(&in.Storage, &out.Storage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha1_ETCDStorage_To_config_ETCDStorage(&in.Events, &out.Events, s); err != nil {
-		return err
-	}
+	out.Events = (*config.ETCDStorage)(unsafe.Pointer(in.Events))
 	if err := Convert_v1alpha1_ETCDBackup_To_config_ETCDBackup(&in.Backup, &out.Backup, s); err != nil {
 		return err
 	}
@@ -151,12 +149,10 @@ func Convert_v1alpha1_ETCD_To_config_ETCD(in *ETCD, out *config.ETCD, s conversi
 }
 
 func autoConvert_config_ETCD_To_v1alpha1_ETCD(in *config.ETCD, out *ETCD, s conversion.Scope) error {
-	if err := Convert_config_ETCDStorage_To_v1alpha1_ETCDStorage(&in.Main, &out.Main, s); err != nil {
+	if err := Convert_config_ETCDStorage_To_v1alpha1_ETCDStorage(&in.Storage, &out.Storage, s); err != nil {
 		return err
 	}
-	if err := Convert_config_ETCDStorage_To_v1alpha1_ETCDStorage(&in.Events, &out.Events, s); err != nil {
-		return err
-	}
+	out.Events = (*ETCDStorage)(unsafe.Pointer(in.Events))
 	if err := Convert_config_ETCDBackup_To_v1alpha1_ETCDBackup(&in.Backup, &out.Backup, s); err != nil {
 		return err
 	}

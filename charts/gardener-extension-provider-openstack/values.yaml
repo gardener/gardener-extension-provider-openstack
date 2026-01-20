@@ -84,10 +84,11 @@ config:
       volumeBindingMode: WaitForFirstConsumer
       # parameters:
       #   type: volumetype-nameOrID
-      # reclaimPolicy: Delete
-    events:
-      className: gardener.cloud-fast
-      capacity: 25Gi
+      # backup:
+      #   schedule: "0 */1 * * *"
+    # events:
+    #   className: gardener.cloud-fast
+    #   capacity: 25Gi
       # provisioner: kubernetes.io/cinder
       # volumeBindingMode: WaitForFirstConsumer
       # parameters:

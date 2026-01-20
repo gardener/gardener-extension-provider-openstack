@@ -58,10 +58,18 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 		}
 	}
 
-	if newObj.Spec.StorageCapacity != nil {
-		newObj.Spec.StorageCapacity = &capacity
-		if class != "" {
+	newObj.Spec.StorageCapacity = &capacity
+
+	switch newObj.Name {
+	case v1beta1constants.ETCDMain:
+		newObj.Spec.StorageClass = &class
+
+	case v1beta1constants.ETCDEvents:
+		if cfg != nil {
 			newObj.Spec.StorageClass = &class
+		} else {
+			empty := ""
+			newObj.Spec.StorageClass = &empty
 		}
 	}
 

@@ -163,18 +163,25 @@ var _ = Describe("Ensurer", func() {
 })
 
 func checkETCDMain(etcd *druidcorev1alpha1.Etcd) {
+	Expect(etcd.Spec.StorageClass).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageClass).To(Equal("gardener.cloud-fast"))
+
+	Expect(etcd.Spec.StorageCapacity).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("25Gi")))
 }
 
-// default behavior (non-breaking): class "" and capacity 10Gi
 func checkETCDEventsDefault(etcd *druidcorev1alpha1.Etcd) {
+	Expect(etcd.Spec.StorageClass).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageClass).To(Equal(""))
+
+	Expect(etcd.Spec.StorageCapacity).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("10Gi")))
 }
 
-// when events is configured: class/capacity follow eventsStorage
 func checkETCDEventsConfigured(etcd *druidcorev1alpha1.Etcd) {
+	Expect(etcd.Spec.StorageClass).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageClass).To(Equal("gardener.cloud-fast"))
+
+	Expect(etcd.Spec.StorageCapacity).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("25Gi")))
 }

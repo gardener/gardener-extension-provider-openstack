@@ -28,7 +28,12 @@ func TestController(t *testing.T) {
 
 var _ = Describe("Ensurer", func() {
 	var (
-		etcdStorage = &config.ETCDStorage{
+		mainStorage = &config.ETCDStorage{
+			ClassName: ptr.To("gardener.cloud-fast"),
+			Capacity:  ptr.To(resource.MustParse("25Gi")),
+		}
+
+		eventsStorage = &config.ETCDStorage{
 			ClassName: ptr.To("gardener.cloud-fast"),
 			Capacity:  ptr.To(resource.MustParse("25Gi")),
 		}
@@ -55,7 +60,7 @@ var _ = Describe("Ensurer", func() {
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			ensurer := NewEnsurer(mainStorage, eventsStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
@@ -75,7 +80,7 @@ var _ = Describe("Ensurer", func() {
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			ensurer := NewEnsurer(mainStorage, eventsStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
@@ -91,7 +96,7 @@ var _ = Describe("Ensurer", func() {
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			ensurer := NewEnsurer(mainStorage, eventsStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
@@ -111,7 +116,7 @@ var _ = Describe("Ensurer", func() {
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			ensurer := NewEnsurer(mainStorage, eventsStorage, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
@@ -127,6 +132,6 @@ func checkETCDMain(etcd *druidcorev1alpha1.Etcd) {
 }
 
 func checkETCDEvents(etcd *druidcorev1alpha1.Etcd) {
-	Expect(*etcd.Spec.StorageClass).To(Equal(""))
-	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("10Gi")))
+	Expect(*etcd.Spec.StorageClass).To(Equal("gardener.cloud-fast"))
+	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("25Gi")))
 }

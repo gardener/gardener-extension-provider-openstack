@@ -61,9 +61,14 @@ func (c *Config) Apply(cfg *config.ControllerConfiguration) {
 	*cfg = *c.Config
 }
 
-// ApplyETCDStorage sets the given etcd storage configuration to that of this Config.
-func (c *Config) ApplyETCDStorage(etcdStorage *config.ETCDStorage) {
-	*etcdStorage = c.Config.ETCD.Storage
+// ApplyETCDMain sets the given etcd storage configuration to that of this Config.
+func (c *Config) ApplyETCDMain(etcdStorage *config.ETCDStorage) {
+	*etcdStorage = c.Config.ETCD.Main
+}
+
+// ApplyETCDEvents sets the given etcd storage configuration to that of this Config.
+func (c *Config) ApplyETCDEvents(etcdStorage *config.ETCDStorage) {
+	*etcdStorage = c.Config.ETCD.Events
 }
 
 // ApplyETCDBackup sets the given etcd backup configuration to that of this Config.

@@ -18,9 +18,12 @@ data:
       burst: {{ required ".Values.config.clientConnection.burst is required" .Values.config.clientConnection.burst }}
 {{- end }}
     etcd:
-      storage:
-        className: {{ .Values.config.etcd.storage.className }}
-        capacity: {{ .Values.config.etcd.storage.capacity }}
+      main:
+        className: {{ .Values.config.etcd.main.className }}
+        capacity: {{ .Values.config.etcd.main.capacity }}
+      events:
+        className: {{ .Values.config.etcd.events.className }}
+        capacity: {{ .Values.config.etcd.events.capacity }}
 {{- if .Values.config.etcd.backup }}
       backup: {{- toYaml .Values.config.etcd.backup | nindent 8 }}
 {{- end }}

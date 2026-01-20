@@ -76,17 +76,18 @@ config:
     qps: 100
     burst: 130
   etcd:
-    storage:
-      enabled: true
-      className: gardener.cloud-fast
+    enabled: true
+    provisioner: kubernetes.io/cinder
+    volumeBindingMode: WaitForFirstConsumer
+    # parameters:
+    #   type: volumetype-nameOrID
+    main:
       capacity: 25Gi
-      provisioner: kubernetes.io/cinder
-      volumeBindingMode: WaitForFirstConsumer
-#       parameters:
-#         type: volumetype-nameOrID
-#     backup:
-#       schedule: "0 */1 * * *"
-# -- Deprecated, should be configured via CloudProfile
+      className: gardener.cloud-fast
+    events:
+      capacity: 25Gi
+      className: gardener.cloud-fast
+  # -- Deprecated, should be configured via CloudProfile
   bastionConfig:
     imageRef: ""
     flavorRef: ""

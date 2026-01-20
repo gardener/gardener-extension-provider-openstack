@@ -39,8 +39,7 @@ jobs:
     needs:
       - build
       - integration-tests
-    secrets:
-      github-app-secret-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+    secrets: inherit
     permissions:
       contents: write
       packages: write

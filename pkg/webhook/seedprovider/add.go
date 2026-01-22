@@ -39,11 +39,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		Types: []extensionswebhook.Type{
 			{Obj: &druidcorev1alpha1.Etcd{}},
 		},
-		Mutator: genericmutator.NewMutator(
-			mgr,
-			NewEnsurer(&opts.ETCDStorage, opts.ETCDEventsStorage, logger),
-			nil, nil, nil, logger,
-		),
+		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(&opts.ETCDStorage, opts.ETCDEventsStorage, logger), nil, nil, nil, logger),
 	})
 }
 

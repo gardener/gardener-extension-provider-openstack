@@ -13,6 +13,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 )
@@ -62,14 +63,12 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 
 	switch newObj.Name {
 	case v1beta1constants.ETCDMain:
-		newObj.Spec.StorageClass = &class
-
+		newObj.Spec.StorageClass = ptr.To(class)
 	case v1beta1constants.ETCDEvents:
 		if cfg != nil {
-			newObj.Spec.StorageClass = &class
+			newObj.Spec.StorageClass = ptr.To(class)
 		} else {
-			empty := ""
-			newObj.Spec.StorageClass = &empty
+			newObj.Spec.StorageClass = ptr.To("")
 		}
 	}
 

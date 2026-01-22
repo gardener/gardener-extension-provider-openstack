@@ -20,9 +20,9 @@ jobs:
   build:
     # only run if run was triggered by either:
     # - anything but a pull_request_target event or
-    # - 'pull_request_target' event and pullrequest-label `reviewed/ok-to-test` was added
+    # - 'pull_request_target' event and pullrequest-label `ok-to-test` was added
     # (the latter label is hardcoded in gardener/cc-utils's trusted-checkout action)
-    if: ${{ github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && github.event.label.name == 'reviewed/ok-to-test') }}
+    if: ${{ github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && github.event.label.name == 'ok-to-test') }}
     uses: ./.github/workflows/build.yaml
     with:
       mode: snapshot
@@ -34,7 +34,7 @@ jobs:
       pull-requests: write
 
   component-descriptor:
-    if: ${{ github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && github.event.label.name == 'reviewed/ok-to-test') }}
+    if: ${{ github.event_name != 'pull_request_target' || (github.event_name == 'pull_request_target' && github.event.label.name == 'ok-to-test') }}
     uses: gardener/cc-utils/.github/workflows/post-build.yaml@master
     needs:
       - build

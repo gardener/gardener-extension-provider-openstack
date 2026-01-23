@@ -13,9 +13,15 @@ provisioner: {{ .Values.config.etcd.storage.provisioner }}
 allowVolumeExpansion: true
 volumeBindingMode: {{ .Values.config.etcd.storage.volumeBindingMode }}
 reclaimPolicy: {{ .Values.config.etcd.storage.reclaimPolicy | default "Delete" }}
-{{- end }}
+{{- end -}}
 
-{{- if and (eq (include "seed.provider" . ) "openstack") .Values.config.etcd.storage.enabled .Values.config.etcd.events (ne .Values.config.etcd.events.className .Values.config.etcd.storage.className) }}
+{{- if and
+  (eq (include "seed.provider" . ) "openstack")
+  .Values.config.etcd.storage.enabled
+  .Values.config.etcd.events
+  .Values.config.etcd.events.className
+  (ne .Values.config.etcd.events.className .Values.config.etcd.storage.className)
+}}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

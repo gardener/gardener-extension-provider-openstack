@@ -6,6 +6,7 @@ package seedprovider
 
 import (
 	"context"
+	"fmt"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -46,8 +47,7 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 	case v1beta1constants.ETCDEvents:
 		cfg = e.eventsStorage
 	default:
-		e.logger.Info("Unknown ETCD name, skipping storage configuration", "name", newObj.Name)
-		return nil
+		return fmt.Errorf("unknown ETCD name %q", newObj.Name)
 	}
 
 	if cfg != nil {
@@ -59,18 +59,8 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 		}
 	}
 
-	newObj.Spec.StorageCapacity = &capacity
-
-	switch newObj.Name {
-	case v1beta1constants.ETCDMain:
-		newObj.Spec.StorageClass = ptr.To(class)
-	case v1beta1constants.ETCDEvents:
-		if cfg != nil {
-			newObj.Spec.StorageClass = ptr.To(class)
-		} else {
-			newObj.Spec.StorageClass = ptr.To("")
-		}
-	}
+	newObj.Spec.StorageCapacity = ptr.To(capacity)
+	newObj.Spec.StorageClass = ptr.To(class)
 
 	return nil
 }

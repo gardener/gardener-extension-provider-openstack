@@ -82,18 +82,18 @@ config:
       capacity: 25Gi
       provisioner: kubernetes.io/cinder
       volumeBindingMode: WaitForFirstConsumer
-      # parameters:
-      #   type: volumetype-nameOrID
-      # backup:
-      #   schedule: "0 */1 * * *"
-    # events:
-    #   className: gardener.cloud-fast
-    #   capacity: 25Gi
-      # provisioner: kubernetes.io/cinder
-      # volumeBindingMode: WaitForFirstConsumer
-      # parameters:
-      #   type: volumetype-nameOrID
-  # -- Deprecated, should be configured via CloudProfile
+#       parameters:
+#         type: volumetype-nameOrID
+#     events:
+#       className: gardener.cloud-fast
+#       capacity: 5Gi
+#       provisioner: kubernetes.io/cinder
+#       volumeBindingMode: WaitForFirstConsumer
+#       parameters:
+#         type: volumetype-nameOrID
+#     backup:
+#       schedule: "0 */1 * * *"
+# -- Deprecated, should be configured via CloudProfile
   bastionConfig:
     imageRef: ""
     flavorRef: ""

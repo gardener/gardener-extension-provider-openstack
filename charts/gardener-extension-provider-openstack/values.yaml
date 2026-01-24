@@ -85,7 +85,9 @@ config:
 #       parameters:
 #         type: volumetype-nameOrID
 #     events:
-#       className: gardener.cloud-fast
+#       # Use a different className than `storage.className` to create a separate StorageClass.
+#       # If it is the same, the existing StorageClass is reused (and a different capacity can still be configured).
+#       className: gardener.cloud-fast-events
 #       capacity: 5Gi
 #       provisioner: kubernetes.io/cinder
 #       volumeBindingMode: WaitForFirstConsumer

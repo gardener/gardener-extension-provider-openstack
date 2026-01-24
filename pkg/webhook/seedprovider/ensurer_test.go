@@ -159,6 +159,20 @@ var _ = Describe("Ensurer", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			checkETCDEventsConfigured(etcd)
 		})
+
+		It("should return an error for an unknown ETCD name", func() {
+			etcd := &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{Name: "some-unknown-etcd"},
+			}
+
+			// Create ensurer (events storage not configured)
+			ensurer := NewEnsurer(etcdStorage, nil, logger)
+
+			// Call EnsureETCDStatefulSet method and check the result
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("unknown ETCD name"))
+		})
 	})
 })
 

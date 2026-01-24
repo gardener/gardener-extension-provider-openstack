@@ -15,6 +15,11 @@ volumeBindingMode: {{ .Values.config.etcd.storage.volumeBindingMode }}
 reclaimPolicy: {{ .Values.config.etcd.storage.reclaimPolicy | default "Delete" }}
 {{- end -}}
 
+{{/*
+Render a separate StorageClass for etcd events only when a different className is configured.
+If the className is the same as for main etcd storage, the existing StorageClass is reused to
+avoid creating duplicate StorageClass objects with the same name.
+*/}}
 {{- if and
   (eq (include "seed.provider" . ) "openstack")
   .Values.config.etcd.storage.enabled

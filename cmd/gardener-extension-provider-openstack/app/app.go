@@ -195,6 +195,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			log.Info("Adding controllers to manager")
 			configFileOpts.Completed().ApplyETCDStorage(&openstackseedprovider.DefaultAddOptions.ETCDStorage)
+			configFileOpts.Completed().ApplyETCDEventsStorage(&openstackseedprovider.DefaultAddOptions.ETCDEventsStorage)
 			configFileOpts.Completed().ApplyHealthCheckConfig(&healthcheck.DefaultAddOptions.HealthCheckConfig)
 			configFileOpts.Completed().ApplyBastionConfig(&openstackbastion.DefaultAddOptions.BastionConfig)
 			healthCheckCtrlOpts.Completed().Apply(&healthcheck.DefaultAddOptions.Controller)

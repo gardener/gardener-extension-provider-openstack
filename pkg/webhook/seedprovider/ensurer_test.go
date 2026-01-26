@@ -33,6 +33,11 @@ var _ = Describe("Ensurer", func() {
 			Capacity:  ptr.To(resource.MustParse("25Gi")),
 		}
 
+		eventsStorage = &config.ETCDStorage{
+			ClassName: ptr.To("gardener.cloud-fast"),
+			Capacity:  ptr.To(resource.MustParse("25Gi")),
+		}
+
 		ctrl *gomock.Controller
 
 		dummyContext = gcontext.NewGardenContext(nil, nil)
@@ -55,7 +60,7 @@ var _ = Describe("Ensurer", func() {
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			ensurer := NewEnsurer(etcdStorage, nil, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
@@ -75,7 +80,7 @@ var _ = Describe("Ensurer", func() {
 			)
 
 			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			ensurer := NewEnsurer(etcdStorage, nil, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
@@ -83,23 +88,23 @@ var _ = Describe("Ensurer", func() {
 			checkETCDMain(etcd)
 		})
 
-		It("should add or modify elements to etcd-events statefulset", func() {
+		It("should keep default behavior for etcd-events when events config is not provided", func() {
 			var (
 				etcd = &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents},
 				}
 			)
 
-			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			// Create ensurer (events storage NOT configured)
+			ensurer := NewEnsurer(etcdStorage, nil, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
 			Expect(err).To(Not(HaveOccurred()))
-			checkETCDEvents(etcd)
+			checkETCDEventsDefault(etcd)
 		})
 
-		It("should modify existing elements of etcd-events statefulset", func() {
+		It("should keep default behavior for etcd-events even if it already has different capacity when events config is not provided", func() {
 			var (
 				r    = resource.MustParse("20Gi")
 				etcd = &druidcorev1alpha1.Etcd{
@@ -110,23 +115,87 @@ var _ = Describe("Ensurer", func() {
 				}
 			)
 
-			// Create ensurer
-			ensurer := NewEnsurer(etcdStorage, logger)
+			// Create ensurer (events storage NOT configured)
+			ensurer := NewEnsurer(etcdStorage, nil, logger)
 
 			// Call EnsureETCDStatefulSet method and check the result
 			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
 			Expect(err).To(Not(HaveOccurred()))
-			checkETCDEvents(etcd)
+			checkETCDEventsDefault(etcd)
+		})
+
+		It("should add or modify elements to etcd-events statefulset when events config is provided", func() {
+			var (
+				etcd = &druidcorev1alpha1.Etcd{
+					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents},
+				}
+			)
+
+			// Create ensurer (events storage configured)
+			ensurer := NewEnsurer(etcdStorage, eventsStorage, logger)
+
+			// Call EnsureETCDStatefulSet method and check the result
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			checkETCDEventsConfigured(etcd)
+		})
+
+		It("should modify existing elements of etcd-events statefulset when events config is provided", func() {
+			var (
+				r    = resource.MustParse("20Gi")
+				etcd = &druidcorev1alpha1.Etcd{
+					ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents},
+					Spec: druidcorev1alpha1.EtcdSpec{
+						StorageCapacity: &r,
+					},
+				}
+			)
+
+			// Create ensurer (events storage configured)
+			ensurer := NewEnsurer(etcdStorage, eventsStorage, logger)
+
+			// Call EnsureETCDStatefulSet method and check the result
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			checkETCDEventsConfigured(etcd)
+		})
+
+		It("should return an error for an unknown ETCD name", func() {
+			etcd := &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{Name: "some-unknown-etcd"},
+			}
+
+			// Create ensurer (events storage not configured)
+			ensurer := NewEnsurer(etcdStorage, nil, logger)
+
+			// Call EnsureETCDStatefulSet method and check the result
+			err := ensurer.EnsureETCD(context.TODO(), dummyContext, etcd, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("unknown ETCD name"))
 		})
 	})
 })
 
 func checkETCDMain(etcd *druidcorev1alpha1.Etcd) {
+	Expect(etcd.Spec.StorageClass).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageClass).To(Equal("gardener.cloud-fast"))
+
+	Expect(etcd.Spec.StorageCapacity).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("25Gi")))
 }
 
-func checkETCDEvents(etcd *druidcorev1alpha1.Etcd) {
+func checkETCDEventsDefault(etcd *druidcorev1alpha1.Etcd) {
+	Expect(etcd.Spec.StorageClass).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageClass).To(Equal(""))
+
+	Expect(etcd.Spec.StorageCapacity).ToNot(BeNil())
 	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("10Gi")))
+}
+
+func checkETCDEventsConfigured(etcd *druidcorev1alpha1.Etcd) {
+	Expect(etcd.Spec.StorageClass).ToNot(BeNil())
+	Expect(*etcd.Spec.StorageClass).To(Equal("gardener.cloud-fast"))
+
+	Expect(etcd.Spec.StorageCapacity).ToNot(BeNil())
+	Expect(*etcd.Spec.StorageCapacity).To(Equal(resource.MustParse("25Gi")))
 }

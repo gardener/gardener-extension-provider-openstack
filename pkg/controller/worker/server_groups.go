@@ -19,13 +19,12 @@ func isServerGroupRequired(config *api.WorkerConfig) bool {
 	return config != nil && config.ServerGroup != nil && config.ServerGroup.Policy != ""
 }
 
-func generateServerGroupName(clusterName, poolName string) (string, error) {
-	suffix, err := utils.GenerateRandomString(10)
-	if err != nil {
-		return "", err
-	}
+func generateServerGroupName(clusterName, poolName string, sgCfg api.ServerGroup) string {
+	// Policy cannot be empty here as we check for it in isServerGroupRequired before calling this function
+	data := fmt.Sprintf("policy=%s", sgCfg.Policy)
+	hash := utils.ComputeSHA256Hex([]byte(data))[:5]
 
-	return fmt.Sprintf("%s-%s-%s", clusterName, poolName, suffix), nil
+	return fmt.Sprintf("%s-%s-%s", clusterName, poolName, hash)
 }
 
 func filterServerGroupsByPrefix(sgs []servergroups.ServerGroup, prefix string) []servergroups.ServerGroup {

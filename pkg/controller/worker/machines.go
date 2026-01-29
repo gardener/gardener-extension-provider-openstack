@@ -63,6 +63,25 @@ func (w *WorkerDelegate) DeployMachineClasses(ctx context.Context) error {
 // GenerateMachineDeployments generates the configuration for the desired machine deployments.
 func (w *WorkerDelegate) GenerateMachineDeployments(ctx context.Context) (worker.MachineDeployments, error) {
 	if w.machineDeployments == nil {
+		if w.worker.Status.LastOperation != nil && w.worker.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore {
+			workerStatus, err := w.decodeWorkerProviderStatus()
+			if err != nil {
+				return nil, err
+			}
+			for _, pool := range w.worker.Spec.Pools {
+				workerConfig, err := helper.WorkerConfigFromRawExtension(pool.ProviderConfig)
+				if err != nil {
+					return nil, err
+				}
+				if isServerGroupRequired(workerConfig) && len(workerStatus.ServerGroupDependencies) == 0 {
+					if err := w.PreReconcileHook(ctx); err != nil {
+						return nil, err
+					}
+					break
+				}
+			}
+		}
+
 		if err := w.generateMachineConfig(ctx); err != nil {
 			return nil, err
 		}
@@ -102,7 +121,7 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 	for _, pool := range w.worker.Spec.Pools {
 		zoneLen := int32(len(pool.Zones)) // #nosec: G115 - We validate if num pool zones exceeds max_int32.
 
-		//TODO: this returns a capability with arch amd64, but worker pool defined architecture arm64.
+		// TODO: this returns a capability with arch amd64, but worker pool defined architecture arm64.
 		machineTypeFromCloudProfile := gardencorev1beta1helper.FindMachineTypeByName(w.cluster.CloudProfile.Spec.MachineTypes, pool.MachineType)
 		if machineTypeFromCloudProfile == nil {
 			return fmt.Errorf("machine type %q not found in cloud profile %q", pool.MachineType, w.cluster.CloudProfile.Name)

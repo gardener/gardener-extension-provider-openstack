@@ -79,12 +79,8 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 		}
 	}
 
-	name, err := generateServerGroupName(w.ClusterTechnicalName(), pool.Name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate server group name for worker pool %q: %w", pool.Name, err)
-	}
-
-	result, err := computeClient.CreateServerGroup(ctx, name, poolProviderConfig.ServerGroup.Policy)
+	serverGroupName := generateServerGroupName(w.ClusterTechnicalName(), pool.Name, *poolProviderConfig.ServerGroup)
+	result, err := computeClient.CreateServerGroup(ctx, serverGroupName, poolProviderConfig.ServerGroup.Policy)
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,15 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.61.1
+release_notes:
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: bugfix
+  contents: Machine controller no longer adds finalizers or reconciles nodes with
+    no associated machine
+  mimetype: text/markdown
+  reference: '[#1066](https://github.com/gardener/machine-controller-manager/pull/1066)'
+  type: standard

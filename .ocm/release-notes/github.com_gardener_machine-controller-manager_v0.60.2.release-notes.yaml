@@ -1,0 +1,14 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.60.2
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: maboehm
+  category: bugfix
+  contents: Fix panic if provider does not support Driver.InitializeMachine
+  mimetype: text/markdown
+  reference: '[#1047](https://github.com/gardener/machine-controller-manager/pull/1047)'
+  type: standard

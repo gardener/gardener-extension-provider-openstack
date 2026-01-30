@@ -66,6 +66,11 @@ func (c *Config) ApplyETCDStorage(etcdStorage *config.ETCDStorage) {
 	*etcdStorage = c.Config.ETCD.Storage
 }
 
+// ApplyETCDEventsStorage sets the given etcd storage configuration to that of this Config.
+func (c *Config) ApplyETCDEventsStorage(etcdEventsStorage **config.ETCDStorage) {
+	*etcdEventsStorage = c.Config.ETCD.Events
+}
+
 // ApplyETCDBackup sets the given etcd backup configuration to that of this Config.
 func (c *Config) ApplyETCDBackup(etcdBackup *config.ETCDBackup) {
 	*etcdBackup = c.Config.ETCD.Backup

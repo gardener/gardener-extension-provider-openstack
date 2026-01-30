@@ -14,3 +14,34 @@ allowVolumeExpansion: true
 volumeBindingMode: {{ .Values.config.etcd.storage.volumeBindingMode }}
 reclaimPolicy: {{ .Values.config.etcd.storage.reclaimPolicy | default "Delete" }}
 {{- end -}}
+
+{{/*
+Render a separate StorageClass for etcd events only when a different className is configured.
+If the className is the same as for main etcd storage, the existing StorageClass is reused to
+avoid creating duplicate StorageClass objects with the same name.
+*/}}
+{{- if and
+  (eq (include "seed.provider" . ) "openstack")
+  .Values.config.etcd.storage.enabled
+  .Values.config.etcd.events
+  .Values.config.etcd.events.className
+  (ne .Values.config.etcd.events.className .Values.config.etcd.storage.className)
+}}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.config.etcd.events.className }}
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  labels: {{- include "labels" . | nindent 4 }}
+{{- if .Values.config.etcd.events.parameters }}
+parameters: {{- toYaml .Values.config.etcd.events.parameters | nindent 2 }}
+{{- else if .Values.config.etcd.storage.parameters }}
+parameters: {{- toYaml .Values.config.etcd.storage.parameters | nindent 2 }}
+{{- end }}
+provisioner: {{ .Values.config.etcd.events.provisioner | default .Values.config.etcd.storage.provisioner }}
+allowVolumeExpansion: true
+volumeBindingMode: {{ .Values.config.etcd.events.volumeBindingMode | default .Values.config.etcd.storage.volumeBindingMode }}
+reclaimPolicy: {{ .Values.config.etcd.events.reclaimPolicy | default (.Values.config.etcd.storage.reclaimPolicy | default "Delete") }}
+{{- end -}}

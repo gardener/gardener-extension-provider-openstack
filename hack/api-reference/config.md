@@ -175,6 +175,19 @@ ETCDStorage
 </tr>
 <tr>
 <td>
+<code>events</code></br>
+<em>
+<a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ETCDStorage">
+ETCDStorage
+</a>
+</em>
+</td>
+<td>
+<p>Optional storage config for etcd events.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>backup</code></br>
 <em>
 <a href="#openstack.provider.extensions.config.gardener.cloud/v1alpha1.ETCDBackup">

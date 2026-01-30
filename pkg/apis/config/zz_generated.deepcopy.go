@@ -76,6 +76,11 @@ func (in *ControllerConfiguration) DeepCopyObject() runtime.Object {
 func (in *ETCD) DeepCopyInto(out *ETCD) {
 	*out = *in
 	in.Storage.DeepCopyInto(&out.Storage)
+	if in.Events != nil {
+		in, out := &in.Events, &out.Events
+		*out = new(ETCDStorage)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Backup.DeepCopyInto(&out.Backup)
 	return
 }

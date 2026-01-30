@@ -6,6 +6,7 @@ package seedprovider
 
 import (
 	"context"
+	"fmt"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -13,22 +14,25 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
 )
 
 // NewEnsurer creates a new seedprovider ensurer.
-func NewEnsurer(etcdStorage *config.ETCDStorage, logger logr.Logger) genericmutator.Ensurer {
+func NewEnsurer(mainStorage *config.ETCDStorage, eventsStorage *config.ETCDStorage, logger logr.Logger) genericmutator.Ensurer {
 	return &ensurer{
-		etcdStorage: etcdStorage,
-		logger:      logger.WithName("openstack-seedprovider-ensurer"),
+		mainStorage:   mainStorage,
+		eventsStorage: eventsStorage,
+		logger:        logger.WithName("openstack-seedprovider-ensurer"),
 	}
 }
 
 type ensurer struct {
 	genericmutator.NoopEnsurer
-	etcdStorage *config.ETCDStorage
-	logger      logr.Logger
+	mainStorage   *config.ETCDStorage
+	eventsStorage *config.ETCDStorage
+	logger        logr.Logger
 }
 
 // EnsureETCD ensures that the etcd conform to the provider requirements.
@@ -36,17 +40,27 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 	capacity := resource.MustParse("10Gi")
 	class := ""
 
-	if newObj.Name == v1beta1constants.ETCDMain && e.etcdStorage != nil {
-		if e.etcdStorage.Capacity != nil {
-			capacity = *e.etcdStorage.Capacity
+	var cfg *config.ETCDStorage
+	switch newObj.Name {
+	case v1beta1constants.ETCDMain:
+		cfg = e.mainStorage
+	case v1beta1constants.ETCDEvents:
+		cfg = e.eventsStorage
+	default:
+		return fmt.Errorf("unknown ETCD name %q", newObj.Name)
+	}
+
+	if cfg != nil {
+		if cfg.Capacity != nil {
+			capacity = *cfg.Capacity
 		}
-		if e.etcdStorage.ClassName != nil {
-			class = *e.etcdStorage.ClassName
+		if cfg.ClassName != nil {
+			class = *cfg.ClassName
 		}
 	}
 
-	newObj.Spec.StorageClass = &class
-	newObj.Spec.StorageCapacity = &capacity
+	newObj.Spec.StorageCapacity = ptr.To(capacity)
+	newObj.Spec.StorageClass = ptr.To(class)
 
 	return nil
 }

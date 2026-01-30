@@ -33,6 +33,8 @@ type ControllerConfiguration struct {
 type ETCD struct {
 	// ETCDStorage is the etcd storage configuration.
 	Storage ETCDStorage
+	// Optional storage config for etcd events.
+	Events *ETCDStorage
 	// ETCDBackup is the etcd backup configuration.
 	Backup ETCDBackup
 }

@@ -1,0 +1,59 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager-provider-openstack
+  component_version: v0.25.0
+release_notes:
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: jamand
+  category: other
+  contents: Resolve minor linting issue
+  mimetype: text/markdown
+  reference: '[#336](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/336)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: ririko-nakamura
+  category: other
+  contents: ' Flavor name not found errors will be treated as ResourceExhausted errors
+    and be backed off'
+  mimetype: text/markdown
+  reference: '[#350](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/350)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: hebelsan
+  category: other
+  contents: Fix pull request handling for PRs of fork owners outside of the gardener
+    organisation
+  mimetype: text/markdown
+  reference: '[#342](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/342)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: jamand
+  category: feature
+  contents: 'When calling CreateMachine() the method now returns the internal IPs
+    of the server in the Addresses field. '
+  mimetype: text/markdown
+  reference: '[#322](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/322)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: axel7born
+  category: feature
+  contents: |-
+    To support dual-stack networking, multiple subnets can be configured.
+    The field SubnetID in MachineProviderConfigSpec is now deprecated. Please use SubnetIDs instead. Support for SubnetID will be removed in a future release.
+  mimetype: text/markdown
+  reference: '[#347](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/347)'
+  type: standard

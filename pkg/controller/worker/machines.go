@@ -22,6 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/utils"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -76,8 +77,9 @@ func (w *WorkerDelegate) GenerateMachineDeployments(ctx context.Context) (worker
 				if isServerGroupRequired(workerConfig) && len(workerStatus.ServerGroupDependencies) == 0 {
 					if err := w.PreReconcileHook(ctx); err != nil {
 						return nil, err
+					} else {
+						return nil, &reconciler.RequeueAfterError{}
 					}
-					break
 				}
 			}
 		}

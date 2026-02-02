@@ -16,18 +16,6 @@ import (
 	osclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
-// DeployMachineDependencies implements genericactuator.WorkerDelegate.
-// Deprecated: Do not use this func. It is deprecated in genericactuator.WorkerDelegate.
-func (w *WorkerDelegate) DeployMachineDependencies(_ context.Context) error {
-	return nil
-}
-
-// CleanupMachineDependencies implements genericactuator.WorkerDelegate.
-// Deprecated: Do not use this func. It is deprecated in genericactuator.WorkerDelegate.
-func (w *WorkerDelegate) CleanupMachineDependencies(_ context.Context) error {
-	return nil
-}
-
 // PreReconcileHook implements genericactuator.WorkerDelegate.
 func (w *WorkerDelegate) PreReconcileHook(ctx context.Context) error {
 	computeClient, err := w.openstackClient.Compute(osclient.WithRegion(w.worker.Spec.Region))
@@ -66,16 +54,36 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 		return nil, nil
 	}
 
-	poolDep := set.getByPoolName(pool.Name)
-	if poolDep != nil {
+	if poolDep := set.getByPoolName(pool.Name); poolDep != nil {
 		serverGroup, err := computeClient.GetServerGroup(ctx, poolDep.ID)
 		if err != nil && !osclient.IsNotFoundError(err) {
 			return nil, err
 		} else if err == nil {
 			if serverGroup.Name == poolDep.Name && (len(serverGroup.Policies) > 0 && serverGroup.Policies[0] == poolProviderConfig.ServerGroup.Policy) {
 				// if the current dependency's spec matches the provider resource, do nothing.
-				return nil, nil
+				return &api.ServerGroupDependency{
+					PoolName: pool.Name,
+					ID:       serverGroup.ID,
+					Name:     serverGroup.Name,
+				}, nil
 			}
+		}
+	}
+
+	// Try to find an existing server group that matches the desired configuration.
+	groups, err := computeClient.ListServerGroups(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	workerManagedServerGroups := filterServerGroupsByPrefix(groups, generateServerGroupNamePrefix(w.ClusterTechnicalName(), pool.Name))
+	for _, group := range workerManagedServerGroups {
+		if len(group.Policies) > 0 && group.Policies[0] == poolProviderConfig.ServerGroup.Policy {
+			return &api.ServerGroupDependency{
+				PoolName: pool.Name,
+				ID:       group.ID,
+				Name:     group.Name,
+			}, nil
 		}
 	}
 

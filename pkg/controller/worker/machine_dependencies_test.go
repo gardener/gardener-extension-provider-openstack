@@ -210,6 +210,137 @@ var _ = Describe("#MachineDependencies", func() {
 			})
 		})
 
+		Context("#PreReconcileHook during Restore", func() {
+			It("should create server groups when called for restore scenario with missing dependencies", func() {
+				var (
+					ctx            = context.Background()
+					policy         = "soft-anti-affinity"
+					pool1          = "pool-1"
+					serverGroupID1 = "id-1"
+				)
+
+				// Setup worker with server group configuration but no dependencies
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(pool1, &policy)))
+
+				// Set the last operation type to Restore
+				w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type: gardencorev1beta1.LastOperationTypeRestore,
+				}
+
+				// Empty worker status (no server group dependencies)
+				// This simulates the scenario where GenerateMachineDeployments would trigger PreReconcileHook
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{},
+					},
+				}
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					osFactory,
+				)
+
+				// Expect PreReconcileHook to create the server group
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool1)), policy).Return(&servergroups.ServerGroup{
+					ID: serverGroupID1,
+				}, nil)
+				expectStatusUpdateToSucceed(ctx, statusCl)
+
+				// Directly call PreReconcileHook (which is what GenerateMachineDeployments would do)
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify that server group dependencies were created
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
+				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal(serverGroupID1),
+						"PoolName": Equal(pool1),
+					}),
+				))
+			})
+
+			It("should create server groups for multiple pools during restore scenario", func() {
+				var (
+					ctx            = context.Background()
+					policy         = "soft-anti-affinity"
+					pool1          = "pool-1"
+					pool2          = "pool-2"
+					serverGroupID1 = "id-1"
+					serverGroupID2 = "id-2"
+				)
+
+				// Setup worker with multiple pools requiring server groups
+				w.Spec.Pools = append(w.Spec.Pools,
+					*(newWorkerPoolWithPolicy(pool1, &policy)),
+					*(newWorkerPoolWithPolicy(pool2, &policy)),
+				)
+
+				// Set the last operation type to Restore
+				w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type: gardencorev1beta1.LastOperationTypeRestore,
+				}
+
+				// Empty worker status (no server group dependencies)
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &apiv1alpha1.WorkerStatus{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "WorkerStatus",
+							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+						},
+						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{},
+					},
+				}
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					osFactory,
+				)
+
+				// PreReconcileHook should create server groups for both pools
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool1)), policy).Return(&servergroups.ServerGroup{
+					ID: serverGroupID1,
+				}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool2)), policy).Return(&servergroups.ServerGroup{
+					ID: serverGroupID2,
+				}, nil)
+				expectStatusUpdateToSucceed(ctx, statusCl)
+
+				// Directly call PreReconcileHook
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify that server group dependencies were created for both pools
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(2))
+				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal(serverGroupID1),
+						"PoolName": Equal(pool1),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ID":       Equal(serverGroupID2),
+						"PoolName": Equal(pool2),
+					}),
+				))
+			})
+		})
+
 		Context("#PostReconcileHook", func() {
 			It("should clean server group if worker pool is deleted", func() {
 				var (

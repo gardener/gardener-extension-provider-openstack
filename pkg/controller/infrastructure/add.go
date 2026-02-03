@@ -32,8 +32,8 @@ type AddOptions struct {
 	// DisableProjectedTokenMount specifies whether the projected token mount shall be disabled for the terraformer.
 	// Used for testing only.
 	DisableProjectedTokenMount bool
-	// ExtensionClass defines the extension class this extension is responsible for.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
+	// ExtensionClasses defines the extension classes this extension is responsible for.
+	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
 // AddToManagerWithOptions adds a controller with the given AddOptions to the given manager.
@@ -46,7 +46,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, options A
 		Predicates:        infrastructure.DefaultPredicates(ctx, mgr, options.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
 		KnownCodes:        helper.KnownCodes,
-		ExtensionClass:    options.ExtensionClass,
+		ExtensionClasses:  options.ExtensionClasses,
 	})
 }
 

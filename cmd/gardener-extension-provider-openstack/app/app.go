@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -118,6 +119,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			openstack.Name,
 			genericactuator.ShootWebhooksResourceName,
 			genericactuator.ShootWebhookNamespaceSelector(openstack.Type),
+			generalOpts,
 			webhookServerOptions,
 			webhookSwitches,
 		)
@@ -206,18 +208,18 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controlPlaneCtrlOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.Controller)
-			reconcileOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &openstackinfrastructure.DefaultAddOptions.ExtensionClass)
-			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &openstackcontrolplane.DefaultAddOptions.ExtensionClass)
-			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation, &openstackworker.DefaultAddOptions.ExtensionClass)
-			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbastion.DefaultAddOptions.ExtensionClass)
-			reconcileOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupbucket.DefaultAddOptions.ExtensionClass)
-			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupentry.DefaultAddOptions.ExtensionClass)
-			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &openstackdnsrecord.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &openstackinfrastructure.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &openstackcontrolplane.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation, &openstackworker.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbastion.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupbucket.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupentry.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &openstackdnsrecord.DefaultAddOptions.ExtensionClasses)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
 			openstackworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
 
-			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil, generalOpts.Completed().SelfHostedShootCluster); err != nil {
+			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil); err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}
 			openstackcontrolplane.DefaultAddOptions.WebhookServerNamespace = webhookOptions.Server.Namespace
@@ -238,7 +240,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add ready check for webhook server to manager: %w", err)
 			}
 
-			if reconcileOpts.ExtensionClass != "garden" {
+			if !slices.Contains(reconcileOpts.ExtensionClasses, "garden") {
 				// TODO (kon-angelo): Remove after the release of version 1.46.0
 				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 					return purgeTerraformerRBACResources(ctx, mgr.GetClient(), log)

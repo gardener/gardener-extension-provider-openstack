@@ -34,8 +34,12 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
+	schemev1 "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -110,6 +114,7 @@ var (
 	networkClient openstackclient.Networking
 	computeClient openstackclient.Compute
 	imageClient   openstackclient.Images
+	testId        = string(uuid.NewUUID())
 )
 
 var _ = BeforeSuite(func() {
@@ -140,15 +145,25 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	By("setup manager")
+	scheme := runtime.NewScheme()
+	Expect(schemev1.AddToScheme(scheme)).To(Succeed())
+	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
+	Expect(openstackinstall.AddToScheme(scheme)).To(Succeed())
+
 	mgr, err := manager.New(cfg, manager.Options{
+		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&extensionsv1alpha1.Bastion{}: {
+					Label: labels.SelectorFromSet(labels.Set{"test-id": testId}),
+				},
+			},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
-
-	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
-	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
 
 	Expect(bastionctrl.AddToManager(ctx, mgr)).To(Succeed())
 
@@ -701,6 +716,9 @@ func createBastion(cluster *controller.Cluster, name string) (*extensionsv1alpha
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-bastion",
 			Namespace: name,
+			Labels: map[string]string{
+				"test-id": testId,
+			},
 		},
 		Spec: extensionsv1alpha1.BastionSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

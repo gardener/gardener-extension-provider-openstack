@@ -238,15 +238,18 @@ var _ = Describe("Bastion tests", func() {
 		})
 
 		networkID := prepareNewNetwork(bastionName)
+
+		framework.AddCleanupAction(func() {
+			By("Tearing down network")
+			teardownNetwork(networkID)
+		})
+
 		subNetID := prepareSubNet(subnetName, networkID)
 		routerID, externalNetworkID := prepareNewRouter(cloudRouterName, subNetID)
 
 		framework.AddCleanupAction(func() {
-			By("Tearing down network")
-			teardownNetwork(networkID, routerID, subNetID)
-
 			By("Tearing down router")
-			teardownRouter(routerID)
+			teardownRouter(routerID, subNetID)
 		})
 
 		infraStatus := createInfrastructureStatus(shootSecurityGroupID, networkID, routerID, externalNetworkID, subNetID)
@@ -379,10 +382,13 @@ func prepareNewRouter(routerName, subnetID string) (string, string) {
 	return router.ID, externalNetwork.ID
 }
 
-func teardownRouter(routerID string) {
+func teardownRouter(routerID, subnetID string) {
 	log.Info("Waiting until router is deleted", "routerID", routerID)
 
-	err := networkClient.DeleteRouter(ctx, routerID)
+	_, err := networkClient.RemoveRouterInterface(ctx, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = networkClient.DeleteRouter(ctx, routerID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Router is deleted", "routerID", routerID)
@@ -456,13 +462,10 @@ func teardownShootSecurityGroup(groupID string) {
 	log.Info("Shoot Security Group is deleted", "shootSecurityGroupID", groupID)
 }
 
-func teardownNetwork(networkID, routerID, subnetID string) {
+func teardownNetwork(networkID string) {
 	log.Info("Waiting until network is deleted", "networkID", networkID)
 
-	_, err := networkClient.RemoveRouterInterface(ctx, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
-	Expect(err).NotTo(HaveOccurred())
-
-	err = networkClient.DeleteNetwork(ctx, networkID)
+	err := networkClient.DeleteNetwork(ctx, networkID)
 	Expect(err).NotTo(HaveOccurred())
 
 	log.Info("Network is deleted", "networkID", networkID)

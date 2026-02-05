@@ -17,9 +17,11 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -105,13 +107,13 @@ func (s *shoot) Validate(ctx context.Context, newObj, oldObj client.Object) erro
 		if !ok {
 			return fmt.Errorf("wrong object type %T for old object", oldObj)
 		}
-		return s.validateShootUpdate(oldShoot, shoot, credentials, &cloudProfile.Spec)
+		return s.validateShootUpdate(ctx, oldShoot, shoot, credentials, &cloudProfile.Spec)
 	}
 
-	return s.validateShootCreation(shoot, credentials, &cloudProfile.Spec)
+	return s.validateShootCreation(ctx, shoot, credentials, &cloudProfile.Spec)
 }
 
-func (s *shoot) validateShootCreation(shoot *core.Shoot, credentials *openstack.Credentials, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) error {
+func (s *shoot) validateShootCreation(ctx context.Context, shoot *core.Shoot, credentials *openstack.Credentials, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) error {
 	valContext, err := newValidationContext(s.decoder, shoot, cloudProfileSpec)
 	if err != nil {
 		return err
@@ -123,11 +125,11 @@ func (s *shoot) validateShootCreation(shoot *core.Shoot, credentials *openstack.
 		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfigAgainstCloudProfile(nil, valContext.infraConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.cloudProfileConfig, infraConfigPath)...)
 		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(nil, valContext.cpConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
 	}
-	allErrs = append(allErrs, s.validateShoot(valContext)...)
+	allErrs = append(allErrs, s.validateShoot(ctx, valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (s *shoot) validateShootUpdate(oldShoot, shoot *core.Shoot, credentials *openstack.Credentials, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) error {
+func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.Shoot, credentials *openstack.Credentials, cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) error {
 	oldValContext, err := newValidationContext(s.lenientDecoder, oldShoot, cloudProfileSpec)
 	if err != nil {
 		return err
@@ -167,11 +169,11 @@ func (s *shoot) validateShootUpdate(oldShoot, shoot *core.Shoot, credentials *op
 		return errList.ToAggregate()
 	}
 
-	allErrs = append(allErrs, s.validateShoot(valContext)...)
+	allErrs = append(allErrs, s.validateShoot(ctx, valContext)...)
 	return allErrs.ToAggregate()
 }
 
-func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
+func (s *shoot) validateShoot(ctx context.Context, context *validationContext) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if context.shoot.Spec.Networking != nil {
 		allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
@@ -179,6 +181,7 @@ func (s *shoot) validateShoot(context *validationContext) field.ErrorList {
 	}
 	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.infraConfig, context.shoot.Spec.Kubernetes.Version, cpConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateWorkers(context.shoot.Spec.Provider.Workers, context.cloudProfileConfig, workersPath)...)
+	allErrs = append(allErrs, s.validateDNS(ctx, context.shoot)...)
 	return allErrs
 }
 
@@ -246,4 +249,50 @@ func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.
 	}
 
 	return secret, nil
+}
+
+// validateDNS validates all openstack provider entries in the Shoot spec.
+func (s *shoot) validateDNS(ctx context.Context, shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if shoot.Spec.DNS == nil {
+		return allErrs
+	}
+
+	providersPath := specPath.Child("dns").Child("providers")
+
+	for i, p := range shoot.Spec.DNS.Providers {
+		if p.Type == nil || *p.Type != openstack.DNSType {
+			continue
+		}
+
+		// skip non-primary providers
+		if p.Primary == nil || !*p.Primary {
+			continue
+		}
+
+		providerFldPath := providersPath.Index(i)
+
+		if ptr.Deref(p.SecretName, "") == "" {
+			allErrs = append(allErrs, field.Required(providerFldPath.Child("secretName"),
+				fmt.Sprintf("secretName must be specified for %v provider", openstack.DNSType)))
+			continue
+		}
+
+		secret := &corev1.Secret{}
+		key := client.ObjectKey{Namespace: shoot.Namespace, Name: *p.SecretName}
+		if err := s.apiReader.Get(ctx, key, secret); err != nil {
+			if apierrors.IsNotFound(err) {
+				allErrs = append(allErrs, field.Invalid(providerFldPath.Child("secretName"),
+					*p.SecretName, "referenced secret not found"))
+			} else {
+				allErrs = append(allErrs, field.InternalError(providerFldPath.Child("secretName"), err))
+			}
+			continue
+		}
+
+		allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(secret, providerFldPath, true)...)
+	}
+
+	return allErrs
 }

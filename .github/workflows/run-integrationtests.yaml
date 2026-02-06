@@ -8,6 +8,11 @@ on:
       - master
   workflow_dispatch:
   workflow_call:
+    inputs:
+      skip-integration-tests:
+        type: boolean
+        default: false
+        description: 'Skip running integration tests.'
 
 jobs:
   integrationtest:
@@ -24,3 +29,10 @@ jobs:
          --testruns-chart-path=.ci/testruns/default \
          --set revision=$(git rev-parse @)
 
+  skip-tests:
+    if: ${{ inputs.skip-integration-tests }}
+    permissions: {}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip Integration Tests
+        run: echo "Skipping Integration Tests as per input parameter."

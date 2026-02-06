@@ -15,6 +15,10 @@ on:
           - bump-minor
           - bump-patch
         description: 'Select the type of version bump for the next release.'
+      skip-integration-tests:
+        type: boolean
+        default: false
+        description: 'Skip running integration tests.'
 
 jobs:
   build:
@@ -33,6 +37,8 @@ jobs:
       contents: read
       id-token: write
     uses: ./.github/workflows/run-integrationtests.yaml
+    with:
+      skip-integration-tests: ${{ inputs.skip-integration-tests }}
 
   release-to-github-and-bump:
     uses: gardener/cc-utils/.github/workflows/release.yaml@master

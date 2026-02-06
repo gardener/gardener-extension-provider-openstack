@@ -11,6 +11,7 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/security"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -55,7 +56,7 @@ func (cb *credentialsBinding) Validate(ctx context.Context, newObj, oldObj clien
 			return err
 		}
 
-		return openstackvalidation.ValidateCloudProviderSecret(secret)
+		return openstackvalidation.ValidateCloudProviderSecret(secret, field.NewPath("secret"), false).ToAggregate()
 	default:
 		return fmt.Errorf("unsupported credentials reference: version %q, kind %q", credentialsBinding.CredentialsRef.APIVersion, credentialsBinding.CredentialsRef.Kind)
 	}

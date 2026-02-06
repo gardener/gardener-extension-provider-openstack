@@ -5,289 +5,594 @@
 package validation_test
 
 import (
-	"strings"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var _ = Describe("Secret validation", func() {
+	Describe("#ValidateCloudProviderSecret", func() {
+		const (
+			namespace  = "test-namespace"
+			secretName = "test-secret"
+		)
 
-	DescribeTable("#ValidateCloudProviderSecret",
-		func(data map[string][]byte, matcher gomegatypes.GomegaMatcher) {
-			secret := &corev1.Secret{
-				Data: data,
+		var (
+			secret  *corev1.Secret
+			fldPath *field.Path
+		)
+
+		BeforeEach(func() {
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{},
 			}
-			err := ValidateCloudProviderSecret(secret)
+			fldPath = field.NewPath("secret")
+		})
 
-			Expect(err).To(matcher)
-		},
+		Context("Infrastructure secrets (allowDNSKeys=false)", func() {
+			It("should pass with valid username/password authentication", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
 
-		Entry("should return error when the domain name field is missing",
-			map[string][]byte{
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the domain name is empty",
-			map[string][]byte{
-				openstack.DomainName: {},
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+			It("should pass with valid application credential ID authentication", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.ApplicationCredentialID:     []byte("app-cred-id-123"),
+					openstack.ApplicationCredentialSecret: []byte("app-cred-secret"),
+				}
 
-		Entry("should return error when the domain name contains a trailing space",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain "),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the tenant name field is missing",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+			It("should pass with valid application credential name authentication", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.UserName:                    []byte("my-user"),
+					openstack.ApplicationCredentialName:   []byte("my-app-cred"),
+					openstack.ApplicationCredentialSecret: []byte("app-cred-secret"),
+				}
 
-		Entry("should return error when the tenant name is empty",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: {},
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the tenant name contains a trailing space",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant "),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+			It("should pass with optional authURL field", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.AuthURL:    []byte("https://keystone.example.com:5000/v3"),
+				}
 
-		Entry("should return error when the tenant name is too long",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte(strings.Repeat("a", 65)),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the user name field is missing",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+			It("should pass with optional caCert field", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.CACert:     []byte("-----BEGIN CERTIFICATE-----\nFAKE-CERT\n-----END CERTIFICATE-----"),
+				}
 
-		Entry("should return error when the user name is empty",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   {},
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the user name contains a trailing space",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user "),
-				openstack.Password:   []byte("password"),
-			},
-			HaveOccurred(),
-		),
+			It("should pass with optional insecure field set to true", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.Insecure:   []byte("true"),
+				}
 
-		Entry("should return error when the password field is missing",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the password is empty",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   {},
-			},
-			HaveOccurred(),
-		),
+			It("should pass with optional insecure field set to false", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.Insecure:   []byte("false"),
+				}
 
-		Entry("should return error when the password contains a trailing new line",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password\n"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
 
-		Entry("should return error when the auth URL is not a valid URL",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-				openstack.AuthURL:    []byte("foo#%(bar"),
-			},
-			HaveOccurred(),
-		),
+			It("should fail when domainName is missing", func() {
+				secret.Data = map[string][]byte{
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
 
-		Entry("should succeed when the client credentials are valid (without AuthURL)",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-			},
-			BeNil(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data[domainName]"),
+				}))))
+			})
 
-		Entry("should succeed when the client credentials are valid (with AuthURL)",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-				openstack.UserName:   []byte("user"),
-				openstack.Password:   []byte("password"),
-				openstack.AuthURL:    []byte("https://foo.bar"),
-			},
-			BeNil(),
-		),
+			It("should fail when tenantName is missing", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
 
-		Entry("should return error when the application credential id contains a trailing new line",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.ApplicationCredentialID:     []byte("app-id\n"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data[tenantName]"),
+				}))))
+			})
 
-		Entry("should return error when the application credential secret contains a trailing new line",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.ApplicationCredentialID:     []byte("app-id"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret\n"),
-			},
-			HaveOccurred(),
-		),
+			It("should fail when domainName is empty", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte(""),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
 
-		Entry("should return error when the application credential name contains a trailing new line",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.UserName:                    []byte("user"),
-				openstack.ApplicationCredentialID:     []byte("app-id"),
-				openstack.ApplicationCredentialName:   []byte("app-name\n"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[domainName]"),
+				}))))
+			})
 
-		Entry("should return error when neither username nor application credential id is given",
-			map[string][]byte{
-				openstack.DomainName: []byte("domain"),
-				openstack.TenantName: []byte("tenant"),
-			},
-			HaveOccurred(),
-		),
+			It("should fail when tenantName is empty", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte(""),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
 
-		Entry("should return error when both password and application credential secret is given",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.Password:                    []byte("password"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[tenantName]"),
+				}))))
+			})
 
-		Entry("should return error when application credential secret is missing",
-			map[string][]byte{
-				openstack.DomainName:              []byte("domain"),
-				openstack.TenantName:              []byte("tenant"),
-				openstack.ApplicationCredentialID: []byte("app-id"),
-			},
-			HaveOccurred(),
-		),
+			It("should fail when no authentication method is provided", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+				}
 
-		Entry("should return error when application credential name is given, but without user name",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.ApplicationCredentialName:   []byte("app-name"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-			},
-			HaveOccurred(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("secret.data"),
+					"Detail": ContainSubstring("must provide one of the following authentication methods"),
+				}))))
+			})
 
-		Entry("should succeed when the client application credentials are valid (id + secret)",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.ApplicationCredentialID:     []byte("app-id"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-				openstack.AuthURL:                     []byte("https://foo.bar"),
-			},
-			BeNil(),
-		),
+			It("should fail when password is provided without username", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.Password:   []byte("my-password"),
+				}
 
-		Entry("should succeed when the client application credentials are valid (id + name + secret)",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.ApplicationCredentialID:     []byte("app-id"),
-				openstack.ApplicationCredentialName:   []byte("app-name"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-				openstack.AuthURL:                     []byte("https://foo.bar"),
-			},
-			BeNil(),
-		),
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data.username"),
+				}))))
+			})
 
-		Entry("should succeed when the client application credentials are valid (username + name + secret)",
-			map[string][]byte{
-				openstack.DomainName:                  []byte("domain"),
-				openstack.TenantName:                  []byte("tenant"),
-				openstack.UserName:                    []byte("user"),
-				openstack.ApplicationCredentialName:   []byte("app-name"),
-				openstack.ApplicationCredentialSecret: []byte("app-secret"),
-				openstack.AuthURL:                     []byte("https://foo.bar"),
-			},
-			BeNil(),
-		),
-	)
+			It("should fail when mixing password and application credentials", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.UserName:                    []byte("my-user"),
+					openstack.Password:                    []byte("my-password"),
+					openstack.ApplicationCredentialSecret: []byte("app-cred-secret"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data"),
+				}))))
+			})
+
+			It("should fail when applicationCredentialID is provided without applicationCredentialSecret", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName:              []byte("my-domain"),
+					openstack.TenantName:              []byte("my-tenant"),
+					openstack.ApplicationCredentialID: []byte("app-cred-id"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data.applicationCredentialSecret"),
+				}))))
+			})
+
+			It("should fail when applicationCredentialName is provided without username", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.ApplicationCredentialName:   []byte("my-app-cred"),
+					openstack.ApplicationCredentialSecret: []byte("app-cred-secret"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data.username"),
+				}))))
+			})
+
+			It("should fail when applicationCredentialName is provided without applicationCredentialSecret", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName:                []byte("my-domain"),
+					openstack.TenantName:                []byte("my-tenant"),
+					openstack.UserName:                  []byte("my-user"),
+					openstack.ApplicationCredentialName: []byte("my-app-cred"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data.applicationCredentialSecret"),
+				}))))
+			})
+
+			It("should fail when username is empty but key is set", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte(""),
+					openstack.Password:   []byte("my-password"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[username]"),
+				}))))
+			})
+
+			It("should fail when password is empty but key is set", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte(""),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[password]"),
+				}))))
+			})
+
+			It("should fail when domainName contains leading whitespace", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte(" my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("secret.data[domainName]"),
+					"BadValue": Equal("(hidden)"),
+				}))))
+			})
+
+			It("should fail when tenantName is too long", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("this-is-a-very-long-tenant-name-that-exceeds-the-maximum-allowed-length-of-64-characters"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[tenantName]"),
+				}))))
+			})
+
+			It("should fail when authURL is invalid", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.AuthURL:    []byte("not a valid url"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[authURL]"),
+				}))))
+			})
+
+			It("should fail when caCert is missing BEGIN marker", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.CACert:     []byte("FAKE-CERT\n-----END CERTIFICATE-----"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[caCert]"),
+				}))))
+			})
+
+			It("should fail when caCert is missing END marker", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.CACert:     []byte("-----BEGIN CERTIFICATE-----\nFAKE-CERT"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[caCert]"),
+				}))))
+			})
+
+			It("should fail when insecure has invalid value", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.Insecure:   []byte("yes"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("secret.data[insecure]"),
+					"BadValue": Equal("yes"),
+				}))))
+			})
+
+			It("should fail when secret contains unexpected keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					"unexpected-field":   []byte("value"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("secret.data[unexpected-field]"),
+				}))))
+			})
+		})
+
+		Context("DNS secrets (allowDNSKeys=true)", func() {
+			It("should pass with valid username/password authentication using standard keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+					openstack.AuthURL:    []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should pass with valid username/password authentication using DNS keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.DNSTenantName: []byte("my-tenant"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.DNSAuthURL:    []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should pass with valid application credential ID authentication using DNS keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName:                  []byte("my-domain"),
+					openstack.DNSTenantName:                  []byte("my-tenant"),
+					openstack.DNSApplicationCredentialID:     []byte("app-cred-id-123"),
+					openstack.DNSApplicationCredentialSecret: []byte("app-cred-secret"),
+					openstack.DNSAuthURL:                     []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should pass with valid application credential name authentication using DNS keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName:                  []byte("my-domain"),
+					openstack.DNSTenantName:                  []byte("my-tenant"),
+					openstack.DNSUserName:                    []byte("my-user"),
+					openstack.DNSApplicationCredentialName:   []byte("my-app-cred"),
+					openstack.DNSApplicationCredentialSecret: []byte("app-cred-secret"),
+					openstack.DNSAuthURL:                     []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should pass with mixed standard and DNS keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.TenantName:    []byte("my-tenant"),
+					openstack.UserName:      []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.AuthURL:       []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should pass with optional caCert using DNS key", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.DNSTenantName: []byte("my-tenant"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.DNSAuthURL:    []byte("https://keystone.example.com:5000/v3"),
+					openstack.DNS_CA_Bundle: []byte("-----BEGIN CERTIFICATE-----\nFAKE-CERT\n-----END CERTIFICATE-----"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should fail when authURL is missing", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.DNSTenantName: []byte("my-tenant"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data[authURL]"),
+				}))))
+			})
+
+			It("should fail when authURL is empty", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.DNSTenantName: []byte("my-tenant"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.DNSAuthURL:    []byte(""),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data[OS_AUTH_URL]"),
+				}))))
+			})
+
+			It("should fail when domainName is missing (neither standard nor DNS key)", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSTenantName: []byte("my-tenant"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.DNSAuthURL:    []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data[domainName]"),
+				}))))
+			})
+
+			It("should fail when tenantName is missing (neither standard nor DNS key)", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.DNSAuthURL:    []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secret.data[tenantName]"),
+				}))))
+			})
+
+			It("should fail when mixing password and application credentials with DNS keys", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName:                  []byte("my-domain"),
+					openstack.DNSTenantName:                  []byte("my-tenant"),
+					openstack.DNSUserName:                    []byte("my-user"),
+					openstack.DNSPassword:                    []byte("my-password"),
+					openstack.DNSApplicationCredentialSecret: []byte("app-cred-secret"),
+					openstack.DNSAuthURL:                     []byte("https://keystone.example.com:5000/v3"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secret.data"),
+				}))))
+			})
+
+			It("should fail when secret contains unexpected keys (not in standard or DNS keys)", func() {
+				secret.Data = map[string][]byte{
+					openstack.DNSDomainName: []byte("my-domain"),
+					openstack.DNSTenantName: []byte("my-tenant"),
+					openstack.DNSUserName:   []byte("my-user"),
+					openstack.DNSPassword:   []byte("my-password"),
+					openstack.DNSAuthURL:    []byte("https://keystone.example.com:5000/v3"),
+					"unexpected-field":      []byte("value"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, true)
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("secret.data[unexpected-field]"),
+				}))))
+			})
+		})
+	})
 })

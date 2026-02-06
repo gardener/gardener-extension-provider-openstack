@@ -17,6 +17,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -26,6 +28,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/validator"
 	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 )
 
 var _ = Describe("Shoot validator", func() {
@@ -292,6 +295,252 @@ var _ = Describe("Shoot validator", func() {
 						"Field": Equal("spec.networking.ipFamilies"),
 					}))))
 				})
+			})
+		})
+
+		Context("DNS validation", func() {
+			var (
+				cloudProfileKey client.ObjectKey
+				cloudProfile    *gardencorev1beta1.CloudProfile
+				dnsSecretKey    client.ObjectKey
+				dnsSecret       *corev1.Secret
+			)
+
+			BeforeEach(func() {
+				cloudProfileKey = client.ObjectKey{Name: "openstack"}
+				cloudProfile = &gardencorev1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openstack",
+					},
+					Spec: gardencorev1beta1.CloudProfileSpec{
+						Regions: []gardencorev1beta1.Region{
+							{
+								Name: regionName,
+								Zones: []gardencorev1beta1.AvailabilityZone{
+									{Name: "zone1"},
+									{Name: "zone2"},
+								},
+							},
+						},
+						ProviderConfig: &runtime.RawExtension{
+							Raw: encode(&apiv1alpha1.CloudProfileConfig{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+									Kind:       "CloudProfileConfig",
+								},
+								MachineImages: []apiv1alpha1.MachineImages{
+									{
+										Name: imageName,
+										Versions: []apiv1alpha1.MachineImageVersion{
+											{
+												Version: imageVersion,
+												Regions: []apiv1alpha1.RegionIDMapping{
+													{
+														Name:         regionName,
+														ID:           "Bar",
+														Architecture: architecture,
+													},
+												},
+											},
+										},
+									},
+								},
+							}),
+						},
+					},
+				}
+
+				dnsSecretKey = client.ObjectKey{Namespace: namespace, Name: "dns-secret"}
+				dnsSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dns-secret",
+						Namespace: namespace,
+					},
+					Data: map[string][]byte{
+						openstack.AuthURL:    []byte("https://keystone.example.com:5000/v3"),
+						openstack.DomainName: []byte("my-domain"),
+						openstack.TenantName: []byte("my-tenant"),
+						openstack.UserName:   []byte("my-user"),
+						openstack.Password:   []byte("my-password"),
+					},
+				}
+
+				shoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "openstack",
+				}
+			})
+
+			It("should pass when shoot has no DNS configuration", func() {
+				shoot.Spec.DNS = nil
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass when shoot has DNS but no OpenStack providers", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To("aws-route53"),
+							SecretName: ptr.To("aws-dns-secret"),
+							Primary:    ptr.To(true),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass when shoot has non-primary OpenStack DNS provider", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To("dns-secret"),
+							Primary:    ptr.To(false),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass with valid primary OpenStack DNS provider", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To("dns-secret"),
+							Primary:    ptr.To(true),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass with multiple DNS providers (only validates primary OpenStack)", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To("aws-route53"),
+							SecretName: ptr.To("aws-secret"),
+							Primary:    ptr.To(false),
+						},
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To("dns-secret"),
+							Primary:    ptr.To(true),
+						},
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To("other-secret"),
+							Primary:    ptr.To(false),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should fail when secretName is missing", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:    ptr.To(openstack.DNSType),
+							Primary: ptr.To(true),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.dns.providers[0].secretName"),
+					"Detail": ContainSubstring("secretName must be specified"),
+				}))))
+			})
+
+			It("should fail when secretName is empty string", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To(""),
+							Primary:    ptr.To(true),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.dns.providers[0].secretName"),
+					"Detail": ContainSubstring("secretName must be specified"),
+				}))))
+			})
+
+			It("should fail when DNS secret does not exist", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To("dns-secret"),
+							Primary:    ptr.To(true),
+						},
+					},
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).Return(apierrors.NewNotFound(corev1.Resource("Secret"), "dns-secret"))
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.dns.providers[0].secretName"),
+					"BadValue": Equal("dns-secret"),
+					"Detail":   Equal("referenced secret not found"),
+				}))))
+			})
+
+			It("should fail when DNS secret has validation errors", func() {
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Type:       ptr.To(openstack.DNSType),
+							SecretName: ptr.To("dns-secret"),
+							Primary:    ptr.To(true),
+						},
+					},
+				}
+				// Invalid secret - missing authURL (required for DNS)
+				dnsSecret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}
+				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+
+				err := shootValidator.Validate(ctx, shoot, nil)
+				Expect(err).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.providers[0].data[authURL]"),
+				}))))
 			})
 		})
 	})

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,19 +7,43 @@ package validation
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"unicode/utf8"
 
 	guuid "github.com/google/uuid"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 var (
 	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets,braces and newlines.
-	genericNameRegex     = `^[^{}\[\]\n]+$`
-	validateResourceName = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
+	genericNameRegex            = `^[^{}\[\]\n]+$`
+	validateResourceName        = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
+	validateDomainName          = hideSensitiveValue(noWhitespace)
+	validateTenantName          = combineValidationFuncs(noWhitespace, maxLength(64))
+	validateUserName            = hideSensitiveValue(noWhitespace)
+	validatePassword            = hideSensitiveValue(noNewlines)
+	validateAppCredentialID     = hideSensitiveValue(noWhitespace)
+	validateAppCredentialName   = hideSensitiveValue(noWhitespace)
+	validateAppCredentialSecret = hideSensitiveValue(noWhitespace)
+	validateInsecure            = allowedValues("true", "false")
 )
 
 type validateFunc[T any] func(T, *field.Path) field.ErrorList
+
+// hideSensitiveValue wraps a validation function to hide the actual value in error messages
+func hideSensitiveValue(fn validateFunc[string]) validateFunc[string] {
+	return func(value string, fld *field.Path) field.ErrorList {
+		errs := fn(value, fld)
+		// Replace the actual value with "(hidden)" in all error messages
+		for i := range errs {
+			if errs[i].Type == field.ErrorTypeInvalid || errs[i].Type == field.ErrorTypeRequired {
+				errs[i].BadValue = "(hidden)"
+			}
+		}
+		return errs
+	}
+}
 
 // combineValidationFuncs validates a value against a list of filters.
 func combineValidationFuncs[T any](filters ...validateFunc[T]) validateFunc[T] {
@@ -72,4 +96,38 @@ func uuid(u string, fld *field.Path) field.ErrorList {
 		return field.ErrorList{field.Invalid(fld, u, fmt.Sprintf("must be a valid UUID: %v", err))}
 	}
 	return nil
+}
+
+func noWhitespace(value string, fld *field.Path) field.ErrorList {
+	if value == "" {
+		return nil // Allow empty
+	}
+	if strings.TrimSpace(value) != value {
+		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing whitespace")}
+	}
+	return nil
+}
+
+func noNewlines(value string, fld *field.Path) field.ErrorList {
+	if value == "" {
+		return nil // Allow empty
+	}
+	if strings.Trim(value, "\n\r") != value {
+		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing newlines")}
+	}
+	return nil
+}
+
+func allowedValues(allowed ...string) validateFunc[string] {
+	allowedSet := sets.New(allowed...)
+	return func(value string, fldPath *field.Path) field.ErrorList {
+		if value == "" {
+			return nil
+		}
+		normalized := strings.ToLower(strings.TrimSpace(value))
+		if !allowedSet.Has(normalized) {
+			return field.ErrorList{field.NotSupported(fldPath, value, allowed)}
+		}
+		return nil
+	}
 }

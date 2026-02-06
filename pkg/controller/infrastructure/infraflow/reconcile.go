@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -17,6 +19,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/sharenetworks"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -42,7 +45,11 @@ func (fctx *FlowContext) Reconcile(ctx context.Context) error {
 
 	state := fctx.computeInfrastructureState()
 	status := fctx.computeInfrastructureStatus()
-	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, status, state)
+	nodeCIDR := fctx.state.Get(IdentifierNodeSubnetIPv6CIDR)
+	podCIDR := fctx.state.Get(IdentifierPodSubnetIPv6CIDR)
+	svcCIDR := fctx.state.Get(IdentifierServiceSubnetIPv6CIDR)
+	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, fctx.shootNetworking, status, state, nodeCIDR, podCIDR, svcCIDR)
+	//return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, fctx.shootNetworking, status, state, nil, nil, nil)
 }
 
 func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
@@ -70,9 +77,23 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 		fctx.ensureSubnet,
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork))
 
+	ensureSubnetIPv6 := fctx.AddTask(g, "ensure IPv6 subnet",
+		fctx.ensureSubnetIPv6,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork))
+
 	_ = fctx.AddTask(g, "ensure router interface",
 		fctx.ensureRouterInterface,
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnet))
+
+	_ = fctx.AddTask(g, "ensure IPv6 router interface",
+		fctx.ensureRouterInterfaceIPv6,
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6))
+
+	_ = fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
+		shared.Timeout(defaultTimeout),
+		shared.Dependencies(ensureSubnetIPv6),
+		shared.DoIf(fctx.isDualStack()),
+	)
 
 	ensureSecGroup := fctx.AddTask(g, "ensure security group",
 		fctx.ensureSecGroup,
@@ -313,6 +334,132 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	return nil
 }
 
+func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
+
+	if !fctx.isDualStack() {
+		return nil
+	}
+	if fctx.state.Get(IdentifierNetwork) == nil {
+		return fmt.Errorf("missing cluster network ID")
+	}
+	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
+
+	// Use configured subnet pool ID if provided
+	var subnetPoolID string
+	if fctx.config.SubnetPoolID != nil {
+		subnetPoolID = *fctx.config.SubnetPoolID
+	}
+
+	desired := []subnets.Subnet{{
+		Name:            fctx.defaultSubnetIPv6Name(),
+		NetworkID:       networkID,
+		IPVersion:       6,
+		DNSNameservers:  fctx.cloudProfileConfig.DNSServers,
+		IPv6RAMode:      "slaac",
+		IPv6AddressMode: "slaac",
+		SubnetPoolID:    subnetPoolID,
+	},
+		{
+			Name:           fctx.defaultSubnetIPv6Name() + "-pod",
+			NetworkID:      networkID,
+			IPVersion:      6,
+			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
+			// IPv6RAMode:      "none",
+			// IPv6AddressMode: "none",
+			SubnetPoolID: subnetPoolID,
+		},
+		{
+			Name:           fctx.defaultSubnetIPv6Name() + "-svc",
+			NetworkID:      networkID,
+			IPVersion:      6,
+			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
+			// IPv6RAMode:      "none",
+			// IPv6AddressMode: "none",
+			SubnetPoolID: subnetPoolID,
+		}}
+
+	for _, desiredSubnet := range desired {
+		current, err := fctx.findExistingSubnetIPv6(ctx, desiredSubnet.Name)
+		if err != nil {
+			return err
+		}
+
+		if current != nil {
+			fctx.state.Set(getSubnetIdentifierBySuffix(desiredSubnet.Name), current.ID)
+			log.Info("updating...")
+			if _, err := fctx.access.UpdateSubnet(ctx, &desiredSubnet, current); err != nil {
+				return err
+			}
+		} else {
+			log.Info("creating...")
+			created, err := fctx.access.CreateSubnet(ctx, &desiredSubnet)
+			if err != nil {
+				return err
+			}
+			fctx.state.Set(getSubnetIdentifierBySuffix(desiredSubnet.Name), created.ID)
+		}
+	}
+	return nil
+}
+
+func (fctx *FlowContext) ensureIPv6CIDRs(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
+
+	if !fctx.isDualStack() {
+		return nil
+	}
+
+	cidrIdentifiers := []string{IdentifierNodeSubnetIPv6CIDR, IdentifierPodSubnetIPv6CIDR, IdentifierServiceSubnetIPv6CIDR}
+	for index, identifier := range []string{IdentifierSubnetIPv6, IdentifierSubnetIPv6Pod, IdentifierSubnetIPv6Svc} {
+		// Get the actual IPv6 CIDR from the created subnet
+		subnetIPv6ID := fctx.state.Get(identifier)
+		if subnetIPv6ID == nil {
+			return fmt.Errorf("missing IPv6 subnet ID for identifier %s", identifier)
+		}
+
+		// Wait for the IPv6 CIDR to be allocated by the subnet pool
+		var actualIPv6CIDR string
+
+		log.V(1).Info("waiting for IPv6 CIDR allocation from subnet pool...")
+		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 30*time.Second, false, func(ctx context.Context) (bool, error) {
+			subnet, err := fctx.access.GetSubnetByID(ctx, *subnetIPv6ID)
+			if err != nil {
+				log.Error(err, "failed to get IPv6 subnet during CIDR wait")
+				return false, err
+			}
+			if subnet == nil {
+				return false, fmt.Errorf("IPv6 subnet not found for id %s", *subnetIPv6ID)
+			}
+
+			// Check if CIDR has been allocated
+			if subnet.CIDR != "" {
+				actualIPv6CIDR = subnet.CIDR
+				log.Info("IPv6 CIDR allocated from subnet pool", "cidr", actualIPv6CIDR)
+				return true, nil
+			}
+
+			log.V(1).Info("IPv6 CIDR not yet allocated, continuing to wait")
+			return false, nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed waiting for IPv6 CIDR allocation for identifier %s: %w", identifier, err)
+		}
+
+		if cidrIdentifiers[index] == IdentifierServiceSubnetIPv6CIDR {
+			ip, _, err := net.ParseCIDR(actualIPv6CIDR)
+			if err != nil {
+				return fmt.Errorf("failed to parse allocated IPv6 service CIDR %s: %w", actualIPv6CIDR, err)
+			}
+			actualIPv6CIDR = fmt.Sprintf("%s/112", ip.String())
+		}
+
+		fctx.state.Set(cidrIdentifiers[index], actualIPv6CIDR)
+	}
+	return nil
+}
+
 func (fctx *FlowContext) findExistingSubnet(ctx context.Context) (*subnets.Subnet, error) {
 	networkID, err := fctx.getNetworkID(ctx)
 	if err != nil {
@@ -325,6 +472,32 @@ func (fctx *FlowContext) findExistingSubnet(ctx context.Context) (*subnets.Subne
 		return fctx.access.GetSubnetByName(ctx, *networkID, name)
 	}
 	return findExisting(ctx, fctx.state.Get(IdentifierSubnet), fctx.defaultSubnetName(), fctx.access.GetSubnetByID, getByName)
+}
+
+// getSubnetIdentifierBySuffix returns the appropriate subnet identifier based on subnet name suffix
+func getSubnetIdentifierBySuffix(subnetName string) string {
+	if strings.HasSuffix(subnetName, "-pod") {
+		return IdentifierSubnetIPv6Pod
+	} else if strings.HasSuffix(subnetName, "-svc") {
+		return IdentifierSubnetIPv6Svc
+	}
+	return IdentifierSubnetIPv6
+}
+
+func (fctx *FlowContext) findExistingSubnetIPv6(ctx context.Context, subnetName string) (*subnets.Subnet, error) {
+	networkID, err := fctx.getNetworkID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if networkID == nil {
+		return nil, nil
+	}
+	getByName := func(ctx context.Context, name string) ([]*subnets.Subnet, error) {
+		return fctx.access.GetSubnetByName(ctx, *networkID, name)
+	}
+	identifier := getSubnetIdentifierBySuffix(subnetName)
+
+	return findExisting(ctx, fctx.state.Get(identifier), subnetName, fctx.access.GetSubnetByID, getByName)
 }
 
 func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
@@ -347,6 +520,30 @@ func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
 	}
 	log.Info("creating...")
 	return fctx.access.AddRouterInterfaceAndWait(ctx, *routerID, *subnetID)
+}
+
+func (fctx *FlowContext) ensureRouterInterfaceIPv6(ctx context.Context) error {
+	log := shared.LogFromContext(ctx)
+	if !fctx.isDualStack() {
+		return nil
+	}
+	routerID := fctx.state.Get(IdentifierRouter)
+	if routerID == nil {
+		return fmt.Errorf("internal error: missing routerID")
+	}
+	subnetIPv6ID := fctx.state.Get(IdentifierSubnetIPv6)
+	if subnetIPv6ID == nil {
+		return fmt.Errorf("internal error: missing IPv6 subnetID")
+	}
+	portID, err := fctx.access.GetRouterInterfacePortID(ctx, *routerID, *subnetIPv6ID)
+	if err != nil {
+		return err
+	}
+	if portID != nil {
+		return nil
+	}
+	log.Info("creating...")
+	return fctx.access.AddRouterInterfaceAndWait(ctx, *routerID, *subnetIPv6ID)
 }
 
 func (fctx *FlowContext) ensureSecGroup(ctx context.Context) error {
@@ -426,6 +623,35 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 			RemoteIPPrefix: "0.0.0.0/0",
 			Description:    "IPv4: allow all incoming udp traffic with port range 30000-32767",
 		},
+	}
+
+	if fctx.isDualStack() {
+		desiredRules = append(desiredRules, []rules.SecGroupRule{
+			{
+				Direction:     string(rules.DirIngress),
+				EtherType:     string(rules.EtherType6),
+				RemoteGroupID: access.SecurityGroupIDSelf,
+				Description:   "IPv6: allow all incoming traffic within the same security group",
+			},
+			{
+				Direction:      string(rules.DirIngress),
+				EtherType:      string(rules.EtherType6),
+				Protocol:       string(rules.ProtocolTCP),
+				PortRangeMin:   30000,
+				PortRangeMax:   32767,
+				RemoteIPPrefix: "::/0",
+				Description:    "IPv6: allow all incoming tcp traffic with port range 30000-32767",
+			},
+			{
+				Direction:      string(rules.DirIngress),
+				EtherType:      string(rules.EtherType6),
+				Protocol:       string(rules.ProtocolUDP),
+				PortRangeMin:   30000,
+				PortRangeMax:   32767,
+				RemoteIPPrefix: "::/0",
+				Description:    "IPv6: allow all incoming udp traffic with port range 30000-32767",
+			},
+		}...)
 	}
 
 	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(_ *rules.SecGroupRule) bool {

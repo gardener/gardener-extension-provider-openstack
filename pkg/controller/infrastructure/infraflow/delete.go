@@ -52,8 +52,11 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 	recoverSubnetID := fctx.AddTask(g, "recover subnet ID",
 		fctx.recoverSubnetID,
 		shared.Timeout(defaultTimeout), shared.Dependencies(recoverNetworkID))
+	recoverSubnetIPv6ID := fctx.AddTask(g, "recover IPv6 subnet ID",
+		fctx.recoverSubnetIPv6ID,
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverNetworkID))
 
-	recoverIDs := flow.NewTaskIDs(recoverNetworkID, recoverRouterID, recoverSubnetID)
+	recoverIDs := flow.NewTaskIDs(recoverNetworkID, recoverRouterID, recoverSubnetID, recoverSubnetIPv6ID)
 	k8sRoutes := fctx.AddTask(g, "delete kubernetes routes",
 		func(ctx context.Context) error {
 			routerID := fctx.state.Get(IdentifierRouter)
@@ -77,22 +80,41 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 		shared.Dependencies(recoverIDs),
 	)
 
+	k8sLoadBalancersIPv6 := fctx.AddTask(g, "delete kubernetes IPv6 loadbalancers",
+		func(ctx context.Context) error {
+			subnetIPv6ID := fctx.state.Get(IdentifierSubnetIPv6)
+			if subnetIPv6ID == nil {
+				return nil
+			}
+			return fctx.cleanupKubernetesLoadbalancers(ctx, shared.LogFromContext(ctx), *subnetIPv6ID)
+		},
+		shared.Timeout(defaultTimeout),
+		shared.Dependencies(recoverIDs),
+	)
+
 	_ = fctx.AddTask(g, "delete share network",
 		fctx.deleteShareNetwork,
 		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs))
 	deleteRouterInterface := fctx.AddTask(g, "delete router interface",
 		fctx.deleteRouterInterface,
 		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs, k8sRoutes))
+	deleteRouterInterfaceIPv6 := fctx.AddTask(g, "delete IPv6 router interface",
+		fctx.deleteRouterInterfaceIPv6,
+		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs, k8sRoutes))
+
 	// subnet deletion only needed if network is given by spec
 	_ = fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
 		shared.DoIf(!needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
+	_ = fctx.AddTask(g, "delete IPv6 subnet",
+		fctx.deleteSubnetIPv6,
+		shared.DoIf(!needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterfaceIPv6, k8sLoadBalancersIPv6))
 	_ = fctx.AddTask(g, "delete network",
 		fctx.deleteNetwork,
-		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface))
+		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6))
 	_ = fctx.AddTask(g, "delete router",
 		fctx.deleteRouter,
-		shared.DoIf(needToDeleteRouter), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface))
+		shared.DoIf(needToDeleteRouter), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6))
 	_ = fctx.AddTask(g, "cleanup marker",
 		func(_ context.Context) error {
 			fctx.state.Set(CreatedResourcesExistKey, "")
@@ -147,6 +169,20 @@ func (fctx *FlowContext) deleteSubnet(ctx context.Context) error {
 	return nil
 }
 
+func (fctx *FlowContext) deleteSubnetIPv6(ctx context.Context) error {
+	subnetIPv6ID := fctx.state.Get(IdentifierSubnetIPv6)
+	if subnetIPv6ID == nil {
+		return nil
+	}
+
+	shared.LogFromContext(ctx).Info("deleting...", "ipv6-subnet", *subnetIPv6ID)
+	if err := fctx.networking.DeleteSubnet(ctx, *subnetIPv6ID); client.IgnoreNotFoundError(err) != nil {
+		return err
+	}
+	fctx.state.Set(IdentifierSubnetIPv6, "")
+	return nil
+}
+
 func (fctx *FlowContext) recoverRouterID(ctx context.Context) error {
 	if fctx.config.Networks.Router != nil {
 		fctx.state.Set(IdentifierRouter, fctx.config.Networks.Router.ID)
@@ -186,6 +222,25 @@ func (fctx *FlowContext) recoverSubnetID(ctx context.Context) error {
 	return nil
 }
 
+func (fctx *FlowContext) recoverSubnetIPv6ID(ctx context.Context) error {
+
+	for _, suffix := range []string{"-ipv6-pod", "-ipv6-svc", "-ipv6"} {
+		identifier := getSubnetIdentifierBySuffix(suffix)
+		if fctx.state.Get(identifier) != nil {
+			return nil
+		}
+
+		subnet, err := fctx.findExistingSubnetIPv6(ctx, fctx.defaultSubnetIPv6Name()+suffix)
+		if err != nil {
+			return err
+		}
+		if subnet != nil {
+			fctx.state.Set(identifier, subnet.ID)
+		}
+	}
+	return nil
+}
+
 func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
 	routerID := fctx.state.Get(IdentifierRouter)
 	if routerID == nil {
@@ -207,6 +262,33 @@ func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 	log.Info("deleting...")
 	err = fctx.access.RemoveRouterInterfaceAndWait(ctx, *routerID, *subnetID, *portID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fctx *FlowContext) deleteRouterInterfaceIPv6(ctx context.Context) error {
+	routerID := fctx.state.Get(IdentifierRouter)
+	if routerID == nil {
+		return nil
+	}
+	subnetIPv6ID := fctx.state.Get(IdentifierSubnetIPv6)
+	if subnetIPv6ID == nil {
+		return nil
+	}
+
+	portID, err := fctx.access.GetRouterInterfacePortID(ctx, *routerID, *subnetIPv6ID)
+	if err != nil {
+		return err
+	}
+	if portID == nil {
+		return nil
+	}
+
+	log := shared.LogFromContext(ctx)
+	log.Info("deleting IPv6 router interface...")
+	err = fctx.access.RemoveRouterInterfaceAndWait(ctx, *routerID, *subnetIPv6ID, *portID)
 	if err != nil {
 		return err
 	}

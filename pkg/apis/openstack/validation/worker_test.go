@@ -5,8 +5,6 @@
 package validation_test
 
 import (
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -18,7 +16,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 var _ = Describe("ValidateWorkerConfig", func() {

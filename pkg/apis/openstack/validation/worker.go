@@ -2,8 +2,7 @@ package validation
 
 import (
 	"fmt"
-	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"gopkg.in/inf.v0"
@@ -11,6 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 // ValidateWorkerConfig validates the providerConfig section of a Worker resource.

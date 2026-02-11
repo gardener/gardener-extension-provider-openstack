@@ -164,6 +164,8 @@ serverGroup:
 #     cpu: 2
 #     gpu: 0
 #     memory: 50Gi
+#   virtualCapacity:
+#     subdomain.domain.com/resource-name: 1234567
 # machineLabels:
 #  - name: my-label
 #    value: foo
@@ -192,6 +194,7 @@ will trigger a rolling of all machines of this worker pool.
 
 ### Node Templates
 Node templates allow users to override the capacity of the nodes as defined by the server flavor specified in the `CloudProfile`'s `machineTypes`. This is useful for certain dynamic scenarios as it allows users to customize cluster-autoscaler's behavior for these workergroup with their provided values.
+The `nodeTemplate.virtualCapacity` can be used to specify node extended resources that are updated on nodes belonging to the pool. There are currently some caveats wrt rollouts
 
 ## Example `Shoot` manifest (one availability zone)
 

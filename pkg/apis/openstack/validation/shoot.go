@@ -10,18 +10,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	corehelper "github.com/gardener/gardener/pkg/apis/core/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
-	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 // ValidateNetworking validates the network settings of a Shoot.
@@ -71,7 +66,7 @@ func ValidateWorkers(workers []core.Worker, cloudProfileCfg *api.CloudProfileCon
 				continue
 			}
 
-			allErrs = append(allErrs, validateWorkerConfig(&worker, workerConfig, cloudProfileCfg, workerFldPath.Child("providerConfig"))...)
+			allErrs = append(allErrs, ValidateWorkerConfig(&worker, workerConfig, cloudProfileCfg, workerFldPath.Child("providerConfig"))...)
 		}
 	}
 
@@ -102,101 +97,5 @@ func ValidateWorkersUpdate(oldWorkers, newWorkers []core.Worker, fldPath *field.
 			}
 		}
 	}
-	return allErrs
-}
-
-// validateWorkerConfig validates the providerConfig section of a Worker resource.
-func validateWorkerConfig(worker *core.Worker, workerConfig *api.WorkerConfig, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, validateServerGroup(worker, workerConfig.ServerGroup, cloudProfileConfig, fldPath.Child("serverGroup"))...)
-	allErrs = append(allErrs, validateNodeTemplate(workerConfig.NodeTemplate, fldPath.Child("nodeTemplate"))...)
-	allErrs = append(allErrs, validateMachineLabels(worker, workerConfig, fldPath.Child("machineLabels"))...)
-
-	return allErrs
-}
-
-func validateServerGroup(worker *core.Worker, sg *api.ServerGroup, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if sg == nil {
-		return allErrs
-	}
-
-	if sg.Policy == "" {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("policy"), sg.Policy, "policy field cannot be empty"))
-		return allErrs
-	}
-
-	isPolicyMatching := func() bool {
-		if cloudProfileConfig == nil {
-			return false
-		}
-
-		for _, policy := range cloudProfileConfig.ServerGroupPolicies {
-			if policy == sg.Policy {
-				return true
-			}
-		}
-		return false
-	}()
-
-	if !isPolicyMatching {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("policy"), sg.Policy, "no matching server group policy found in cloudprofile"))
-		return allErrs
-	}
-
-	if len(worker.Zones) > 1 && sg.Policy == openstackclient.ServerGroupPolicyAffinity {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", openstackclient.ServerGroupPolicyAffinity)))
-	}
-
-	return allErrs
-}
-
-func validateNodeTemplate(nodeTemplate *extensionsv1alpha1.NodeTemplate, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if nodeTemplate == nil {
-		return nil
-	}
-	for _, capacityAttribute := range []corev1.ResourceName{corev1.ResourceCPU, "gpu", corev1.ResourceMemory} {
-		value, ok := nodeTemplate.Capacity[capacityAttribute]
-		if !ok {
-			allErrs = append(allErrs, field.Required(fldPath.Child("capacity"), fmt.Sprintf("%s is a mandatory field", capacityAttribute)))
-			continue
-		}
-		allErrs = append(allErrs, validateResourceQuantityValue(capacityAttribute, value, fldPath.Child("capacity").Child(string(capacityAttribute)))...)
-	}
-
-	return allErrs
-}
-
-func validateResourceQuantityValue(key corev1.ResourceName, value resource.Quantity, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if value.Cmp(resource.Quantity{}) < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath, value.String(), fmt.Sprintf("%s value must not be negative", key)))
-	}
-
-	return allErrs
-}
-
-func validateMachineLabels(worker *core.Worker, workerConfig *api.WorkerConfig, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	machineLabelNames := sets.New[string]()
-	for i, ml := range workerConfig.MachineLabels {
-		idxPath := fldPath.Index(i)
-		allErrs = append(allErrs, validateResourceName(ml.Name, idxPath.Child("name"))...)
-		allErrs = append(allErrs, validateResourceName(ml.Value, idxPath.Child("value"))...)
-		if machineLabelNames.Has(ml.Name) {
-			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), ml.Name))
-		} else if _, found := worker.Labels[ml.Name]; found {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), ml.Name, "label name already defined as pool label"))
-		} else {
-			machineLabelNames.Insert(ml.Name)
-		}
-	}
-
 	return allErrs
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
-func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
+func (w *WorkerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	if w.machineImages == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
 			return fmt.Errorf("unable to generate the machine config: %w", err)

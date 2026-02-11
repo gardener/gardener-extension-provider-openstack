@@ -45,7 +45,7 @@ APP_ID             := .kube-secrets/openstack/app_id.secret
 APP_NAME           := .kube-secrets/openstack/app_name.secret
 APP_SECRET         := .kube-secrets/openstack/app_secret.secret
 
-INFRA_TEST_FLAGS := --v -ginkgo.v -ginkgo.progress \
+INFRA_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                     --kubeconfig=${KUBECONFIG} \
                     --auth-url='$(shell cat $(AUTH_URL))' \
                     --domain-name='$(shell cat $(DOMAIN_NAME))' \
@@ -69,7 +69,7 @@ BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                            --password='$(shell cat $(PASSWORD))' \
                            --user-name='$(shell cat $(USER_NAME))'
 
-DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.progress \
+DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                         --kubeconfig=${KUBECONFIG} \
                         --auth-url='$(shell cat $(AUTH_URL))' \
                         --domain-name='$(shell cat $(DOMAIN_NAME))' \

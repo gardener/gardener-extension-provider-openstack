@@ -322,7 +322,7 @@ var _ = Describe("Shoot validation", func() {
 					Expect(ValidateWorkers(workers, nil, nilPath)).To(BeEmpty())
 				})
 
-				It("should return error when all resources not specified", func() {
+				It("should not return error when all resources not specified", func() {
 					workers[0].ProviderConfig = &runtime.RawExtension{
 						Object: &apiv1alpha1.WorkerConfig{
 							TypeMeta: metav1.TypeMeta{
@@ -337,18 +337,7 @@ var _ = Describe("Shoot validation", func() {
 						},
 					}
 
-					Expect(ValidateWorkers(workers, nil, nilPath)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeRequired),
-							"Field":  Equal("[0].providerConfig.nodeTemplate.capacity"),
-							"Detail": Equal("cpu is a mandatory field"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeRequired),
-							"Field":  Equal("[0].providerConfig.nodeTemplate.capacity"),
-							"Detail": Equal("memory is a mandatory field"),
-						})),
-					))
+					Expect(ValidateWorkers(workers, nil, nilPath)).To(BeEmpty())
 				})
 
 				It("should return error when resource value is negative", func() {

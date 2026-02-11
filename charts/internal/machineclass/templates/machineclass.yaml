@@ -29,6 +29,9 @@ provider: "OpenStack"
 nodeTemplate:
   architecture: {{ $machineClass.nodeTemplate.architecture }}
   capacity: {{- toYaml $machineClass.nodeTemplate.capacity | nindent 4 }}
+{{- if $machineClass.nodeTemplate.virtualCapacity }}
+  virtualCapacity: {{ toYaml $machineClass.nodeTemplate.virtualCapacity | nindent 4 }}
+{{- end }}
   instanceType: {{ $machineClass.nodeTemplate.instanceType }}
   region: {{ $machineClass.nodeTemplate.region }}
   zone: {{ $machineClass.nodeTemplate.zone }}

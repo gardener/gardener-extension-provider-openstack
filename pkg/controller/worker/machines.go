@@ -7,6 +7,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -23,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,22 +35,22 @@ import (
 )
 
 // MachineClassKind yields the name of the machine class kind used by OpenStack provider.
-func (w *workerDelegate) MachineClassKind() string {
+func (w *WorkerDelegate) MachineClassKind() string {
 	return "MachineClass"
 }
 
 // MachineClass yields a newly initialized machine class object.
-func (w *workerDelegate) MachineClass() client.Object {
+func (w *WorkerDelegate) MachineClass() client.Object {
 	return &machinev1alpha1.MachineClass{}
 }
 
 // MachineClassList yields a newly initialized MachineClassList object.
-func (w *workerDelegate) MachineClassList() client.ObjectList {
+func (w *WorkerDelegate) MachineClassList() client.ObjectList {
 	return &machinev1alpha1.MachineClassList{}
 }
 
 // DeployMachineClasses generates and creates the OpenStack specific machine classes.
-func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
+func (w *WorkerDelegate) DeployMachineClasses(ctx context.Context) error {
 	if w.machineClasses == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
 			return err
@@ -59,7 +61,7 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 }
 
 // GenerateMachineDeployments generates the configuration for the desired machine deployments.
-func (w *workerDelegate) GenerateMachineDeployments(ctx context.Context) (worker.MachineDeployments, error) {
+func (w *WorkerDelegate) GenerateMachineDeployments(ctx context.Context) (worker.MachineDeployments, error) {
 	if w.machineDeployments == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
 			return nil, err
@@ -68,7 +70,7 @@ func (w *workerDelegate) GenerateMachineDeployments(ctx context.Context) (worker
 	return w.machineDeployments, nil
 }
 
-func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
+func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineDeployments = worker.MachineDeployments{}
 		machineClasses     []map[string]interface{}
@@ -199,23 +201,26 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				machineClassSpec["serverGroupID"] = serverGroupDep.ID
 			}
 
-			if workerConfig.NodeTemplate != nil {
-				machineClassSpec["nodeTemplate"] = machinev1alpha1.NodeTemplate{
-					Capacity:     workerConfig.NodeTemplate.Capacity,
-					InstanceType: pool.MachineType,
-					Region:       w.worker.Spec.Region,
-					Zone:         zone,
-					Architecture: ptr.To(architecture),
-				}
-			} else if pool.NodeTemplate != nil {
-				machineClassSpec["nodeTemplate"] = machinev1alpha1.NodeTemplate{
-					Capacity:     pool.NodeTemplate.Capacity,
-					InstanceType: pool.MachineType,
-					Region:       w.worker.Spec.Region,
-					Zone:         zone,
-					Architecture: ptr.To(architecture),
+			var nodeTemplate machinev1alpha1.NodeTemplate
+			if pool.NodeTemplate != nil {
+				nodeTemplate = machinev1alpha1.NodeTemplate{
+					Capacity:        pool.NodeTemplate.Capacity.DeepCopy(),
+					VirtualCapacity: pool.NodeTemplate.VirtualCapacity.DeepCopy(),
+					InstanceType:    pool.MachineType,
+					Region:          w.worker.Spec.Region,
+					Zone:            zone,
+					Architecture:    ptr.To(architecture),
 				}
 			}
+			if workerConfig.NodeTemplate != nil {
+				// Support providerConfig extended resources by copying into node template capacity and virtualCapacity
+				maps.Copy(nodeTemplate.Capacity, workerConfig.NodeTemplate.Capacity)
+				if nodeTemplate.VirtualCapacity == nil {
+					nodeTemplate.VirtualCapacity = corev1.ResourceList{}
+				}
+				maps.Copy(nodeTemplate.VirtualCapacity, workerConfig.NodeTemplate.VirtualCapacity)
+			}
+			machineClassSpec["nodeTemplate"] = nodeTemplate
 
 			var (
 				deploymentName = fmt.Sprintf("%s-%s-z%d", w.cluster.Shoot.Status.TechnicalID, pool.Name, zoneIndex+1)
@@ -287,7 +292,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency, workerConfig *api.WorkerConfig) (string, error) {
+func (w *WorkerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPool, serverGroupDependency *api.ServerGroupDependency, workerConfig *api.WorkerConfig) (string, error) {
 	var additionalHashData []string
 
 	// Include the given worker pool dependencies into the hash.

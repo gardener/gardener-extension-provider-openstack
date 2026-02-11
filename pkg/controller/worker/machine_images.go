@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
+// UpdateMachineImagesStatus updates the worker provider status with the machine images used in the worker spec.
 func (w *WorkerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	if w.machineImages == nil {
 		if err := w.generateMachineConfig(ctx); err != nil {
@@ -39,7 +40,7 @@ func (w *WorkerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, region string, arch *string, machineCapabilities gardencorev1beta1.Capabilities) (*api.MachineImage, error) {
+func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, region string, arch *string, machineCapabilities gardencorev1beta1.Capabilities) (*api.MachineImage, error) {
 	selectedMachineImage := &api.MachineImage{
 		Name:    name,
 		Version: version,

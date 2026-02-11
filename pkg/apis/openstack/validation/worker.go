@@ -26,6 +26,7 @@ func ValidateWorkerConfig(worker *core.Worker, workerConfig *api.WorkerConfig, c
 	return allErrs
 }
 
+// ValidateServerGroup validates the server group settings of a WorkerConfig resource.
 func ValidateServerGroup(worker *core.Worker, sg *api.ServerGroup, cloudProfileConfig *api.CloudProfileConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -63,6 +64,7 @@ func ValidateServerGroup(worker *core.Worker, sg *api.ServerGroup, cloudProfileC
 	return allErrs
 }
 
+// ValidateNodeTemplate validates the node template section of a WorkerConfig resource.
 func ValidateNodeTemplate(nodeTemplate *extensionsv1alpha1.NodeTemplate, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -109,6 +111,7 @@ func validateResourceQuantityValue(key corev1.ResourceName, value resource.Quant
 	return allErrs
 }
 
+// ValidateMachineLabels validates the machine labels of a WorkerConfig resource.
 func ValidateMachineLabels(worker *core.Worker, workerConfig *api.WorkerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

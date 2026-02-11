@@ -194,7 +194,8 @@ will trigger a rolling of all machines of this worker pool.
 
 ### Node Templates
 Node templates allow users to override the capacity of the nodes as defined by the server flavor specified in the `CloudProfile`'s `machineTypes`. This is useful for certain dynamic scenarios as it allows users to customize cluster-autoscaler's behavior for these workergroup with their provided values.
-The `nodeTemplate.virtualCapacity` can be used to specify node extended resources that are updated on nodes belonging to the pool. There are currently some caveats wrt rollouts
+The `nodeTemplate.virtualCapacity` can be used to specify node extended resources that are updated on nodes belonging to the pool. There are in general no caveats wrt rollouts
+* Any addition, deletions, or updates to the `providerConfig` will not trigger a rolling update of nodes.
 
 ## Example `Shoot` manifest (one availability zone)
 

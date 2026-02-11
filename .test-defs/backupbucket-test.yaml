@@ -21,5 +21,4 @@ spec:
       --use-existing-cluster=${USE_EXISTING_CLUSTER}
       --log-level=${LOG_LEVEL}
 
-  image: golang:1.25
-
+  image: golang:1.26

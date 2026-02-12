@@ -399,6 +399,18 @@ var _ = Describe("ValidateWorkerConfig", func() {
 						"Detail": Equal("subdomain.domain.com/vResource value must be a whole number"),
 					})),
 				))
+
+				nodeTemplate.VirtualCapacity = corev1.ResourceList{
+					"subdomain.domain.com/vResource": resource.MustParse("2500m"),
+				}
+
+				Expect(ValidateNodeTemplate(nodeTemplate, fldPath)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("config.virtualCapacity.subdomain.domain.com/vResource"),
+						"Detail": Equal("subdomain.domain.com/vResource value must be a whole number"),
+					})),
+				))
 			})
 
 			It("should return errors for negative virtual capacity values", func() {

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
+	"gopkg.in/godo.v2/glob"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -294,10 +296,11 @@ func (a *networkingAccess) LookupFloatingPoolSubnetIDs(ctx context.Context, netw
 		return subnetIDs, nil
 	}
 
-	r, err := regexp.Compile(floatingPoolSubnetNameRegex)
+	match, err := subnetNameMatcher(floatingPoolSubnetNameRegex)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, subnet := range allSubnets {
 		// Check for a very rare case where the response would include no
 		// subnet name. No name means nothing to attempt a match against,
@@ -307,11 +310,46 @@ func (a *networkingAccess) LookupFloatingPoolSubnetIDs(ctx context.Context, netw
 				"subnetID", subnet.ID)
 			continue
 		}
-		if r.MatchString(subnet.Name) {
+		if match(&subnet) {
 			subnetIDs = append(subnetIDs, subnet.ID)
 		}
 	}
+
+	if len(subnetIDs) == 0 {
+		return nil, fmt.Errorf("no subnet found matching the given regex: %s", floatingPoolSubnetNameRegex)
+	}
+
 	return subnetIDs, nil
+}
+
+// subnetMatcher matches a subnet
+type subnetMatcher func(subnet *subnets.Subnet) bool
+
+// subnetNameMatcher creates a subnet matcher matching a subnet by name for a given glob or regexp
+// based on https://github.com/kubernetes/cloud-provider-openstack/blob/a031201ff26f3df433192b91df2be0e7d50acb70/pkg/openstack/loadbalancer_subnet_match.go#L67-L90
+func subnetNameMatcher(pat string) (subnetMatcher, error) {
+	var match subnetMatcher
+	var rexp *regexp.Regexp
+	not := false
+	if strings.HasPrefix(pat, "!") {
+		not = true
+		pat = pat[1:]
+	}
+	if strings.HasPrefix(pat, "~") {
+		var err error
+		rexp, err = regexp.Compile(pat[1:])
+		if err != nil {
+			return nil, fmt.Errorf("invalid subnet regexp pattern %q: %v", pat[1:], err)
+		}
+	} else {
+		rexp = glob.Globexp(pat)
+	}
+	baseMatch := func(s *subnets.Subnet) bool { return rexp.FindString(s.Name) == s.Name }
+	match = baseMatch
+	if not {
+		match = func(s *subnets.Subnet) bool { return !baseMatch(s) }
+	}
+	return match, nil
 }
 
 // CreateNetwork creates a private network

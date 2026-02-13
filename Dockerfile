@@ -1,5 +1,5 @@
 ############# builder
-FROM golang:1.26.0 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.0 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener-extension-provider-openstack
 
@@ -11,8 +11,10 @@ RUN go mod download
 COPY . .
 
 ARG EFFECTIVE_VERSION
+ARG TARGETOS
+ARG TARGETARCH
 
-RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
+RUN make build GOOS=$TARGETOS GOARCH=$TARGETARCH EFFECTIVE_VERSION=$EFFECTIVE_VERSION BUILD_OUTPUT_FILE="/output/bin/"
 
 ############# base
 FROM gcr.io/distroless/static-debian12:nonroot AS base
@@ -21,12 +23,12 @@ FROM gcr.io/distroless/static-debian12:nonroot AS base
 FROM base AS gardener-extension-provider-openstack
 WORKDIR /
 
-COPY --from=builder /go/bin/gardener-extension-provider-openstack /gardener-extension-provider-openstack
+COPY --from=builder /output/bin/gardener-extension-provider-openstack /gardener-extension-provider-openstack
 ENTRYPOINT ["/gardener-extension-provider-openstack"]
 
 ############# gardener-extension-admission-openstack
 FROM base AS gardener-extension-admission-openstack
 WORKDIR /
 
-COPY --from=builder /go/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack
+COPY --from=builder /output/bin/gardener-extension-admission-openstack /gardener-extension-admission-openstack
 ENTRYPOINT ["/gardener-extension-admission-openstack"]

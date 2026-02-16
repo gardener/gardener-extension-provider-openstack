@@ -49,6 +49,14 @@ rules:
     - watch
     - patch
     - delete
+  # required in dnsrecord reconciler to check if namespace has role=shoot label
+  - apiGroups:
+    - ""
+    resources:
+    - namespaces
+    verbs:
+    - list
+    - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -63,6 +63,7 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 			"admission-openstack",
 			"",
 			nil,
+			nil,
 			webhookServerOptions,
 			webhookSwitches,
 		)
@@ -154,7 +155,7 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 			}
 
 			log.Info("Setting up webhook server")
-			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, sourceCluster, false); err != nil {
+			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, sourceCluster); err != nil {
 				return err
 			}
 

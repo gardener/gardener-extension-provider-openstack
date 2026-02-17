@@ -75,7 +75,7 @@ spec:
 {{- if (include "runtimeCluster.enabled" .) }}
         - --controllers=backupbucket,dnsrecord
         - --disable-webhooks="*"
-        - --extension-class=garden
+        - --extension-classes=garden
 {{- else }}
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}

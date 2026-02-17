@@ -36,6 +36,11 @@ require (
 )
 
 require (
+	github.com/MichaelTJones/walk v0.0.0-20161122175330-4748e29d5718 // indirect
+	github.com/mgutz/str v1.2.0 // indirect
+)
+
+require (
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
@@ -183,6 +188,7 @@ require (
 	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
+	gopkg.in/godo.v2 v2.0.9
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.19.2 // indirect

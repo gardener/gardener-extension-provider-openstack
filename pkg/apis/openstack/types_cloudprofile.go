@@ -74,7 +74,7 @@ type FloatingPool struct {
 	Region *string
 	// Domain is the domain name.
 	Domain *string
-	// DefaultFloatingSubnet is the default floating subnet for the floating pool.
+	// DefaultFloatingSubnet is the name of a subnet or a pattern to select a subnet that will be used by default for the floating pool.
 	DefaultFloatingSubnet *string
 	// NonConstraining specifies whether this floating pool is not constraining, that means additionally available independent of other FP constraints.
 	NonConstraining *bool
@@ -102,7 +102,7 @@ type LoadBalancerClass struct {
 	FloatingSubnetID *string
 	// FloatingSubnetTags is a list of tags which can be used to select subnets in the floating network pool.
 	FloatingSubnetTags *string
-	// FloatingSubnetName is can either be a name or a name pattern of a subnet in the floating network pool.
+	// FloatingSubnetName can either be a name or a name pattern of a subnet in the floating network pool.
 	FloatingSubnetName *string
 	// FloatingNetworkID is the network ID of the floating network pool.
 	FloatingNetworkID *string

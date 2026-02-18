@@ -7,8 +7,6 @@ package worker_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -105,34 +103,55 @@ var _ = Describe("#MachineDependencies", func() {
 
 			It("should create server groups if specified in worker pool", func() {
 				var (
-					ctx            = context.Background()
-					policy         = "foo"
-					pool1          = "pool-1"
-					serverGroupID1 = "id-1"
+					ctx              = context.Background()
+					policy           = "foo"
+					pool1            = "pool-1"
+					serverGroupID1   = "id-1"
+					serverGroupName1 string
 
-					pool2          = "pool-2"
-					serverGroupID2 = "id-2"
-					pools          []extensionsv1alpha1.WorkerPool
+					pool2            = "pool-2"
+					serverGroupID2   = "id-2"
+					serverGroupName2 string
+					pools            []extensionsv1alpha1.WorkerPool
 				)
 
 				pools = append(pools, *(newWorkerPoolWithPolicy(pool1, &policy)), *(newWorkerPoolWithPolicy(pool2, &policy)))
 				w.Spec.Pools = append(w.Spec.Pools, pools...)
+
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
 
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
 					nil,
 					w,
-					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					cluster,
 					osFactory,
 				)
 
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool1)), policy).Return(&servergroups.ServerGroup{
-					ID: serverGroupID1,
-				}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool2)), policy).Return(&servergroups.ServerGroup{
-					ID: serverGroupID2,
-				}, nil)
+				// List server groups first (new logic checks for existing ones)
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						serverGroupName1 = name
+						return &servergroups.ServerGroup{
+							ID:       serverGroupID1,
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					}).Times(1)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						serverGroupName2 = name
+						return &servergroups.ServerGroup{
+							ID:       serverGroupID2,
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					}).Times(1)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
@@ -145,21 +164,28 @@ var _ = Describe("#MachineDependencies", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal(serverGroupID1),
 						"PoolName": Equal(pool1),
+						"Name":     Equal(serverGroupName1),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal(serverGroupID2),
 						"PoolName": Equal(pool2),
+						"Name":     Equal(serverGroupName2),
 					}),
 				))
 			})
 
 			It("should recreate server group if specs do not match", func() {
 				var (
-					ctx       = context.Background()
-					poolName  = "pool"
-					policy    = "foo"
-					newPolicy = "bar"
+					ctx                = context.Background()
+					poolName           = "pool"
+					policy             = "foo"
+					newPolicy          = "bar"
+					serverGroupName    = technicalID + "-" + poolName + "-rand123"
+					newServerGroupName string
 				)
+
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
 
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -167,13 +193,21 @@ var _ = Describe("#MachineDependencies", func() {
 					scheme,
 					nil,
 					w,
-					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					cluster,
 					osFactory,
 				)
 
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, poolName)), policy).Return(&servergroups.ServerGroup{
-					ID: "id",
-				}, nil)
+				// First reconcile - create initial server group
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						serverGroupName = name
+						return &servergroups.ServerGroup{
+							ID:       "id",
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					})
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
@@ -184,17 +218,33 @@ var _ = Describe("#MachineDependencies", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal("id"),
 						"PoolName": Equal("pool"),
+						"Name":     Equal(serverGroupName),
 					}),
 				))
 
+				// Second reconcile - policy changed, should recreate
 				w.Spec.Pools[0] = *(newWorkerPoolWithPolicy("pool", &newPolicy))
 				computeClient.EXPECT().GetServerGroup(ctx, "id").Return(&servergroups.ServerGroup{
 					ID:       "id",
-					Policies: []string{"foo"},
+					Name:     serverGroupName,
+					Policies: []string{policy},
 				}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, poolName)), newPolicy).Return(&servergroups.ServerGroup{
-					ID: "new-id",
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
+					{
+						ID:       "id",
+						Name:     serverGroupName,
+						Policies: []string{policy},
+					},
 				}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						newServerGroupName = name
+						return &servergroups.ServerGroup{
+							ID:       "new-id",
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					})
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err = workerDelegate.PreReconcileHook(ctx)
@@ -205,6 +255,7 @@ var _ = Describe("#MachineDependencies", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal("new-id"),
 						"PoolName": Equal("pool"),
+						"Name":     Equal(newServerGroupName),
 					}),
 				))
 			})
@@ -213,10 +264,11 @@ var _ = Describe("#MachineDependencies", func() {
 		Context("#PreReconcileHook during Restore", func() {
 			It("should create server groups when called for restore scenario with missing dependencies", func() {
 				var (
-					ctx            = context.Background()
-					policy         = "soft-anti-affinity"
-					pool1          = "pool-1"
-					serverGroupID1 = "id-1"
+					ctx              = context.Background()
+					policy           = "soft-anti-affinity"
+					pool1            = "pool-1"
+					serverGroupID1   = "id-1"
+					serverGroupName1 string
 				)
 
 				// Setup worker with server group configuration but no dependencies
@@ -239,19 +291,29 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
+
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
 					nil,
 					w,
-					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					cluster,
 					osFactory,
 				)
 
-				// Expect PreReconcileHook to create the server group
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool1)), policy).Return(&servergroups.ServerGroup{
-					ID: serverGroupID1,
-				}, nil)
+				// Expect PreReconcileHook to list then create the server group
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						serverGroupName1 = name
+						return &servergroups.ServerGroup{
+							ID:       serverGroupID1,
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					})
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				// Directly call PreReconcileHook (which is what GenerateMachineDeployments would do)
@@ -266,18 +328,21 @@ var _ = Describe("#MachineDependencies", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal(serverGroupID1),
 						"PoolName": Equal(pool1),
+						"Name":     Equal(serverGroupName1),
 					}),
 				))
 			})
 
 			It("should create server groups for multiple pools during restore scenario", func() {
 				var (
-					ctx            = context.Background()
-					policy         = "soft-anti-affinity"
-					pool1          = "pool-1"
-					pool2          = "pool-2"
-					serverGroupID1 = "id-1"
-					serverGroupID2 = "id-2"
+					ctx              = context.Background()
+					policy           = "soft-anti-affinity"
+					pool1            = "pool-1"
+					pool2            = "pool-2"
+					serverGroupID1   = "id-1"
+					serverGroupID2   = "id-2"
+					serverGroupName1 string
+					serverGroupName2 string
 				)
 
 				// Setup worker with multiple pools requiring server groups
@@ -302,22 +367,39 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}
 
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
+
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
 					nil,
 					w,
-					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					cluster,
 					osFactory,
 				)
 
-				// PreReconcileHook should create server groups for both pools
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool1)), policy).Return(&servergroups.ServerGroup{
-					ID: serverGroupID1,
-				}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, prefixMatch(serverGroupPrefix(technicalID, pool2)), policy).Return(&servergroups.ServerGroup{
-					ID: serverGroupID2,
-				}, nil)
+				// PreReconcileHook should list then create server groups for both pools
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						serverGroupName1 = name
+						return &servergroups.ServerGroup{
+							ID:       serverGroupID1,
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					}).Times(1)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						serverGroupName2 = name
+						return &servergroups.ServerGroup{
+							ID:       serverGroupID2,
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					}).Times(1)
 				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				// Directly call PreReconcileHook
@@ -332,12 +414,205 @@ var _ = Describe("#MachineDependencies", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal(serverGroupID1),
 						"PoolName": Equal(pool1),
+						"Name":     Equal(serverGroupName1),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"ID":       Equal(serverGroupID2),
 						"PoolName": Equal(pool2),
+						"Name":     Equal(serverGroupName2),
 					}),
 				))
+			})
+		})
+
+		Context("#PreReconcileHook with K8s version-based naming", func() {
+			var (
+				ctx       = context.Background()
+				policy    = "soft-anti-affinity"
+				poolName  = "pool-1"
+				shootUID  = "12345678-1234-1234-1234-123456789012"
+				oldSGName = technicalID + "-" + poolName
+			)
+
+			It("should use new name format for K8s >= 1.35", func() {
+				k8sVersion := "1.35.0"
+				pool := newWorkerPoolWithPolicy(poolName, &policy)
+				pool.KubernetesVersion = &k8sVersion
+				w.Spec.Pools = append(w.Spec.Pools, *pool)
+
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
+				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					cluster,
+					osFactory,
+				)
+
+				// Should list server groups and find none, then create with new name format
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						// Verify the name uses the new format (UUID prefix)
+						Expect(name).To(HavePrefix(shootUID[:16]))
+						return &servergroups.ServerGroup{
+							ID:       "new-id",
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					})
+				expectStatusUpdateToSucceed(ctx, statusCl)
+
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
+				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("new-id"))
+			})
+
+			It("should reuse existing old name format server group for K8s < 1.35", func() {
+				k8sVersion := "1.34.0"
+				pool := newWorkerPoolWithPolicy(poolName, &policy)
+				pool.KubernetesVersion = &k8sVersion
+				w.Spec.Pools = append(w.Spec.Pools, *pool)
+				w.Status.ProviderStatus = &runtime.RawExtension{
+					Object: &api.WorkerStatus{
+						ServerGroupDependencies: []api.ServerGroupDependency{
+							{
+								ID:       "existing-old-id",
+								Name:     oldSGName,
+								PoolName: poolName,
+							},
+						},
+					},
+				}
+
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
+				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					cluster,
+					osFactory,
+				)
+
+				computeClient.EXPECT().GetServerGroup(ctx, gomock.Any()).DoAndReturn(
+					func(ctx context.Context, name string) (*servergroups.ServerGroup, error) {
+						return &servergroups.ServerGroup{
+							ID:       "existing-old-id",
+							Name:     oldSGName,
+							Policies: []string{policy},
+						}, nil
+					})
+				expectStatusUpdateToSucceed(ctx, statusCl)
+
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
+				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("existing-old-id"))
+				Expect(workerStatus.ServerGroupDependencies[0].Name).To(Equal(oldSGName))
+			})
+
+			It("should use new name format for K8s < 1.35 when no existing old format server group exists", func() {
+				k8sVersion := "1.34.0"
+				pool := newWorkerPoolWithPolicy(poolName, &policy)
+				pool.KubernetesVersion = &k8sVersion
+				w.Spec.Pools = append(w.Spec.Pools, *pool)
+
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
+				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					cluster,
+					osFactory,
+				)
+
+				// Should list server groups, find none with old name, then create with new name format
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						// Verify the name uses the new format (UUID prefix)
+						Expect(name).To(HavePrefix(shootUID[:16]))
+						return &servergroups.ServerGroup{
+							ID:       "new-id",
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					})
+				expectStatusUpdateToSucceed(ctx, statusCl)
+
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
+				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("new-id"))
+			})
+
+			It("should recreate server group with new name when policy changes for K8s < 1.35", func() {
+				k8sVersion := "1.34.0"
+				oldPolicy := "soft-anti-affinity"
+				newPolicy := "anti-affinity"
+				pool := newWorkerPoolWithPolicy(poolName, &newPolicy)
+				pool.KubernetesVersion = &k8sVersion
+				w.Spec.Pools = append(w.Spec.Pools, *pool)
+
+				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
+				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
+
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					cluster,
+					osFactory,
+				)
+
+				// Should list server groups and find existing one with old policy
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
+					{
+						ID:       "existing-old-id",
+						Name:     oldSGName,
+						Policies: []string{oldPolicy}, // Old policy doesn't match
+					},
+				}, nil)
+				// Should create new server group with new name format
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy).DoAndReturn(
+					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+						// Verify the name uses the new format (UUID prefix)
+						Expect(name).To(HavePrefix(shootUID[:16]))
+						return &servergroups.ServerGroup{
+							ID:       "new-id-with-new-policy",
+							Name:     name,
+							Policies: []string{policy},
+						}, nil
+					})
+				expectStatusUpdateToSucceed(ctx, statusCl)
+
+				err := workerDelegate.PreReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
+				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("new-id-with-new-policy"))
 			})
 		})
 
@@ -360,6 +635,7 @@ var _ = Describe("#MachineDependencies", func() {
 							{
 								PoolName: poolName,
 								ID:       serverGroupID,
+								Name:     serverGroupName,
 							},
 						},
 					},
@@ -414,6 +690,7 @@ var _ = Describe("#MachineDependencies", func() {
 							{
 								PoolName: poolName,
 								ID:       serverGroupID,
+								Name:     serverGroupName,
 							},
 						},
 					},
@@ -452,11 +729,13 @@ var _ = Describe("#MachineDependencies", func() {
 				var (
 					ctx = context.Background()
 
-					policy         = "foo"
-					poolName1      = "pool1"
-					serverGroupID1 = "id1"
-					poolName2      = "pool2"
-					serverGroupID2 = "id2"
+					policy           = "foo"
+					poolName1        = "pool1"
+					serverGroupID1   = "id1"
+					serverGroupName1 = technicalID + "-" + poolName1 + "-rand1"
+					poolName2        = "pool2"
+					serverGroupID2   = "id2"
+					serverGroupName2 = technicalID + "-" + poolName2 + "-rand2"
 				)
 
 				deletionTime := metav1.NewTime(time.Now())
@@ -472,10 +751,12 @@ var _ = Describe("#MachineDependencies", func() {
 							{
 								PoolName: poolName1,
 								ID:       serverGroupID1,
+								Name:     serverGroupName1,
 							},
 							{
 								PoolName: poolName2,
 								ID:       serverGroupID2,
+								Name:     serverGroupName2,
 							},
 						},
 					},
@@ -492,11 +773,11 @@ var _ = Describe("#MachineDependencies", func() {
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID1,
-						Name: poolName1,
+						Name: serverGroupName1,
 					},
 					{
 						ID:   serverGroupID2,
-						Name: poolName2,
+						Name: serverGroupName2,
 					},
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID1).Return(nil)
@@ -530,6 +811,7 @@ var _ = Describe("#MachineDependencies", func() {
 							{
 								PoolName: poolName,
 								ID:       serverGroupID,
+								Name:     serverGroupName,
 							},
 						},
 					},
@@ -584,6 +866,7 @@ var _ = Describe("#MachineDependencies", func() {
 							{
 								PoolName: poolName,
 								ID:       serverGroupID,
+								Name:     serverGroupName,
 							},
 						},
 					},
@@ -622,11 +905,13 @@ var _ = Describe("#MachineDependencies", func() {
 				var (
 					ctx = context.Background()
 
-					policy         = "foo"
-					poolName1      = "pool1"
-					serverGroupID1 = "id1"
-					poolName2      = "pool2"
-					serverGroupID2 = "id2"
+					policy           = "foo"
+					poolName1        = "pool1"
+					serverGroupID1   = "id1"
+					serverGroupName1 = technicalID + "-" + poolName1 + "-rand1"
+					poolName2        = "pool2"
+					serverGroupID2   = "id2"
+					serverGroupName2 = technicalID + "-" + poolName2 + "-rand2"
 				)
 
 				deletionTime := metav1.NewTime(time.Now())
@@ -642,10 +927,12 @@ var _ = Describe("#MachineDependencies", func() {
 							{
 								PoolName: poolName1,
 								ID:       serverGroupID1,
+								Name:     serverGroupName1,
 							},
 							{
 								PoolName: poolName2,
 								ID:       serverGroupID2,
+								Name:     serverGroupName2,
 							},
 						},
 					},
@@ -662,11 +949,11 @@ var _ = Describe("#MachineDependencies", func() {
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
 					{
 						ID:   serverGroupID1,
-						Name: poolName1,
+						Name: serverGroupName1,
 					},
 					{
 						ID:   serverGroupID2,
-						Name: poolName2,
+						Name: serverGroupName2,
 					},
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID1).Return(nil)
@@ -730,6 +1017,14 @@ func newClusterWithDefaultCloudProfileConfig(name, technicalID string) *extensio
 		},
 		Seed: nil,
 		Shoot: &gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: "12345678-1234-1234-1234-123456789012",
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.30.0",
+				},
+			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: technicalID,
 			},
@@ -739,31 +1034,4 @@ func newClusterWithDefaultCloudProfileConfig(name, technicalID string) *extensio
 
 func expectStatusUpdateToSucceed(ctx context.Context, statusWriter *k8smocks.MockStatusWriter) {
 	statusWriter.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).Return(nil)
-}
-
-type prefixMatcher struct {
-	prefix string
-}
-
-func (p *prefixMatcher) Matches(x interface{}) bool {
-	s, ok := x.(string)
-	if !ok {
-		return false
-	}
-
-	return strings.HasPrefix(s, p.prefix)
-}
-
-func (p *prefixMatcher) String() string {
-	return fmt.Sprintf("doesn't match prefix %s", p.prefix)
-}
-
-func prefixMatch(prefix string) gomock.Matcher {
-	return &prefixMatcher{
-		prefix: prefix,
-	}
-}
-
-func serverGroupPrefix(clusterName, poolName string) string {
-	return fmt.Sprintf("%s-%s", clusterName, poolName)
 }

@@ -19,15 +19,26 @@ func isServerGroupRequired(config *api.WorkerConfig) bool {
 	return config != nil && config.ServerGroup != nil && config.ServerGroup.Policy != ""
 }
 
-func generateServerGroupNamePrefix(clusterName, poolName string) string {
+func generateServerGroupNamePrefixV1(clusterName, poolName string) string {
 	return fmt.Sprintf("%s-%s-", clusterName, poolName)
 }
-func generateServerGroupName(clusterName, poolName string, sgCfg api.ServerGroup) string {
-	// Policy cannot be empty here as we check for it in isServerGroupRequired before calling this function
-	data := fmt.Sprintf("policy=%s", sgCfg.Policy)
-	hash := utils.ComputeSHA256Hex([]byte(data))[:10]
 
-	return fmt.Sprintf("%s%s", generateServerGroupNamePrefix(clusterName, poolName), hash)
+func generateServerGroupNameV1(clusterName, poolName string) (string, error) {
+	suffix, err := utils.GenerateRandomString(10)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s%s", generateServerGroupNamePrefixV1(clusterName, poolName), suffix), nil
+}
+
+func generateServerGroupNamePrefixV2(uuid string) string {
+	return uuid[:16] + "-"
+}
+
+func generateServerGroupNameV2(uuid, poolName, policy string) (string, error) {
+	hashSeed := fmt.Sprintf("pool=%s,policy=%s", poolName, policy)
+	return fmt.Sprintf("%s%s", generateServerGroupNamePrefixV2(uuid), utils.ComputeSHA256Hex([]byte(hashSeed))[:8]), nil
 }
 
 func filterServerGroupsByPrefix(sgs []servergroups.ServerGroup, prefix string) []servergroups.ServerGroup {

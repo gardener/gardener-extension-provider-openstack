@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Mutating admission policy to control NetworkUnavailable condition set by Calico CNI plugin.
+name: calico-mutating-admission-policy
+version: 0.1.0

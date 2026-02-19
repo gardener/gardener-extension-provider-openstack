@@ -159,7 +159,7 @@ spec:
             - --timeout={{ .Values.timeout }}
             - --kube-api-qps=100
             - --kube-api-burst=200
-            - v=5
+            - --v=5
 {{- if .Values.resources.provisioner }}
           resources:
 {{ toYaml .Values.resources.provisioner | indent 12 }}

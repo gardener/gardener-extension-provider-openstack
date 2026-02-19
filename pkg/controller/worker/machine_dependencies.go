@@ -67,7 +67,7 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 	forceNewNameFormat := versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion)
 
 	// Generate expected server group names
-	name, err := generateServerGroupNameV2(string(w.cluster.Shoot.GetUID()), pool.Name, poolProviderConfig.ServerGroup.Policy)
+	name := generateServerGroupNameV2(string(w.cluster.Shoot.GetUID()), pool.Name, poolProviderConfig.ServerGroup.Policy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate server group name for worker pool %q: %w", pool.Name, err)
 	}

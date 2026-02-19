@@ -119,8 +119,6 @@ var _ = Describe("#MachineDependencies", func() {
 				w.Spec.Pools = append(w.Spec.Pools, pools...)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
-
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -135,7 +133,7 @@ var _ = Describe("#MachineDependencies", func() {
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						serverGroupName1 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID1,
@@ -144,7 +142,7 @@ var _ = Describe("#MachineDependencies", func() {
 						}, nil
 					}).Times(1)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						serverGroupName2 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID2,
@@ -185,8 +183,6 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
-
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
@@ -200,7 +196,7 @@ var _ = Describe("#MachineDependencies", func() {
 				// First reconcile - create initial server group
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						serverGroupName = name
 						return &servergroups.ServerGroup{
 							ID:       "id",
@@ -237,7 +233,7 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}, nil)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						newServerGroupName = name
 						return &servergroups.ServerGroup{
 							ID:       "new-id",
@@ -292,8 +288,6 @@ var _ = Describe("#MachineDependencies", func() {
 				}
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
-
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -306,7 +300,7 @@ var _ = Describe("#MachineDependencies", func() {
 				// Expect PreReconcileHook to list then create the server group
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						serverGroupName1 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID1,
@@ -368,8 +362,6 @@ var _ = Describe("#MachineDependencies", func() {
 				}
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
-
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -383,7 +375,7 @@ var _ = Describe("#MachineDependencies", func() {
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						serverGroupName1 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID1,
@@ -392,7 +384,7 @@ var _ = Describe("#MachineDependencies", func() {
 						}, nil
 					}).Times(1)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						serverGroupName2 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID2,
@@ -441,7 +433,6 @@ var _ = Describe("#MachineDependencies", func() {
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
 
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -456,7 +447,7 @@ var _ = Describe("#MachineDependencies", func() {
 				// Should list server groups and find none, then create with new name format
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						// Verify the name uses the new format (UUID prefix)
 						Expect(name).To(HavePrefix(shootUID[:16]))
 						return &servergroups.ServerGroup{
@@ -493,7 +484,6 @@ var _ = Describe("#MachineDependencies", func() {
 				}
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
 
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -506,9 +496,9 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				computeClient.EXPECT().GetServerGroup(ctx, gomock.Any()).DoAndReturn(
-					func(ctx context.Context, name string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, id string) (*servergroups.ServerGroup, error) {
 						return &servergroups.ServerGroup{
-							ID:       "existing-old-id",
+							ID:       id,
 							Name:     oldSGName,
 							Policies: []string{policy},
 						}, nil
@@ -531,7 +521,6 @@ var _ = Describe("#MachineDependencies", func() {
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
 
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -546,7 +535,7 @@ var _ = Describe("#MachineDependencies", func() {
 				// Should list server groups, find none with old name, then create with new name format
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						// Verify the name uses the new format (UUID prefix)
 						Expect(name).To(HavePrefix(shootUID[:16]))
 						return &servergroups.ServerGroup{
@@ -574,7 +563,6 @@ var _ = Describe("#MachineDependencies", func() {
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
-				cluster.Shoot.ObjectMeta.UID = "12345678-1234-1234-1234-123456789012"
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
 
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -596,7 +584,7 @@ var _ = Describe("#MachineDependencies", func() {
 				}, nil)
 				// Should create new server group with new name format
 				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy).DoAndReturn(
-					func(ctx context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
 						// Verify the name uses the new format (UUID prefix)
 						Expect(name).To(HavePrefix(shootUID[:16]))
 						return &servergroups.ServerGroup{

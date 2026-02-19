@@ -45,7 +45,7 @@ spec:
             - --nodeid=$(NODE_ID)
             - --endpoint=/csi/csi.sock
             - --drivername=$(DRIVER_NAME)
-            - --v=3
+            - --v=5
             - --share-protocol-selector=$(MANILA_SHARE_PROTO)
             - --fwdendpoint=/csi-fwd/csi.sock
             - --cluster-id={{ .Values.csimanila.clusterID }}

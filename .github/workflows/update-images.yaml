@@ -13,8 +13,6 @@ on:
 jobs:
   update-images:
     uses: gardener/cc-utils/.github/workflows/update-extension-provider-images.yaml@master
-    # Pass all available secrets (like the private key)
-    secrets: inherit
     permissions:
       contents: write
       id-token: write

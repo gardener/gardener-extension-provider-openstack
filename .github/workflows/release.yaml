@@ -23,11 +23,11 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
+    secrets: inherit
     permissions:
-      contents: write
+      contents: read
       packages: write
       id-token: write
-      pull-requests: write
     with:
       mode: release
       release-version: ${{ inputs.release-version }}
@@ -50,7 +50,6 @@ jobs:
       contents: write
       packages: write
       id-token: write
-      pull-requests: write
     with:
       release-commit-target: branch
       next-version: ${{ inputs.next-version }}

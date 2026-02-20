@@ -1,0 +1,61 @@
+{{- if .Values.enabled }}
+---
+apiVersion: admissionregistration.k8s.io/v1alpha1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: block-calico-network-unavailable-binding
+spec:
+  policyName: block-calico-network-unavailable
+---
+# MutatingAdmissionPolicy to block Calico from setting the NetworkUnavailable condition on nodes.
+apiVersion: admissionregistration.k8s.io/v1alpha1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: block-calico-network-unavailable
+spec:
+  failurePolicy: Fail
+  reinvocationPolicy: IfNeeded
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["UPDATE"]
+      resources: ["nodes/status"]
+  matchConditions:
+    # Only apply to requests from the calico-node service account
+    - name: is-calico-node
+      expression: >-
+        request.userInfo.username == "system:serviceaccount:kube-system:calico-node"
+    # Only apply if calico is trying to set/modify NetworkUnavailable condition
+    - name: has-network-unavailable-in-request
+      expression: >-
+        object.status.conditions.exists(c, c.type == 'NetworkUnavailable')
+  variables:
+    # Extract the current NetworkUnavailable condition from the old object
+    - name: oldNetworkUnavailableCondition
+      expression: >-
+        has(oldObject.status) && has(oldObject.status.conditions) ? 
+        oldObject.status.conditions.filter(c, c.type == 'NetworkUnavailable') : []
+    # Remove NetworkUnavailable from the new conditions
+    - name: conditionsWithoutNetworkUnavailable
+      expression: >-
+        object.status.conditions.filter(c, c.type != 'NetworkUnavailable')
+    # Reconstruct final conditions
+    - name: finalConditions
+      expression: >-
+        variables.oldNetworkUnavailableCondition.size() > 0 ?
+        variables.conditionsWithoutNetworkUnavailable + variables.oldNetworkUnavailableCondition :
+        variables.conditionsWithoutNetworkUnavailable
+  mutations:
+    # Replace the entire conditions array with the reconstructed version
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: |
+          [
+            JSONPatch{
+              op: "replace",
+              path: "/status/conditions",
+              value: variables.finalConditions
+            }
+          ]
+{{- end }}

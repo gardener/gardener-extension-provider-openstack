@@ -48,8 +48,11 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
+	// Wrap the generic actuator with our custom actuator for cleanup logic
+	wrappedActuator := NewActuator(mgr, genericActuator)
+
 	return controlplane.Add(mgr, controlplane.AddArgs{
-		Actuator:          genericActuator,
+		Actuator:          wrappedActuator,
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,

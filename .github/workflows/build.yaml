@@ -22,8 +22,7 @@ jobs:
       version-operation: ${{ inputs.release-version }}
       version-commit-callback-action-path: .github/actions/prepare-release
     permissions:
-      contents: read
-      pull-requests: write
+      id-token: write
 
   oci-images:
     name: Build OCI-Images

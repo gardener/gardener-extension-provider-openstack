@@ -87,6 +87,36 @@ Apart from the router and the worker subnet the OpenStack extension will also cr
 The optional `networks.shareNetwork.enabled` field controls the creation of a share network. This is only needed if shared
 file system storage (like NFS) should be used. Note, that in this case, the `ControlPlaneConfig` needs additional configuration, too.
 
+### Dual-Stack Networking (IPv4/IPv6)
+
+For dual-stack clusters that use both IPv4 and IPv6, you must configure a subnet pool for IPv6 address allocation.
+The `subnetPoolID` field specifies the OpenStack subnet pool ID from which IPv6 subnets will be allocated for nodes, pods, and services.
+
+An example `InfrastructureConfig` for dual-stack looks as follows:
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: InfrastructureConfig
+floatingPoolName: MY-FLOATING-POOL
+subnetPoolID: MY-SUBNET-POOL-ID  # IPv6 subnet pool
+networks:
+  workers: 10.250.0.0/19
+```
+
+**Why is `subnetPoolID` required for IPv6?**
+
+Unlike IPv4 where you explicitly specify the CIDR in `networks.workers`, IPv6 addresses are typically allocated from a larger prefix managed by your OpenStack environment.
+The subnet pool ensures that:
+
+1. **Proper address scope**: IPv6 subnets are allocated from a globally routable prefix that's properly configured in your OpenStack address scope
+2. **Automatic CIDR allocation**: OpenStack automatically allocates non-overlapping /64 subnets for nodes, pods, and services from the pool
+3. **External routing**: The subnet pool must be associated with an address scope that's known to the external network infrastructure for proper routing
+
+To find available subnet pools in your OpenStack environment, check with your cloud provider or administrator.
+The subnet pool must be configured with a suitable prefix length (typically /48 or larger) to allow allocation of multiple /64 subnets per shoot cluster.
+
+⚠️ The `subnetPoolID` is immutable after cluster creation and must be set for all dual-stack shoot clusters.
+
 ## `ControlPlaneConfig`
 
 The control plane configuration mainly contains values for the OpenStack-specific control plane components.

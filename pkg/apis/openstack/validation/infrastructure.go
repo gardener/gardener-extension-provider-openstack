@@ -87,6 +87,7 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks, oldNetworks, fldPath.Child("networks"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolName, oldConfig.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolSubnetName, oldConfig.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.SubnetPoolID, oldConfig.SubnetPoolID, fldPath.Child("subnetPoolID"))...)
 
 	return allErrs
 }

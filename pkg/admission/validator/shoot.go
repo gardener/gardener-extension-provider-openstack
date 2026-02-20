@@ -178,6 +178,11 @@ func (s *shoot) validateShoot(ctx context.Context, context *validationContext) f
 	if context.shoot.Spec.Networking != nil {
 		allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
+
+		// Validate that SubnetPoolID is set for dual-stack shoots
+		if !core.IsIPv4SingleStack(context.shoot.Spec.Networking.IPFamilies) && context.infraConfig.SubnetPoolID == nil {
+			allErrs = append(allErrs, field.Required(infraConfigPath.Child("subnetPoolID"), "subnetPoolID must be set for dual-stack shoots"))
+		}
 	}
 	allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfig(context.cpConfig, context.infraConfig, context.shoot.Spec.Kubernetes.Version, cpConfigPath)...)
 	allErrs = append(allErrs, openstackvalidation.ValidateWorkers(context.shoot.Spec.Provider.Workers, context.cloudProfileConfig, workersPath)...)

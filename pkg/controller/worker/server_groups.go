@@ -19,13 +19,17 @@ func isServerGroupRequired(config *api.WorkerConfig) bool {
 	return config != nil && config.ServerGroup != nil && config.ServerGroup.Policy != ""
 }
 
-func generateServerGroupName(clusterName, poolName string) (string, error) {
-	suffix, err := utils.GenerateRandomString(10)
-	if err != nil {
-		return "", err
-	}
+func generateServerGroupNamePrefixV1(clusterName, poolName string) string {
+	return fmt.Sprintf("%s-%s-", clusterName, poolName)
+}
 
-	return fmt.Sprintf("%s-%s-%s", clusterName, poolName, suffix), nil
+func generateServerGroupNamePrefixV2(uuid string) string {
+	return uuid[:16] + "-"
+}
+
+func generateServerGroupNameV2(uuid, poolName, policy string) string {
+	hashSeed := fmt.Sprintf("pool=%s,policy=%s", poolName, policy)
+	return fmt.Sprintf("%s%s", generateServerGroupNamePrefixV2(uuid), utils.ComputeSHA256Hex([]byte(hashSeed))[:8])
 }
 
 func filterServerGroupsByPrefix(sgs []servergroups.ServerGroup, prefix string) []servergroups.ServerGroup {

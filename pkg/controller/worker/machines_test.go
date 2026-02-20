@@ -807,7 +807,6 @@ var _ = Describe("Machines", func() {
 
 					// Test workerDelegate.DeployMachineClasses()
 					expectedUserDataSecretRefRead()
-					fmt.Printf("Expected machineClasses: %+v\n", machineClasses)
 
 					chartApplier.
 						EXPECT().
@@ -884,13 +883,12 @@ var _ = Describe("Machines", func() {
 				})
 
 				It("should return the expected machine deployments for profile image types with id", func() {
-					//setup(region, "", machineImageID, archARM)
+					// setup(region, "", machineImageID, archARM)
 					workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithRegion, clusterWithRegion, nil)
 					clusterWithRegion.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
 
 					// Test workerDelegate.DeployMachineClasses()
 					expectedUserDataSecretRefRead()
-					fmt.Printf("Expected machineClasses: %+v\n", machineClasses)
 
 					chartApplier.
 						EXPECT().
@@ -945,8 +943,6 @@ var _ = Describe("Machines", func() {
 						MachineImages: machineImages,
 					}
 
-					fmt.Printf("Expected machineImages: %+v\n", machineImages)
-
 					workerWithExpectedImages := workerWithRegion.DeepCopy()
 					workerWithExpectedImages.Status.ProviderStatus = &runtime.RawExtension{
 						Object: expectedImages,
@@ -977,7 +973,7 @@ var _ = Describe("Machines", func() {
 							serverGroupID3   = "id3"
 						)
 
-						//setup(region, "", machineImageID)
+						// setup(region, "", machineImageID)
 
 						workerWithServerGroup := w.DeepCopy()
 						workerWithServerGroup.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
@@ -1107,7 +1103,7 @@ var _ = Describe("Machines", func() {
 							machineClassPool3Zone1,
 							machineClassPool3Zone2,
 						}}
-						fmt.Printf("Expected machineClasses: %+v\n", machineClasses)
+
 						expectedUserDataSecretRefRead()
 						chartApplier.
 							EXPECT().
@@ -1129,7 +1125,7 @@ var _ = Describe("Machines", func() {
 					})
 
 					It("should fail if the server group dependencies do not exist", func() {
-						//(region, machineImage, "")
+						// (region, machineImage, "")
 						// TODO: check if we need to skip this test when image names are used instead
 						if !usesGlobalImageNames {
 							Skip("skipping test if image IDs are used")
@@ -1157,7 +1153,7 @@ var _ = Describe("Machines", func() {
 
 				Context("Machine Labels", func() {
 					It("should consider rolling machine labels for the worker pool hash", func() {
-						//setup(region, machineImage, "")
+						// setup(region, machineImage, "")
 
 						applyLabelsAndPolicy := func(labels []apiv1alpha1.MachineLabel, policy *string) string {
 							w.Spec.Pools[0].Labels = utils.MergeStringMaps(w.Spec.Pools[0].Labels, map[string]string{"k1": "v1"})

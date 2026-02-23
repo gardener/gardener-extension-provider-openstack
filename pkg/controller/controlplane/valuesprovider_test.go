@@ -714,7 +714,8 @@ var _ = Describe("ValuesProvider", func() {
 						"nodeVolumeAttachLimit":      ptr.To[int32](nodeVoluemAttachLimit),
 						"userAgentHeaders":           []string{domainName, tenantName, technicalID},
 					}),
-					openstack.CSIDriverManila: enabledFalse,
+					openstack.CSIDriverManila:          enabledFalse,
+					"calico-mutating-admission-policy": enabledFalse,
 				}))
 			})
 
@@ -752,6 +753,7 @@ var _ = Describe("ValuesProvider", func() {
 							"caCert":                      "",
 						},
 					}),
+					"calico-mutating-admission-policy": enabledFalse,
 				}))
 			})
 		})

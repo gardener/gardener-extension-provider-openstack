@@ -27,6 +27,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	admissionregistrationv1alpha1 "k8s.io/api/admissionregistration/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -48,6 +49,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/utils"
+	networkingutils "github.com/gardener/gardener-extension-provider-openstack/pkg/utils/networking"
 )
 
 const (
@@ -239,6 +241,13 @@ var (
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIManilaNodeName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIManilaNodeName},
+				},
+			},
+			{
+				Name: "calico-mutating-admission-policy",
+				Objects: []*chart.Object{
+					{Type: &admissionregistrationv1alpha1.MutatingAdmissionPolicy{}, Name: "calico-node-status-patch"},
+					{Type: &admissionregistrationv1alpha1.MutatingAdmissionPolicyBinding{}, Name: "calico-node-status-patch"},
 				},
 			},
 		},
@@ -830,10 +839,22 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		return nil, err
 	}
 
+	// Determine if the calico-mutating-admission-policy should be enabled
+	mutatingAdmissionPolicyEnabled := false
+	if vp.isUsingCalico(cluster) && vp.isMutatingAdmissionPolicyEnabled(cluster) {
+		overlayEnabled, err := networkingutils.IsOverlayEnabled(cluster.Shoot.Spec.Networking)
+		if err != nil {
+			return nil, fmt.Errorf("could not determine if overlay is enabled: %w", err)
+		}
+		// Enable the policy only when overlay is disabled
+		mutatingAdmissionPolicyEnabled = !overlayEnabled
+	}
+
 	return map[string]interface{}{
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName:                csiNodeDriverValues,
 		openstack.CSIDriverManila:            csiDriverManilaValues,
+		"calico-mutating-admission-policy":   map[string]interface{}{"enabled": mutatingAdmissionPolicyEnabled},
 	}, nil
 }
 
@@ -862,6 +883,36 @@ func (vp *valuesProvider) isOverlayEnabled(network *v1beta1.Networking) (bool, e
 
 func (vp *valuesProvider) isCSIManilaEnabled(cpConfig *api.ControlPlaneConfig) bool {
 	return cpConfig.Storage != nil && cpConfig.Storage.CSIManila != nil && cpConfig.Storage.CSIManila.Enabled
+}
+
+// isUsingCalico returns true if the cluster is using Calico as the CNI.
+func (vp *valuesProvider) isUsingCalico(cluster *extensionscontroller.Cluster) bool {
+	if cluster.Shoot.Spec.Networking == nil || cluster.Shoot.Spec.Networking.Type == nil {
+		return false
+	}
+	return *cluster.Shoot.Spec.Networking.Type == "calico"
+}
+
+// isMutatingAdmissionPolicyEnabled returns true if the MutatingAdmissionPolicy feature is enabled in the cluster.
+func (vp *valuesProvider) isMutatingAdmissionPolicyEnabled(cluster *extensionscontroller.Cluster) bool {
+	// Check if feature gates are set and if MutatingAdmissionPolicy is enabled
+	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer == nil ||
+		cluster.Shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates == nil {
+		return false
+	}
+	if enabled, ok := cluster.Shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates["MutatingAdmissionPolicy"]; !ok || !enabled {
+		return false
+	}
+
+	// Check if the API is enabled in runtime config
+	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig == nil {
+		return false
+	}
+	if enabled, ok := cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig["admissionregistration.k8s.io/v1alpha1"]; !ok || !enabled {
+		return false
+	}
+
+	return true
 }
 
 func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(

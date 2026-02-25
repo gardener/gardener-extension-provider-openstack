@@ -66,8 +66,9 @@ func (a *actuator) Reconcile(
 
 	// Clean up NetworkUnavailable conditions set by Calico only when overlay is disabled
 	// Only run cleanup if it hasn't been completed yet (annotation not present)
-	if !overlayEnabled && cp.Annotations[AnnotationCalicoCleanupCompleted] != "true" {
-		if err := a.cleanupCalicoNetworkUnavailableConditions(ctx, log, cp.Namespace, cluster); err != nil {
+	// Skip if cluster is hibernated or transitioning (hibernating/waking up)
+	if !overlayEnabled && !extensionscontroller.IsHibernated(cluster) && !extensionscontroller.IsHibernatingOrWakingUp(cluster) && cp.Annotations[AnnotationCalicoCleanupCompleted] != "true" {
+		if err := a.cleanupCalicoNetworkUnavailableConditions(ctx, log, cp.Namespace); err != nil {
 			log.Error(err, "Failed to cleanup Calico NetworkUnavailable conditions")
 			return ok, err
 		} else {
@@ -96,12 +97,7 @@ func (a *actuator) cleanupCalicoNetworkUnavailableConditions(
 	ctx context.Context,
 	log logr.Logger,
 	namespace string,
-	cluster *extensionscontroller.Cluster,
 ) error {
-	if extensionscontroller.IsHibernated(cluster) {
-		return nil
-	}
-
 	_, shootClient, err := util.NewClientForShoot(ctx, a.client, namespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
 	if err != nil {
 		return fmt.Errorf("could not create shoot client: %w", err)

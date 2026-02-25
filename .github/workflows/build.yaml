@@ -23,6 +23,7 @@ jobs:
       version-commit-callback-action-path: .github/actions/prepare-release
     permissions:
       id-token: write
+      pull-requests: write # required until https://github.com/gardener/cc-utils/pull/1529 is merged
 
   oci-images:
     name: Build OCI-Images

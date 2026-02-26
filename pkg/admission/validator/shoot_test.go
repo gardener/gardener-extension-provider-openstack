@@ -274,14 +274,35 @@ var _ = Describe("Shoot validator", func() {
 					}
 				})
 
+				It("should succeed when networking is configured with dual-stack and subnetPoolID", func() {
+					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: encode(&apiv1alpha1.InfrastructureConfig{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "InfrastructureConfig",
+							},
+							Networks: apiv1alpha1.Networks{
+								Workers: "10.250.0.0/19",
+							},
+							FloatingPoolName: "pool-1",
+							SubnetPoolID:     ptr.To("subnet-pool-id"),
+						}),
+					}
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				It("should return err when networking is configured to use dual-stack", func() {
 					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 
 					err := shootValidator.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.networking.ipFamilies"),
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.provider.infrastructureConfig.subnetPoolID"),
 					}))))
 				})
 
@@ -290,10 +311,16 @@ var _ = Describe("Shoot validator", func() {
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
 					err := shootValidator.Validate(ctx, shoot, nil)
-					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.networking.ipFamilies"),
-					}))))
+					Expect(err).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.networking.ipFamilies"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.provider.infrastructureConfig.subnetPoolID"),
+						})),
+					))
 				})
 			})
 		})

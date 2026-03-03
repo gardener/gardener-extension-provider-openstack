@@ -345,15 +345,26 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 	}
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 
-	// Use configured subnet pool ID if provided
+	// Determine subnet configuration based on whether explicit IPv6 CIDRs are provided
 	var subnetPoolID string
-	if fctx.config.SubnetPoolID != nil {
-		subnetPoolID = *fctx.config.SubnetPoolID
+	var nodeCIDR, podCIDR, serviceCIDR string
+
+	if fctx.hasExplicitIPv6Config() {
+		// Use explicit CIDRs from IPv6 configuration
+		nodeCIDR = fctx.config.Networks.IPv6.NodeCIDR
+		podCIDR = fctx.config.Networks.IPv6.PodCIDR
+		serviceCIDR = fctx.config.Networks.IPv6.ServiceCIDR
+	} else {
+		// Use subnet pool for automatic CIDR allocation
+		if fctx.config.SubnetPoolID != nil {
+			subnetPoolID = *fctx.config.SubnetPoolID
+		}
 	}
 
 	desired := []subnets.Subnet{{
 		Name:            fctx.defaultSubnetIPv6Name(),
 		NetworkID:       networkID,
+		CIDR:            nodeCIDR,
 		IPVersion:       6,
 		DNSNameservers:  fctx.cloudProfileConfig.DNSServers,
 		IPv6RAMode:      "slaac",
@@ -363,20 +374,18 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 		{
 			Name:           fctx.defaultSubnetIPv6Name() + "-pod",
 			NetworkID:      networkID,
+			CIDR:           podCIDR,
 			IPVersion:      6,
 			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
-			// IPv6RAMode:      "none",
-			// IPv6AddressMode: "none",
-			SubnetPoolID: subnetPoolID,
+			SubnetPoolID:   subnetPoolID,
 		},
 		{
 			Name:           fctx.defaultSubnetIPv6Name() + "-svc",
 			NetworkID:      networkID,
+			CIDR:           serviceCIDR,
 			IPVersion:      6,
 			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
-			// IPv6RAMode:      "none",
-			// IPv6AddressMode: "none",
-			SubnetPoolID: subnetPoolID,
+			SubnetPoolID:   subnetPoolID,
 		}}
 
 	for _, desiredSubnet := range desired {
@@ -410,6 +419,32 @@ func (fctx *FlowContext) ensureIPv6CIDRs(ctx context.Context) error {
 		return nil
 	}
 
+	// If explicit IPv6 CIDRs are configured, use them directly
+	if fctx.hasExplicitIPv6Config() {
+		nodeCIDR := fctx.config.Networks.IPv6.NodeCIDR
+		podCIDR := fctx.config.Networks.IPv6.PodCIDR
+		serviceCIDR := fctx.config.Networks.IPv6.ServiceCIDR
+
+		// For service CIDR, extract the IP and use /112 prefix as per convention
+		ip, _, err := net.ParseCIDR(serviceCIDR)
+		if err != nil {
+			return fmt.Errorf("failed to parse configured IPv6 service CIDR %s: %w", serviceCIDR, err)
+		}
+		serviceCIDR = fmt.Sprintf("%s/112", ip.String())
+
+		fctx.state.Set(IdentifierNodeSubnetIPv6CIDR, nodeCIDR)
+		fctx.state.Set(IdentifierPodSubnetIPv6CIDR, podCIDR)
+		fctx.state.Set(IdentifierServiceSubnetIPv6CIDR, serviceCIDR)
+
+		log.Info("Using explicit IPv6 CIDRs from configuration",
+			"nodeCIDR", nodeCIDR,
+			"podCIDR", podCIDR,
+			"serviceCIDR", serviceCIDR)
+
+		return nil
+	}
+
+	// Otherwise, wait for subnet pool to allocate CIDRs
 	cidrIdentifiers := []string{IdentifierNodeSubnetIPv6CIDR, IdentifierPodSubnetIPv6CIDR, IdentifierServiceSubnetIPv6CIDR}
 	for index, identifier := range []string{IdentifierSubnetIPv6, IdentifierSubnetIPv6Pod, IdentifierSubnetIPv6Svc} {
 		// Get the actual IPv6 CIDR from the created subnet

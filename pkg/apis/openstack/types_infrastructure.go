@@ -38,6 +38,19 @@ type Networks struct {
 	ID *string
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	ShareNetwork *ShareNetwork
+	// IPv6 holds information about the IPv6 CIDRs.
+	// +optional
+	IPv6 *IPv6Config
+}
+
+// IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
+type IPv6Config struct {
+	// NodeCIDR is the CIDR of the node subnet.
+	NodeCIDR string
+	// PodCIDR is the CIDR of the pods.
+	PodCIDR string
+	// ServiceCIDR is the CIDR of the services.
+	ServiceCIDR string
 }
 
 // Router indicates whether to use an existing router or create a new one.

@@ -218,3 +218,8 @@ func (fctx *FlowContext) workersCIDR() string {
 func (fctx *FlowContext) isDualStack() bool {
 	return !gardencorev1beta1.IsIPv4SingleStack(fctx.shootNetworking.IPFamilies)
 }
+
+// hasExplicitIPv6Config returns true if the IPv6 configuration with explicit CIDRs is set
+func (fctx *FlowContext) hasExplicitIPv6Config() bool {
+	return fctx.config.Networks.IPv6 != nil
+}

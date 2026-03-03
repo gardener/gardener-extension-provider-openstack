@@ -295,18 +295,43 @@ var _ = Describe("Shoot validator", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("should return err when networking is configured to use dual-stack", func() {
+				It("should succeed when networking is configured with dual-stack and IPv6 config", func() {
+					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: encode(&apiv1alpha1.InfrastructureConfig{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "InfrastructureConfig",
+							},
+							Networks: apiv1alpha1.Networks{
+								Workers: "10.250.0.0/19",
+								IPv6: &apiv1alpha1.IPv6Config{
+									NodeCIDR:    "2001:db8:1::/64",
+									PodCIDR:     "2001:db8:2::/64",
+									ServiceCIDR: "2001:db8:3::/112",
+								},
+							},
+							FloatingPoolName: "pool-1",
+						}),
+					}
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should return err when networking is configured to use dual-stack without subnetPoolID or IPv6 config", func() {
 					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 
 					err := shootValidator.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.provider.infrastructureConfig.subnetPoolID"),
+						"Field": Equal("spec.provider.infrastructureConfig"),
 					}))))
 				})
 
-				It("should return err when networking is configured to use IPv6-only", func() {
+				It("should return err when networking is configured to use IPv6-only without subnetPoolID or IPv6 config", func() {
 					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
@@ -318,7 +343,7 @@ var _ = Describe("Shoot validator", func() {
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeRequired),
-							"Field": Equal("spec.provider.infrastructureConfig.subnetPoolID"),
+							"Field": Equal("spec.provider.infrastructureConfig"),
 						})),
 					))
 				})

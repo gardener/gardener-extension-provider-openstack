@@ -89,10 +89,13 @@ file system storage (like NFS) should be used. Note, that in this case, the `Con
 
 ### Dual-Stack Networking (IPv4/IPv6)
 
-For dual-stack clusters that use both IPv4 and IPv6, you must configure a subnet pool for IPv6 address allocation.
-The `subnetPoolID` field specifies the OpenStack subnet pool ID from which IPv6 subnets will be allocated for nodes, pods, and services.
+For dual-stack clusters that use both IPv4 and IPv6, you have two configuration options:
 
-An example `InfrastructureConfig` for dual-stack looks as follows:
+#### Option 1: Using a Subnet Pool (Recommended)
+
+The `subnetPoolID` field specifies the OpenStack subnet pool ID from which IPv6 subnets will be allocated automatically for nodes, pods, and services.
+
+An example `InfrastructureConfig` for dual-stack with subnet pool looks as follows:
 
 ```yaml
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
@@ -103,19 +106,25 @@ networks:
   workers: 10.250.0.0/19
 ```
 
-**Why is `subnetPoolID` required for IPv6?**
-
 Unlike IPv4 where you explicitly specify the CIDR in `networks.workers`, IPv6 addresses are typically allocated from a larger prefix managed by your OpenStack environment.
-The subnet pool ensures that:
 
-1. **Proper address scope**: IPv6 subnets are allocated from a globally routable prefix that's properly configured in your OpenStack address scope
-2. **Automatic CIDR allocation**: OpenStack automatically allocates non-overlapping /64 subnets for nodes, pods, and services from the pool
-3. **External routing**: The subnet pool must be associated with an address scope that's known to the external network infrastructure for proper routing
+#### Option 2: Explicit IPv6 CIDR Configuration
 
-To find available subnet pools in your OpenStack environment, check with your cloud provider or administrator.
-The subnet pool must be configured with a suitable prefix length (typically /48 or larger) to allow allocation of multiple /64 subnets per shoot cluster.
+Alternatively, you can explicitly specify IPv6 CIDRs for nodes, pods, and services using the `networks.ipv6` field:
 
-⚠️ The `subnetPoolID` is immutable after cluster creation and must be set for all dual-stack shoot clusters.
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: InfrastructureConfig
+floatingPoolName: MY-FLOATING-POOL
+networks:
+  workers: 10.250.0.0/19
+  ipv6:
+    nodeCIDR: 2001:db8:1::/64      # IPv6 CIDR for worker nodes
+    podCIDR: 2001:db8:2::/64        # IPv6 CIDR for pods
+    serviceCIDR: 2001:db8:3::/112   # IPv6 CIDR for services
+```
+
+⚠️ Both `subnetPoolID` and `networks.ipv6` configuration are immutable after cluster creation. 
 
 ## `ControlPlaneConfig`
 

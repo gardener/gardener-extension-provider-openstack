@@ -102,5 +102,5 @@ func (a *actuator) migrateFromTerraform(ctx context.Context, log logr.Logger, in
 	// we mark that there are infra resources created.
 	state.Data[infraflow.CreatedResourcesExistKey] = "true"
 
-	return state, infraflow.PatchProviderStatusAndState(ctx, a.client, infra, nil, &runtime.RawExtension{Object: state})
+	return state, infraflow.PatchProviderStatusAndState(ctx, a.client, infra, nil, nil, &runtime.RawExtension{Object: state}, nil, nil, nil)
 }

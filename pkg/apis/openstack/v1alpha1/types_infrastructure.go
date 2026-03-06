@@ -20,6 +20,10 @@ type InfrastructureConfig struct {
 	// in the Floating IP Pool where the router should be attached to.
 	// +optional
 	FloatingPoolSubnetName *string `json:"floatingPoolSubnetName,omitempty"`
+	// SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
+	// If not specified, IPv6 subnets will be allocated from the default subnet pool.
+	// +optional
+	SubnetPoolID *string `json:"subnetPoolID,omitempty"`
 	// Networks is the OpenStack specific network configuration
 	Networks Networks `json:"networks"`
 }
@@ -40,6 +44,19 @@ type Networks struct {
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	// +optional
 	ShareNetwork *ShareNetwork `json:"shareNetwork,omitempty"`
+	// IPv6 holds information about the IPv6 CIDRs.
+	// +optional
+	IPv6 *IPv6Config `json:"ipv6,omitempty"`
+}
+
+// IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
+type IPv6Config struct {
+	// NodeCIDR is the CIDR of the node subnet.
+	NodeCIDR string `json:"nodeCIDR"`
+	// PodCIDR is the CIDR of the pods.
+	PodCIDR string `json:"podCIDR"`
+	// ServiceCIDR is the CIDR of the services.
+	ServiceCIDR string `json:"serviceCIDR"`
 }
 
 // Router indicates whether to use an existing router or create a new one.

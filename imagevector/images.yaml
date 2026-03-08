@@ -339,7 +339,7 @@ images:
       integrity_requirement: high
       availability_requirement: low
     signing: false
-# CSI provisioner v6.0.0 and above requires k8s 1.34 or higher
+  targetVersion: 5.3.x
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
@@ -354,7 +354,22 @@ images:
       integrity_requirement: high
       availability_requirement: low
     signing: false
-  targetVersion: '>= 1.34'
+  targetVersion: 6.1.x
+- name: csi-provisioner
+  sourceRepository: github.com/kubernetes-csi/external-provisioner
+  repository: registry.k8s.io/sig-storage/csi-provisioner
+  tag: v6.2.0
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: private
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: low
+      integrity_requirement: high
+      availability_requirement: low
+    signing: false
+  targetVersion: '>= 6.2'
 - name: csi-resizer
   sourceRepository: github.com/kubernetes-csi/external-resizer
   repository: registry.k8s.io/sig-storage/csi-resizer

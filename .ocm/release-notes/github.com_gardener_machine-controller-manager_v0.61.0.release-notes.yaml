@@ -1,0 +1,102 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.61.0
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: bugfix
+  contents: Fixed spurious warning logs for machines without `force-deletion` label
+  mimetype: text/markdown
+  reference: '[#1057](https://github.com/gardener/machine-controller-manager/pull/1057)'
+  type: standard
+- audience: user
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: feature
+  contents: Users with delete permissions can simply use `kubectl delete node` to
+    delete backing Machine. `node.machine.sapcloud.io/trigger-deletion-by-mcm` annotation
+    on Node no longer supported for indirect deletion of Machine
+  mimetype: text/markdown
+  reference: '[#1055](https://github.com/gardener/machine-controller-manager/pull/1055)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: doc
+  contents: Added proposal for the temporary preservation of machines.
+  mimetype: text/markdown
+  reference: '[#1031](https://github.com/gardener/machine-controller-manager/pull/1031)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: r4mek
+  category: bugfix
+  contents: Made changes to reconcileClusterMachineTermination to avoid duplicate
+    reconciliations
+  mimetype: text/markdown
+  reference: '[#1056](https://github.com/gardener/machine-controller-manager/pull/1056)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: r4mek
+  category: bugfix
+  contents: Updated machineclass reconciliation to avoid unnecessary machine requeues
+  mimetype: text/markdown
+  reference: '[#1056](https://github.com/gardener/machine-controller-manager/pull/1056)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: maboehm
+  category: bugfix
+  contents: Fix panic if provider does not support Driver.InitializeMachine
+  mimetype: text/markdown
+  reference: '[#1032](https://github.com/gardener/machine-controller-manager/pull/1032)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: Duciwuci
+  category: bugfix
+  contents: The metric for the `machine_current_status_phase` has been fixed and is
+    not reporting removed Machines anymore
+  mimetype: text/markdown
+  reference: '[#1058](https://github.com/gardener/machine-controller-manager/pull/1058)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: takoverflow
+  category: bugfix
+  contents: Added a safeguard to delay deletion of machines that are undergoing a
+    `Create` Request to prevent orphaning of VMs.
+  mimetype: text/markdown
+  reference: '[#1036](https://github.com/gardener/machine-controller-manager/pull/1036)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: acumino
+  category: bugfix
+  contents: Fixed an issue where deleting a machine from an old MachineSet could prevent
+    proper scaling. The new MachineSet now scales up when total replicas (old + new)
+    drop below the desired count, ensuring replacements are created with the updated
+    configuration.
+  mimetype: text/markdown
+  reference: '[#1052](https://github.com/gardener/machine-controller-manager/pull/1052)'
+  type: standard

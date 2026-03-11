@@ -30,6 +30,22 @@ func FindSubnetByPurpose(subnets []api.Subnet, purpose api.Purpose) (*api.Subnet
 	return nil, fmt.Errorf("cannot find subnet with purpose %q", purpose)
 }
 
+// FindSubnetsByPurpose takes a list of subnets and returns all entries
+// whose purpose matches with the given purpose. If no such entries are found then an error will be
+// returned.
+func FindSubnetsByPurpose(subnets []api.Subnet, purpose api.Purpose) ([]api.Subnet, error) {
+	var matchingSubnets []api.Subnet
+	for _, subnet := range subnets {
+		if subnet.Purpose == purpose {
+			matchingSubnets = append(matchingSubnets, subnet)
+		}
+	}
+	if len(matchingSubnets) == 0 {
+		return nil, fmt.Errorf("cannot find any subnets with purpose %q", purpose)
+	}
+	return matchingSubnets, nil
+}
+
 // FindSecurityGroupByPurpose takes a list of security groups and tries to find the first entry
 // whose purpose matches with the given purpose. If no such entry is found then an error will be
 // returned.

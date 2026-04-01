@@ -4,28 +4,32 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: infrastructures.extensions.gardener.cloud
+  name: selfhostedshootexposures.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
   names:
-    kind: Infrastructure
-    listKind: InfrastructureList
-    plural: infrastructures
+    kind: SelfHostedShootExposure
+    listKind: SelfHostedShootExposureList
+    plural: selfhostedshootexposures
     shortNames:
-    - infra
-    singular: infrastructure
+    - exp
+    singular: selfhostedshootexposure
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: The type of the cloud provider for this resource.
+    - description: The type of the self hosted shoot exposure provider for this resource.
       jsonPath: .spec.type
       name: Type
       type: string
-    - description: The region into which the infrastructure should be deployed.
-      jsonPath: .spec.region
-      name: Region
+    - description: The IP of the first LoadBalancer ingress.
+      jsonPath: .status.ingress[0].ip
+      name: IP
       type: string
-    - description: Status of infrastructure resource.
+    - description: The Hostname of the first LoadBalancer ingress.
+      jsonPath: .status.ingress[0].hostname
+      name: Hostname
+      type: string
+    - description: Status of self hosted shoot exposure resource.
       jsonPath: .status.lastOperation.state
       name: Status
       type: string
@@ -36,7 +40,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Infrastructure is a specification for cloud provider infrastructure.
+        description: SelfHostedShootExposure contains the configuration for the exposure
+          of a self-hosted shoot control plane.
         properties:
           apiVersion:
             description: |-
@@ -57,7 +62,7 @@ spec:
             type: object
           spec:
             description: |-
-              Specification of the Infrastructure.
+              Specification of the SelfHostedShootExposure.
               If the object's deletion timestamp is set, this field is immutable.
             properties:
               class:
@@ -67,43 +72,106 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              credentialsRef:
+                description: |-
+                  CredentialsRef is a reference to the cloud provider credentials.
+                  It is only set for shoots with managed infrastructure (i.e., if `Shoot.spec.{credentials,secret}BindingName` is set).
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              endpoints:
+                description: Endpoints contains a list of healthy control plane nodes
+                  to expose.
+                items:
+                  description: ControlPlaneEndpoint is an endpoint that should be
+                    exposed.
+                  properties:
+                    addresses:
+                      description: Addresses is a list of addresses of type NodeAddress
+                        to expose.
+                      items:
+                        description: NodeAddress contains information for the node's
+                          address.
+                        properties:
+                          address:
+                            description: The node address.
+                            type: string
+                          type:
+                            description: Node address type, one of Hostname, ExternalIP
+                              or InternalIP.
+                            type: string
+                        required:
+                        - address
+                        - type
+                        type: object
+                      type: array
+                    nodeName:
+                      description: NodeName is the name of the node to expose.
+                      type: string
+                  required:
+                  - addresses
+                  - nodeName
+                  type: object
+                type: array
+              port:
+                description: |-
+                  Port is the port number that should be exposed by the exposure mechanism.
+                  It is the port where the API server listens on the control plane nodes and the port on which the load balancer (or
+                  any other exposure mechanism) should listen on.
+                format: int32
+                type: integer
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
-              region:
-                description: Region is the region of this infrastructure. This field
-                  is immutable.
-                type: string
-              secretRef:
-                description: SecretRef is a reference to a secret that contains the
-                  cloud provider credentials.
-                properties:
-                  name:
-                    description: name is unique within a namespace to reference a
-                      secret resource.
-                    type: string
-                  namespace:
-                    description: namespace defines the space within which the secret
-                      name must be unique.
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-              sshPublicKey:
-                description: SSHPublicKey is the public SSH key that should be used
-                  with this infrastructure.
-                format: byte
-                type: string
               type:
                 description: Type contains the instance of the resource's kind.
                 type: string
             required:
-            - region
-            - secretRef
+            - endpoints
+            - port
             - type
             type: object
           status:
-            description: InfrastructureStatus is the status for an Infrastructure
+            description: SelfHostedShootExposureStatus is the status for an SelfHostedShootExposure
               resource.
             properties:
               conditions:
@@ -151,12 +219,69 @@ spec:
                   - type
                   type: object
                 type: array
-              egressCIDRs:
-                description: |-
-                  EgressCIDRs is a list of CIDRs used by the shoot as the source IP for egress traffic. For certain environments the egress
-                  IPs may not be stable in which case the extension controller may opt to not populate this field.
+              ingress:
+                description: Ingress is a list of endpoints of the exposure mechanism.
                 items:
-                  type: string
+                  description: |-
+                    LoadBalancerIngress represents the status of a load-balancer ingress point:
+                    traffic intended for the service should be sent to an ingress point.
+                  properties:
+                    hostname:
+                      description: |-
+                        Hostname is set for load-balancer ingress points that are DNS based
+                        (typically AWS load-balancers)
+                      type: string
+                    ip:
+                      description: |-
+                        IP is set for load-balancer ingress points that are IP based
+                        (typically GCE or OpenStack load-balancers)
+                      type: string
+                    ipMode:
+                      description: |-
+                        IPMode specifies how the load-balancer IP behaves, and may only be specified when the ip field is specified.
+                        Setting this to "VIP" indicates that traffic is delivered to the node with
+                        the destination set to the load-balancer's IP and port.
+                        Setting this to "Proxy" indicates that traffic is delivered to the node or pod with
+                        the destination set to the node's IP and node port or the pod's IP and port.
+                        Service implementations may use this information to adjust traffic routing.
+                      type: string
+                    ports:
+                      description: |-
+                        Ports is a list of records of service ports
+                        If used, every port defined in the service should have an entry in it
+                      items:
+                        description: PortStatus represents the error condition of
+                          a service port
+                        properties:
+                          error:
+                            description: |-
+                              Error is to record the problem with the service port
+                              The format of the error shall comply with the following rules:
+                              - built-in error values shall be specified in this file and those shall use
+                                CamelCase names
+                              - cloud provider specific error values must have names that comply with the
+                                format foo.example.com/CamelCase.
+                            maxLength: 316
+                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                            type: string
+                          port:
+                            description: Port is the port number of the service port
+                              of which status is recorded here
+                            format: int32
+                            type: integer
+                          protocol:
+                            description: |-
+                              Protocol is the protocol of the service port of which status is recorded here
+                              The supported values are: "TCP", "UDP", "SCTP"
+                            type: string
+                        required:
+                        - error
+                        - port
+                        - protocol
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                  type: object
                 type: array
               lastError:
                 description: LastError holds information about the last occurred error
@@ -214,32 +339,6 @@ spec:
                 - state
                 - type
                 type: object
-              networking:
-                description: Networking contains information about cluster networking
-                  such as CIDRs.
-                properties:
-                  nodes:
-                    description: Nodes are the CIDRs of the node network.
-                    items:
-                      type: string
-                    type: array
-                  pods:
-                    description: Pods are the CIDRs of the pod network.
-                    items:
-                      type: string
-                    type: array
-                  services:
-                    description: Services are the CIDRs of the service network.
-                    items:
-                      type: string
-                    type: array
-                type: object
-              nodesCIDR:
-                description: |-
-                  NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
-                  This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
-                  be statically defined in the Shoot resource but must be computed dynamically.
-                type: string
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   for this resource.

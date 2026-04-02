@@ -9,10 +9,11 @@ If multiple identifiers make sense you can also state the commands multiple time
   /area auto-scaling
   ...
 
+If the PR affects cryptography or security mechanisms (encryption, keys, ciphers, hashes, signatures, etc.), mark it as crypto relevant.
+/label crypto
+
 "/area" identifiers:     audit-logging|auto-scaling|backup|compliance|control-plane-migration|control-plane|cost|delivery|dev-productivity|disaster-recovery|documentation|high-availability|logging|metering|monitoring|networking|open-source|ops-productivity|os|performance|quality|robustness|scalability|security|storage|testing|usability|user-management
 "/kind" identifiers:     api-change|bug|cleanup|discussion|enhancement|epic|flake|impediment|poc|post-mortem|question|regression|task|technical-debt|test
-
-For Gardener Enhancement Proposals (GEPs), please check the following [documentation](https://github.com/gardener/gardener/tree/master/docs/proposals/README.md) before submitting this pull request.
 -->
 /area TODO
 /kind TODO

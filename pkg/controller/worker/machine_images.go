@@ -9,9 +9,9 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"

@@ -45,11 +45,8 @@ func (fctx *FlowContext) Reconcile(ctx context.Context) error {
 
 	state := fctx.computeInfrastructureState()
 	status := fctx.computeInfrastructureStatus()
-	nodeCIDR := fctx.state.Get(IdentifierNodeSubnetIPv6CIDR)
-	podCIDR := fctx.state.Get(IdentifierPodSubnetIPv6CIDR)
-	svcCIDR := fctx.state.Get(IdentifierServiceSubnetIPv6CIDR)
-	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, fctx.shootNetworking, status, state, nodeCIDR, podCIDR, svcCIDR)
-	//return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, fctx.shootNetworking, status, state, nil, nil, nil)
+	networkingStatus := fctx.computeInfrastructureNetworkingStatus()
+	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, status, state, networkingStatus)
 }
 
 func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
@@ -79,7 +76,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	ensureSubnetIPv6 := fctx.AddTask(g, "ensure IPv6 subnet",
 		fctx.ensureSubnetIPv6,
-		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork), shared.DoIf(gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)))
 
 	_ = fctx.AddTask(g, "ensure router interface",
 		fctx.ensureRouterInterface,
@@ -87,12 +84,12 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "ensure IPv6 router interface",
 		fctx.ensureRouterInterfaceIPv6,
-		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6), shared.DoIf(gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)))
 
 	_ = fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(ensureSubnetIPv6),
-		shared.DoIf(fctx.isDualStack()),
+		shared.DoIf(gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)),
 	)
 
 	ensureSecGroup := fctx.AddTask(g, "ensure security group",
@@ -337,9 +334,6 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 
-	if !fctx.isDualStack() {
-		return nil
-	}
 	if fctx.state.Get(IdentifierNetwork) == nil {
 		return fmt.Errorf("missing cluster network ID")
 	}
@@ -414,10 +408,6 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 
 func (fctx *FlowContext) ensureIPv6CIDRs(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
-
-	if !fctx.isDualStack() {
-		return nil
-	}
 
 	// If explicit IPv6 CIDRs are configured, use them directly
 	if fctx.hasExplicitIPv6Config() {
@@ -559,9 +549,6 @@ func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
 
 func (fctx *FlowContext) ensureRouterInterfaceIPv6(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
-	if !fctx.isDualStack() {
-		return nil
-	}
 	routerID := fctx.state.Get(IdentifierRouter)
 	if routerID == nil {
 		return fmt.Errorf("internal error: missing routerID")
@@ -660,7 +647,7 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 		},
 	}
 
-	if fctx.isDualStack() {
+	if gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies) {
 		desiredRules = append(desiredRules, []rules.SecGroupRule{
 			{
 				Direction:     string(rules.DirIngress),

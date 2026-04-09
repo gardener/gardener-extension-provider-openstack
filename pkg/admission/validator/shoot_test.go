@@ -331,7 +331,7 @@ var _ = Describe("Shoot validator", func() {
 					}))))
 				})
 
-				It("should return err when networking is configured to use IPv6-only without subnetPoolID or IPv6 config", func() {
+				It("should return err when networking is configured to use IPv6-only", func() {
 					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
@@ -340,10 +340,6 @@ var _ = Describe("Shoot validator", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.networking.ipFamilies"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeRequired),
-							"Field": Equal("spec.provider.infrastructureConfig"),
 						})),
 					))
 				})

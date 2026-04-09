@@ -110,7 +110,9 @@ Unlike IPv4 where you explicitly specify the CIDR in `networks.workers`, IPv6 ad
 
 #### Option 2: Explicit IPv6 CIDR Configuration
 
-Alternatively, you can explicitly specify IPv6 CIDRs for nodes, pods, and services using the `networks.ipv6` field:
+Alternatively, you can explicitly specify IPv6 CIDRs for nodes, pods, and services using the `networks.ipv6` field.
+In this case, IPv6 subnets are created without a subnet pool (using the provided CIDRs directly), so no `subnetPoolID` is required.
+If a `subnetPoolID` is also set, the explicit CIDRs from `networks.ipv6` take precedence and the pool is not used for CIDR allocation.
 
 ```yaml
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1

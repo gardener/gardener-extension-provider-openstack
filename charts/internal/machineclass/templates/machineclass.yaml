@@ -56,7 +56,6 @@ providerSpec:
     imageName: {{ $machineClass.imageName }}
 {{- end }}
     networkID: {{ $machineClass.networkID }}
-    subnetID: {{ $machineClass.subnetID }}
     subnetIDs:
 {{ toYaml $machineClass.subnetIDs | indent 6 }}
     podNetworkCIDRs:

@@ -207,7 +207,6 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 				subnetIDs = append(subnetIDs, subnet.ID)
 			}
 
-			machineClassSpec["subnetID"] = subnets[0].ID
 			machineClassSpec["subnetIDs"] = subnetIDs
 
 			if volumeSize > 0 {

@@ -179,8 +179,9 @@ func (s *shoot) validateShoot(ctx context.Context, context *validationContext) f
 		allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
 
-		// Validate that either SubnetPoolID or IPv6 config is set for dual-stack shoots
-		if !core.IsIPv4SingleStack(context.shoot.Spec.Networking.IPFamilies) {
+		// Validate that either SubnetPoolID or IPv6 config is set for dual-stack shoots.
+		// It is valid to set both; in that case the explicit networks.ipv6 CIDRs take precedence.
+		if core.IsDualStack(context.shoot.Spec.Networking.IPFamilies) {
 			if context.infraConfig.SubnetPoolID == nil && context.infraConfig.Networks.IPv6 == nil {
 				allErrs = append(allErrs, field.Required(infraConfigPath, "either subnetPoolID or networks.ipv6 must be set for dual-stack shoots"))
 			}

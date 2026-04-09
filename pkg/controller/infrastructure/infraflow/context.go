@@ -156,7 +156,7 @@ func NewFlowContext(opts Opts) (*FlowContext, error) {
 }
 
 func (fctx *FlowContext) persistState(ctx context.Context) error {
-	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, fctx.shootNetworking, nil, fctx.computeInfrastructureState(), nil, nil, nil)
+	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, nil, fctx.computeInfrastructureState(), nil)
 }
 
 // PatchProviderStatusAndState patches the infrastructure status with the given provider specific status and state.
@@ -164,12 +164,9 @@ func PatchProviderStatusAndState(
 	ctx context.Context,
 	runtimeClient client.Client,
 	infra *extensionsv1alpha1.Infrastructure,
-	networking *gardencorev1beta1.Networking,
 	status *openstackv1alpha1.InfrastructureStatus,
 	state *runtime.RawExtension,
-	nodesSubnetIPv6CIDR *string,
-	podSubnetIPv6CIDR *string,
-	servicesSubnetIPv6CIDR *string,
+	networkingStatus *extensionsv1alpha1.InfrastructureStatusNetworking,
 ) error {
 	patch := client.MergeFrom(infra.DeepCopy())
 	if status != nil {
@@ -177,29 +174,7 @@ func PatchProviderStatusAndState(
 		infra.Status.EgressCIDRs = ComputeEgressCIDRs(status.Networks.Router.ExternalFixedIPs)
 	}
 
-	infra.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{}
-
-	if networking != nil {
-		if networking.Nodes != nil {
-			infra.Status.Networking.Nodes = append(infra.Status.Networking.Nodes, *networking.Nodes)
-		}
-		if networking.Pods != nil {
-			infra.Status.Networking.Pods = append(infra.Status.Networking.Pods, *networking.Pods)
-		}
-		if networking.Services != nil {
-			infra.Status.Networking.Services = append(infra.Status.Networking.Services, *networking.Services)
-		}
-	}
-
-	if nodesSubnetIPv6CIDR != nil {
-		infra.Status.Networking.Nodes = append(infra.Status.Networking.Nodes, *nodesSubnetIPv6CIDR)
-	}
-	if podSubnetIPv6CIDR != nil {
-		infra.Status.Networking.Pods = append(infra.Status.Networking.Pods, *podSubnetIPv6CIDR)
-	}
-	if servicesSubnetIPv6CIDR != nil {
-		infra.Status.Networking.Services = append(infra.Status.Networking.Services, *servicesSubnetIPv6CIDR)
-	}
+	infra.Status.Networking = networkingStatus
 
 	if state != nil {
 		infra.Status.State = state
@@ -213,6 +188,36 @@ func PatchProviderStatusAndState(
 	}
 
 	return runtimeClient.Status().Patch(ctx, infra, patch)
+}
+
+// computeInfrastructureNetworkingStatus builds the InfrastructureStatusNetworking from the shoot networking
+// spec and any IPv6 CIDRs allocated during reconciliation.
+func (fctx *FlowContext) computeInfrastructureNetworkingStatus() *extensionsv1alpha1.InfrastructureStatusNetworking {
+	networking := &extensionsv1alpha1.InfrastructureStatusNetworking{}
+
+	if fctx.shootNetworking != nil {
+		if fctx.shootNetworking.Nodes != nil {
+			networking.Nodes = append(networking.Nodes, *fctx.shootNetworking.Nodes)
+		}
+		if fctx.shootNetworking.Pods != nil {
+			networking.Pods = append(networking.Pods, *fctx.shootNetworking.Pods)
+		}
+		if fctx.shootNetworking.Services != nil {
+			networking.Services = append(networking.Services, *fctx.shootNetworking.Services)
+		}
+	}
+
+	if nodeCIDR := fctx.state.Get(IdentifierNodeSubnetIPv6CIDR); nodeCIDR != nil {
+		networking.Nodes = append(networking.Nodes, *nodeCIDR)
+	}
+	if podCIDR := fctx.state.Get(IdentifierPodSubnetIPv6CIDR); podCIDR != nil {
+		networking.Pods = append(networking.Pods, *podCIDR)
+	}
+	if svcCIDR := fctx.state.Get(IdentifierServiceSubnetIPv6CIDR); svcCIDR != nil {
+		networking.Services = append(networking.Services, *svcCIDR)
+	}
+
+	return networking
 }
 
 func (fctx *FlowContext) computeInfrastructureState() *runtime.RawExtension {

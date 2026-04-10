@@ -1,0 +1,26 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.61.2
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: r4mek
+  category: other
+  contents: Fix machines termination in machine set replica management to avoid needless
+    scale-up of machines because of stale replica count.
+  mimetype: text/markdown
+  reference: '[#1071](https://github.com/gardener/machine-controller-manager/pull/1071)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: aaronfern
+  category: other
+  contents: newly created machines not moved to `Pending` state without valid node
+    name and providerID from provider
+  mimetype: text/markdown
+  reference: '[#1072](https://github.com/gardener/machine-controller-manager/pull/1072)'
+  type: standard

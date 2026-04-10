@@ -1,0 +1,15 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.61.3
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: r4mek
+  category: bugfix
+  contents: Fixing an issue where a rapid scale up and scale down can result in a
+    cordoned machine in the cluster.
+  mimetype: text/markdown
+  reference: '[#1090](https://github.com/gardener/machine-controller-manager/pull/1090)'
+  type: standard

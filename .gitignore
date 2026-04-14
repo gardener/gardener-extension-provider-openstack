@@ -23,3 +23,8 @@ TODO
 # GitGuardian
 .cache_ggshield
 .gitguardian.yaml
+
+# AI coding agents
+# Claude
+.claude/
+/skills-lock.json

@@ -343,7 +343,7 @@ images:
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
-  tag: v6.1.1
+  tag: v6.2.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -415,7 +415,7 @@ images:
 - name: machine-controller-manager-provider-openstack
   sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-openstack
-  tag: v0.25.0
+  tag: v0.26.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:

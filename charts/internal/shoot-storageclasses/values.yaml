@@ -14,3 +14,5 @@
 #  - name: default
 #    default: true
 #    provisioner: cinder.csi.openstack.org
+
+managedDefaultVolumeSnapshotClass: true

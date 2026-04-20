@@ -6,6 +6,7 @@ package worker_test
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -1373,6 +1374,69 @@ var _ = Describe("Machines", func() {
 				Expect(result[1].ClusterAutoscalerAnnotations[extensionsv1alpha1.ScaleDownUnneededTimeAnnotation]).To(Equal("2m0s"))
 				Expect(result[1].ClusterAutoscalerAnnotations[extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation]).To(Equal("3m0s"))
 				Expect(result[1].ClusterAutoscalerAnnotations[extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation]).To(Equal("0.5"))
+			})
+
+			It("should use storage type and size from cloud profile machine type as default when no pool volume is specified", func() {
+				premiumStorageSize := resource.MustParse("64Gi")
+				clusterWithPremiumMachineType := &extensionscontroller.Cluster{
+					CloudProfile: cluster.CloudProfile.DeepCopy(),
+					Shoot:        cluster.Shoot,
+					Seed:         cluster.Seed,
+				}
+				clusterWithPremiumMachineType.CloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+					{
+						Name:         machineType,
+						Capabilities: capabilitiesAmd,
+						Storage: &gardencorev1beta1.MachineTypeStorage{
+							Class:       "standard",
+							StorageSize: &premiumStorageSize,
+							Type:        "premium",
+						},
+					},
+					{
+						Name:         machineTypeArm,
+						Architecture: ptr.To(archARM),
+						Capabilities: capabilitiesArm,
+					},
+				}
+
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, clusterWithPremiumMachineType, nil)
+
+				var capturedMachineClasses []map[string]interface{}
+				expectedUserDataSecretRefRead()
+				chartApplier.
+					EXPECT().
+					ApplyFromEmbeddedFS(
+						ctx,
+						charts.InternalChart,
+						filepath.Join("internal", "machineclass"),
+						namespace,
+						"machineclass",
+						gomock.AssignableToTypeOf(kubernetes.Values(nil)),
+					).
+					DoAndReturn(func(_ context.Context, _ embed.FS, _, _, _ string, opts ...kubernetes.ApplyOption) error {
+						applyOpts := &kubernetes.ApplyOptions{}
+						for _, o := range opts {
+							o.MutateApplyOptions(applyOpts)
+						}
+						if values, ok := applyOpts.Values.(map[string]interface{}); ok {
+							if classes, ok := values["machineClasses"].([]map[string]interface{}); ok {
+								capturedMachineClasses = classes
+							}
+						}
+						return nil
+					})
+
+				err := workerDelegate.DeployMachineClasses(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(capturedMachineClasses).NotTo(BeEmpty())
+				for _, class := range capturedMachineClasses {
+					if class["machineType"] == machineType {
+						Expect(class).To(HaveKeyWithValue("rootDiskType", "premium"), "expected rootDiskType to be set from cloud profile storage type")
+						Expect(class).To(HaveKeyWithValue("rootDiskSize", 64), "expected rootDiskSize to be set from cloud profile storage size")
+					}
+				}
 			})
 		},
 			Entry("with capabilities and using imageIDs", true, false),

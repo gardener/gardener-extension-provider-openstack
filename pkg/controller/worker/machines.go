@@ -210,6 +210,20 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 			// specifying the volume type requires a custom volume size to be specified too.
 			if pool.Volume != nil && pool.Volume.Type != nil {
 				machineClassSpec["rootDiskType"] = *pool.Volume.Type
+			} else if machineTypeFromCloudProfile.Storage != nil &&
+				machineTypeFromCloudProfile.Storage.Type != "" &&
+				machineTypeFromCloudProfile.Storage.Type != "default" {
+				// Use the storage type from the cloud profile as the default if not explicitly set in the shoot spec.
+				// This is required e.g. for KVM machines that need a "premium" disk type for boot disks.
+				machineClassSpec["rootDiskType"] = machineTypeFromCloudProfile.Storage.Type
+				if machineTypeFromCloudProfile.Storage.StorageSize != nil {
+					cloudProfileVolumeSize, err := worker.DiskSize(machineTypeFromCloudProfile.Storage.StorageSize.String())
+					if err == nil && cloudProfileVolumeSize > 0 {
+						if _, alreadySet := machineClassSpec["rootDiskSize"]; !alreadySet {
+							machineClassSpec["rootDiskSize"] = cloudProfileVolumeSize
+						}
+					}
+				}
 			}
 
 			if machineImage.ID != "" {

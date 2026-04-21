@@ -334,10 +334,10 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
 
-	if fctx.state.Get(IdentifierNetwork) == nil {
+	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
+	if networkID == "" {
 		return fmt.Errorf("missing cluster network ID")
 	}
-	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 
 	// Determine subnet configuration based on whether explicit IPv6 CIDRs are provided
 	var subnetPoolID string
@@ -355,16 +355,17 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 		}
 	}
 
-	desired := []subnets.Subnet{{
-		Name:            fctx.defaultSubnetIPv6Name(),
-		NetworkID:       networkID,
-		CIDR:            nodeCIDR,
-		IPVersion:       6,
-		DNSNameservers:  fctx.cloudProfileConfig.DNSServers,
-		IPv6RAMode:      "slaac",
-		IPv6AddressMode: "slaac",
-		SubnetPoolID:    subnetPoolID,
-	},
+	desired := []subnets.Subnet{
+		{
+			Name:            fctx.defaultSubnetIPv6Name(),
+			NetworkID:       networkID,
+			CIDR:            nodeCIDR,
+			IPVersion:       6,
+			DNSNameservers:  fctx.cloudProfileConfig.DNSServers,
+			IPv6RAMode:      "slaac",
+			IPv6AddressMode: "slaac",
+			SubnetPoolID:    subnetPoolID,
+		},
 		{
 			Name:           fctx.defaultSubnetIPv6Name() + "-pod",
 			NetworkID:      networkID,
@@ -380,14 +381,14 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 			IPVersion:      6,
 			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
 			SubnetPoolID:   subnetPoolID,
-		}}
+		},
+	}
 
 	for _, desiredSubnet := range desired {
 		current, err := fctx.findExistingSubnetIPv6(ctx, desiredSubnet.Name)
 		if err != nil {
 			return err
 		}
-
 		if current != nil {
 			fctx.state.Set(getSubnetIdentifierBySuffix(desiredSubnet.Name), current.ID)
 			log.Info("updating...")

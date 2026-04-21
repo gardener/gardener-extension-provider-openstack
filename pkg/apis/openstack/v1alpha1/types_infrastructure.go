@@ -140,6 +140,10 @@ type Purpose string
 const (
 	// PurposeNodes is a Purpose for node resources.
 	PurposeNodes Purpose = "nodes"
+	// PurposePods is a Purpose for pod CIDR allocation resources.
+	PurposePods Purpose = "pods"
+	// PurposeServices is a Purpose for service CIDR allocation resources.
+	PurposeServices Purpose = "services"
 )
 
 // Subnet is an OpenStack subnet related to a Network.

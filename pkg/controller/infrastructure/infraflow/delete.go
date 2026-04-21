@@ -170,16 +170,18 @@ func (fctx *FlowContext) deleteSubnet(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) deleteSubnetIPv6(ctx context.Context) error {
-	subnetIPv6ID := fctx.state.Get(IdentifierSubnetIPv6)
-	if subnetIPv6ID == nil {
-		return nil
-	}
+	for _, identifier := range []string{IdentifierSubnetIPv6, IdentifierSubnetIPv6Pod, IdentifierSubnetIPv6Svc} {
+		subnetIPv6ID := fctx.state.Get(identifier)
+		if subnetIPv6ID == nil {
+			continue
+		}
 
-	shared.LogFromContext(ctx).Info("deleting...", "ipv6-subnet", *subnetIPv6ID)
-	if err := fctx.networking.DeleteSubnet(ctx, *subnetIPv6ID); client.IgnoreNotFoundError(err) != nil {
-		return err
+		shared.LogFromContext(ctx).Info("deleting...", "ipv6-subnet", *subnetIPv6ID)
+		if err := fctx.networking.DeleteSubnet(ctx, *subnetIPv6ID); client.IgnoreNotFoundError(err) != nil {
+			return err
+		}
+		fctx.state.Set(identifier, "")
 	}
-	fctx.state.Set(IdentifierSubnetIPv6, "")
 	return nil
 }
 
@@ -223,13 +225,13 @@ func (fctx *FlowContext) recoverSubnetID(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) recoverSubnetIPv6ID(ctx context.Context) error {
-	for _, suffix := range []string{"-ipv6-pod", "-ipv6-svc", "-ipv6"} {
-		identifier := getSubnetIdentifierBySuffix(suffix)
+	for _, suffix := range []string{"-pod", "-svc", ""} {
+		name := fctx.defaultSubnetIPv6Name() + suffix
+		identifier := getSubnetIdentifierBySuffix(name)
 		if fctx.state.Get(identifier) != nil {
-			return nil
+			continue
 		}
-
-		subnet, err := fctx.findExistingSubnetIPv6(ctx, fctx.defaultSubnetIPv6Name()+suffix)
+		subnet, err := fctx.findExistingSubnetIPv6(ctx, name)
 		if err != nil {
 			return err
 		}

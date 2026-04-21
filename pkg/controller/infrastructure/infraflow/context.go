@@ -278,6 +278,20 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 		})
 	}
 
+	if v := fctx.state.Get(IdentifierSubnetIPv6Pod); v != nil {
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+			Purpose: openstackv1alpha1.PurposePods,
+			ID:      *v,
+		})
+	}
+
+	if v := fctx.state.Get(IdentifierSubnetIPv6Svc); v != nil {
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+			Purpose: openstackv1alpha1.PurposeServices,
+			ID:      *v,
+		})
+	}
+
 	if v := fctx.state.Get(IdentifierSecGroup); v != nil {
 		status.SecurityGroups = []openstackv1alpha1.SecurityGroup{
 			{

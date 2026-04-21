@@ -201,10 +201,12 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 				},
 			}
 
-			// Collect all subnet IDs
+			// Collect only node subnet IDs; pod/service subnets must not be attached to machines.
 			var subnetIDs []string
 			for _, subnet := range subnets {
-				subnetIDs = append(subnetIDs, subnet.ID)
+				if subnet.Purpose == api.PurposeNodes {
+					subnetIDs = append(subnetIDs, subnet.ID)
+				}
 			}
 
 			machineClassSpec["subnetIDs"] = subnetIDs

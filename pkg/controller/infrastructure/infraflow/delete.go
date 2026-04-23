@@ -289,11 +289,7 @@ func (fctx *FlowContext) deleteRouterInterfaceIPv6(ctx context.Context) error {
 
 	log := shared.LogFromContext(ctx)
 	log.Info("deleting IPv6 router interface...")
-	err = fctx.access.RemoveRouterInterfaceAndWait(ctx, *routerID, *subnetIPv6ID, *portID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return fctx.access.RemoveRouterInterfaceAndWait(ctx, *routerID, *subnetIPv6ID, *portID)
 }
 
 func (fctx *FlowContext) deleteSecGroup(ctx context.Context) error {

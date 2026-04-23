@@ -577,6 +577,7 @@ func Convert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *ope
 }
 
 func autoConvert_v1alpha1_IPv6Config_To_openstack_IPv6Config(in *IPv6Config, out *openstack.IPv6Config, s conversion.Scope) error {
+	out.SubnetPoolID = (*string)(unsafe.Pointer(in.SubnetPoolID))
 	out.NodeCIDR = in.NodeCIDR
 	out.PodCIDR = in.PodCIDR
 	out.ServiceCIDR = in.ServiceCIDR
@@ -589,6 +590,7 @@ func Convert_v1alpha1_IPv6Config_To_openstack_IPv6Config(in *IPv6Config, out *op
 }
 
 func autoConvert_openstack_IPv6Config_To_v1alpha1_IPv6Config(in *openstack.IPv6Config, out *IPv6Config, s conversion.Scope) error {
+	out.SubnetPoolID = (*string)(unsafe.Pointer(in.SubnetPoolID))
 	out.NodeCIDR = in.NodeCIDR
 	out.PodCIDR = in.PodCIDR
 	out.ServiceCIDR = in.ServiceCIDR
@@ -603,7 +605,6 @@ func Convert_openstack_IPv6Config_To_v1alpha1_IPv6Config(in *openstack.IPv6Confi
 func autoConvert_v1alpha1_InfrastructureConfig_To_openstack_InfrastructureConfig(in *InfrastructureConfig, out *openstack.InfrastructureConfig, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
 	out.FloatingPoolSubnetName = (*string)(unsafe.Pointer(in.FloatingPoolSubnetName))
-	out.SubnetPoolID = (*string)(unsafe.Pointer(in.SubnetPoolID))
 	if err := Convert_v1alpha1_Networks_To_openstack_Networks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -618,7 +619,6 @@ func Convert_v1alpha1_InfrastructureConfig_To_openstack_InfrastructureConfig(in 
 func autoConvert_openstack_InfrastructureConfig_To_v1alpha1_InfrastructureConfig(in *openstack.InfrastructureConfig, out *InfrastructureConfig, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
 	out.FloatingPoolSubnetName = (*string)(unsafe.Pointer(in.FloatingPoolSubnetName))
-	out.SubnetPoolID = (*string)(unsafe.Pointer(in.SubnetPoolID))
 	if err := Convert_openstack_Networks_To_v1alpha1_Networks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}

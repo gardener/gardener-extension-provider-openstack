@@ -285,9 +285,11 @@ var _ = Describe("Shoot validator", func() {
 							},
 							Networks: apiv1alpha1.Networks{
 								Workers: "10.250.0.0/19",
+								IPv6: &apiv1alpha1.IPv6Config{
+									SubnetPoolID: ptr.To("subnet-pool-id"),
+								},
 							},
 							FloatingPoolName: "pool-1",
-							SubnetPoolID:     ptr.To("subnet-pool-id"),
 						}),
 					}
 

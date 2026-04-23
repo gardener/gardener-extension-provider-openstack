@@ -68,6 +68,55 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		}
 	}
 
+	if infra.Networks.IPv6 != nil {
+		allErrs = append(allErrs, validateIPv6Config(infra.Networks.IPv6, networksPath.Child("ipv6"))...)
+	}
+
+	return allErrs
+}
+
+func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	hasExplicitCIDRs := ipv6.NodeCIDR != "" || ipv6.PodCIDR != "" || ipv6.ServiceCIDR != ""
+
+	if ipv6.SubnetPoolID == nil && !hasExplicitCIDRs {
+		allErrs = append(allErrs, field.Required(fldPath, "either subnetPoolID or explicit CIDRs (nodeCIDR, podCIDR, serviceCIDR) must be set"))
+		return allErrs
+	}
+
+	if !hasExplicitCIDRs {
+		return allErrs
+	}
+
+	cidrFields := []struct {
+		cidr string
+		path *field.Path
+	}{
+		{ipv6.NodeCIDR, fldPath.Child("nodeCIDR")},
+		{ipv6.PodCIDR, fldPath.Child("podCIDR")},
+		{ipv6.ServiceCIDR, fldPath.Child("serviceCIDR")},
+	}
+
+	for _, f := range cidrFields {
+		if f.cidr == "" {
+			allErrs = append(allErrs, field.Required(f.path, "must be set when any IPv6 CIDR is configured"))
+		}
+	}
+
+	var parsedCIDRs []cidrvalidation.CIDR
+	for _, f := range cidrFields {
+		if f.cidr == "" {
+			continue
+		}
+		c := cidrvalidation.NewCIDR(f.cidr, f.path)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(c)...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(f.path, f.cidr)...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily([]cidrvalidation.CIDR{c}, cidrvalidation.IPFamilyIPv6)...)
+		parsedCIDRs = append(parsedCIDRs, c)
+	}
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(parsedCIDRs, false)...)
+
 	return allErrs
 }
 
@@ -84,10 +133,13 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 		newNetworks.ShareNetwork = nil
 		oldNetworks.ShareNetwork = nil
 	}
+	// networks.ipv6 is immutable and checked explicitly below for a precise error field.
+	newNetworks.IPv6 = nil
+	oldNetworks.IPv6 = nil
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks, oldNetworks, fldPath.Child("networks"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.IPv6, oldConfig.Networks.IPv6, fldPath.Child("networks").Child("ipv6"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolName, oldConfig.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolSubnetName, oldConfig.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.SubnetPoolID, oldConfig.SubnetPoolID, fldPath.Child("subnetPoolID"))...)
 
 	return allErrs
 }

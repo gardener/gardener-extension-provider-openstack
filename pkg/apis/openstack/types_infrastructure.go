@@ -18,9 +18,6 @@ type InfrastructureConfig struct {
 	// FloatingPoolSubnetName contains the fixed name of subnet or matching name pattern for subnet
 	// in the Floating IP Pool where the router should be attached to.
 	FloatingPoolSubnetName *string
-	// SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
-	// If not specified, IPv6 subnets will be allocated from the default subnet pool.
-	SubnetPoolID *string
 	// Networks is the OpenStack specific network configuration
 	Networks Networks
 }
@@ -45,6 +42,9 @@ type Networks struct {
 
 // IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
 type IPv6Config struct {
+	// SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
+	// Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).
+	SubnetPoolID *string
 	// NodeCIDR is the CIDR of the node subnet.
 	NodeCIDR string
 	// PodCIDR is the CIDR of the pods.
@@ -133,6 +133,8 @@ type Purpose string
 const (
 	// PurposeNodes is a Purpose for node resources.
 	PurposeNodes Purpose = "nodes"
+	// PurposeNodesIPv6 is a Purpose for IPv6 node subnet resources in dual-stack clusters.
+	PurposeNodesIPv6 Purpose = "nodes-ipv6"
 	// PurposePods is a Purpose for pod CIDR allocation resources.
 	PurposePods Purpose = "pods"
 	// PurposeServices is a Purpose for service CIDR allocation resources.

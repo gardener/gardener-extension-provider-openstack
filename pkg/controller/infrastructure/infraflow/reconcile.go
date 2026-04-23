@@ -76,7 +76,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	ensureSubnetIPv6 := fctx.AddTask(g, "ensure IPv6 subnet",
 		fctx.ensureSubnetIPv6,
-		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork), shared.DoIf(gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureNetwork), shared.DoIf(fctx.isDualStack()))
 
 	_ = fctx.AddTask(g, "ensure router interface",
 		fctx.ensureRouterInterface,
@@ -84,12 +84,12 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 
 	_ = fctx.AddTask(g, "ensure IPv6 router interface",
 		fctx.ensureRouterInterfaceIPv6,
-		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6), shared.DoIf(gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6), shared.DoIf(fctx.isDualStack()))
 
 	_ = fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(ensureSubnetIPv6),
-		shared.DoIf(gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)),
+		shared.DoIf(fctx.isDualStack()),
 	)
 
 	ensureSecGroup := fctx.AddTask(g, "ensure security group",
@@ -350,8 +350,8 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 		serviceCIDR = fctx.config.Networks.IPv6.ServiceCIDR
 	} else {
 		// Use subnet pool for automatic CIDR allocation
-		if fctx.config.SubnetPoolID != nil {
-			subnetPoolID = *fctx.config.SubnetPoolID
+		if fctx.config.Networks.IPv6 != nil && fctx.config.Networks.IPv6.SubnetPoolID != nil {
+			subnetPoolID = *fctx.config.Networks.IPv6.SubnetPoolID
 		}
 	}
 
@@ -648,7 +648,7 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 		},
 	}
 
-	if gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies) {
+	if fctx.isDualStack() {
 		desiredRules = append(desiredRules, []rules.SecGroupRule{
 			{
 				Direction:     string(rules.DirIngress),

@@ -93,7 +93,7 @@ For dual-stack clusters that use both IPv4 and IPv6, you have two configuration 
 
 #### Option 1: Using a Subnet Pool (Recommended)
 
-The `subnetPoolID` field specifies the OpenStack subnet pool ID from which IPv6 subnets will be allocated automatically for nodes, pods, and services.
+The `networks.ipv6.subnetPoolID` field specifies the OpenStack subnet pool ID from which IPv6 subnets will be allocated automatically for nodes, pods, and services.
 
 An example `InfrastructureConfig` for dual-stack with subnet pool looks as follows:
 
@@ -101,9 +101,10 @@ An example `InfrastructureConfig` for dual-stack with subnet pool looks as follo
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 kind: InfrastructureConfig
 floatingPoolName: MY-FLOATING-POOL
-subnetPoolID: MY-SUBNET-POOL-ID  # IPv6 subnet pool
 networks:
   workers: 10.250.0.0/19
+  ipv6:
+    subnetPoolID: MY-SUBNET-POOL-ID
 ```
 
 Unlike IPv4 where you explicitly specify the CIDR in `networks.workers`, IPv6 addresses are typically allocated from a larger prefix managed by your OpenStack environment.
@@ -111,8 +112,8 @@ Unlike IPv4 where you explicitly specify the CIDR in `networks.workers`, IPv6 ad
 #### Option 2: Explicit IPv6 CIDR Configuration
 
 Alternatively, you can explicitly specify IPv6 CIDRs for nodes, pods, and services using the `networks.ipv6` field.
-In this case, IPv6 subnets are created without a subnet pool (using the provided CIDRs directly), so no `subnetPoolID` is required.
-If a `subnetPoolID` is also set, the explicit CIDRs from `networks.ipv6` take precedence and the pool is not used for CIDR allocation.
+In this case, IPv6 subnets are created using the provided CIDRs directly, so no `subnetPoolID` is required.
+If both `subnetPoolID` and explicit CIDRs are set, the explicit CIDRs take precedence and the pool is not used for CIDR allocation.
 
 ```yaml
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
@@ -126,7 +127,7 @@ networks:
     serviceCIDR: 2001:db8:3::/112   # IPv6 CIDR for services
 ```
 
-⚠️ Both `subnetPoolID` and `networks.ipv6` configuration are immutable after cluster creation. 
+⚠️ The `networks.ipv6` configuration is immutable after cluster creation.
 
 ## `ControlPlaneConfig`
 

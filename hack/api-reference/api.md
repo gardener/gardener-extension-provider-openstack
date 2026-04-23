@@ -409,19 +409,6 @@ in the Floating IP Pool where the router should be attached to.</p>
 </tr>
 <tr>
 <td>
-<code>subnetPoolID</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
-If not specified, IPv6 subnets will be allocated from the default subnet pool.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>networks</code></br>
 <em>
 <a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">
@@ -757,12 +744,26 @@ string
 <tbody>
 <tr>
 <td>
+<code>subnetPoolID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
+Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodeCIDR</code></br>
 <em>
 string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>NodeCIDR is the CIDR of the node subnet.</p>
 </td>
 </tr>
@@ -774,6 +775,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>PodCIDR is the CIDR of the pods.</p>
 </td>
 </tr>
@@ -785,6 +787,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ServiceCIDR is the CIDR of the services.</p>
 </td>
 </tr>

@@ -156,7 +156,7 @@ func NewFlowContext(opts Opts) (*FlowContext, error) {
 }
 
 func (fctx *FlowContext) persistState(ctx context.Context) error {
-	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, nil, fctx.computeInfrastructureState(), nil)
+	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, nil, fctx.computeInfrastructureState(), fctx.computeInfrastructureNetworkingStatus())
 }
 
 // PatchProviderStatusAndState patches the infrastructure status with the given provider specific status and state.

@@ -1,3 +1,4 @@
+reference_version: v1.54.0
 ocm:
   component_name: github.com/gardener/machine-controller-manager-provider-openstack
   component_version: v0.26.0

@@ -725,6 +725,74 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.IPv6Config">IPv6Config
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks</a>)
+</p>
+<p>
+<p>IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>subnetPoolID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
+Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeCIDR is the CIDR of the node subnet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>podCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PodCIDR is the CIDR of the pods.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceCIDR is the CIDR of the services.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureState">InfrastructureState
 </h3>
 <p>
@@ -1476,6 +1544,20 @@ ShareNetwork
 <td>
 <em>(Optional)</em>
 <p>ShareNetwork holds information about the share network (used for shared file systems like NFS)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ipv6</code></br>
+<em>
+<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.IPv6Config">
+IPv6Config
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPv6 holds information about the IPv6 CIDRs.</p>
 </td>
 </tr>
 </tbody>

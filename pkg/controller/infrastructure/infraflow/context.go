@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,12 @@ const (
 	IdentifierNetwork = "Network"
 	// IdentifierSubnet is the key for the subnet id
 	IdentifierSubnet = "Subnet"
+	// IdentifierSubnetIPv6 is the key for the IPv6 subnet id
+	IdentifierSubnetIPv6 = "SubnetIPv6"
+	// IdentifierSubnetIPv6Pod is the key for the IPv6 subnet id for pods
+	IdentifierSubnetIPv6Pod = "SubnetIPv6Pod"
+	// IdentifierSubnetIPv6Svc is the key for the IPv6 subnet id for services
+	IdentifierSubnetIPv6Svc = "SubnetIPv6Svc"
 	// IdentifierFloatingNetwork is the key for the floating network id
 	IdentifierFloatingNetwork = "FloatingNetwork"
 	// IdentifierSecGroup is the key for the security group id
@@ -40,6 +47,13 @@ const (
 	IdentifierShareNetwork = "ShareNetwork"
 	// IdentifierEgressCIDRs is the key for the slice containing egress CIDRs strings.
 	IdentifierEgressCIDRs = "EgressCIDRs"
+
+	// IdentifierNodeSubnetIPv6CIDR is the key for the node subnet IPv6 CIDR
+	IdentifierNodeSubnetIPv6CIDR = "NodeSubnetIPv6CIDR"
+	// IdentifierPodSubnetIPv6CIDR is the key for the pod subnet IPv6 CIDR
+	IdentifierPodSubnetIPv6CIDR = "PodSubnetIPv6CIDR"
+	// IdentifierServiceSubnetIPv6CIDR is the key for the service subnet IPv6 CIDR
+	IdentifierServiceSubnetIPv6CIDR = "ServiceSubnetIPv6CIDR"
 
 	// NameFloatingNetwork is the key for the floating network name
 	NameFloatingNetwork = "FloatingNetworkName"
@@ -87,6 +101,7 @@ type FlowContext struct {
 	loadbalancing          osclient.Loadbalancing
 	access                 access.NetworkingAccess
 	compute                osclient.Compute
+	shootNetworking        *gardencorev1beta1.Networking
 
 	*shared.BasicFlowContext
 }
@@ -135,12 +150,13 @@ func NewFlowContext(opts Opts) (*FlowContext, error) {
 		log:                    opts.Log,
 		client:                 opts.Client,
 		openstackClientFactory: opts.ClientFactory,
+		shootNetworking:        opts.Cluster.Shoot.Spec.Networking,
 	}
 	return flowContext, nil
 }
 
 func (fctx *FlowContext) persistState(ctx context.Context) error {
-	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, nil, fctx.computeInfrastructureState())
+	return PatchProviderStatusAndState(ctx, fctx.client, fctx.infra, nil, fctx.computeInfrastructureState(), fctx.computeInfrastructureNetworkingStatus())
 }
 
 // PatchProviderStatusAndState patches the infrastructure status with the given provider specific status and state.
@@ -150,12 +166,15 @@ func PatchProviderStatusAndState(
 	infra *extensionsv1alpha1.Infrastructure,
 	status *openstackv1alpha1.InfrastructureStatus,
 	state *runtime.RawExtension,
+	networkingStatus *extensionsv1alpha1.InfrastructureStatusNetworking,
 ) error {
 	patch := client.MergeFrom(infra.DeepCopy())
 	if status != nil {
 		infra.Status.ProviderStatus = &runtime.RawExtension{Object: status}
 		infra.Status.EgressCIDRs = ComputeEgressCIDRs(status.Networks.Router.ExternalFixedIPs)
 	}
+
+	infra.Status.Networking = networkingStatus
 
 	if state != nil {
 		infra.Status.State = state
@@ -169,6 +188,36 @@ func PatchProviderStatusAndState(
 	}
 
 	return runtimeClient.Status().Patch(ctx, infra, patch)
+}
+
+// computeInfrastructureNetworkingStatus builds the InfrastructureStatusNetworking from the shoot networking
+// spec and any IPv6 CIDRs allocated during reconciliation.
+func (fctx *FlowContext) computeInfrastructureNetworkingStatus() *extensionsv1alpha1.InfrastructureStatusNetworking {
+	networking := &extensionsv1alpha1.InfrastructureStatusNetworking{}
+
+	if fctx.shootNetworking != nil {
+		if fctx.shootNetworking.Nodes != nil {
+			networking.Nodes = append(networking.Nodes, *fctx.shootNetworking.Nodes)
+		}
+		if fctx.shootNetworking.Pods != nil {
+			networking.Pods = append(networking.Pods, *fctx.shootNetworking.Pods)
+		}
+		if fctx.shootNetworking.Services != nil {
+			networking.Services = append(networking.Services, *fctx.shootNetworking.Services)
+		}
+	}
+
+	if nodeCIDR := fctx.state.Get(IdentifierNodeSubnetIPv6CIDR); nodeCIDR != nil {
+		networking.Nodes = append(networking.Nodes, *nodeCIDR)
+	}
+	if podCIDR := fctx.state.Get(IdentifierPodSubnetIPv6CIDR); podCIDR != nil {
+		networking.Pods = append(networking.Pods, *podCIDR)
+	}
+	if svcCIDR := fctx.state.Get(IdentifierServiceSubnetIPv6CIDR); svcCIDR != nil {
+		networking.Services = append(networking.Services, *svcCIDR)
+	}
+
+	return networking
 }
 
 func (fctx *FlowContext) computeInfrastructureState() *runtime.RawExtension {
@@ -206,6 +255,8 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 
 	status.Node.KeyName = ptr.Deref(fctx.state.Get(NameKeyPair), "")
 
+	status.Networks.Subnets = []openstackv1alpha1.Subnet{}
+
 	if v := fctx.state.Get(IdentifierShareNetwork); v != nil {
 		status.Networks.ShareNetwork = &openstackv1alpha1.ShareNetworkStatus{
 			ID:   *v,
@@ -214,12 +265,31 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 	}
 
 	if v := fctx.state.Get(IdentifierSubnet); v != nil {
-		status.Networks.Subnets = []openstackv1alpha1.Subnet{
-			{
-				Purpose: openstackv1alpha1.PurposeNodes,
-				ID:      *v,
-			},
-		}
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+			Purpose: openstackv1alpha1.PurposeNodes,
+			ID:      *v,
+		})
+	}
+
+	if v := fctx.state.Get(IdentifierSubnetIPv6); v != nil {
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+			Purpose: openstackv1alpha1.PurposeNodesIPv6,
+			ID:      *v,
+		})
+	}
+
+	if v := fctx.state.Get(IdentifierSubnetIPv6Pod); v != nil {
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+			Purpose: openstackv1alpha1.PurposePods,
+			ID:      *v,
+		})
+	}
+
+	if v := fctx.state.Get(IdentifierSubnetIPv6Svc); v != nil {
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+			Purpose: openstackv1alpha1.PurposeServices,
+			ID:      *v,
+		})
 	}
 
 	if v := fctx.state.Get(IdentifierSecGroup); v != nil {

@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
@@ -196,6 +197,10 @@ func (fctx *FlowContext) defaultSubnetName() string {
 	return fctx.infra.Namespace
 }
 
+func (fctx *FlowContext) defaultSubnetIPv6Name() string {
+	return fctx.infra.Namespace + "-ipv6"
+}
+
 func (fctx *FlowContext) defaultSecurityGroupName() string {
 	return fctx.infra.Namespace
 }
@@ -206,4 +211,17 @@ func (fctx *FlowContext) defaultSharedNetworkName() string {
 
 func (fctx *FlowContext) workersCIDR() string {
 	return fctx.config.WorkersCIDR()
+}
+
+// hasExplicitIPv6Config returns true if explicit IPv6 CIDRs (not a subnet pool) are configured
+func (fctx *FlowContext) hasExplicitIPv6Config() bool {
+	return fctx.config.Networks.IPv6 != nil && fctx.config.Networks.IPv6.NodeCIDR != ""
+}
+
+// isDualStack returns true if the shoot is configured for dual-stack networking.
+func (fctx *FlowContext) isDualStack() bool {
+	if fctx.shootNetworking == nil {
+		return false
+	}
+	return gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)
 }

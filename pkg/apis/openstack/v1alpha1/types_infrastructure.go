@@ -40,6 +40,26 @@ type Networks struct {
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	// +optional
 	ShareNetwork *ShareNetwork `json:"shareNetwork,omitempty"`
+	// IPv6 holds information about the IPv6 CIDRs.
+	// +optional
+	IPv6 *IPv6Config `json:"ipv6,omitempty"`
+}
+
+// IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
+type IPv6Config struct {
+	// SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
+	// Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).
+	// +optional
+	SubnetPoolID *string `json:"subnetPoolID,omitempty"`
+	// NodeCIDR is the CIDR of the node subnet.
+	// +optional
+	NodeCIDR string `json:"nodeCIDR,omitempty"`
+	// PodCIDR is the CIDR of the pods.
+	// +optional
+	PodCIDR string `json:"podCIDR,omitempty"`
+	// ServiceCIDR is the CIDR of the services.
+	// +optional
+	ServiceCIDR string `json:"serviceCIDR,omitempty"`
 }
 
 // Router indicates whether to use an existing router or create a new one.
@@ -123,6 +143,12 @@ type Purpose string
 const (
 	// PurposeNodes is a Purpose for node resources.
 	PurposeNodes Purpose = "nodes"
+	// PurposeNodesIPv6 is a Purpose for IPv6 node subnet resources in dual-stack clusters.
+	PurposeNodesIPv6 Purpose = "nodes-ipv6"
+	// PurposePods is a Purpose for pod CIDR allocation resources.
+	PurposePods Purpose = "pods"
+	// PurposeServices is a Purpose for service CIDR allocation resources.
+	PurposeServices Purpose = "services"
 )
 
 // Subnet is an OpenStack subnet related to a Network.

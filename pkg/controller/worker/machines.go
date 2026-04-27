@@ -115,9 +115,15 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 		return err
 	}
 
-	subnet, err := helper.FindSubnetByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
+	subnets, err := helper.FindSubnetsByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodes)
 	if err != nil {
 		return err
+	}
+	// In dual-stack clusters the IPv6 node subnet has a distinct purpose so that
+	// valuesprovider.go can unambiguously select the IPv4 subnet for the CCM config.
+	// Machines must be attached to both, so append the IPv6 node subnets here.
+	if ipv6NodeSubnets, err := helper.FindSubnetsByPurpose(infrastructureStatus.Networks.Subnets, api.PurposeNodesIPv6); err == nil {
+		subnets = append(subnets, ipv6NodeSubnets...)
 	}
 
 	for _, pool := range w.worker.Spec.Pools {
@@ -201,7 +207,13 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 				},
 			}
 
-			machineClassSpec["subnetID"] = subnet.ID
+			// Collect only node subnet IDs; pod/service subnets must not be attached to machines.
+			var subnetIDs []string
+			for _, subnet := range subnets {
+				subnetIDs = append(subnetIDs, subnet.ID)
+			}
+
+			machineClassSpec["subnetIDs"] = subnetIDs
 
 			if volumeSize > 0 {
 				machineClassSpec["rootDiskSize"] = volumeSize

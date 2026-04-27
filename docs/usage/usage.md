@@ -87,6 +87,48 @@ Apart from the router and the worker subnet the OpenStack extension will also cr
 The optional `networks.shareNetwork.enabled` field controls the creation of a share network. This is only needed if shared
 file system storage (like NFS) should be used. Note, that in this case, the `ControlPlaneConfig` needs additional configuration, too.
 
+### Dual-Stack Networking (IPv4/IPv6)
+
+For dual-stack clusters that use both IPv4 and IPv6, you have two configuration options:
+
+#### Option 1: Using a Subnet Pool (Recommended)
+
+The `networks.ipv6.subnetPoolID` field specifies the OpenStack subnet pool ID from which IPv6 subnets will be allocated automatically for nodes, pods, and services.
+
+An example `InfrastructureConfig` for dual-stack with subnet pool looks as follows:
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: InfrastructureConfig
+floatingPoolName: MY-FLOATING-POOL
+networks:
+  workers: 10.250.0.0/19
+  ipv6:
+    subnetPoolID: MY-SUBNET-POOL-ID
+```
+
+Unlike IPv4 where you explicitly specify the CIDR in `networks.workers`, IPv6 addresses are typically allocated from a larger prefix managed by your OpenStack environment.
+
+#### Option 2: Explicit IPv6 CIDR Configuration
+
+Alternatively, you can explicitly specify IPv6 CIDRs for nodes, pods, and services using the `networks.ipv6` field.
+In this case, IPv6 subnets are created using the provided CIDRs directly, so no `subnetPoolID` is required.
+If both `subnetPoolID` and explicit CIDRs are set, the explicit CIDRs take precedence and the pool is not used for CIDR allocation.
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: InfrastructureConfig
+floatingPoolName: MY-FLOATING-POOL
+networks:
+  workers: 10.250.0.0/19
+  ipv6:
+    nodeCIDR: 2001:db8:1::/64      # IPv6 CIDR for worker nodes
+    podCIDR: 2001:db8:2::/64        # IPv6 CIDR for pods
+    serviceCIDR: 2001:db8:3::/112   # IPv6 CIDR for services
+```
+
+⚠️ The `networks.ipv6` configuration is immutable after cluster creation.
+
 ## `ControlPlaneConfig`
 
 The control plane configuration mainly contains values for the OpenStack-specific control plane components.

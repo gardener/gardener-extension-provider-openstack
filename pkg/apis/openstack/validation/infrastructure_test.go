@@ -177,6 +177,124 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 	})
 
+	Context("IPv6 config", func() {
+		It("should pass when networks.ipv6 is not set", func() {
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should pass with a valid subnetPoolID", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{SubnetPoolID: ptr.To("pool-id")}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should pass with valid explicit IPv6 CIDRs", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "2001:db8:1::/64",
+				PodCIDR:     "2001:db8:2::/64",
+				ServiceCIDR: "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should pass with both subnetPoolID and explicit CIDRs set", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				SubnetPoolID: ptr.To("pool-id"),
+				NodeCIDR:     "2001:db8:1::/64",
+				PodCIDR:      "2001:db8:2::/64",
+				ServiceCIDR:  "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid networks.ipv6 with neither subnetPoolID nor CIDRs", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("networks.ipv6"),
+			}))))
+		})
+
+		It("should forbid partial explicit CIDRs", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{NodeCIDR: "2001:db8:1::/64"}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("networks.ipv6.podCIDR"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("networks.ipv6.serviceCIDR"),
+				})),
+			))
+		})
+
+		It("should forbid non-IPv6 CIDRs", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "10.0.0.0/24",
+				PodCIDR:     "10.1.0.0/24",
+				ServiceCIDR: "10.2.0.0/24",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(HaveLen(3))
+			for _, err := range errorList {
+				Expect(err.Type).To(Equal(field.ErrorTypeInvalid))
+			}
+		})
+
+		It("should forbid invalid CIDR syntax", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "not-a-cidr",
+				PodCIDR:     "2001:db8:2::/64",
+				ServiceCIDR: "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6.nodeCIDR"),
+			}))))
+		})
+
+		It("should forbid non-canonical IPv6 CIDRs", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "2001:db8:1::1/64",
+				PodCIDR:     "2001:db8:2::/64",
+				ServiceCIDR: "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6.nodeCIDR"),
+			}))))
+		})
+
+		It("should forbid overlapping IPv6 CIDRs", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "2001:db8::/48",
+				PodCIDR:     "2001:db8::/64",
+				ServiceCIDR: "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).NotTo(BeEmpty())
+		})
+
+		It("should forbid changing networks.ipv6 after creation", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{SubnetPoolID: ptr.To("pool-id")}
+			newConfig := infrastructureConfig.DeepCopy()
+			newConfig.Networks.IPv6 = &api.IPv6Config{SubnetPoolID: ptr.To("other-pool-id")}
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6"),
+			}))))
+		})
+	})
+
 	Describe("#ValidateInfrastructureConfigUpdate", func() {
 		It("should return no errors for an unchanged config", func() {
 			Expect(ValidateInfrastructureConfigUpdate(infrastructureConfig, infrastructureConfig, nilPath)).To(BeEmpty())

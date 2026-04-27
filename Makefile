@@ -83,7 +83,7 @@ DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                         --existing-dns-zone='' # gardener-dev-team-test.c.eu-de-1.cloud.sap.
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
-	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
+	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-$(shell date +%s)-dirty
 endif
 
 #########################################
@@ -166,6 +166,79 @@ docker-image-admission:
 
 .PHONY: docker-images
 docker-images: docker-image-provider docker-image-admission
+
+.PHONY: docker-push-provider
+docker-push-provider: $(KUBECTL)
+	$(eval REGISTRY_URL := $(shell $(KUBECTL) cluster-info | head -1 | grep -oP 'https://\K[^:]+' | sed 's/^api\./reg./'))
+	@docker tag $(IMAGE_PREFIX)/$(NAME):$(VERSION) $(REGISTRY_URL)/$(NAME):$(EFFECTIVE_VERSION)
+	@docker push $(REGISTRY_URL)/$(NAME):$(EFFECTIVE_VERSION)
+
+.PHONY: docker-push-admission
+docker-push-admission: $(KUBECTL)
+	$(eval REGISTRY_URL := $(shell $(KUBECTL) cluster-info | head -1 | grep -oP 'https://\K[^:]+' | sed 's/^api\./reg./'))
+	@docker tag $(IMAGE_PREFIX)/$(ADMISSION_NAME):$(VERSION) $(REGISTRY_URL)/$(ADMISSION_NAME):$(EFFECTIVE_VERSION)
+	@docker push $(REGISTRY_URL)/$(ADMISSION_NAME):$(EFFECTIVE_VERSION)
+
+.PHONY: docker-push
+docker-push: docker-push-provider docker-push-admission
+
+.PHONY: helm-chart-provider
+helm-chart-provider: $(HELM)
+	@mkdir -p remote
+	@$(HELM) package ./charts/$(EXTENSION_PREFIX)-$(NAME) --version $(EFFECTIVE_VERSION) --app-version $(EFFECTIVE_VERSION) --destination remote
+
+.PHONY: helm-chart-admission
+helm-chart-admission: $(HELM)
+	@mkdir -p remote
+	@$(HELM) package ./charts/$(EXTENSION_PREFIX)-$(ADMISSION_NAME)/charts/application --version $(EFFECTIVE_VERSION) --app-version $(EFFECTIVE_VERSION) --destination remote
+	@$(HELM) package ./charts/$(EXTENSION_PREFIX)-$(ADMISSION_NAME)/charts/runtime --version $(EFFECTIVE_VERSION) --app-version $(EFFECTIVE_VERSION) --destination remote
+
+.PHONY: helm-charts
+helm-charts: helm-chart-provider helm-chart-admission
+
+.PHONY: helm-push-provider
+helm-push-provider: $(HELM) $(KUBECTL)
+	$(eval REGISTRY_URL := $(shell $(KUBECTL) cluster-info | head -1 | grep -oP 'https://\K[^:]+' | sed 's/^api\./reg./'))
+	@$(HELM) push remote/$(EXTENSION_PREFIX)-$(NAME)-$(EFFECTIVE_VERSION).tgz oci://$(REGISTRY_URL)
+
+.PHONY: helm-push-admission
+helm-push-admission: $(HELM) $(KUBECTL)
+	$(eval REGISTRY_URL := $(shell $(KUBECTL) cluster-info | head -1 | grep -oP 'https://\K[^:]+' | sed 's/^api\./reg./'))
+	@$(HELM) push remote/$(ADMISSION_NAME)-application-$(EFFECTIVE_VERSION).tgz oci://$(REGISTRY_URL)
+	@$(HELM) push remote/$(ADMISSION_NAME)-runtime-$(EFFECTIVE_VERSION).tgz oci://$(REGISTRY_URL)
+
+.PHONY: helm-push
+helm-push: helm-push-provider helm-push-admission
+
+.PHONY: extension-manifest
+extension-manifest: $(KUBECTL) $(YQ)
+	$(eval REGISTRY_URL := $(shell $(KUBECTL) cluster-info | head -1 | grep -oP 'https://\K[^:]+' | sed 's/^api\./reg./'))
+	@mkdir -p remote
+	@$(YQ) eval ".spec.deployment.admission.runtimeCluster.helm.ociRepository.ref = \"$(REGISTRY_URL)/$(ADMISSION_NAME)-runtime:$(EFFECTIVE_VERSION)\" | \
+	          .spec.deployment.admission.runtimeCluster.helm.ociRepository.pullSecretRef.name = \"gardener-images\" | \
+	          .spec.deployment.admission.virtualCluster.helm.ociRepository.ref = \"$(REGISTRY_URL)/$(ADMISSION_NAME)-application:$(EFFECTIVE_VERSION)\" | \
+	          .spec.deployment.admission.virtualCluster.helm.ociRepository.pullSecretRef.name = \"gardener-images\" | \
+	          .spec.deployment.extension.helm.ociRepository.ref = \"$(REGISTRY_URL)/$(EXTENSION_PREFIX)-$(NAME):$(EFFECTIVE_VERSION)\" | \
+	          .spec.deployment.extension.helm.ociRepository.pullSecretRef.name = \"gardener-images\" | \
+	          .spec.deployment.admission.values.image.repository = \"$(REGISTRY_URL)/$(ADMISSION_NAME)\" | \
+	          .spec.deployment.admission.values.image.tag = \"$(EFFECTIVE_VERSION)\" | \
+	          .spec.deployment.admission.values.image.pullPolicy = \"Always\" | \
+	          .spec.deployment.extension.values.image.repository = \"$(REGISTRY_URL)/$(NAME)\" | \
+	          .spec.deployment.extension.values.image.tag = \"$(EFFECTIVE_VERSION)\" | \
+	          .spec.deployment.extension.values.image.pullPolicy = \"Always\" | \
+	          .spec.deployment.extension.runtimeClusterValues.image.repository = \"$(REGISTRY_URL)/$(NAME)\" | \
+	          .spec.deployment.extension.runtimeClusterValues.image.tag = \"$(EFFECTIVE_VERSION)\" | \
+	          .spec.deployment.extension.runtimeClusterValues.image.pullPolicy = \"Always\"" \
+	          example/extension.yaml > remote/extension.yaml
+	@echo "Created remote/extension.yaml with registry $(REGISTRY_URL)"
+
+.PHONY: extension-apply
+extension-apply: $(KUBECTL)
+	@$(KUBECTL) apply -f remote/extension.yaml
+
+.PHONY: deploy-remote
+deploy-remote: docker-images docker-push helm-charts helm-push extension-manifest extension-apply
+	@echo "Successfully deployed extension to remote cluster"
 
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #

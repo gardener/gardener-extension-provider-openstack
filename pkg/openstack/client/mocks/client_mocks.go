@@ -963,21 +963,6 @@ func (mr *MockNetworkingMockRecorder) ListSecurityGroup(ctx, listOpts any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSecurityGroup", reflect.TypeOf((*MockNetworking)(nil).ListSecurityGroup), ctx, listOpts)
 }
 
-// ListSubnets mocks base method.
-func (m *MockNetworking) ListSubnets(ctx context.Context, listOpts subnets.ListOpts) ([]subnets.Subnet, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSubnets", ctx, listOpts)
-	ret0, _ := ret[0].([]subnets.Subnet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListSubnets indicates an expected call of ListSubnets.
-func (mr *MockNetworkingMockRecorder) ListSubnets(ctx, listOpts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSubnets", reflect.TypeOf((*MockNetworking)(nil).ListSubnets), ctx, listOpts)
-}
-
 // ListSubnetPools mocks base method.
 func (m *MockNetworking) ListSubnetPools(ctx context.Context, listOpts subnetpools.ListOpts) ([]subnetpools.SubnetPool, error) {
 	m.ctrl.T.Helper()
@@ -991,6 +976,21 @@ func (m *MockNetworking) ListSubnetPools(ctx context.Context, listOpts subnetpoo
 func (mr *MockNetworkingMockRecorder) ListSubnetPools(ctx, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSubnetPools", reflect.TypeOf((*MockNetworking)(nil).ListSubnetPools), ctx, listOpts)
+}
+
+// ListSubnets mocks base method.
+func (m *MockNetworking) ListSubnets(ctx context.Context, listOpts subnets.ListOpts) ([]subnets.Subnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSubnets", ctx, listOpts)
+	ret0, _ := ret[0].([]subnets.Subnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSubnets indicates an expected call of ListSubnets.
+func (mr *MockNetworkingMockRecorder) ListSubnets(ctx, listOpts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSubnets", reflect.TypeOf((*MockNetworking)(nil).ListSubnets), ctx, listOpts)
 }
 
 // RemoveRouterInterface mocks base method.

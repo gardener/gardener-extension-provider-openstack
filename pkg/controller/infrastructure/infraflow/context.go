@@ -54,6 +54,8 @@ const (
 	IdentifierPodSubnetIPv6CIDR = "PodSubnetIPv6CIDR"
 	// IdentifierServiceSubnetIPv6CIDR is the key for the service subnet IPv6 CIDR
 	IdentifierServiceSubnetIPv6CIDR = "ServiceSubnetIPv6CIDR"
+	// IdentifierWorkersCIDR is the key for the workers subnet CIDR allocated from a subnet pool.
+	IdentifierWorkersCIDR = "WorkersCIDR"
 
 	// NameFloatingNetwork is the key for the floating network name
 	NameFloatingNetwork = "FloatingNetworkName"
@@ -205,6 +207,11 @@ func (fctx *FlowContext) computeInfrastructureNetworkingStatus() *extensionsv1al
 		if fctx.shootNetworking.Services != nil {
 			networking.Services = append(networking.Services, *fctx.shootNetworking.Services)
 		}
+	}
+
+	// If workers subnet was allocated from a pool, report the allocated CIDR as the nodes CIDR.
+	if workersCIDR := fctx.state.Get(IdentifierWorkersCIDR); workersCIDR != nil {
+		networking.Nodes = append(networking.Nodes, *workersCIDR)
 	}
 
 	if nodeCIDR := fctx.state.Get(IdentifierNodeSubnetIPv6CIDR); nodeCIDR != nil {

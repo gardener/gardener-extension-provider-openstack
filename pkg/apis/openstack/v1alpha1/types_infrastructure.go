@@ -33,7 +33,12 @@ type Networks struct {
 	// Deprecated: use `workers` instead.
 	Worker string `json:"worker"`
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
+	// Mutually exclusive with SubnetPool.
 	Workers string `json:"workers"`
+	// SubnetPool specifies an OpenStack subnet pool to use for automatic CIDR allocation
+	// for the worker subnet. Mutually exclusive with Workers/Worker CIDR fields.
+	// +optional
+	SubnetPool *SubnetPool `json:"subnetPool,omitempty"`
 	// ID is the ID of an existing private network.
 	// +optional
 	ID *string `json:"id,omitempty"`
@@ -43,6 +48,14 @@ type Networks struct {
 	// IPv6 holds information about the IPv6 CIDRs.
 	// +optional
 	IPv6 *IPv6Config `json:"ipv6,omitempty"`
+}
+
+// SubnetPool specifies an OpenStack subnet pool from which a CIDR will be automatically allocated.
+type SubnetPool struct {
+	// Name is the name of the OpenStack subnet pool.
+	Name string `json:"name"`
+	// PrefixLength is the prefix length (e.g. 24 for a /24 subnet) to request from the pool.
+	PrefixLength int `json:"prefixLength"`
 }
 
 // IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.

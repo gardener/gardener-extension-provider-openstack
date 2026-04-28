@@ -2186,6 +2186,18 @@ string
 <p>ID is the subnet id.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>cidr</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CIDR is the CIDR of the subnet. This is only set for subnets that were allocated from a subnet pool.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"path/filepath"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/subnetpools"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
@@ -327,6 +329,32 @@ var _ = Describe("Infrastructure tests", func() {
 		err = runTest(ctx, log, c, namespace, providerConfig, cloudProfileConfig)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("with infrastructure that uses a subnet pool", func() {
+		// subnetPoolPrefixLength is the prefix length of the /16 block assigned to each test's subnet pool.
+		// subnetPoolAllocationPrefixLength is the size of the subnet allocated from that pool by the reconciler.
+		subnetPoolPrefixLength := 16
+		subnetPoolAllocationPrefixLength := 24
+
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		subnetPoolName := namespace + "-subnet-pool"
+		subnetPoolPrefix := subnetPoolPrefixForNamespace(namespace, subnetPoolPrefixLength)
+		subnetPoolID := prepareNewSubnetPool(log, subnetPoolName, subnetPoolPrefix)
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			teardownSubnetPool(log, *subnetPoolID)
+			framework.RemoveCleanupAction(cleanupHandle)
+		})
+
+		providerConfig := newProviderConfigWithSubnetPool(*subnetPoolID, subnetPoolAllocationPrefixLength)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTest(ctx, log, c, namespace, providerConfig, cloudProfileConfig)
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
 
 func runTest(
@@ -551,6 +579,22 @@ func newProviderConfig(routerID string, networkID *string) *openstackv1alpha1.In
 	}
 }
 
+func newProviderConfigWithSubnetPool(subnetPoolID string, prefixLength int) *openstackv1alpha1.InfrastructureConfig {
+	return &openstackv1alpha1.InfrastructureConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "InfrastructureConfig",
+		},
+		FloatingPoolName: *floatingPoolName,
+		Networks: openstackv1alpha1.Networks{
+			SubnetPool: &openstackv1alpha1.SubnetPool{
+				ID:           subnetPoolID,
+				PrefixLength: prefixLength,
+			},
+		},
+	}
+}
+
 func newCloudProfileConfig(region string, authURL string) *openstackv1alpha1.CloudProfileConfig {
 	return &openstackv1alpha1.CloudProfileConfig{
 		TypeMeta: metav1.TypeMeta{
@@ -609,6 +653,16 @@ func generateNamespaceName() (string, error) {
 	return "openstack--infra-it--" + suffix, nil
 }
 
+// subnetPoolPrefixForNamespace derives a unique CIDR within 10.0.0.0/8 from the
+// namespace name so that parallel test runs using the same OpenStack account each get
+// a distinct subnet pool prefix and don't conflict on pool creation.
+func subnetPoolPrefixForNamespace(namespace string, subnetPoolPrefixLength int) string {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(namespace))
+	n := h.Sum32() % 65536
+	return fmt.Sprintf("10.%d.%d.0/%d", n>>8, n&0xff, subnetPoolPrefixLength)
+}
+
 func prepareNewRouter(log logr.Logger, routerName string) *string {
 	log.Info("Waiting until router is created", "routerName", routerName)
 
@@ -656,6 +710,29 @@ func teardownNetwork(log logr.Logger, networkID string) {
 	log.Info("Network is deleted", "networkID", networkID)
 }
 
+func prepareNewSubnetPool(log logr.Logger, name, prefix string) *string {
+	log.Info("Waiting until subnet pool is created", "subnetPoolName", name)
+
+	createOpts := subnetpools.CreateOpts{
+		Name:     name,
+		Prefixes: []string{prefix},
+	}
+	pool, err := networkClient.CreateSubnetPool(ctx, createOpts)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet pool is created", "subnetPoolName", name, "subnetPoolID", pool.ID)
+	return &pool.ID
+}
+
+func teardownSubnetPool(log logr.Logger, subnetPoolID string) {
+	log.Info("Waiting until subnet pool is deleted", "subnetPoolID", subnetPoolID)
+
+	err := networkClient.DeleteSubnetPool(ctx, subnetPoolID)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet pool is deleted", "subnetPoolID", subnetPoolID)
+}
+
 type infrastructureIdentifiers struct {
 	networkID  *string
 	keyPair    *string
@@ -700,7 +777,13 @@ func verifyCreation(infraStatus extensionsv1alpha1.InfrastructureStatus, provide
 	// subnet is created
 	subnet, err := networkClient.GetSubnetByID(ctx, providerStatus.Networks.Subnets[0].ID)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
+	if providerConfig.Networks.SubnetPool != nil {
+		// CIDR is allocated from the pool; verify it is non-empty and matches the status
+		Expect(subnet.CIDR).NotTo(BeEmpty())
+		Expect(providerStatus.Networks.Subnets[0].CIDR).To(Equal(subnet.CIDR))
+	} else {
+		Expect(subnet.CIDR).To(Equal(providerConfig.Networks.Workers))
+	}
 	infrastructureIdentifier.subnetID = ptr.To(subnet.ID)
 
 	// security group is created

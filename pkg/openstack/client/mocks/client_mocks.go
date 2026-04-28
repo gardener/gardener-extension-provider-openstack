@@ -609,6 +609,21 @@ func (mr *MockNetworkingMockRecorder) CreateSubnet(ctx, createOpts any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSubnet", reflect.TypeOf((*MockNetworking)(nil).CreateSubnet), ctx, createOpts)
 }
 
+// CreateSubnetPool mocks base method.
+func (m *MockNetworking) CreateSubnetPool(ctx context.Context, createOpts subnetpools.CreateOpts) (*subnetpools.SubnetPool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSubnetPool", ctx, createOpts)
+	ret0, _ := ret[0].(*subnetpools.SubnetPool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSubnetPool indicates an expected call of CreateSubnetPool.
+func (mr *MockNetworkingMockRecorder) CreateSubnetPool(ctx, createOpts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSubnetPool", reflect.TypeOf((*MockNetworking)(nil).CreateSubnetPool), ctx, createOpts)
+}
+
 // DeleteFloatingIP mocks base method.
 func (m *MockNetworking) DeleteFloatingIP(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
@@ -691,6 +706,20 @@ func (m *MockNetworking) DeleteSubnet(ctx context.Context, subnetID string) erro
 func (mr *MockNetworkingMockRecorder) DeleteSubnet(ctx, subnetID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSubnet", reflect.TypeOf((*MockNetworking)(nil).DeleteSubnet), ctx, subnetID)
+}
+
+// DeleteSubnetPool mocks base method.
+func (m *MockNetworking) DeleteSubnetPool(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSubnetPool", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSubnetPool indicates an expected call of DeleteSubnetPool.
+func (mr *MockNetworkingMockRecorder) DeleteSubnetPool(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSubnetPool", reflect.TypeOf((*MockNetworking)(nil).DeleteSubnetPool), ctx, id)
 }
 
 // GetExternalNetworkByName mocks base method.

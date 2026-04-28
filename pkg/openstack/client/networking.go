@@ -294,6 +294,16 @@ func (c *NetworkingClient) ListSubnetPools(ctx context.Context, listOpts subnetp
 	return subnetpools.ExtractSubnetPools(page)
 }
 
+// CreateSubnetPool creates a subnet pool
+func (c *NetworkingClient) CreateSubnetPool(ctx context.Context, createOpts subnetpools.CreateOpts) (*subnetpools.SubnetPool, error) {
+	return subnetpools.Create(ctx, c.client, createOpts).Extract()
+}
+
+// DeleteSubnetPool deletes a subnet pool by identifier
+func (c *NetworkingClient) DeleteSubnetPool(ctx context.Context, id string) error {
+	return subnetpools.Delete(ctx, c.client, id).ExtractErr()
+}
+
 // GetPort gets a port by identifier
 func (c *NetworkingClient) GetPort(ctx context.Context, portID string) (*ports.Port, error) {
 	return ports.Get(ctx, c.client, portID).Extract()

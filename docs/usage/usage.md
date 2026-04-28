@@ -82,6 +82,20 @@ The `networks.workers` section describes the CIDR for a subnet that is used for 
 
 You can freely choose these CIDRs and it is your responsibility to properly design the network layout to suit your needs.
 
+Instead of specifying an explicit CIDR via `networks.workers`, you can use `networks.subnetPool` to let OpenStack automatically allocate a subnet CIDR from a pre-configured subnet pool:
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: InfrastructureConfig
+floatingPoolName: MY-FLOATING-POOL
+networks:
+  subnetPool:
+    id: MY-SUBNET-POOL-ID
+    prefixLength: 24  # request a /24 subnet from the pool
+```
+
+`networks.subnetPool.id` is the UUID of the OpenStack subnet pool to allocate from, and `networks.subnetPool.prefixLength` controls the size of the allocated subnet (e.g. `24` for a `/24`). The `networks.workers` and `networks.subnetPool` fields are mutually exclusive.
+
 Apart from the router and the worker subnet the OpenStack extension will also create a network, router interfaces, security groups, and a key pair.
 
 The optional `networks.shareNetwork.enabled` field controls the creation of a share network. This is only needed if shared

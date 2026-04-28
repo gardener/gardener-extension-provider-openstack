@@ -2184,13 +2184,13 @@ string
 <tbody>
 <tr>
 <td>
-<code>name</code></br>
+<code>id</code></br>
 <em>
 string
 </em>
 </td>
 <td>
-<p>Name is the name of the OpenStack subnet pool.</p>
+<p>ID is the ID of the OpenStack subnet pool.</p>
 </td>
 </tr>
 <tr>

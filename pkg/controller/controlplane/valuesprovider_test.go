@@ -824,7 +824,7 @@ var _ = Describe("ValuesProvider", func() {
 										},
 										Networks: openstackv1alpha1.Networks{
 											SubnetPool: &openstackv1alpha1.SubnetPool{
-												Name: "my-subnet-pool",
+												ID: "my-subnet-pool-id",
 											},
 										},
 									}),

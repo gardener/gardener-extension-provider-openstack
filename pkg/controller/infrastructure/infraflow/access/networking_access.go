@@ -19,7 +19,6 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/subnetpools"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"gopkg.in/godo.v2/glob"
@@ -50,7 +49,6 @@ type NetworkingAccess interface {
 	GetSubnetByID(ctx context.Context, id string) (*subnets.Subnet, error)
 	GetSubnetByName(ctx context.Context, networkID, name string) ([]*subnets.Subnet, error)
 	UpdateSubnet(ctx context.Context, desired, current *subnets.Subnet) (modified bool, err error)
-	GetSubnetPoolIDByName(ctx context.Context, name string) (string, error)
 
 	// SecurityGroups
 	CreateSecurityGroup(ctx context.Context, desired *groups.SecGroup) (*groups.SecGroup, error)
@@ -450,20 +448,6 @@ func (a *networkingAccess) CreateSubnet(ctx context.Context, desired *subnets.Su
 		return nil, err
 	}
 	return raw, nil
-}
-
-func (a *networkingAccess) GetSubnetPoolIDByName(ctx context.Context, name string) (string, error) {
-	pools, err := a.networking.ListSubnetPools(ctx, subnetpools.ListOpts{Name: name})
-	if err != nil {
-		return "", err
-	}
-	if len(pools) == 0 {
-		return "", fmt.Errorf("subnet pool with name %q not found", name)
-	}
-	if len(pools) > 1 {
-		return "", fmt.Errorf("found %d subnet pools with name %q, expected exactly one", len(pools), name)
-	}
-	return pools[0].ID, nil
 }
 
 func (a *networkingAccess) GetSubnetByID(ctx context.Context, id string) (*subnets.Subnet, error) {

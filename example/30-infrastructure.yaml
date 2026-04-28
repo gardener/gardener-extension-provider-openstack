@@ -64,4 +64,8 @@ spec:
     # router:
     #   id: 1234
       workers: 10.250.0.0/19
+    # Alternatively, use a subnet pool for automatic CIDR allocation (mutually exclusive with workers):
+    # subnetPool:
+    #   id: MY-SUBNET-POOL-ID
+    #   prefixLength: 24
   sshPublicKey: AAAA

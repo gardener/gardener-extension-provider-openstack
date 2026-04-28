@@ -14,6 +14,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/subnetpools"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
@@ -282,6 +283,15 @@ func (c *NetworkingClient) UpdateSubnet(ctx context.Context, id string, updateOp
 // DeleteSubnet deletes a subnet by identifier
 func (c *NetworkingClient) DeleteSubnet(ctx context.Context, subnetID string) error {
 	return subnets.Delete(ctx, c.client, subnetID).ExtractErr()
+}
+
+// ListSubnetPools returns a list of subnet pools
+func (c *NetworkingClient) ListSubnetPools(ctx context.Context, listOpts subnetpools.ListOpts) ([]subnetpools.SubnetPool, error) {
+	page, err := subnetpools.List(c.client, listOpts).AllPages(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return subnetpools.ExtractSubnetPools(page)
 }
 
 // GetPort gets a port by identifier

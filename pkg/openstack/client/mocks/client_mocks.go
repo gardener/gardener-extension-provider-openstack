@@ -23,6 +23,7 @@ import (
 	routers "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	groups "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	rules "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	subnetpools "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/subnetpools"
 	networks "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	ports "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
 	subnets "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
@@ -975,6 +976,21 @@ func (m *MockNetworking) ListSubnets(ctx context.Context, listOpts subnets.ListO
 func (mr *MockNetworkingMockRecorder) ListSubnets(ctx, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSubnets", reflect.TypeOf((*MockNetworking)(nil).ListSubnets), ctx, listOpts)
+}
+
+// ListSubnetPools mocks base method.
+func (m *MockNetworking) ListSubnetPools(ctx context.Context, listOpts subnetpools.ListOpts) ([]subnetpools.SubnetPool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSubnetPools", ctx, listOpts)
+	ret0, _ := ret[0].([]subnetpools.SubnetPool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSubnetPools indicates an expected call of ListSubnetPools.
+func (mr *MockNetworkingMockRecorder) ListSubnetPools(ctx, listOpts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSubnetPools", reflect.TypeOf((*MockNetworking)(nil).ListSubnetPools), ctx, listOpts)
 }
 
 // RemoveRouterInterface mocks base method.

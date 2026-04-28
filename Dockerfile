@@ -6,7 +6,9 @@ WORKDIR /go/src/github.com/gardener/gardener-extension-provider-openstack
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
 
 COPY . .
 
@@ -14,7 +16,9 @@ ARG EFFECTIVE_VERSION
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN make build GOOS=$TARGETOS GOARCH=$TARGETARCH EFFECTIVE_VERSION=$EFFECTIVE_VERSION BUILD_OUTPUT_FILE="/output/bin/"
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    make build GOOS=$TARGETOS GOARCH=$TARGETARCH EFFECTIVE_VERSION=$EFFECTIVE_VERSION BUILD_OUTPUT_FILE="/output/bin/"
 
 ############# base
 FROM gcr.io/distroless/static-debian12:nonroot AS base

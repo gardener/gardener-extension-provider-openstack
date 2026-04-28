@@ -74,7 +74,6 @@ images:
       availability_requirement: low
     signing: false
   targetVersion: 1.34.x
-# max-supported-k8s
 - name: cloud-controller-manager
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/openstack-cloud-controller-manager
@@ -179,7 +178,6 @@ images:
       availability_requirement: low
     signing: false
   targetVersion: 1.34.x
-# max-supported-k8s
 - name: csi-driver-cinder
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/cinder-csi-plugin
@@ -270,7 +268,6 @@ images:
       availability_requirement: low
     signing: false
   targetVersion: 1.34.x
-# max-supported-k8s
 - name: csi-driver-manila
   sourceRepository: github.com/kubernetes/cloud-provider-openstack
   repository: registry.k8s.io/provider-os/manila-csi-plugin
@@ -289,7 +286,7 @@ images:
 - name: csi-driver-nfs
   sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
   repository: registry.k8s.io/sig-storage/nfsplugin
-  tag: v4.13.1
+  tag: v4.13.2
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -342,7 +339,6 @@ images:
       integrity_requirement: high
       availability_requirement: low
     signing: false
-# CSI provisioner v6.0.0 and above requires k8s 1.34 or higher
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner

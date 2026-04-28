@@ -1,0 +1,11 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+    {{- if .Values.managedDefaultVolumeSnapshotClass }}
+    snapshot.storage.kubernetes.io/is-default-class: "true"
+    {{- end }}
+  name: csi-cinder
+driver: cinder.csi.openstack.org
+deletionPolicy: Delete

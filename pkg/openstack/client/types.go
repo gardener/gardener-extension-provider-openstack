@@ -160,6 +160,8 @@ type Networking interface {
 	DeleteSubnet(ctx context.Context, subnetID string) error
 	// SubnetPools
 	ListSubnetPools(ctx context.Context, listOpts subnetpools.ListOpts) ([]subnetpools.SubnetPool, error)
+	CreateSubnetPool(ctx context.Context, createOpts subnetpools.CreateOpts) (*subnetpools.SubnetPool, error)
+	DeleteSubnetPool(ctx context.Context, id string) error
 	// Ports
 	GetPort(ctx context.Context, portID string) (*ports.Port, error)
 	GetRouterInterfacePort(ctx context.Context, routerID, subnetID string) (*ports.Port, error)

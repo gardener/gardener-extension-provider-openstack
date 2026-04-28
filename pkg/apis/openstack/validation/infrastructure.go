@@ -91,8 +91,8 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 
 func validateSubnetPool(pool *api.SubnetPool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if pool.Name == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "subnet pool name must not be empty"))
+	if pool.ID == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("id"), "subnet pool id must not be empty"))
 	}
 	if pool.PrefixLength <= 0 || pool.PrefixLength > 32 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("prefixLength"), pool.PrefixLength,

@@ -181,30 +181,30 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		It("should pass with a valid subnetPool and no workers CIDR", func() {
 			infrastructureConfig.Networks.Workers = ""
 			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "my-pool",
+				ID:           "my-pool-id",
 				PrefixLength: 24,
 			}
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid subnetPool with an empty name", func() {
+		It("should forbid subnetPool with an empty id", func() {
 			infrastructureConfig.Networks.Workers = ""
 			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "",
+				ID:           "",
 				PrefixLength: 24,
 			}
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("networks.subnetPool.name"),
+				"Field": Equal("networks.subnetPool.id"),
 			}))))
 		})
 
 		It("should forbid subnetPool with an invalid prefix length of 0", func() {
 			infrastructureConfig.Networks.Workers = ""
 			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "my-pool",
+				ID:           "my-pool-id",
 				PrefixLength: 0,
 			}
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
@@ -217,7 +217,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		It("should forbid subnetPool with an invalid prefix length > 32", func() {
 			infrastructureConfig.Networks.Workers = ""
 			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "my-pool",
+				ID:           "my-pool-id",
 				PrefixLength: 33,
 			}
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
@@ -230,7 +230,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		It("should forbid specifying both subnetPool and workers CIDR", func() {
 			infrastructureConfig.Networks.Workers = "10.250.0.0/16"
 			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "my-pool",
+				ID:           "my-pool-id",
 				PrefixLength: 24,
 			}
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
@@ -243,12 +243,12 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		It("should forbid changing networks.subnetPool after creation", func() {
 			infrastructureConfig.Networks.Workers = ""
 			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "my-pool",
+				ID:           "my-pool-id",
 				PrefixLength: 24,
 			}
 			newConfig := infrastructureConfig.DeepCopy()
 			newConfig.Networks.SubnetPool = &api.SubnetPool{
-				Name:         "other-pool",
+				ID:           "other-pool-id",
 				PrefixLength: 24,
 			}
 			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)

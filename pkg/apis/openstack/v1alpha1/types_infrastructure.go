@@ -52,8 +52,8 @@ type Networks struct {
 
 // SubnetPool specifies an OpenStack subnet pool from which a CIDR will be automatically allocated.
 type SubnetPool struct {
-	// Name is the name of the OpenStack subnet pool.
-	Name string `json:"name"`
+	// ID is the ID of the OpenStack subnet pool.
+	ID string `json:"id"`
 	// PrefixLength is the prefix length (e.g. 24 for a /24 subnet) to request from the pool.
 	PrefixLength int `json:"prefixLength"`
 }

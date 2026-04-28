@@ -1243,7 +1243,7 @@ func Convert_openstack_Subnet_To_v1alpha1_Subnet(in *openstack.Subnet, out *Subn
 }
 
 func autoConvert_v1alpha1_SubnetPool_To_openstack_SubnetPool(in *SubnetPool, out *openstack.SubnetPool, s conversion.Scope) error {
-	out.Name = in.Name
+	out.ID = in.ID
 	out.PrefixLength = in.PrefixLength
 	return nil
 }
@@ -1254,7 +1254,7 @@ func Convert_v1alpha1_SubnetPool_To_openstack_SubnetPool(in *SubnetPool, out *op
 }
 
 func autoConvert_openstack_SubnetPool_To_v1alpha1_SubnetPool(in *openstack.SubnetPool, out *SubnetPool, s conversion.Scope) error {
-	out.Name = in.Name
+	out.ID = in.ID
 	out.PrefixLength = in.PrefixLength
 	return nil
 }

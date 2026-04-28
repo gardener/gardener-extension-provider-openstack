@@ -327,11 +327,7 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 		var subnetPoolID string
 		var prefixlen *int
 		if fctx.config.Networks.SubnetPool != nil {
-			poolID, err := fctx.access.GetSubnetPoolIDByName(ctx, fctx.config.Networks.SubnetPool.Name)
-			if err != nil {
-				return fmt.Errorf("failed to resolve subnet pool %q: %w", fctx.config.Networks.SubnetPool.Name, err)
-			}
-			subnetPoolID = poolID
+			subnetPoolID = fctx.config.Networks.SubnetPool.ID
 			pl := fctx.config.Networks.SubnetPool.PrefixLength
 			prefixlen = &pl
 			desired.CIDR = "" // let the pool allocate

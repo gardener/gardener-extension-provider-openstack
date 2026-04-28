@@ -170,6 +170,9 @@ type Subnet struct {
 	Purpose Purpose `json:"purpose"`
 	// ID is the subnet id.
 	ID string `json:"id"`
+	// CIDR is the CIDR of the subnet. This is only set for subnets that were allocated from a subnet pool.
+	// +optional
+	CIDR string `json:"cidr,omitempty"`
 }
 
 // SecurityGroup is an OpenStack security group related to a Network.

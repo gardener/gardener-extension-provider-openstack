@@ -756,6 +756,91 @@ var _ = Describe("ValuesProvider", func() {
 					"calico-mutating-admission-policy": enabledFalse,
 				}))
 			})
+			It("should return correct shoot control plane chart if CSI Manila is enabled and subnet pool is used", func() {
+				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+
+				// Build a ControlPlane with Manila enabled and an infra status where the nodes subnet
+				// has a CIDR allocated from a subnet pool (no static Workers CIDR in the infra config).
+				cpConfig := &api.ControlPlaneConfig{
+					LoadBalancerProvider: "load-balancer-provider",
+					CloudControllerManager: &api.CloudControllerManagerConfig{
+						FeatureGates: map[string]bool{
+							"SomeKubernetesFeature": true,
+						},
+					},
+					Storage: &api.Storage{CSIManila: &api.CSIManila{Enabled: true}},
+				}
+				cpManilaSubnetPool := &extensionsv1alpha1.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Namespace: namespace},
+					Spec: extensionsv1alpha1.ControlPlaneSpec{
+						SecretRef: corev1.SecretReference{
+							Name:      v1beta1constants.SecretNameCloudProvider,
+							Namespace: namespace,
+						},
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							ProviderConfig: &runtime.RawExtension{Raw: encode(cpConfig)},
+						},
+						Region: region,
+						InfrastructureProviderStatus: &runtime.RawExtension{
+							Raw: encode(&api.InfrastructureStatus{
+								Networks: api.NetworkStatus{
+									Name: technicalID,
+									FloatingPool: api.FloatingPoolStatus{
+										ID: "floating-network-id",
+									},
+									Router: api.RouterStatus{
+										ID: "routerID",
+									},
+									Subnets: []api.Subnet{
+										{
+											ID:      "subnet-pool-allocated",
+											Purpose: api.PurposeNodes,
+											CIDR:    "10.180.10.0/24",
+										},
+									},
+									ShareNetwork: &api.ShareNetworkStatus{
+										ID:   "1111-2222-3333-4444",
+										Name: "sharenetwork",
+									},
+								},
+							}),
+						},
+					},
+				}
+				clusterSubnetPool := &extensionscontroller.Cluster{
+					ObjectMeta:   cluster.ObjectMeta,
+					CloudProfile: cluster.CloudProfile,
+					Seed:         cluster.Seed,
+					Shoot: &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Networking: cluster.Shoot.Spec.Networking,
+							Kubernetes: cluster.Shoot.Spec.Kubernetes,
+							Provider: gardencorev1beta1.Provider{
+								InfrastructureConfig: &runtime.RawExtension{
+									Raw: encode(&openstackv1alpha1.InfrastructureConfig{
+										TypeMeta: metav1.TypeMeta{
+											APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+											Kind:       "InfrastructureConfig",
+										},
+										Networks: openstackv1alpha1.Networks{
+											SubnetPool: &openstackv1alpha1.SubnetPool{
+												Name: "my-subnet-pool",
+											},
+										},
+									}),
+								},
+								Workers: cluster.Shoot.Spec.Provider.Workers,
+							},
+						},
+						Status: cluster.Shoot.Status,
+					},
+				}
+
+				values, err := vp.GetControlPlaneShootChartValues(ctx, cpManilaSubnetPool, clusterSubnetPool, fakeSecretsManager, map[string]string{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(values).To(HaveKey(openstack.CSIDriverManila))
+				Expect(values[openstack.CSIDriverManila]).To(HaveKeyWithValue("openstack", HaveKeyWithValue("shareClient", "10.180.10.0/24")))
+			})
 		})
 	})
 

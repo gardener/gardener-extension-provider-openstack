@@ -1221,6 +1221,7 @@ func Convert_openstack_StorageClassDefinition_To_v1alpha1_StorageClassDefinition
 func autoConvert_v1alpha1_Subnet_To_openstack_Subnet(in *Subnet, out *openstack.Subnet, s conversion.Scope) error {
 	out.Purpose = openstack.Purpose(in.Purpose)
 	out.ID = in.ID
+	out.CIDR = in.CIDR
 	return nil
 }
 
@@ -1232,6 +1233,7 @@ func Convert_v1alpha1_Subnet_To_openstack_Subnet(in *Subnet, out *openstack.Subn
 func autoConvert_openstack_Subnet_To_v1alpha1_Subnet(in *openstack.Subnet, out *Subnet, s conversion.Scope) error {
 	out.Purpose = Purpose(in.Purpose)
 	out.ID = in.ID
+	out.CIDR = in.CIDR
 	return nil
 }
 

@@ -974,10 +974,18 @@ func (vp *valuesProvider) addCSIManilaValues(
 	if infraStatus.Networks.ShareNetwork != nil {
 		shareNetworkID = infraStatus.Networks.ShareNetwork.ID
 	}
+	shareClient := infraConfig.WorkersCIDR()
+	if shareClient == "" {
+		// When a subnet pool is used, the workers CIDR is not statically configured but allocated dynamically.
+		// In that case, the allocated CIDR is stored in the nodes subnet status.
+		if subnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes); err == nil {
+			shareClient = subnet.CIDR
+		}
+	}
 	values["openstack"] = map[string]interface{}{
 		"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
 		"shareNetworkID":              shareNetworkID,
-		"shareClient":                 infraConfig.WorkersCIDR(),
+		"shareClient":                 shareClient,
 		"authURL":                     authURL,
 		"region":                      cp.Spec.Region,
 		"domainName":                  domainName,

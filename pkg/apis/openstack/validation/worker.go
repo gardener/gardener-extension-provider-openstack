@@ -136,9 +136,16 @@ func ValidateMachineLabels(worker *core.Worker, workerConfig *api.WorkerConfig, 
 // ValidateAdditionalSecurityGroups validates the additionalSecurityGroups list of a WorkerConfig.
 func ValidateAdditionalSecurityGroups(names []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	seen := make(map[string]int, len(names))
 	for i, name := range names {
 		if name == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i), "security group name must not be empty"))
+			continue
+		}
+		if j, ok := seen[name]; ok {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), name, fmt.Sprintf("duplicate security group, already listed at index %d", j)))
+		} else {
+			seen[name] = i
 		}
 	}
 	return allErrs

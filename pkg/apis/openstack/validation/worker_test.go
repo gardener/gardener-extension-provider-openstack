@@ -328,6 +328,15 @@ var _ = Describe("ValidateWorkerConfig", func() {
 				})),
 			))
 		})
+
+		It("should return an error for duplicate security group names", func() {
+			Expect(ValidateAdditionalSecurityGroups([]string{"sg-1", "sg-2", "sg-1"}, fldPath.Child("additionalSecurityGroups"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("config.additionalSecurityGroups[2]"),
+				})),
+			))
+		})
 	})
 
 	Describe("#ValidateNodeTemplate", func() {

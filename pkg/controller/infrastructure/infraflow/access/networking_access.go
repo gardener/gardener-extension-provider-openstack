@@ -22,6 +22,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"gopkg.in/godo.v2/glob"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
@@ -417,30 +418,15 @@ func (a *networkingAccess) toNetwork(raw *networks.Network) *Network {
 
 func (a *networkingAccess) CreateSubnet(ctx context.Context, desired *subnets.Subnet, prefixlen *int) (*subnets.Subnet, error) {
 	opts := subnets.CreateOpts{
-		NetworkID:      desired.NetworkID,
-		Name:           desired.Name,
-		IPVersion:      gophercloud.IPVersion(desired.IPVersion),
-		DNSNameservers: desired.DNSNameservers,
-	}
-
-	if desired.CIDR != "" {
-		opts.CIDR = desired.CIDR
-	}
-
-	if desired.SubnetPoolID != "" {
-		opts.SubnetPoolID = desired.SubnetPoolID
-	}
-
-	if prefixlen != nil {
-		opts.Prefixlen = *prefixlen
-	}
-
-	// Set IPv6 specific options if provided
-	if desired.IPv6RAMode != "" {
-		opts.IPv6RAMode = desired.IPv6RAMode
-	}
-	if desired.IPv6AddressMode != "" {
-		opts.IPv6AddressMode = desired.IPv6AddressMode
+		NetworkID:       desired.NetworkID,
+		Name:            desired.Name,
+		IPVersion:       gophercloud.IPVersion(desired.IPVersion),
+		DNSNameservers:  desired.DNSNameservers,
+		SubnetPoolID:    desired.SubnetPoolID,
+		CIDR:            desired.CIDR,
+		Prefixlen:       ptr.Deref(prefixlen, 0),
+		IPv6RAMode:      desired.IPv6RAMode,
+		IPv6AddressMode: desired.IPv6AddressMode,
 	}
 
 	raw, err := a.networking.CreateSubnet(ctx, opts)

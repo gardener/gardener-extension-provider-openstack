@@ -155,8 +155,21 @@ func (fctx *FlowContext) cleanupKubernetesRoutes(ctx context.Context, routerID s
 		return nil
 	}
 
+	// Determine the workers CIDR: use allocated CIDR if available (subnet pool case),
+	// otherwise fall back to the static config CIDR.
+	workersCIDRStr := fctx.workersCIDR()
+	if workersCIDRStr == "" {
+		if allocated := fctx.state.Get(IdentifierWorkersCIDR); allocated != nil {
+			workersCIDRStr = *allocated
+		}
+	}
+	if workersCIDRStr == "" {
+		// No CIDR available; skip route cleanup.
+		return nil
+	}
+
 	var routes []routers.Route
-	_, workersNet, err := net.ParseCIDR(fctx.workersCIDR())
+	_, workersNet, err := net.ParseCIDR(workersCIDRStr)
 	if err != nil {
 		return err
 	}
@@ -224,4 +237,29 @@ func (fctx *FlowContext) isDualStack() bool {
 		return false
 	}
 	return gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)
+}
+
+// waitForSubnetCIDR polls the subnet until a CIDR is allocated by the subnet pool, returning it.
+func (fctx *FlowContext) waitForSubnetCIDR(ctx context.Context, log logr.Logger, subnetID string) (string, error) {
+	var allocatedCIDR string
+	log.V(1).Info("waiting for CIDR allocation from subnet pool...", "subnetID", subnetID)
+	err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 30*time.Second, false, func(ctx context.Context) (bool, error) {
+		subnet, err := fctx.access.GetSubnetByID(ctx, subnetID)
+		if err != nil {
+			return false, err
+		}
+		if subnet == nil {
+			return false, fmt.Errorf("subnet not found for id %s", subnetID)
+		}
+		if subnet.CIDR != "" {
+			allocatedCIDR = subnet.CIDR
+			log.Info("CIDR allocated from subnet pool", "cidr", allocatedCIDR)
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed waiting for CIDR allocation for subnet %s: %w", subnetID, err)
+	}
+	return allocatedCIDR, nil
 }

@@ -19,7 +19,6 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/sharenetworks"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
@@ -302,7 +301,7 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 		return fmt.Errorf("missing cluster network ID")
 	}
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
-	// Backwards compatibility - remove this code in a future version.
+
 	desired := &subnets.Subnet{
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
@@ -320,13 +319,31 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 		if _, err := fctx.access.UpdateSubnet(ctx, desired, current); err != nil {
 			return err
 		}
+		if fctx.config.Networks.SubnetPool != nil {
+			fctx.state.Set(IdentifierWorkersCIDR, current.CIDR)
+		}
 	} else {
 		log.Info("creating...")
-		created, err := fctx.access.CreateSubnet(ctx, desired)
+		var subnetPoolID string
+		var prefixlen *int
+		if fctx.config.Networks.SubnetPool != nil {
+			subnetPoolID = fctx.config.Networks.SubnetPool.ID
+			prefixlen = ptr.To(fctx.config.Networks.SubnetPool.PrefixLength)
+			desired.CIDR = "" // let the pool allocate
+			desired.SubnetPoolID = subnetPoolID
+		}
+		created, err := fctx.access.CreateSubnet(ctx, desired, prefixlen)
 		if err != nil {
 			return err
 		}
 		fctx.state.Set(IdentifierSubnet, created.ID)
+		if subnetPoolID != "" {
+			allocatedCIDR, err := fctx.waitForSubnetCIDR(ctx, log, created.ID)
+			if err != nil {
+				return err
+			}
+			fctx.state.Set(IdentifierWorkersCIDR, allocatedCIDR)
+		}
 	}
 	return nil
 }
@@ -397,7 +414,7 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 			}
 		} else {
 			log.Info("creating...")
-			created, err := fctx.access.CreateSubnet(ctx, &desiredSubnet)
+			created, err := fctx.access.CreateSubnet(ctx, &desiredSubnet, nil)
 			if err != nil {
 				return err
 			}
@@ -438,37 +455,12 @@ func (fctx *FlowContext) ensureIPv6CIDRs(ctx context.Context) error {
 	// Otherwise, wait for subnet pool to allocate CIDRs
 	cidrIdentifiers := []string{IdentifierNodeSubnetIPv6CIDR, IdentifierPodSubnetIPv6CIDR, IdentifierServiceSubnetIPv6CIDR}
 	for index, identifier := range []string{IdentifierSubnetIPv6, IdentifierSubnetIPv6Pod, IdentifierSubnetIPv6Svc} {
-		// Get the actual IPv6 CIDR from the created subnet
 		subnetIPv6ID := fctx.state.Get(identifier)
 		if subnetIPv6ID == nil {
 			return fmt.Errorf("missing IPv6 subnet ID for identifier %s", identifier)
 		}
 
-		// Wait for the IPv6 CIDR to be allocated by the subnet pool
-		var actualIPv6CIDR string
-
-		log.V(1).Info("waiting for IPv6 CIDR allocation from subnet pool...")
-		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 30*time.Second, false, func(ctx context.Context) (bool, error) {
-			subnet, err := fctx.access.GetSubnetByID(ctx, *subnetIPv6ID)
-			if err != nil {
-				log.Error(err, "failed to get IPv6 subnet during CIDR wait")
-				return false, err
-			}
-			if subnet == nil {
-				return false, fmt.Errorf("IPv6 subnet not found for id %s", *subnetIPv6ID)
-			}
-
-			// Check if CIDR has been allocated
-			if subnet.CIDR != "" {
-				actualIPv6CIDR = subnet.CIDR
-				log.Info("IPv6 CIDR allocated from subnet pool", "cidr", actualIPv6CIDR)
-				return true, nil
-			}
-
-			log.V(1).Info("IPv6 CIDR not yet allocated, continuing to wait")
-			return false, nil
-		})
-
+		actualIPv6CIDR, err := fctx.waitForSubnetCIDR(ctx, log, *subnetIPv6ID)
 		if err != nil {
 			return fmt.Errorf("failed waiting for IPv6 CIDR allocation for identifier %s: %w", identifier, err)
 		}

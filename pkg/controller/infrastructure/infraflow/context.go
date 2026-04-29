@@ -54,6 +54,8 @@ const (
 	IdentifierPodSubnetIPv6CIDR = "PodSubnetIPv6CIDR"
 	// IdentifierServiceSubnetIPv6CIDR is the key for the service subnet IPv6 CIDR
 	IdentifierServiceSubnetIPv6CIDR = "ServiceSubnetIPv6CIDR"
+	// IdentifierWorkersCIDR is the key for the workers subnet CIDR allocated from a subnet pool.
+	IdentifierWorkersCIDR = "WorkersCIDR"
 
 	// NameFloatingNetwork is the key for the floating network name
 	NameFloatingNetwork = "FloatingNetworkName"
@@ -207,6 +209,11 @@ func (fctx *FlowContext) computeInfrastructureNetworkingStatus() *extensionsv1al
 		}
 	}
 
+	// If workers subnet was allocated from a pool, report the allocated CIDR as the nodes CIDR.
+	if workersCIDR := fctx.state.Get(IdentifierWorkersCIDR); workersCIDR != nil {
+		networking.Nodes = append(networking.Nodes, *workersCIDR)
+	}
+
 	if nodeCIDR := fctx.state.Get(IdentifierNodeSubnetIPv6CIDR); nodeCIDR != nil {
 		networking.Nodes = append(networking.Nodes, *nodeCIDR)
 	}
@@ -265,10 +272,14 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 	}
 
 	if v := fctx.state.Get(IdentifierSubnet); v != nil {
-		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
+		subnet := openstackv1alpha1.Subnet{
 			Purpose: openstackv1alpha1.PurposeNodes,
 			ID:      *v,
-		})
+		}
+		if cidr := fctx.state.Get(IdentifierWorkersCIDR); cidr != nil {
+			subnet.CIDR = *cidr
+		}
+		status.Networks.Subnets = append(status.Networks.Subnets, subnet)
 	}
 
 	if v := fctx.state.Get(IdentifierSubnetIPv6); v != nil {

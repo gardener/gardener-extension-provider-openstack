@@ -103,7 +103,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 	})
 
 	Context("CIDR", func() {
-		It("should forbid empty workers CIDR", func() {
+		It("should forbid empty workers CIDR when no subnetPool is set", func() {
 			infrastructureConfig.Networks.Workers = ""
 
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
@@ -111,7 +111,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal("networks.workers"),
-				"Detail": Equal("must specify the network range for the worker network"),
+				"Detail": Equal("must specify either the network range for the worker network or a subnetPool"),
 			}))
 		})
 
@@ -174,6 +174,88 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
 
 			Expect(errorList).To(BeEmpty())
+		})
+	})
+
+	Context("SubnetPool", func() {
+		It("should pass with a valid subnetPool and no workers CIDR", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "my-pool-id",
+				PrefixLength: 24,
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid subnetPool with an empty id", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "",
+				PrefixLength: 24,
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("networks.subnetPool.id"),
+			}))))
+		})
+
+		It("should forbid subnetPool with an invalid prefix length of 0", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "my-pool-id",
+				PrefixLength: 0,
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetPool.prefixLength"),
+			}))))
+		})
+
+		It("should forbid subnetPool with an invalid prefix length > 32", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "my-pool-id",
+				PrefixLength: 33,
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetPool.prefixLength"),
+			}))))
+		})
+
+		It("should forbid specifying both subnetPool and workers CIDR", func() {
+			infrastructureConfig.Networks.Workers = "10.250.0.0/16"
+			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "my-pool-id",
+				PrefixLength: 24,
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetPool"),
+			}))))
+		})
+
+		It("should forbid changing networks.subnetPool after creation", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "my-pool-id",
+				PrefixLength: 24,
+			}
+			newConfig := infrastructureConfig.DeepCopy()
+			newConfig.Networks.SubnetPool = &api.SubnetPool{
+				ID:           "other-pool-id",
+				PrefixLength: 24,
+			}
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetPool"),
+			}))))
 		})
 	})
 

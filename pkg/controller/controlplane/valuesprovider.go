@@ -945,10 +945,6 @@ func (vp *valuesProvider) addCSIManilaValues(
 		"clusterID": cp.Namespace,
 	}
 
-	infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
-	if err != nil {
-		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
-	}
 	infraStatus, err := vp.getInfrastructureStatus(cp)
 	if err != nil {
 		return err
@@ -974,18 +970,14 @@ func (vp *valuesProvider) addCSIManilaValues(
 	if infraStatus.Networks.ShareNetwork != nil {
 		shareNetworkID = infraStatus.Networks.ShareNetwork.ID
 	}
-	shareClient := infraConfig.WorkersCIDR()
-	if shareClient == "" {
-		// When a subnet pool is used, the workers CIDR is not statically configured but allocated dynamically.
-		// In that case, the allocated CIDR is stored in the nodes subnet status.
-		if subnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes); err == nil {
-			shareClient = subnet.CIDR
-		}
+	nodesSubnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, api.PurposeNodes)
+	if err != nil {
+		return fmt.Errorf("could not find nodes subnet in infrastructure status: %w", err)
 	}
 	values["openstack"] = map[string]interface{}{
 		"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
 		"shareNetworkID":              shareNetworkID,
-		"shareClient":                 shareClient,
+		"shareClient":                 nodesSubnet.CIDR,
 		"authURL":                     authURL,
 		"region":                      cp.Spec.Region,
 		"domainName":                  domainName,

@@ -108,6 +108,7 @@ func controlPlane(floatingPoolID string, cfg *api.ControlPlaneConfig, status *ap
 							{
 								ID:      "subnet-acbd1234",
 								Purpose: api.PurposeNodes,
+								CIDR:    "10.200.0.0/19",
 							},
 						},
 						ShareNetwork: status,

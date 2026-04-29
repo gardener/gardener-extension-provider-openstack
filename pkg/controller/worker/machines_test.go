@@ -1266,6 +1266,40 @@ var _ = Describe("Machines", func() {
 				})
 			})
 
+			Context("Additional Security Groups", func() {
+				It("should include additional security groups in the machine class and handle rolling updates", func() {
+					applySGs := func(sgs []string) string {
+						workerConfig := &apiv1alpha1.WorkerConfig{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "WorkerConfig",
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+							},
+							AdditionalSecurityGroups: sgs,
+						}
+						w.Spec.Pools[0].ProviderConfig = &runtime.RawExtension{
+							Raw: encode(workerConfig),
+						}
+						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
+						expectedUserDataSecretRefRead()
+						result, err := workerDelegate.GenerateMachineDeployments(ctx)
+						Expect(err).NotTo(HaveOccurred())
+						return result[0].ClassName
+					}
+
+					classNameNone := applySGs(nil)
+					classNameWithSGs := applySGs([]string{"sg-a", "sg-b"})
+					classNameReordered := applySGs([]string{"sg-b", "sg-a"})
+					classNameDifferent := applySGs([]string{"sg-a", "sg-c"})
+
+					// adding security groups must trigger a roll
+					Expect(classNameNone).NotTo(Equal(classNameWithSGs))
+					// reordering must not trigger a roll
+					Expect(classNameWithSGs).To(Equal(classNameReordered))
+					// different names must trigger a roll
+					Expect(classNameWithSGs).NotTo(Equal(classNameDifferent))
+				})
+			})
+
 			It("should fail because the version is invalid", func() {
 				clusterWithoutImages.Shoot.Spec.Kubernetes.Version = "invalid"
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)

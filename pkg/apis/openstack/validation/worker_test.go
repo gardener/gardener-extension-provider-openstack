@@ -309,6 +309,36 @@ var _ = Describe("ValidateWorkerConfig", func() {
 		})
 	})
 
+	Describe("#ValidateAdditionalSecurityGroups", func() {
+		var fldPath = field.NewPath("config")
+
+		It("should return no errors for an empty list", func() {
+			Expect(ValidateAdditionalSecurityGroups(nil, fldPath.Child("additionalSecurityGroups"))).To(BeEmpty())
+		})
+
+		It("should return no errors for valid names", func() {
+			Expect(ValidateAdditionalSecurityGroups([]string{"sg-1", "my-security-group"}, fldPath.Child("additionalSecurityGroups"))).To(BeEmpty())
+		})
+
+		It("should return an error for an empty string entry", func() {
+			Expect(ValidateAdditionalSecurityGroups([]string{"sg-1", ""}, fldPath.Child("additionalSecurityGroups"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("config.additionalSecurityGroups[1]"),
+				})),
+			))
+		})
+
+		It("should return an error for duplicate security group names", func() {
+			Expect(ValidateAdditionalSecurityGroups([]string{"sg-1", "sg-2", "sg-1"}, fldPath.Child("additionalSecurityGroups"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("config.additionalSecurityGroups[2]"),
+				})),
+			))
+		})
+	})
+
 	Describe("#ValidateNodeTemplate", func() {
 		var (
 			fldPath      = field.NewPath("config")

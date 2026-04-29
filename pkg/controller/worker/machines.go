@@ -182,6 +182,7 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 
 		for zoneIndex, zone := range pool.Zones {
 			zoneIdx := int32(zoneIndex) // #nosec: G115 - We validate if num pool zones exceeds max_int32.
+			securityGroups := append([]string{nodesSecurityGroup.Name}, workerConfig.AdditionalSecurityGroups...)
 			machineClassSpec := map[string]interface{}{
 				"region":           w.worker.Spec.Region,
 				"availabilityZone": zone,
@@ -189,7 +190,7 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 				"keyName":          infrastructureStatus.Node.KeyName,
 				"networkID":        infrastructureStatus.Networks.ID,
 				"podNetworkCIDRs":  extensionscontroller.GetPodNetwork(w.cluster),
-				"securityGroups":   []string{nodesSecurityGroup.Name},
+				"securityGroups":   securityGroups,
 				"tags": utils.MergeStringMaps(
 					NormalizeLabelsForMachineClass(pool.Labels),
 					NormalizeLabelsForMachineClass(machineLabels),
@@ -358,6 +359,12 @@ func (w *WorkerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		// include machine labels marked for rolling
 		sort.Strings(pairs)
 		additionalHashData = append(additionalHashData, pairs...)
+	}
+
+	if len(workerConfig.AdditionalSecurityGroups) > 0 {
+		sortedSGs := append([]string(nil), workerConfig.AdditionalSecurityGroups...)
+		sort.Strings(sortedSGs)
+		additionalHashData = append(additionalHashData, sortedSGs...)
 	}
 
 	// hash v1 would otherwise hash the ProviderConfig

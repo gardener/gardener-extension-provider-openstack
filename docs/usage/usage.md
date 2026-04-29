@@ -214,6 +214,8 @@ serverGroup:
 #  - name: my-rolling-label
 #    value: bar
 #    triggerRollingOnUpdate: true # means any change of the machine label value will trigger rolling of all machines of the worker pool
+# additionalSecurityGroups:
+# - my-existing-security-group
 ```
 
 ### ServerGroups
@@ -233,6 +235,11 @@ Please note the following restrictions when deploying workers with server groups
 The `machineLabels` section in the worker group configuration allows to specify additional machine labels. These labels are added to the machine
 instances only, but not to the node object. Additionally, they have an optional `triggerRollingOnUpdate` field. If it is set to `true`, changing the label value
 will trigger a rolling of all machines of this worker pool.
+
+### AdditionalSecurityGroups
+The `additionalSecurityGroups` field allows attaching one or more pre-existing OpenStack security groups to every node in the worker pool, in addition to the security group that is automatically managed by the infrastructure reconciler. The security groups are referenced by name and must already exist in OpenStack before the worker pool is reconciled.
+
+Any change to the list of additional security groups (adding, removing, or renaming entries) will trigger a rolling replacement of all machines in the worker pool. Reordering the list without changing the entries does not trigger a roll.
 
 ### Node Templates
 Node templates allow users to override the capacity of the nodes as defined by the server flavor specified in the `CloudProfile`'s `machineTypes`. This is useful for certain dynamic scenarios as it allows users to customize cluster-autoscaler's behavior for these workergroup with their provided values.

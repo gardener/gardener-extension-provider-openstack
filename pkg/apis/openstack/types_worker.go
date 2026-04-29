@@ -69,6 +69,12 @@ type WorkerConfig struct {
 
 	// MachineLabels define key value pairs to add to machines.
 	MachineLabels []MachineLabel
+
+	// AdditionalSecurityGroups is a list of names of pre-existing OpenStack security
+	// groups to attach to every node in this worker pool, in addition to the
+	// auto-managed "nodes" security group.
+	// +optional
+	AdditionalSecurityGroups []string
 }
 
 // MachineLabel define key value pair to label machines.

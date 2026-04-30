@@ -83,7 +83,7 @@ DNSRECORD_TEST_FLAGS = --v -ginkgo.v -ginkgo.show-node-events \
                         --existing-dns-zone='' # gardener-dev-team-test.c.eu-de-1.cloud.sap.
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
-	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-$(shell date +%s)-dirty
+	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-$(shell { git diff HEAD; git status --porcelain; } | sha256sum | cut -c1-8)-dirty
 endif
 
 #########################################

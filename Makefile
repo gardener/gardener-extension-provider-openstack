@@ -45,7 +45,7 @@ APP_ID             := .kube-secrets/openstack/app_id.secret
 APP_NAME           := .kube-secrets/openstack/app_name.secret
 APP_SECRET         := .kube-secrets/openstack/app_secret.secret
 
-INFRA_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
+INFRA_TEST_FLAGS = --v -ginkgo.v -ginkgo.show-node-events \
                     --kubeconfig=${KUBECONFIG} \
                     --auth-url='$(shell cat $(AUTH_URL))' \
                     --domain-name='$(shell cat $(DOMAIN_NAME))' \
@@ -58,7 +58,7 @@ INFRA_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                     --app-name='$(shell cat $(APP_NAME))' \
                     --app-secret='$(shell cat $(APP_SECRET))'
 
-BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
+BACKUPBUCKET_TEST_FLAGS = --v -ginkgo.v -ginkgo.show-node-events \
                            --kubeconfig=${KUBECONFIG} \
                            --auth-url='$(shell cat $(AUTH_URL))' \
                            --domain-name='$(shell cat $(DOMAIN_NAME))' \
@@ -69,7 +69,7 @@ BACKUPBUCKET_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                            --password='$(shell cat $(PASSWORD))' \
                            --user-name='$(shell cat $(USER_NAME))'
 
-DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
+DNSRECORD_TEST_FLAGS = --v -ginkgo.v -ginkgo.show-node-events \
                         --kubeconfig=${KUBECONFIG} \
                         --auth-url='$(shell cat $(AUTH_URL))' \
                         --domain-name='$(shell cat $(DOMAIN_NAME))' \
@@ -83,7 +83,7 @@ DNSRECORD_TEST_FLAGS := --v -ginkgo.v -ginkgo.show-node-events \
                         --existing-dns-zone='' # gardener-dev-team-test.c.eu-de-1.cloud.sap.
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
-	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-$(shell date +%s)-dirty
+	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-$(shell { git diff HEAD; git status --porcelain; } | sha256sum | cut -c1-8)-dirty
 endif
 
 #########################################

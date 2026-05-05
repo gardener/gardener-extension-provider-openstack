@@ -172,7 +172,7 @@ var _ = Describe("ValuesProvider", func() {
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.30.14",
+						Version: "1.32.0",
 					},
 					Provider: gardencorev1beta1.Provider{
 						InfrastructureConfig: &runtime.RawExtension{
@@ -222,7 +222,7 @@ var _ = Describe("ValuesProvider", func() {
 						Pods: &cidr,
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.31.1",
+						Version: "1.32.0",
 						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},

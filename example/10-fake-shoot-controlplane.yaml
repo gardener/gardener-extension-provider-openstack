@@ -146,7 +146,6 @@ spec:
       - command:
         - /usr/local/bin/kube-apiserver
         - --enable-admission-plugins=Priority,NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota,StorageObjectInUseProtection,MutatingAdmissionWebhook,ValidatingAdmissionWebhook
-        - --disable-admission-plugins=PersistentVolumeLabel
         - --allow-privileged=true
         - --anonymous-auth=false
         - --authorization-mode=Node,RBAC

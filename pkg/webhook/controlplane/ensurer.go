@@ -17,7 +17,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -79,22 +78,9 @@ func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ gcontex
 }
 
 // EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
-func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
-	template := &newObj.Spec.Template
-	ps := &template.Spec
-
-	cluster, err := gctx.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
-	if err != nil {
-		return err
-	}
-
-	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-apiserver"); c != nil {
-		ensureKubeAPIServerCommandLineArgs(c, k8sVersion)
+func (e *ensurer) EnsureKubeAPIServerDeployment(_ context.Context, _ gcontext.GardenContext, newObj, _ *appsv1.Deployment) error {
+	if c := extensionswebhook.ContainerWithName(newObj.Spec.Template.Spec.Containers, "kube-apiserver"); c != nil {
+		ensureKubeAPIServerCommandLineArgs(c)
 	}
 
 	return nil
@@ -115,15 +101,9 @@ func (e *ensurer) EnsureKubeControllerManagerDeployment(_ context.Context, _ gco
 	return nil
 }
 
-func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, k8sVersion *semver.Version) {
+func ensureKubeAPIServerCommandLineArgs(c *corev1.Container) {
 	c.Command = extensionswebhook.EnsureNoStringWithPrefix(c.Command, "--cloud-provider=")
 	c.Command = extensionswebhook.EnsureNoStringWithPrefix(c.Command, "--cloud-config=")
-	if versionutils.ConstraintK8sLess131.Check(k8sVersion) {
-		c.Command = extensionswebhook.EnsureNoStringWithPrefixContains(c.Command, "--enable-admission-plugins=",
-			"PersistentVolumeLabel", ",")
-		c.Command = extensionswebhook.EnsureStringWithPrefixContains(c.Command, "--disable-admission-plugins=",
-			"PersistentVolumeLabel", ",")
-	}
 }
 
 func ensureKubeControllerManagerCommandLineArgs(c *corev1.Container) {

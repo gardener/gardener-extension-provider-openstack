@@ -16,14 +16,12 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/test"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	testutils "github.com/gardener/gardener/pkg/utils/test"
-	"github.com/gardener/gardener/pkg/utils/version"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -88,29 +86,18 @@ var _ = Describe("Ensurer", func() {
 
 		ensurer genericmutator.Ensurer
 
-		eContextK8s130 = gcontext.NewInternalGardenContext(
+		eContextK8s132 = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.30.14",
+							Version: "1.32.0",
 						},
 					},
 				},
 			},
 		)
-		eContextK8s131 = gcontext.NewInternalGardenContext(
-			&extensionscontroller.Cluster{
-				Shoot: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.31.1",
-						},
-					},
-				},
-			},
-		)
-		eContextK8s130WithResolvConfOptions = gcontext.NewInternalGardenContext(
+		eContextK8s132WithResolvConfOptions = gcontext.NewInternalGardenContext(
 			&extensionscontroller.Cluster{
 				CloudProfile: &gardencorev1beta1.CloudProfile{
 					Spec: gardencorev1beta1.CloudProfileSpec{
@@ -128,7 +115,7 @@ var _ = Describe("Ensurer", func() {
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: "1.30.14",
+							Version: "1.32.0",
 						},
 					},
 				},
@@ -165,18 +152,11 @@ var _ = Describe("Ensurer", func() {
 			}
 		})
 
-		It("should add missing elements to kube-apiserver deployment (k8s < 1.31)", func() {
-			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s130, dep, nil)
+		It("should add missing elements to kube-apiserver deployment", func() {
+			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s132, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeAPIServerDeployment(dep, "1.30.14")
-		})
-
-		It("should add missing elements to kube-apiserver deployment (k8s >= 1.31)", func() {
-			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s131, dep, nil)
-			Expect(err).To(Not(HaveOccurred()))
-
-			checkKubeAPIServerDeployment(dep, "1.31.1")
+			checkKubeAPIServerDeployment(dep)
 		})
 
 		It("should modify existing elements of kube-apiserver deployment", func() {
@@ -192,7 +172,6 @@ var _ = Describe("Ensurer", func() {
 										"--cloud-provider=?",
 										"--cloud-config=?",
 										"--enable-admission-plugins=Priority,NamespaceLifecycle",
-										"--disable-admission-plugins=PersistentVolumeLabel",
 									},
 								},
 							},
@@ -201,10 +180,10 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s130, dep, nil)
+			err := ensurer.EnsureKubeAPIServerDeployment(ctx, eContextK8s132, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeAPIServerDeployment(dep, "1.30.14")
+			checkKubeAPIServerDeployment(dep)
 		})
 	})
 
@@ -229,10 +208,10 @@ var _ = Describe("Ensurer", func() {
 		})
 
 		It("should add missing elements to kube-controller-manager deployment", func() {
-			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s130, dep, nil)
+			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s132, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeControllerManagerDeployment(dep, "1.30.14")
+			checkKubeControllerManagerDeployment(dep)
 		})
 
 		It("should modify existing elements of kube-controller-manager deployment", func() {
@@ -269,10 +248,10 @@ var _ = Describe("Ensurer", func() {
 				},
 			}
 
-			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s130, dep, nil)
+			err := ensurer.EnsureKubeControllerManagerDeployment(ctx, eContextK8s132, dep, nil)
 			Expect(err).To(Not(HaveOccurred()))
 
-			checkKubeControllerManagerDeployment(dep, "1.30.14")
+			checkKubeControllerManagerDeployment(dep)
 		})
 	})
 
@@ -338,7 +317,7 @@ var _ = Describe("Ensurer", func() {
 			}
 
 			kubeletConfig := *oldKubeletConfig
-			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s130, semver.MustParse("1.30.14"), &kubeletConfig, nil)
+			err := ensurer.EnsureKubeletConfiguration(ctx, eContextK8s132, semver.MustParse("1.32.0"), &kubeletConfig, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(&kubeletConfig).To(Equal(newKubeletConfig))
 		})
@@ -374,7 +353,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalUnits method and check the result
-			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s130, &units, nil)
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s132, &units, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(units).To(ConsistOf(oldUnit, additionalPath, additionalUnit))
 		})
@@ -392,7 +371,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalUnits method and check the result
-			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s130WithResolvConfOptions, &units, nil)
+			err := ensurer.EnsureAdditionalUnits(ctx, eContextK8s132WithResolvConfOptions, &units, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(units).To(ConsistOf(oldUnit, additionalPath, additionalUnit))
 		})
@@ -425,7 +404,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalFiles method and check the result
-			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s130, &files, nil)
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s132, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`""`)))
 		})
@@ -436,7 +415,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalFiles method and check the result
-			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s130WithResolvConfOptions, &files, nil)
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s132WithResolvConfOptions, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(files).To(ConsistOf(oldFile, additionalFileFunc(`"options rotate timeout:1"`)))
 		})
@@ -451,7 +430,7 @@ WantedBy=multi-user.target
 			ensurer := NewEnsurer(logger)
 
 			// Call EnsureAdditionalFiles method and check the result
-			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s130WithResolvConfOptions, &files, nil)
+			err := ensurer.EnsureAdditionalFiles(ctx, eContextK8s132WithResolvConfOptions, &files, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(files).To(ConsistOf(oldFile, additionalFile))
 			Expect(files).To(HaveLen(2))
@@ -488,7 +467,7 @@ WantedBy=multi-user.target
 
 		It("should inject the sidecar container", func() {
 			Expect(deployment.Spec.Template.Spec.Containers).To(BeEmpty())
-			Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), eContextK8s130, deployment, nil)).To(Succeed())
+			Expect(ensurer.EnsureMachineControllerManagerDeployment(context.TODO(), eContextK8s132, deployment, nil)).To(Succeed())
 			expectedContainer := machinecontrollermanager.ProviderSidecarContainer(shoot, deployment.Namespace, "provider-openstack", "foo:bar")
 			Expect(deployment.Spec.Template.Spec.Containers).To(ConsistOf(expectedContainer))
 		})
@@ -521,9 +500,7 @@ WantedBy=multi-user.target
 	})
 })
 
-func checkKubeAPIServerDeployment(dep *appsv1.Deployment, k8sVersion string) {
-	k8sVersionAtLeast131, _ := version.CompareVersions(k8sVersion, ">=", "1.31")
-
+func checkKubeAPIServerDeployment(dep *appsv1.Deployment) {
 	// Check that the kube-apiserver container still exists and contains all needed command line args,
 	// env vars, and volume mounts
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-apiserver")
@@ -531,13 +508,9 @@ func checkKubeAPIServerDeployment(dep *appsv1.Deployment, k8sVersion string) {
 
 	Expect(c.Command).NotTo(ContainElement("--cloud-provider=openstack"))
 	Expect(c.Command).NotTo(ContainElement("--cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf"))
-	if !k8sVersionAtLeast131 {
-		Expect(c.Command).NotTo(test.ContainElementWithPrefixContaining("--enable-admission-plugins=", "PersistentVolumeLabel", ","))
-		Expect(c.Command).To(test.ContainElementWithPrefixContaining("--disable-admission-plugins=", "PersistentVolumeLabel", ","))
-	}
 }
 
-func checkKubeControllerManagerDeployment(dep *appsv1.Deployment, _ string) {
+func checkKubeControllerManagerDeployment(dep *appsv1.Deployment) {
 	// Check that the kube-controller-manager container still exists and contains all needed command line args,
 	// env vars, and volume mounts
 	c := extensionswebhook.ContainerWithName(dep.Spec.Template.Spec.Containers, "kube-controller-manager")

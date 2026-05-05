@@ -1010,7 +1010,7 @@ func newClusterWithDefaultCloudProfileConfig(name, technicalID string) *extensio
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.30.0",
+					Version: "1.32.0",
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{

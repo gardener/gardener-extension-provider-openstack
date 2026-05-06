@@ -23,24 +23,30 @@ import (
 )
 
 // NewNamespacedCloudProfileMutator returns a new instance of a NamespacedCloudProfile mutator.
+// It handles both spec mutations (populating capabilityFlavors) and status mutations (merging provider config).
 func NewNamespacedCloudProfileMutator(mgr manager.Manager) extensionswebhook.Mutator {
 	return &namespacedCloudProfile{
+		client:  mgr.GetClient(),
 		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 	}
 }
 
 type namespacedCloudProfile struct {
+	client  client.Client
 	decoder runtime.Decoder
 }
 
 // Mutate mutates the given NamespacedCloudProfile object.
-func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Object) error {
+// It performs two independent mutations:
+// 1. Populates capabilityFlavors on spec.machineImages from the providerConfig (for spec create/update)
+// 2. Merges spec providerConfig into status providerConfig (for status subresource updates)
+func (p *namespacedCloudProfile) Mutate(ctx context.Context, newObj, _ client.Object) error {
 	profile, ok := newObj.(*gardencorev1beta1.NamespacedCloudProfile)
 	if !ok {
 		return fmt.Errorf("wrong object type %T", newObj)
 	}
 
-	if shouldSkipMutation(profile) {
+	if profile.DeletionTimestamp != nil || profile.Spec.ProviderConfig == nil {
 		return nil
 	}
 
@@ -48,6 +54,41 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 	if _, _, err := p.decoder.Decode(profile.Spec.ProviderConfig.Raw, nil, specConfig); err != nil {
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile spec for '%s': %w", profile.Name, err)
 	}
+
+	// Mutation 1: Populate capabilityFlavors on spec.machineImages if parent has machineCapabilities
+	if err := p.mutateSpecCapabilityFlavors(ctx, profile, specConfig); err != nil {
+		return err
+	}
+
+	// Mutation 2: Merge spec providerConfig into status (only when status is available)
+	if shouldMergeStatus(profile) {
+		if err := p.mergeStatusProviderConfig(profile, specConfig); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// mutateSpecCapabilityFlavors populates capabilityFlavors on spec.machineImages versions from the providerConfig.
+func (p *namespacedCloudProfile) mutateSpecCapabilityFlavors(ctx context.Context, profile *gardencorev1beta1.NamespacedCloudProfile, specConfig *v1alpha1.CloudProfileConfig) error {
+	// Fetch parent CloudProfile to check for machineCapabilities
+	parentProfile := &gardencorev1beta1.CloudProfile{}
+	if err := p.client.Get(ctx, client.ObjectKey{Name: profile.Spec.Parent.Name}, parentProfile); err != nil {
+		return fmt.Errorf("could not get parent CloudProfile %q: %w", profile.Spec.Parent.Name, err)
+	}
+
+	// Skip if parent has no machineCapabilities
+	if len(parentProfile.Spec.MachineCapabilities) == 0 {
+		return nil
+	}
+
+	mutateMachineImageCapabilityFlavors(profile.Spec.MachineImages, specConfig)
+	return nil
+}
+
+// mergeStatusProviderConfig merges the spec providerConfig into the status providerConfig.
+func (p *namespacedCloudProfile) mergeStatusProviderConfig(profile *gardencorev1beta1.NamespacedCloudProfile, specConfig *v1alpha1.CloudProfileConfig) error {
 	statusConfig := &v1alpha1.CloudProfileConfig{}
 	if _, _, err := p.decoder.Decode(profile.Status.CloudProfileSpec.ProviderConfig.Raw, nil, statusConfig); err != nil {
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
@@ -55,11 +96,7 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 
 	statusConfig.MachineImages = mergeMachineImages(specConfig.MachineImages, statusConfig.MachineImages)
 
-	return p.updateProfileStatus(profile, statusConfig)
-}
-
-func (p *namespacedCloudProfile) updateProfileStatus(profile *gardencorev1beta1.NamespacedCloudProfile, config *v1alpha1.CloudProfileConfig) error {
-	modifiedStatusConfig, err := json.Marshal(config)
+	modifiedStatusConfig, err := json.Marshal(statusConfig)
 	if err != nil {
 		return fmt.Errorf("failed to marshal status config: %w", err)
 	}
@@ -67,11 +104,11 @@ func (p *namespacedCloudProfile) updateProfileStatus(profile *gardencorev1beta1.
 	return nil
 }
 
-func shouldSkipMutation(profile *gardencorev1beta1.NamespacedCloudProfile) bool {
-	return profile.DeletionTimestamp != nil ||
-		profile.Generation != profile.Status.ObservedGeneration ||
-		profile.Spec.ProviderConfig == nil ||
-		profile.Status.CloudProfileSpec.ProviderConfig == nil
+// shouldMergeStatus checks if the status merge should be performed.
+// Status merge is only applicable when the status has been populated (status subresource update).
+func shouldMergeStatus(profile *gardencorev1beta1.NamespacedCloudProfile) bool {
+	return profile.Generation == profile.Status.ObservedGeneration &&
+		profile.Status.CloudProfileSpec.ProviderConfig != nil
 }
 
 func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.MachineImages) []v1alpha1.MachineImages {

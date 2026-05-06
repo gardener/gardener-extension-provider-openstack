@@ -130,6 +130,12 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 				continue
 			}
 
+			// If the version exists in the parent and has no providerConfig entry, it's an
+			// expirationDate-only override that doesn't change image mappings — skip validation.
+			if existsInParent && !exists {
+				continue
+			}
+
 			if len(parentSpec.MachineCapabilities) == 0 {
 				allErrs = append(allErrs, validateMachineImageArchitectures(machineImage, version, providerImageVersion)...)
 			} else {

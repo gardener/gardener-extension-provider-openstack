@@ -38,7 +38,73 @@ To enable this feature, an operator should:
 If your OpenStack system has multiple `volume-types`, the `storageClasses` property enables the creation of kubernetes `storageClasses` for shoots.
 Set `storageClasses[].parameters.type` to map it with an openstack `volume-type`. Specifying `storageClasses` is optional and can be omitted.
 
-An example `CloudProfileConfig` for the OpenStack extension looks as follows:
+### MachineCapabilities
+
+With the introduction of `spec.machineCapabilities` in Gardener *v1.131.0*, you can define capability-based matching between machine images and machine types. This enables fine-grained control over which images can be used with which machine types.
+
+**Purpose and Behavior:**
+
+The `machineCapabilities` feature allows you to:
+- Define available capabilities and their values in the CloudProfile (e.g., `architecture`, `hypervisor`)
+- Associate machine images with specific capability combinations via `capabilityFlavors`
+- Optionally restrict machine types to specific capabilities via `machineTypes.capabilities`
+
+**Default & Override Behavior:**
+
+The capability system uses **automatic defaulting** from `.spec.machineCapabilities`:
+
+- **`.spec.machineCapabilities`**: Defines all available capability keys and their possible values (e.g., `architecture: [amd64, arm64]`, `hypervisor: [baremetal, virtualized]`)
+- Any capability **not explicitly specified** in `.spec.machineImages[].versions[].capabilityFlavors[].capabilities` or `.spec.machineTypes[].capabilities` automatically gets **all values** from `.spec.machineCapabilities`
+- If no capabilities are defined all will be defaulted.
+
+**Required Capability:**
+
+Always required is the architecture capability:
+- `architecture`: `amd64` and `arm64` (specifies the CPU architecture of the machine on which given machine image can be used)
+
+But any other capability can be mapped here as well, e.g. `hypervisor`, etc. with any value that makes sense for your environment.
+
+**Mixed Format Support:**
+
+When migrating to the `capabilityFlavors` format, you do not need to update all image versions at once. Different versions of the same image can independently use either the old format (`regions` with `architecture`) or the new format (`capabilityFlavors`). This allows a smooth, incremental migration.
+
+#### New format: `capabilityFlavors`
+
+An example `CloudProfileConfig` for the OpenStack extension using the new `capabilityFlavors` format:
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: CloudProfileConfig
+machineImages:
+- name: gardenlinux
+  versions:
+  - version: 1877.5.0
+    capabilityFlavors:
+    - capabilities:
+        architecture: [amd64]
+      regions:
+      - name: europe
+        id: "1234-amd64"
+      - name: asia
+        id: "5678-amd64"
+    - capabilities:
+        architecture: [arm64]
+      regions:
+      - name: europe
+        id: "1234-arm64"
+keystoneURL: https://url-to-keystone/v3/
+constraints:
+  floatingPools:
+  - name: fp-pool-1
+  loadBalancerProviders:
+  - name: haproxy
+```
+
+#### Old format: `regions` with `architecture`
+
+For each machine image version, region-specific image IDs are mapped using the `regions` field. An `architecture` field can be specified per region entry which specifies the CPU architecture of the machine on which the given machine image can be used.
+
+An example `CloudProfileConfig` for the OpenStack extension using the old format:
 
 ```yaml
 apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
@@ -153,7 +219,120 @@ on every change to `/etc/resolv.conf` and appends the given options.
 
 ## Example `CloudProfile` manifest
 
-Please find below an example `CloudProfile` manifest:
+### New: with `spec.machineCapabilities`
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: CloudProfile
+metadata:
+  name: openstack
+spec:
+  type: openstack
+  machineCapabilities:
+  - name: architecture
+    values:
+    - amd64
+    - arm64
+  - name: hypervisor
+    values:
+    - baremetal
+    - virtualized
+  kubernetes:
+    versions:
+    - version: 1.32.0
+    - version: 1.31.1
+      expirationDate: "2026-03-31T23:59:59Z"
+  machineImages:
+  - name: gardenlinux
+    versions:
+    - version: 1877.5.0
+      capabilityFlavors:
+      - capabilities:
+          architecture: [amd64]
+          hypervisor: [virtualized]
+      - capabilities:
+          architecture: [amd64]
+          hypervisor: [baremetal]
+      - capabilities:
+          architecture: [arm64]
+          hypervisor: [virtualized]
+  machineTypes:
+  - name: medium_4_8
+    cpu: "4"
+    gpu: "0"
+    memory: 8Gi
+    capabilities:
+      architecture: [amd64]
+      hypervisor: [virtualized]
+    storage:
+      class: standard
+      type: default
+      size: 40Gi
+  - name: medium_4_8_arm
+    cpu: "4"
+    gpu: "0"
+    memory: 8Gi
+    capabilities:
+      architecture: [arm64]
+      hypervisor: [virtualized]
+    storage:
+      class: standard
+      type: default
+      size: 40Gi
+  - name: bare_8_16
+    cpu: "8"
+    gpu: "0"
+    memory: 16Gi
+    capabilities:
+      architecture: [amd64]
+      hypervisor: [baremetal]
+    storage:
+      class: standard
+      type: default
+      size: 80Gi
+  regions:
+  - name: europe-1
+    zones:
+    - name: europe-1a
+    - name: europe-1b
+    - name: europe-1c
+  providerConfig:
+    apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+    kind: CloudProfileConfig
+    machineImages:
+    - name: gardenlinux
+      versions:
+      - version: 1877.5.0
+        capabilityFlavors:
+        - capabilities:
+            architecture: [amd64]
+            hypervisor: [virtualized]
+          regions:
+          - name: europe
+            id: "1234-amd64-virt"
+          - name: asia
+            id: "5678-amd64-virt"
+        - capabilities:
+            architecture: [amd64]
+            hypervisor: [baremetal]
+          regions:
+          - name: europe
+            id: "1234-amd64-bare"
+        - capabilities:
+            architecture: [arm64]
+            hypervisor: [virtualized]
+          regions:
+          - name: europe
+            id: "1234-arm64-virt"
+    keystoneURL: https://url-to-keystone/v3/
+    constraints:
+      floatingPools:
+      - name: fp-pool-1
+      loadBalancerProviders:
+      - name: haproxy
+```
+
+### Without `spec.machineCapabilities`
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1

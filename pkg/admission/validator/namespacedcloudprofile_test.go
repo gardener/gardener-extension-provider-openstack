@@ -132,6 +132,89 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
 		})
 
+		It("should succeed with old-format regions in a capabilities CloudProfile", func() {
+			if !isCapabilitiesCloudProfile {
+				Skip("mixed format tests only apply to capabilities CloudProfiles")
+			}
+
+			// Parent uses new format
+			cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[{"name":"image-1","versions":[{"version":"1.0","capabilityFlavors":[{"regions":[{"name":"reg-1","id":"id-1"}]}]}]}]
+}`)}
+
+			// Namespaced provider config uses old format (regions with architecture)
+			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[{"name":"image-1","versions":[{"version":"1.1","regions":[{"name":"reg-1","id":"id-new","architecture":"amd64"}]}]}]
+}`)}
+			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+				{
+					Name: "image-1",
+					Versions: []core.MachineImageVersion{{
+						ExpirableVersion:  core.ExpirableVersion{Version: "1.1"},
+						Architectures:     []string{"amd64"},
+						CapabilityFlavors: []core.MachineImageFlavor{{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}}},
+					}},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+		})
+
+		It("should succeed with mixed format across versions within the same image", func() {
+			if !isCapabilitiesCloudProfile {
+				Skip("mixed format tests only apply to capabilities CloudProfiles")
+			}
+
+			cloudProfile.Spec.MachineCapabilities[0].Values = []string{"amd64", "arm64"}
+
+			cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig"
+}`)}
+
+			// One version uses old format, another uses new format
+			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[{"name":"image-1","versions":[
+  {"version":"1.0","regions":[{"name":"reg-1","id":"id-amd64","architecture":"amd64"},{"name":"reg-1","id":"id-arm64","architecture":"arm64"}]},
+  {"version":"2.0","capabilityFlavors":[
+    {"capabilities":{"architecture":["amd64"]},"regions":[{"name":"reg-1","id":"id-amd64-v2"}]},
+    {"capabilities":{"architecture":["arm64"]},"regions":[{"name":"reg-1","id":"id-arm64-v2"}]}
+  ]}
+]}]
+}`)}
+			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+				{
+					Name: "image-1",
+					Versions: []core.MachineImageVersion{
+						{
+							ExpirableVersion: core.ExpirableVersion{Version: "1.0"},
+							CapabilityFlavors: []core.MachineImageFlavor{
+								{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
+								{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+							},
+						},
+						{
+							ExpirableVersion: core.ExpirableVersion{Version: "2.0"},
+							CapabilityFlavors: []core.MachineImageFlavor{
+								{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
+								{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+		})
+
 		It("should fail for NamespacedCloudProfile with invalid parent kind", func() {
 			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
@@ -252,6 +335,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 {"name":"image-region-2","id":"id-img-reg-2","architecture":"amd64"}
 ]`
 			image1FallbackMappings := `"regions":[ {"name":"image-region-2","id":"id-img-reg-2"}]`
+			image1OldRegionsMappings := ""
 			if isCapabilitiesCloudProfile {
 				image1IDMappings = `"capabilityFlavors":[
 {"capabilities":{"architecture":["arm64"]},"regions":[{"name":"image-region-1","id":"id-img-reg-1"}]},
@@ -260,6 +344,9 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 				image1FallbackMappings = `"capabilityFlavors":[
 {"capabilities":{"architecture":["amd64"]},"regions":[{"name":"image-region-2","id":"id-img-reg-2"}]}
 ]`
+				// Old-format regions: has excess amd64 and is missing required arm64
+				image1OldRegionsMappings = `,
+    {"version":"1.1-old-regions","regions":[{"name":"image-region-1","id":"id-old-amd64","architecture":"amd64"}]}`
 				cloudProfile.Spec.MachineCapabilities[0].Values = []string{"amd64", "arm64"}
 			}
 			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{
@@ -268,13 +355,26 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 "machineImages":[
   {"name":"image-1","versions":[
 	{"version":"1.1-regions",%s},
-    {"version":"1.1-fallback",%s}
+    {"version":"1.1-fallback",%s}%s
   ]}
-]}`, image1IDMappings, image1FallbackMappings))}
+]}`, image1IDMappings, image1FallbackMappings, image1OldRegionsMappings))}
+
+			oldRegionsVersions := []core.MachineImageVersion{}
+			if isCapabilitiesCloudProfile {
+				// Old-format regions version: spec requires both amd64 and arm64, but provider only has amd64
+				oldRegionsVersions = append(oldRegionsVersions, core.MachineImageVersion{
+					ExpirableVersion: core.ExpirableVersion{Version: "1.1-old-regions"},
+					CapabilityFlavors: []core.MachineImageFlavor{
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+					},
+				})
+			}
+
 			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 				{
 					Name: "image-1",
-					Versions: []core.MachineImageVersion{
+					Versions: append([]core.MachineImageVersion{
 						{ExpirableVersion: core.ExpirableVersion{Version: "1.1-regions"}, Architectures: []string{"amd64", "arm64"},
 							CapabilityFlavors: []core.MachineImageFlavor{
 								{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
@@ -288,7 +388,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 							CapabilityFlavors: []core.MachineImageFlavor{
 								{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
 							}},
-					},
+					}, oldRegionsVersions...),
 				},
 			}
 			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
@@ -318,7 +418,13 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  fieldMatcher,
 					"Detail": Equal("machine image version image-1@1.1-missing is not defined in the NamespacedCloudProfile providerConfig"),
-				}))))
+				})),
+					// Old-format regions: missing arm64 architecture
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  fieldMatcher,
+						"Detail": Equal("machine image version image-1@1.1-old-regions has a capabilityFlavor map[architecture:[arm64]] not defined in the NamespacedCloudProfile providerConfig"),
+					}))))
 			} else {
 				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),

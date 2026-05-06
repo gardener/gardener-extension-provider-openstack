@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
@@ -54,8 +53,7 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
 
-	uniformSpecConfig := helper.TransformProviderConfigToParentFormat(specConfig, profile.Status.CloudProfileSpec.MachineCapabilities)
-	statusConfig.MachineImages = mergeMachineImages(uniformSpecConfig.MachineImages, statusConfig.MachineImages)
+	statusConfig.MachineImages = mergeMachineImages(specConfig.MachineImages, statusConfig.MachineImages)
 
 	return p.updateProfileStatus(profile, statusConfig)
 }

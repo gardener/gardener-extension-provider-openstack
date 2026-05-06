@@ -12,6 +12,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"k8s.io/utils/ptr"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -40,29 +41,19 @@ func (w *WorkerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, region string, arch *string, machineCapabilities gardencorev1beta1.Capabilities) (*api.MachineImage, error) {
+func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, region string, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (*api.MachineImage, error) {
 	selectedMachineImage := &api.MachineImage{
 		Name:    name,
 		Version: version,
 	}
 
-	if capabilitySet, err := helper.FindImageInCloudProfile(w.cloudProfileConfig, name, version, region, arch, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities); err == nil {
+	if capabilitySet, err := helper.FindImageInCloudProfile(w.cloudProfileConfig, name, version, region, machineCapabilities, capabilityDefinitions); err == nil {
 		selectedMachineImage.Capabilities = capabilitySet.Capabilities
 		// ID takes precedence over Image attribute. Reminder: Image is global name while ID is region specific.
-		if capabilitySet.Regions[0].ID == "" {
-			selectedMachineImage.Image = capabilitySet.Image
-		} else {
+		if len(capabilitySet.Regions) > 0 && capabilitySet.Regions[0].ID != "" {
 			selectedMachineImage.ID = capabilitySet.Regions[0].ID
-		}
-
-		if len(selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName]) > 0 {
-			var selectedArch = &selectedMachineImage.Capabilities[v1beta1constants.ArchitectureName][0]
-			// Verify that selectedMachineImage has correct architecture
-			if selectedArch == nil || arch != nil && *selectedArch != *arch {
-				return nil, fmt.Errorf("architecture does not match for machine image")
-			}
 		} else {
-			selectedMachineImage.Architecture = capabilitySet.Regions[0].Architecture
+			selectedMachineImage.Image = capabilitySet.Image
 		}
 
 		return selectedMachineImage, nil
@@ -75,17 +66,32 @@ func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, r
 			return nil, fmt.Errorf("could not decode worker status of worker '%s': %w", k8sclient.ObjectKeyFromObject(w.worker), err)
 		}
 
-		return helper.FindImageInWorkerStatus(workerStatus.MachineImages, name, version, arch, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities)
+		// Pass the original (non-normalized) MachineCapabilities so FindImageInWorkerStatus
+		// can distinguish legacy format (Architecture field) from capability format (Capabilities field).
+		return helper.FindImageInWorkerStatus(workerStatus.MachineImages, name, version, nil, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities)
 	}
 
-	return nil, worker.ErrorMachineImageNotFound(name, version, *arch, region)
+	archValues := machineCapabilities[v1beta1constants.ArchitectureName]
+	arch := v1beta1constants.ArchitectureAMD64
+	if len(archValues) > 0 {
+		arch = archValues[0]
+	}
+	return nil, worker.ErrorMachineImageNotFound(name, version, arch, region)
 }
 
 func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
 	// support for cloudprofile machine images without capabilities
 	if len(capabilityDefinitions) == 0 {
+		// Extract architecture from Capabilities if Architecture is not set
+		// (happens when image came from capability-based lookup with normalized definitions)
+		architecture := machineImage.Architecture
+		if architecture == nil {
+			if archValues, ok := machineImage.Capabilities[v1beta1constants.ArchitectureName]; ok && len(archValues) > 0 {
+				architecture = &archValues[0]
+			}
+		}
 		for _, image := range machineImages {
-			if image.Name == machineImage.Name && image.Version == machineImage.Version && machineImage.Architecture == image.Architecture {
+			if image.Name == machineImage.Name && image.Version == machineImage.Version && ptr.Deref(architecture, "") == ptr.Deref(image.Architecture, "") {
 				// If the image already exists without capabilities, we can just return the existing list.
 				return machineImages
 			}
@@ -93,8 +99,9 @@ func appendMachineImage(machineImages []api.MachineImage, machineImage api.Machi
 		return append(machineImages, api.MachineImage{
 			Name:         machineImage.Name,
 			Version:      machineImage.Version,
+			Image:        machineImage.Image,
 			ID:           machineImage.ID,
-			Architecture: machineImage.Architecture,
+			Architecture: architecture,
 		})
 	}
 

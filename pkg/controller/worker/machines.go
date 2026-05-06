@@ -135,8 +135,10 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 			return fmt.Errorf("machine type %q not found in cloud profile %q", pool.MachineType, w.cluster.CloudProfile.Name)
 		}
 
+		capabilityDefinitions := helper.NormalizeCapabilityDefinitions(w.cluster.CloudProfile.Spec.MachineCapabilities)
 		architecture := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
-		machineImage, err := w.selectMachineImageForWorkerPool(pool.MachineImage.Name, pool.MachineImage.Version, w.worker.Spec.Region, &architecture, machineTypeFromCloudProfile.Capabilities)
+		machineTypeCapabilities := helper.NormalizeMachineTypeCapabilities(machineTypeFromCloudProfile.Capabilities, &architecture, capabilityDefinitions)
+		machineImage, err := w.selectMachineImageForWorkerPool(pool.MachineImage.Name, pool.MachineImage.Version, w.worker.Spec.Region, machineTypeCapabilities, capabilityDefinitions)
 		if err != nil {
 			return err
 		}
@@ -334,7 +336,7 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 
 	w.machineDeployments = machineDeployments
 	w.machineClasses = machineClasses
-	w.machineImages = machineImages
+	w.machineImages = EnsureUniformMachineImages(machineImages, w.cluster.CloudProfile.Spec.MachineCapabilities)
 
 	return nil
 }
@@ -403,10 +405,10 @@ func EnsureUniformMachineImages(images []api.MachineImage, definitions []gardenc
 			if len(img.Capabilities[v1beta1constants.ArchitectureName]) > 0 {
 				architecture = &img.Capabilities[v1beta1constants.ArchitectureName][0]
 			}
-			// TODO: make uniform for imageID is not set BUT the global image name is set
 			uniformMachineImages = appendMachineImage(uniformMachineImages, api.MachineImage{
 				Name:         img.Name,
 				Version:      img.Version,
+				Image:        img.Image,
 				ID:           img.ID,
 				Architecture: architecture,
 			}, definitions)

@@ -8,13 +8,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	extensionsbastion "github.com/gardener/gardener/extensions/pkg/bastion"
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,17 +35,15 @@ func TestBastion(t *testing.T) {
 
 var _ = Describe("Bastion", func() {
 	var (
-		log            = logf.Log.WithName("bastion-test")
-		cluster        *extensions.Cluster
-		bastion        *extensionsv1alpha1.Bastion
-		providerImages []openstack.MachineImages
+		log     = logf.Log.WithName("bastion-test")
+		cluster *extensions.Cluster
+		bastion *extensionsv1alpha1.Bastion
 
 		maxLengthForResource int
 	)
 	BeforeEach(func() {
 		cluster = createOpenstackTestCluster()
 		bastion = createTestBastion()
-		providerImages = createTestProviderConfig().MachineImages
 		maxLengthForResource = 63
 	})
 
@@ -207,46 +203,6 @@ var _ = Describe("Bastion", func() {
 
 			Expect(ruleEqual(c, a)).To(BeTrue())
 			Expect(ruleEqual(c, b)).To(BeFalse())
-		})
-	})
-
-	Describe("#getProviderSpecificImage", func() {
-		var desiredVM = extensionsbastion.MachineSpec{
-			MachineTypeName: "small_machine",
-			Architecture:    "amd64",
-			ImageBaseName:   "gardenlinux",
-			ImageVersion:    "1.2.3",
-		}
-
-		It("should succeed for existing image", func() {
-			machineImage, err := getProviderSpecificImage(providerImages, desiredVM)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(machineImage).To(DeepEqual(providerImages[0].Versions[0]))
-		})
-
-		It("fail if image name does not exist", func() {
-			desiredVM.ImageBaseName = "unknown"
-			_, err := getProviderSpecificImage(providerImages, desiredVM)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("fail if image version does not exist", func() {
-			desiredVM.ImageVersion = "6.6.6"
-			_, err := getProviderSpecificImage(providerImages, desiredVM)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("#findImageIdByRegion", func() {
-		It("should succeed for existing image", func() {
-			imageID, err := findImageIdByRegion(providerImages[0].Versions[0], "suse", "eu-nl-1")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(imageID).To(Equal(providerImages[0].Versions[0].Regions[0].ID))
-		})
-
-		It("should fail for unknown region", func() {
-			_, err := findImageIdByRegion(providerImages[0].Versions[0], "suse", "unknown")
-			Expect(err).To(HaveOccurred())
 		})
 	})
 })

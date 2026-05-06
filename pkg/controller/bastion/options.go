@@ -8,7 +8,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net"
-	"slices"
 
 	extensionsbastion "github.com/gardener/gardener/extensions/pkg/bastion"
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -18,7 +17,6 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
@@ -91,21 +89,29 @@ func NewOpts(bastion *extensionsv1alpha1.Bastion, cluster *controller.Cluster, l
 		return Options{}, fmt.Errorf("failed to extract cloud provider config from cluster: %w", err)
 	}
 
-	machineImage, err := getProviderSpecificImage(cloudProfileConfig.MachineImages, machineSpec)
+	capabilityDefinitions := helper.NormalizeCapabilityDefinitions(cluster.CloudProfile.Spec.MachineCapabilities)
+	machineTypeCapabilities := helper.NormalizeMachineTypeCapabilities(machineSpec.MachineTypeCapabilities, &machineSpec.Architecture, capabilityDefinitions)
+
+	imageFlavor, err := helper.FindImageInCloudProfile(
+		cloudProfileConfig, machineSpec.ImageBaseName, machineSpec.ImageVersion,
+		region, machineTypeCapabilities, capabilityDefinitions)
 	if err != nil {
-		return Options{}, fmt.Errorf("failed to extract image from provider config: %w", err)
+		return Options{}, fmt.Errorf("failed to find image in cloud profile: %w", err)
 	}
 
-	imageId, err := findImageIdByRegion(machineImage, machineSpec.ImageBaseName, region)
-	if err != nil {
-		return Options{}, err
+	var imageID string
+	if len(imageFlavor.Regions) > 0 && imageFlavor.Regions[0].ID != "" {
+		imageID = imageFlavor.Regions[0].ID
+	} else {
+		// fallback: use global image name (not region-specific)
+		imageID = imageFlavor.Image
 	}
 
 	return Options{
 		ShootName:   clusterName,
 		Region:      region,
 		UserData:    bastion.Spec.UserData,
-		ImageID:     imageId,
+		ImageID:     imageID,
 		MachineType: machineSpec.MachineTypeName,
 		BaseOptions: baseOpts,
 	}, nil
@@ -175,42 +181,4 @@ func ingressAllowSSHResourceName(baseName string) string {
 // egressAllowOnlyResourceName is Security group egress allow only rule name
 func egressAllowOnlyResourceName(baseName string) string {
 	return fmt.Sprintf("%s-egress-worker", baseName)
-}
-
-// getProviderSpecificImage returns the provider specific MachineImageVersion that matches with the given MachineSpec
-func getProviderSpecificImage(images []openstack.MachineImages, vm extensionsbastion.MachineSpec) (openstack.MachineImageVersion, error) {
-	imageIndex := slices.IndexFunc(images, func(image openstack.MachineImages) bool {
-		return image.Name == vm.ImageBaseName
-	})
-
-	if imageIndex == -1 {
-		return openstack.MachineImageVersion{},
-			fmt.Errorf("machine image with name %s not found in cloudProfileConfig", vm.ImageBaseName)
-	}
-
-	versions := images[imageIndex].Versions
-	versionIndex := slices.IndexFunc(versions, func(version openstack.MachineImageVersion) bool {
-		return version.Version == vm.ImageVersion
-	})
-
-	if versionIndex == -1 {
-		return openstack.MachineImageVersion{},
-			fmt.Errorf("version %s for arch %s of image %s not found in cloudProfileConfig",
-				vm.ImageVersion, vm.Architecture, vm.ImageBaseName)
-	}
-
-	return versions[versionIndex], nil
-}
-
-func findImageIdByRegion(image openstack.MachineImageVersion, imageName, region string) (string, error) {
-	regionIndex := slices.IndexFunc(image.Regions, func(regionID openstack.RegionIDMapping) bool {
-		return regionID.Name == region
-	})
-
-	if regionIndex == -1 {
-		return "", fmt.Errorf("image %s with version %s not found in region %s",
-			imageName, image.Version, region)
-	}
-
-	return image.Regions[regionIndex].ID, nil
 }

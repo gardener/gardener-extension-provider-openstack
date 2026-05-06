@@ -169,6 +169,83 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 					}),
 				))
 			})
+
+			It("should correctly merge mixed format machineImages preserving both old and new format", func() {
+				namespacedCloudProfile.Status.CloudProfileSpec.MachineCapabilities = []v1beta1.CapabilityDefinition{{
+					Name:   "architecture",
+					Values: []string{"amd64", "arm64"},
+				}}
+				// Parent status has new-format capabilityFlavors
+				namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[{"version":"1.0","capabilityFlavors":[
+{"capabilities":{"architecture":["amd64"]},"regions":[{"name":"eu1","id":"id-cap-amd64"}]}
+]}]}
+]}`)}
+				// Spec has mixed: one version old-format regions, one version new-format capabilityFlavors
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[
+    {"version":"1.1","regions":[
+      {"name":"eu1","id":"id-old-amd64","architecture":"amd64"},
+      {"name":"eu1","id":"id-old-arm64","architecture":"arm64"}
+    ]}
+  ]},
+  {"name":"image-2","versions":[
+    {"version":"2.0","capabilityFlavors":[
+      {"capabilities":{"architecture":["amd64"]},"regions":[{"name":"eu1","id":"id-new-amd64"}]},
+      {"capabilities":{"architecture":["arm64"]},"regions":[{"name":"eu1","id":"id-new-arm64"}]}
+    ]}
+  ]}
+]}`)}
+
+				Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+
+				mergedConfig, err := decodeCloudProfileConfig(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(mergedConfig.MachineImages).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("image-1"),
+						"Versions": ContainElements(
+							// Parent version preserved as-is (new format)
+							api.MachineImageVersion{Version: "1.0",
+								CapabilityFlavors: []api.MachineImageFlavor{{
+									Capabilities: v1beta1.Capabilities{"architecture": []string{"amd64"}},
+									Regions:      []api.RegionIDMapping{{Name: "eu1", ID: "id-cap-amd64"}},
+								}},
+							},
+							// Spec version preserved as-is (old format with regions)
+							api.MachineImageVersion{Version: "1.1",
+								Regions: []api.RegionIDMapping{
+									{Name: "eu1", ID: "id-old-amd64", Architecture: ptr.To("amd64")},
+									{Name: "eu1", ID: "id-old-arm64", Architecture: ptr.To("arm64")},
+								},
+							},
+						),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("image-2"),
+						"Versions": ContainElements(
+							// Spec version preserved as-is (new format)
+							api.MachineImageVersion{Version: "2.0",
+								CapabilityFlavors: []api.MachineImageFlavor{
+									{
+										Capabilities: v1beta1.Capabilities{"architecture": []string{"amd64"}},
+										Regions:      []api.RegionIDMapping{{Name: "eu1", ID: "id-new-amd64"}},
+									},
+									{
+										Capabilities: v1beta1.Capabilities{"architecture": []string{"arm64"}},
+										Regions:      []api.RegionIDMapping{{Name: "eu1", ID: "id-new-arm64"}},
+									},
+								},
+							}),
+					}),
+				))
+			})
 		})
 	})
 })

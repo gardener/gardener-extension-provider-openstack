@@ -58,9 +58,14 @@ func (p *cloudProfile) Mutate(_ context.Context, newObj, _ client.Object) error 
 
 // overwriteMachineImageCapabilityFlavors updates the capability flavors of machine images in the CloudProfile
 func overwriteMachineImageCapabilityFlavors(profile *gardencorev1beta1.CloudProfile, config *v1alpha1.CloudProfileConfig) {
+	mutateMachineImageCapabilityFlavors(profile.Spec.MachineImages, config)
+}
+
+// mutateMachineImageCapabilityFlavors populates capabilityFlavors on machineImages from the provider config.
+func mutateMachineImageCapabilityFlavors(machineImages []gardencorev1beta1.MachineImage, config *v1alpha1.CloudProfileConfig) {
 	for _, providerMachineImage := range config.MachineImages {
-		// Find the corresponding machine image in the CloudProfile
-		imageIdx := slices.IndexFunc(profile.Spec.MachineImages, func(mi gardencorev1beta1.MachineImage) bool {
+		// Find the corresponding machine image
+		imageIdx := slices.IndexFunc(machineImages, func(mi gardencorev1beta1.MachineImage) bool {
 			return mi.Name == providerMachineImage.Name
 		})
 		if imageIdx == -1 {
@@ -69,15 +74,15 @@ func overwriteMachineImageCapabilityFlavors(profile *gardencorev1beta1.CloudProf
 
 		// Iterate over versions in the provider's machine image
 		for _, providerVersion := range providerMachineImage.Versions {
-			// Find the corresponding version in the CloudProfile's machine image
-			versionIdx := slices.IndexFunc(profile.Spec.MachineImages[imageIdx].Versions, func(miv gardencorev1beta1.MachineImageVersion) bool {
+			// Find the corresponding version in the machine image
+			versionIdx := slices.IndexFunc(machineImages[imageIdx].Versions, func(miv gardencorev1beta1.MachineImageVersion) bool {
 				return miv.Version == providerVersion.Version
 			})
 			if versionIdx == -1 {
 				continue
 			}
 
-			profile.Spec.MachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = convertProviderVersionToCapabilityFlavors(providerVersion)
+			machineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = convertProviderVersionToCapabilityFlavors(providerVersion)
 		}
 	}
 }

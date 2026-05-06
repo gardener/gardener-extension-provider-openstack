@@ -59,6 +59,12 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				Name:      "profile-1",
 				Namespace: namespace,
 			},
+			Spec: v1beta1.NamespacedCloudProfileSpec{
+				Parent: v1beta1.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "parent-profile",
+				},
+			},
 		}
 	})
 
@@ -76,7 +82,138 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			Expect(namespacedCloudProfile).To(DeepEqual(expectedProfile))
 		})
 
+		Describe("populate capabilityFlavors on spec.machineImages", func() {
+			It("should skip if parent has no machineCapabilities", func() {
+				Expect(fakeClient.Create(ctx, &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"},
+					Spec: v1beta1.CloudProfileSpec{
+						MachineCapabilities: nil,
+					},
+				})).To(Succeed())
+
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[{"version":"1.0","capabilityFlavors":[
+{"capabilities":{"architecture":["amd64"]},"regions":[{"name":"eu1","id":"id-1"}]}
+]}]}
+]}`)}
+				namespacedCloudProfile.Spec.MachineImages = []v1beta1.MachineImage{
+					{Name: "image-1", Versions: []v1beta1.MachineImageVersion{
+						{ExpirableVersion: v1beta1.ExpirableVersion{Version: "1.0"}},
+					}},
+				}
+
+				expectedImages := namespacedCloudProfile.Spec.MachineImages
+
+				Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+				Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal(expectedImages))
+			})
+
+			It("should populate capabilityFlavors from new-format provider config", func() {
+				Expect(fakeClient.Create(ctx, &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"},
+					Spec: v1beta1.CloudProfileSpec{
+						MachineCapabilities: []v1beta1.CapabilityDefinition{{
+							Name:   "architecture",
+							Values: []string{"amd64", "arm64"},
+						}},
+					},
+				})).To(Succeed())
+
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[{"version":"1.0","capabilityFlavors":[
+{"capabilities":{"architecture":["amd64"]},"regions":[{"name":"eu1","id":"id-amd64"}]},
+{"capabilities":{"architecture":["arm64"]},"regions":[{"name":"eu1","id":"id-arm64"}]}
+]}]}
+]}`)}
+				namespacedCloudProfile.Spec.MachineImages = []v1beta1.MachineImage{
+					{Name: "image-1", Versions: []v1beta1.MachineImageVersion{
+						{ExpirableVersion: v1beta1.ExpirableVersion{Version: "1.0"}},
+					}},
+				}
+
+				Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+				Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("image-1"),
+						"Versions": ConsistOf(
+							MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("1.0")}),
+								"CapabilityFlavors": ConsistOf(
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"amd64"}}),
+									}),
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"arm64"}}),
+									}),
+								),
+							}),
+						),
+					}),
+				))
+			})
+
+			It("should populate capabilityFlavors from old-format regions provider config", func() {
+				Expect(fakeClient.Create(ctx, &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"},
+					Spec: v1beta1.CloudProfileSpec{
+						MachineCapabilities: []v1beta1.CapabilityDefinition{{
+							Name:   "architecture",
+							Values: []string{"amd64", "arm64"},
+						}},
+					},
+				})).To(Succeed())
+
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[{"version":"1.0","regions":[
+{"name":"eu1","id":"id-amd64","architecture":"amd64"},
+{"name":"eu1","id":"id-arm64","architecture":"arm64"}
+]}]}
+]}`)}
+				namespacedCloudProfile.Spec.MachineImages = []v1beta1.MachineImage{
+					{Name: "image-1", Versions: []v1beta1.MachineImageVersion{
+						{ExpirableVersion: v1beta1.ExpirableVersion{Version: "1.0"}},
+					}},
+				}
+
+				Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+				Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("image-1"),
+						"Versions": ConsistOf(
+							MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("1.0")}),
+								"CapabilityFlavors": ConsistOf(
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"amd64"}}),
+									}),
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"arm64"}}),
+									}),
+								),
+							}),
+						),
+					}),
+				))
+			})
+		})
+
 		Describe("merge the provider configurations from a NamespacedCloudProfile and the parent CloudProfile", func() {
+			BeforeEach(func() {
+				// Create a parent profile without machineCapabilities for status merge tests
+				Expect(fakeClient.Create(ctx, &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"},
+				})).To(Succeed())
+			})
+
 			It("should correctly merge extended machineImages", func() {
 				namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
@@ -111,6 +248,17 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				))
 			})
 			It("should correctly merge extended machineImages using capabilities ", func() {
+				Expect(fakeClient.Delete(ctx, &v1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"}})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"},
+					Spec: v1beta1.CloudProfileSpec{
+						MachineCapabilities: []v1beta1.CapabilityDefinition{{
+							Name:   "architecture",
+							Values: []string{"amd64", "arm64"},
+						}},
+					},
+				})).To(Succeed())
+
 				namespacedCloudProfile.Status.CloudProfileSpec.MachineCapabilities = []v1beta1.CapabilityDefinition{{
 					Name:   "architecture",
 					Values: []string{"amd64", "arm64"},
@@ -171,6 +319,17 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should correctly merge mixed format machineImages preserving both old and new format", func() {
+				Expect(fakeClient.Delete(ctx, &v1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"}})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "parent-profile"},
+					Spec: v1beta1.CloudProfileSpec{
+						MachineCapabilities: []v1beta1.CapabilityDefinition{{
+							Name:   "architecture",
+							Values: []string{"amd64", "arm64"},
+						}},
+					},
+				})).To(Succeed())
+
 				namespacedCloudProfile.Status.CloudProfileSpec.MachineCapabilities = []v1beta1.CapabilityDefinition{{
 					Name:   "architecture",
 					Values: []string{"amd64", "arm64"},

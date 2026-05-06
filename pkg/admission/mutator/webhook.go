@@ -33,7 +33,7 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Mutators: map[extensionswebhook.Mutator][]extensionswebhook.Type{
 			NewShootMutator():                     {{Obj: &gardencorev1beta1.Shoot{}}},
 			NewCloudProfileMutator(mgr):           {{Obj: &gardencorev1beta1.CloudProfile{}}},
-			NewNamespacedCloudProfileMutator(mgr): {{Obj: &gardencorev1beta1.NamespacedCloudProfile{}, Subresource: ptr.To("status")}},
+			NewNamespacedCloudProfileMutator(mgr): {{Obj: &gardencorev1beta1.NamespacedCloudProfile{}}, {Obj: &gardencorev1beta1.NamespacedCloudProfile{}, Subresource: ptr.To("status")}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{

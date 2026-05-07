@@ -30,7 +30,12 @@ type Networks struct {
 	// Deprecated: use `workers` instead.
 	Worker string
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
+	// Mutually exclusive with SubnetPool.
 	Workers string
+	// SubnetPool specifies an OpenStack subnet pool to use for automatic CIDR allocation
+	// for the worker subnet. Mutually exclusive with Workers/Worker CIDR fields.
+	// +optional
+	SubnetPool *SubnetPool
 	// ID is the ID of an existing private network.
 	ID *string
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
@@ -38,6 +43,14 @@ type Networks struct {
 	// IPv6 holds information about the IPv6 CIDRs.
 	// +optional
 	IPv6 *IPv6Config
+}
+
+// SubnetPool specifies an OpenStack subnet pool from which a CIDR will be automatically allocated.
+type SubnetPool struct {
+	// ID is the ID of the OpenStack subnet pool.
+	ID string
+	// PrefixLength is the prefix length (e.g. 24 for a /24 subnet) to request from the pool.
+	PrefixLength int
 }
 
 // IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
@@ -147,6 +160,8 @@ type Subnet struct {
 	Purpose Purpose
 	// ID is the subnet id.
 	ID string
+	// CIDR is the CIDR of the subnet. This is only set for subnets that were allocated from a subnet pool.
+	CIDR string
 }
 
 // SecurityGroup is an OpenStack security group related to a Network.

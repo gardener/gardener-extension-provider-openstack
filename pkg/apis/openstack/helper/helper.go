@@ -18,6 +18,48 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/utils"
 )
 
+// NormalizeCapabilityDefinitions ensures that capability definitions always include at least
+// the architecture capability. This allows all downstream code to assume capabilities are always present,
+// eliminating the need for conditional logic based on whether capabilities are defined.
+func NormalizeCapabilityDefinitions(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []gardencorev1beta1.CapabilityDefinition {
+	if len(capabilityDefinitions) > 0 {
+		return capabilityDefinitions
+	}
+	return []gardencorev1beta1.CapabilityDefinition{{
+		Name:   v1beta1constants.ArchitectureName,
+		Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
+	}}
+}
+
+// NormalizeMachineTypeCapabilities ensures that machine type capabilities include the architecture
+// capability. This transforms the legacy architecture-based selection into capability-based selection.
+// The architecture is determined in the following priority order:
+// 1. If capabilities already has architecture, use it as-is
+// 2. If capabilityDefinitions has exactly one architecture value, use that value
+// 3. Otherwise, use workerArchitecture (defaulting to amd64)
+func NormalizeMachineTypeCapabilities(capabilities gardencorev1beta1.Capabilities, workerArchitecture *string, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) gardencorev1beta1.Capabilities {
+	if capabilities == nil {
+		capabilities = make(gardencorev1beta1.Capabilities)
+	}
+	// If architecture capability is already present, return as-is
+	if _, hasArch := capabilities[v1beta1constants.ArchitectureName]; hasArch {
+		return capabilities
+	}
+
+	// Check if capabilityDefinitions has exactly one architecture value
+	for _, def := range capabilityDefinitions {
+		if def.Name == v1beta1constants.ArchitectureName && len(def.Values) == 1 {
+			capabilities[v1beta1constants.ArchitectureName] = []string{def.Values[0]}
+			return capabilities
+		}
+	}
+
+	// Fall back to workerArchitecture or default
+	arch := ptr.Deref(workerArchitecture, v1beta1constants.ArchitectureAMD64)
+	capabilities[v1beta1constants.ArchitectureName] = []string{arch}
+	return capabilities
+}
+
 // FindSubnetByPurpose takes a list of subnets and tries to find the first entry
 // whose purpose matches with the given purpose. If no such entry is found then an error will be
 // returned.
@@ -58,97 +100,121 @@ func FindSecurityGroupByPurpose(securityGroups []api.SecurityGroup, purpose api.
 	return nil, fmt.Errorf("cannot find security group with purpose %q", purpose)
 }
 
-// FindMachineImage takes a list of machine images and tries to find the first entry
-// whose name, version, and zone matches with the given name, version, and cloud profile. If no such
-// entry is found then an error will be returned.
-func FindMachineImage(machineImages []api.MachineImage, name, version, architecture string) (*api.MachineImage, error) {
-	for _, machineImage := range machineImages {
-		// If the architecture field is not present, ignore it for backwards-compatibility.
-		if machineImage.Name == name && machineImage.Version == version &&
-			(machineImage.Architecture == nil || *machineImage.Architecture == architecture) {
-			return &machineImage, nil
-		}
-	}
-	return nil, fmt.Errorf("no machine image with name %q, version %q found", name, version)
-}
-
-// FindImageFromCloudProfile takes a list of machine images, and the desired image name and version. It tries
-// to find the image with the given name and version in the desired cloud profile. If it cannot be found then an error
-// is returned.
-func FindImageFromCloudProfile(cloudProfileConfig *api.CloudProfileConfig, imageName, imageVersion, regionName, architecture string) (*api.MachineImage, error) {
-	if cloudProfileConfig != nil {
-		for _, machineImage := range cloudProfileConfig.MachineImages {
-			if machineImage.Name != imageName {
-				continue
-			}
-			for _, version := range machineImage.Versions {
-				if imageVersion != version.Version {
-					continue
-				}
-				for _, region := range version.Regions {
-					if regionName == region.Name && architecture == ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64) {
-						return &api.MachineImage{
-							Name:         imageName,
-							Version:      imageVersion,
-							Architecture: &architecture,
-							ID:           region.ID,
-						}, nil
-					}
-				}
-
-				// if we haven't found a region mapping, fallback to the image name
-				if version.Image != "" && architecture == v1beta1constants.ArchitectureAMD64 {
-					// The fallback image name doesn't specify an architecture, but we assume it is amd64 as arm was not supported
-					// previously.
-					// Referencing images by name is error-prone and is highly discouraged anyways.
-					// If people want to use arm images in their CloudProfile, they need to specify a region mapping and can't
-					// use the fallback MachineImage by name.
-					return &api.MachineImage{
-						Name:         imageName,
-						Version:      imageVersion,
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-						Image:        version.Image,
-					}, nil
-				}
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("could not find an image for name %q in version %q for region %q", imageName, imageVersion, regionName)
-}
-
-// FindImageInCloudProfile takes a list of machine images and tries to find the first entry
-// whose name, version, region, architecture, capabilities and zone matches with the given ones. If no such entry is
-// found then an error will be returned.
+// FindImageInCloudProfile takes a list of machine images and tries to find the first entry whose name, version and capabilities
+// matches with the machineTypeCapabilities. If no such entry is found then an error will be returned.
+// Note: capabilityDefinitions and machineTypeCapabilities are expected to be normalized
+// by the caller using NormalizeCapabilityDefinitions() and NormalizeMachineTypeCapabilities()
 func FindImageInCloudProfile(
 	cloudProfileConfig *api.CloudProfileConfig,
 	name, version, region string,
-	arch *string,
 	machineCapabilities gardencorev1beta1.Capabilities,
 	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) (*api.MachineImageFlavor, error) {
 	if cloudProfileConfig == nil {
 		return nil, fmt.Errorf("cloud profile config is nil")
 	}
+	if len(capabilityDefinitions) == 0 {
+		return nil, fmt.Errorf("capabilityDefinitions must not be empty, use NormalizeCapabilityDefinitions() to ensure defaults")
+	}
 	machineImages := cloudProfileConfig.MachineImages
 
-	capabilitySet, err := findMachineImageFlavor(machineImages, name, version, region, arch, machineCapabilities, capabilityDefinitions)
-	if err != nil {
-		return nil, fmt.Errorf("could not find an Image ID for region %q, image %q, version %q that supports %v: %w", region, name, version, machineCapabilities, err)
-	}
+	for _, machineImage := range machineImages {
+		if machineImage.Name != name {
+			continue
+		}
 
-	// TODO: what if imageName is used?
-	if capabilitySet != nil && len(capabilitySet.Regions) > 0 && (capabilitySet.Regions[0].ID != "" || capabilitySet.Image != "") {
-		return capabilitySet, nil
+		// Collect all versions with matching version string (mixed format support)
+		var matchingVersions []api.MachineImageVersion
+		for _, v := range machineImage.Versions {
+			if version == v.Version {
+				matchingVersions = append(matchingVersions, v)
+			}
+		}
+
+		if len(matchingVersions) == 0 {
+			continue
+		}
+
+		// Convert old format (regions with architecture) versions to capability flavors if required
+		// as there may be multiple version entries for the same version with different architectures
+		// the normalization for capability flavors is done here instead of the caller to keep the caller code simpler
+		capabilityFlavors := convertLegacyVersionsToCapabilityFlavors(matchingVersions)
+
+		// Filter capability flavors by region
+		filteredCapabilityFlavors := filterCapabilityFlavorsByRegion(capabilityFlavors, region)
+
+		if len(filteredCapabilityFlavors) > 0 {
+			bestMatch, err := worker.FindBestImageFlavor(filteredCapabilityFlavors, machineCapabilities, capabilityDefinitions)
+			if err != nil {
+				return nil, fmt.Errorf("could not determine best flavor: %w", err)
+			}
+			return bestMatch, nil
+		}
 	}
-	return nil, fmt.Errorf("could not find an Image ID for region %q, image %q, version %q that supports %v", region, name, version, machineCapabilities)
+	return nil, fmt.Errorf("could not find an image for region %q, image %q, version %q that supports %v", region, name, version, machineCapabilities)
 }
 
-// FindImageInWorkerStatus takes a list of machine images from the worker status and tries to find the first entry
-// whose name, version, architecture, capabilities and zone matches with the given ones. If no such entry is
-// found then an error will be returned.
+// convertLegacyVersionsToCapabilityFlavors converts old format (regions with architecture) versions
+// to capability flavors for mixed format support.
+func convertLegacyVersionsToCapabilityFlavors(versions []api.MachineImageVersion) []api.MachineImageFlavor {
+	var capabilityFlavors []api.MachineImageFlavor
+	for _, version := range versions {
+		if len(version.CapabilityFlavors) > 0 {
+			// New format: use capability flavors directly
+			capabilityFlavors = append(capabilityFlavors, version.CapabilityFlavors...)
+		} else if len(version.Regions) > 0 {
+			// Old format: regions with architecture - convert to capability flavors
+			capabilityFlavors = append(capabilityFlavors, convertRegionsToCapabilityFlavors(version.Regions, version.Image)...)
+		} else if version.Image != "" {
+			// Legacy format: only global image name, no regions - synthesize an amd64 capability flavor
+			capabilityFlavors = append(capabilityFlavors, api.MachineImageFlavor{
+				Capabilities: gardencorev1beta1.Capabilities{
+					v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+				},
+				Image: version.Image,
+			})
+		}
+	}
+	return capabilityFlavors
+}
+
+// convertRegionsToCapabilityFlavors converts old format (regions with architecture) to capability flavors.
+// Groups regions by architecture, preserves the Image field, and strips Architecture from RegionIDMapping.
+func convertRegionsToCapabilityFlavors(regions []api.RegionIDMapping, image string) []api.MachineImageFlavor {
+	// Group regions by architecture
+	architectureRegions := make(map[string][]api.RegionIDMapping)
+	for _, region := range regions {
+		arch := ptr.Deref(region.Architecture, v1beta1constants.ArchitectureAMD64)
+		// Remove architecture field from region mapping when converting to capability flavors
+		// as architecture is now expressed through the Capabilities field
+		regionWithoutArch := api.RegionIDMapping{
+			Name: region.Name,
+			ID:   region.ID,
+		}
+		architectureRegions[arch] = append(architectureRegions[arch], regionWithoutArch)
+	}
+
+	// Create a capability flavor for each architecture
+	var capabilityFlavors []api.MachineImageFlavor
+	for arch, regionMappings := range architectureRegions {
+		capabilityFlavors = append(capabilityFlavors, api.MachineImageFlavor{
+			Capabilities: gardencorev1beta1.Capabilities{
+				v1beta1constants.ArchitectureName: []string{arch},
+			},
+			Regions: regionMappings,
+			Image:   image,
+		})
+	}
+
+	return capabilityFlavors
+}
+
+// FindImageInWorkerStatus takes a list of machine images from the worker status and tries to find the first entry whose name, version, architecture
+// capabilities and zone matches with the machineTypeCapabilities. If no such entry is found then an error will be returned.
+// The worker status is an external source that may contain images in either legacy format (Architecture field)
+// or capability format (Capabilities field). The capabilityDefinitions parameter should be the original
+// (non-normalized) spec.MachineCapabilities from the CloudProfile to distinguish the two cases.
 func FindImageInWorkerStatus(machineImages []api.MachineImage, name string, version string, architecture *string, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (*api.MachineImage, error) {
-	// If no capabilityDefinitions are specified, return the (legacy) architecture format field as no Capabilities are used.
 	if len(capabilityDefinitions) == 0 {
 		for _, statusMachineImage := range machineImages {
 			if statusMachineImage.Architecture == nil {
@@ -161,7 +227,7 @@ func FindImageInWorkerStatus(machineImages []api.MachineImage, name string, vers
 		return nil, fmt.Errorf("no machine image found for image %q with version %q and architecture %q", name, version, *architecture)
 	}
 
-	// If capabilityDefinitions are specified, we need to find the best matching capability set.
+	// Capability format: find the best matching capability set.
 	for _, statusMachineImage := range machineImages {
 		var statusMachineImageV1alpha1 v1alpha1.MachineImage
 		if err := v1alpha1.Convert_openstack_MachineImage_To_v1alpha1_MachineImage(&statusMachineImage, &statusMachineImageV1alpha1, nil); err != nil {
@@ -174,51 +240,9 @@ func FindImageInWorkerStatus(machineImages []api.MachineImage, name string, vers
 	return nil, fmt.Errorf("no machine image found for image %q with version %q and capabilities %v", name, version, machineCapabilities)
 }
 
-func findMachineImageFlavor(
-	machineImages []api.MachineImages,
-	imageName, imageVersion, region string,
-	arch *string,
-	machineCapabilities gardencorev1beta1.Capabilities,
-	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
-) (*api.MachineImageFlavor, error) {
-	for _, machineImage := range machineImages {
-		if machineImage.Name != imageName {
-			continue
-		}
-		for _, version := range machineImage.Versions {
-			if imageVersion != version.Version {
-				continue
-			}
-
-			// No capability definitions means legacy format, so we match Architecture field of region
-			if len(capabilityDefinitions) == 0 {
-				for _, mapping := range version.Regions {
-					if region == mapping.Name && *arch == ptr.Deref(mapping.Architecture, v1beta1constants.ArchitectureAMD64) {
-						return &api.MachineImageFlavor{
-							Image:        version.Image,
-							Regions:      []api.RegionIDMapping{mapping},
-							Capabilities: gardencorev1beta1.Capabilities{},
-						}, nil
-					}
-				}
-				continue
-			}
-
-			// TODO VR: filteredCapabilityFlavors.Image is empty. We need to set it here if it exists
-			filteredCapabilityFlavors := filterCapabilityFlavorsByRegion(version.CapabilityFlavors, region)
-			bestMatch, err := worker.FindBestImageFlavor(filteredCapabilityFlavors, machineCapabilities, capabilityDefinitions)
-			if err != nil {
-				return nil, fmt.Errorf("could not determine best flavor %w", err)
-			}
-
-			return bestMatch, nil
-		}
-	}
-	return nil, nil
-}
-
 // filterCapabilityFlavorsByRegion returns a new list with capabilityFlavors that only contain RegionIDMappings
-// of the region to filter for.
+// of the region to filter for. Flavors with a global Image name but no matching region mapping are included
+// without region details (they fall back to the global image name).
 func filterCapabilityFlavorsByRegion(capabilityFlavors []api.MachineImageFlavor, regionName string) []*api.MachineImageFlavor {
 	var compatibleFlavors []*api.MachineImageFlavor
 
@@ -232,6 +256,12 @@ func filterCapabilityFlavorsByRegion(capabilityFlavors []api.MachineImageFlavor,
 		if regionIDMapping != nil {
 			compatibleFlavors = append(compatibleFlavors, &api.MachineImageFlavor{
 				Regions:      []api.RegionIDMapping{*regionIDMapping},
+				Image:        capabilityFlavor.Image,
+				Capabilities: capabilityFlavor.Capabilities,
+			})
+		} else if capabilityFlavor.Image != "" {
+			// No matching region mapping, but a global image name is available as fallback
+			compatibleFlavors = append(compatibleFlavors, &api.MachineImageFlavor{
 				Image:        capabilityFlavor.Image,
 				Capabilities: capabilityFlavor.Capabilities,
 			})

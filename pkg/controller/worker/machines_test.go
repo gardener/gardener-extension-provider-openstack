@@ -840,16 +840,24 @@ var _ = Describe("Machines", func() {
 						},
 					}
 					if !isCapabilitiesCloudProfile {
+						// When using global image names (machineImageID==""), Image field is set;
+						// when using image IDs, Image is empty.
+						expectedImage := ""
+						if usesGlobalImageNames {
+							expectedImage = machineImage
+						}
 						machineImages = []apiv1alpha1.MachineImage{
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: &archAMD,
 							},
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: &archARM,
 							},
@@ -920,16 +928,22 @@ var _ = Describe("Machines", func() {
 						},
 					}
 					if !isCapabilitiesCloudProfile {
+						expectedImage := ""
+						if usesGlobalImageNames {
+							expectedImage = machineImage
+						}
 						machineImages = []apiv1alpha1.MachineImage{
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 							},
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: ptr.To(v1beta1constants.ArchitectureARM64),
 							},

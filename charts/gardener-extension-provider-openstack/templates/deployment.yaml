@@ -73,7 +73,6 @@ spec:
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-server-port={{ tpl .Values.webhookConfig.serverPort . }}
 {{- if (include "runtimeCluster.enabled" .) }}
-        - --controllers=backupbucket,dnsrecord
         - --disable-webhooks="*"
         - --extension-classes=garden
 {{- else }}

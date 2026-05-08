@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -208,13 +207,20 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controlPlaneCtrlOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.Controller)
-			reconcileOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &openstackinfrastructure.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &openstackcontrolplane.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation, &openstackworker.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbastion.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupbucket.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation, &openstackbackupentry.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &openstackdnsrecord.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&openstackinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackworker.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackbastion.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)
+			openstackinfrastructure.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackcontrolplane.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackworker.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackbastion.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackbackupbucket.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackbackupentry.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackdnsrecord.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
 			openstackworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
@@ -238,15 +244,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 				return fmt.Errorf("could not add ready check for webhook server to manager: %w", err)
-			}
-
-			if !slices.Contains(reconcileOpts.ExtensionClasses, "garden") {
-				// TODO (kon-angelo): Remove after the release of version 1.46.0
-				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-					return purgeTerraformerRBACResources(ctx, mgr.GetClient(), log)
-				})); err != nil {
-					return fmt.Errorf("error adding terraformer migrations: %w", err)
-				}
 			}
 
 			if err := mgr.Start(ctx); err != nil {

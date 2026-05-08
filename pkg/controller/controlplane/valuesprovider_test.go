@@ -17,8 +17,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -130,9 +130,8 @@ var _ = Describe("ValuesProvider", func() {
 		fakeClient         client.Client
 		fakeSecretsManager secretsmanager.Interface
 
-		vp  genericactuator.ValuesProvider
-		c   *mockclient.MockClient
-		mgr *mockmanager.MockManager
+		vp genericactuator.ValuesProvider
+		c  *mockclient.MockClient
 
 		cp = defaultControlPlane()
 
@@ -295,9 +294,7 @@ var _ = Describe("ValuesProvider", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
-		mgr = mockmanager.NewMockManager(ctrl)
-		mgr.EXPECT().GetClient().Return(c)
-		mgr.EXPECT().GetScheme().Return(scheme)
+		mgr := test.FakeManager{Client: c, Scheme: scheme}
 		vp = NewValuesProvider(mgr)
 	})
 

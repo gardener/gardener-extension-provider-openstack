@@ -4,26 +4,24 @@
 <a href="#openstack.provider.extensions.gardener.cloud%2fv1alpha1">openstack.provider.extensions.gardener.cloud/v1alpha1</a>
 </li>
 </ul>
+
 <h2 id="openstack.provider.extensions.gardener.cloud/v1alpha1">openstack.provider.extensions.gardener.cloud/v1alpha1</h2>
 <p>
-<p>Package v1alpha1 contains the OpenStack provider API resources.</p>
+
 </p>
-Resource Types:
-<ul><li>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>
-</li><li>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>
-</li><li>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureConfig">InfrastructureConfig</a>
-</li><li>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>
-</li></ul>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig
+
+<h3 id="csimanila">CSIManila
 </h3>
+
+
 <p>
-<p>CloudProfileConfig contains provider-specific configuration that is embedded into Gardener&rsquo;s <code>CloudProfile</code>
-resource.</p>
+(<em>Appears on:</em><a href="#storage">Storage</a>)
 </p>
+
+<p>
+CSIManila contains configuration for CSI Manila driver (support for NFS volumes)
+</p>
+
 <table>
 <thead>
 <tr>
@@ -32,30 +30,84 @@ resource.</p>
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
-<code>apiVersion</code></br>
-string</td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
 <td>
-<code>
-openstack.provider.extensions.gardener.cloud/v1alpha1
-</code>
+<p>Enabled is the switch to enable the CSI Manila driver support</p>
 </td>
 </tr>
+
+</tbody>
+</table>
+
+
+<h3 id="cloudcontrollermanagerconfig">CloudControllerManagerConfig
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#controlplaneconfig">ControlPlaneConfig</a>)
+</p>
+
+<p>
+CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
 <tr>
 <td>
-<code>kind</code></br>
-string
+<code>featureGates</code></br>
+<em>
+object (keys:string, values:boolean)
+</em>
 </td>
-<td><code>CloudProfileConfig</code></td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates contains information about enabled feature gates.</p>
+</td>
 </tr>
+
+</tbody>
+</table>
+
+
+<h3 id="cloudprofileconfig">CloudProfileConfig
+</h3>
+
+
+<p>
+CloudProfileConfig contains provider-specific configuration that is embedded into Gardener's `CloudProfile`
+resource.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
 <tr>
 <td>
 <code>constraints</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Constraints">
-Constraints
-</a>
+<a href="#constraints">Constraints</a>
 </em>
 </td>
 <td>
@@ -66,7 +118,7 @@ Constraints
 <td>
 <code>dnsServers</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
@@ -83,8 +135,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for
-Kubernetes 1.10.1+. See <a href="https://github.com/kubernetes/kubernetes/pull/61890">https://github.com/kubernetes/kubernetes/pull/61890</a> for details.</p>
+<p>DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for<br />Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.</p>
 </td>
 </tr>
 <tr>
@@ -96,7 +147,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>KeyStoneURL is the URL for auth{n,z} in OpenStack (pointing to KeyStone).</p>
+<p>KeyStoneURL is the URL for auth\{n,z\} in OpenStack (pointing to KeyStone).</p>
 </td>
 </tr>
 <tr>
@@ -115,7 +166,7 @@ string
 <td>
 <code>keystoneForceInsecure</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
@@ -127,37 +178,30 @@ bool
 <td>
 <code>keystoneURLs</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.KeyStoneURL">
-[]KeyStoneURL
-</a>
+<a href="#keystoneurl">KeyStoneURL</a> array
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>KeyStoneURLs is a region-URL mapping for auth{n,z} in OpenStack (pointing to KeyStone).</p>
+<p>KeyStoneURLs is a region-URL mapping for auth\{n,z\} in OpenStack (pointing to KeyStone).</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>machineImages</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImages">
-[]MachineImages
-</a>
+<a href="#machineimages">MachineImages</a> array
 </em>
 </td>
 <td>
-<p>MachineImages is the list of machine images that are understood by the controller. It maps
-logical names and versions to provider-specific identifiers.</p>
+<p>MachineImages is the list of machine images that are understood by the controller. It maps<br />logical names and versions to provider-specific identifiers.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>requestTimeout</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#duration-v1-meta">Duration</a>
 </em>
 </td>
 <td>
@@ -169,33 +213,31 @@ Kubernetes meta/v1.Duration
 <td>
 <code>rescanBlockStorageOnResize</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>RescanBlockStorageOnResize specifies whether the storage plugin scans and checks new block device size before it resizes
-the filesystem.</p>
+<p>RescanBlockStorageOnResize specifies whether the storage plugin scans and checks new block device size before it resizes<br />the filesystem.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>ignoreVolumeAZ</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,
-to allow for differences between volume and compute zone naming.</p>
+<p>IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,<br />to allow for differences between volume and compute zone naming.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>nodeVolumeAttachLimit</code></br>
 <em>
-int32
+integer
 </em>
 </td>
 <td>
@@ -207,7 +249,7 @@ int32
 <td>
 <code>useSNAT</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
@@ -219,7 +261,7 @@ bool
 <td>
 <code>serverGroupPolicies</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
@@ -231,7 +273,7 @@ bool
 <td>
 <code>resolvConfOptions</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
@@ -243,9 +285,7 @@ bool
 <td>
 <code>storageClasses</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.StorageClassDefinition">
-[]StorageClassDefinition
-</a>
+<a href="#storageclassdefinition">StorageClassDefinition</a> array
 </em>
 </td>
 <td>
@@ -253,13 +293,23 @@ bool
 <p>StorageClasses defines storageclasses for the shoot</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig
+
+
+<h3 id="constraints">Constraints
 </h3>
+
+
 <p>
-<p>ControlPlaneConfig contains configuration settings for the control plane.</p>
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
 </p>
+
+<p>
+Constraints is an object containing constraints for the shoots.
+</p>
+
 <table>
 <thead>
 <tr>
@@ -268,30 +318,56 @@ bool
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
-<code>apiVersion</code></br>
-string</td>
+<code>floatingPools</code></br>
+<em>
+<a href="#floatingpool">FloatingPool</a> array
+</em>
+</td>
 <td>
-<code>
-openstack.provider.extensions.gardener.cloud/v1alpha1
-</code>
+<p>FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the control plane config.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>kind</code></br>
-string
+<code>loadBalancerProviders</code></br>
+<em>
+<a href="#loadbalancerprovider">LoadBalancerProvider</a> array
+</em>
 </td>
-<td><code>ControlPlaneConfig</code></td>
+<td>
+<p>LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the control plane config.</p>
+</td>
 </tr>
+
+</tbody>
+</table>
+
+
+<h3 id="controlplaneconfig">ControlPlaneConfig
+</h3>
+
+
+<p>
+ControlPlaneConfig contains configuration settings for the control plane.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
 <tr>
 <td>
 <code>cloudControllerManager</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudControllerManagerConfig">
-CloudControllerManagerConfig
-</a>
+<a href="#cloudcontrollermanagerconfig">CloudControllerManagerConfig</a>
 </em>
 </td>
 <td>
@@ -303,9 +379,7 @@ CloudControllerManagerConfig
 <td>
 <code>loadBalancerClasses</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.LoadBalancerClass">
-[]LoadBalancerClass
-</a>
+<a href="#loadbalancerclass">LoadBalancerClass</a> array
 </em>
 </td>
 <td>
@@ -333,17 +407,14 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Zone is the OpenStack zone.
-Deprecated: Don&rsquo;t use anymore. Will be removed in a future version.</p>
+<p>Zone is the OpenStack zone.<br />Deprecated: Don't use anymore. Will be removed in a future version.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>storage</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Storage">
-Storage
-</a>
+<a href="#storage">Storage</a>
 </em>
 </td>
 <td>
@@ -351,13 +422,23 @@ Storage
 <p>Storage contains configuration for storage in the cluster.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureConfig">InfrastructureConfig
+
+
+<h3 id="floatingpool">FloatingPool
 </h3>
+
+
 <p>
-<p>InfrastructureConfig infrastructure configuration resource</p>
+(<em>Appears on:</em><a href="#constraints">Constraints</a>)
 </p>
+
+<p>
+FloatingPool contains constraints regarding allowed values of the 'floatingPoolName' block in the control plane config.
+</p>
+
 <table>
 <thead>
 <tr>
@@ -366,249 +447,7 @@ Storage
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-openstack.provider.extensions.gardener.cloud/v1alpha1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>InfrastructureConfig</code></td>
-</tr>
-<tr>
-<td>
-<code>floatingPoolName</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>FloatingPoolName contains the FloatingPoolName name in which LoadBalancer FIPs should be created.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>floatingPoolSubnetName</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>FloatingPoolSubnetName contains the fixed name of subnet or matching name pattern for subnet
-in the Floating IP Pool where the router should be attached to.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>networks</code></br>
-<em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">
-Networks
-</a>
-</em>
-</td>
-<td>
-<p>Networks is the OpenStack specific network configuration</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus
-</h3>
-<p>
-<p>WorkerStatus contains information about created worker resources.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-openstack.provider.extensions.gardener.cloud/v1alpha1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>WorkerStatus</code></td>
-</tr>
-<tr>
-<td>
-<code>machineImages</code></br>
-<em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImage">
-[]MachineImage
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MachineImages is a list of machine images that have been used in this worker. Usually, the extension controller
-gets the mapping from name/version to the provider-specific machine image data in its componentconfig. However, if
-a version that is still in use gets removed from this componentconfig it cannot reconcile anymore existing <code>Worker</code>
-resources that are still using this version. Hence, it stores the used versions in the provider status to ensure
-reconciliation is possible.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>serverGroupDependencies</code></br>
-<em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroupDependency">
-[]ServerGroupDependency
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ServerGroupDependencies is a list of external server group dependencies.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">CSIManila
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Storage">Storage</a>)
-</p>
-<p>
-<p>CSIManila contains configuration for CSI Manila driver (support for NFS volumes)</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled is the switch to enable the CSI Manila driver support</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.CloudControllerManagerConfig">CloudControllerManagerConfig
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>)
-</p>
-<p>
-<p>CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>featureGates</code></br>
-<em>
-map[string]bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Constraints">Constraints
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>)
-</p>
-<p>
-<p>Constraints is an object containing constraints for the shoots.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>floatingPools</code></br>
-<em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPool">
-[]FloatingPool
-</a>
-</em>
-</td>
-<td>
-<p>FloatingPools contains constraints regarding allowed values of the &lsquo;floatingPoolName&rsquo; block in the control plane config.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>loadBalancerProviders</code></br>
-<em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.LoadBalancerProvider">
-[]LoadBalancerProvider
-</a>
-</em>
-</td>
-<td>
-<p>LoadBalancerProviders contains constraints regarding allowed values of the &lsquo;loadBalancerProvider&rsquo; block in the control plane config.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPool">FloatingPool
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Constraints">Constraints</a>)
-</p>
-<p>
-<p>FloatingPool contains constraints regarding allowed values of the &lsquo;floatingPoolName&rsquo; block in the control plane config.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -660,7 +499,7 @@ string
 <td>
 <code>nonConstraining</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
@@ -672,9 +511,7 @@ bool
 <td>
 <code>loadBalancerClasses</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.LoadBalancerClass">
-[]LoadBalancerClass
-</a>
+<a href="#loadbalancerclass">LoadBalancerClass</a> array
 </em>
 </td>
 <td>
@@ -682,17 +519,23 @@ bool
 <p>LoadBalancerClasses contains a list of supported labeled load balancer network settings.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPoolStatus">FloatingPoolStatus
+
+
+<h3 id="floatingpoolstatus">FloatingPoolStatus
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>)
+(<em>Appears on:</em><a href="#networkstatus">NetworkStatus</a>)
 </p>
+
 <p>
-<p>FloatingPoolStatus contains information about the floating pool.</p>
+FloatingPoolStatus contains information about the floating pool.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -701,6 +544,7 @@ bool
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>id</code></br>
@@ -723,17 +567,23 @@ string
 <p>Name is the floating pool name.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.IPv6Config">IPv6Config
+
+
+<h3 id="ipv6config">IPv6Config
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks</a>)
+(<em>Appears on:</em><a href="#networks">Networks</a>)
 </p>
+
 <p>
-<p>IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.</p>
+IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -742,6 +592,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>subnetPoolID</code></br>
@@ -751,8 +602,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
-Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).</p>
+<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.<br />Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).</p>
 </td>
 </tr>
 <tr>
@@ -791,13 +641,19 @@ string
 <p>ServiceCIDR is the CIDR of the services.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureState">InfrastructureState
+
+
+<h3 id="infrastructureconfig">InfrastructureConfig
 </h3>
+
+
 <p>
-<p>InfrastructureState is the state which is persisted as part of the infrastructure status.</p>
+InfrastructureConfig infrastructure configuration resource
 </p>
+
 <table>
 <thead>
 <tr>
@@ -806,38 +662,101 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
-<code>data</code></br>
+<code>floatingPoolName</code></br>
 <em>
-map[string]string
+string
 </em>
 </td>
 <td>
+<p>FloatingPoolName contains the FloatingPoolName name in which LoadBalancer FIPs should be created.</p>
 </td>
 </tr>
-</tbody>
-</table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus
-</h3>
-<p>
-<p>InfrastructureStatus contains information about created infrastructure resources.</p>
-</p>
-<table>
-<thead>
 <tr>
-<th>Field</th>
-<th>Description</th>
+<td>
+<code>floatingPoolSubnetName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FloatingPoolSubnetName contains the fixed name of subnet or matching name pattern for subnet<br />in the Floating IP Pool where the router should be attached to.</p>
+</td>
 </tr>
-</thead>
-<tbody>
 <tr>
 <td>
 <code>networks</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">
-NetworkStatus
-</a>
+<a href="#networks">Networks</a>
+</em>
+</td>
+<td>
+<p>Networks is the OpenStack specific network configuration</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="infrastructurestate">InfrastructureState
+</h3>
+
+
+<p>
+InfrastructureState is the state which is persisted as part of the infrastructure status.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>data</code></br>
+<em>
+object (keys:string, values:string)
+</em>
+</td>
+<td>
+<p></p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="infrastructurestatus">InfrastructureStatus
+</h3>
+
+
+<p>
+InfrastructureStatus contains information about created infrastructure resources.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>networks</code></br>
+<em>
+<a href="#networkstatus">NetworkStatus</a>
 </em>
 </td>
 <td>
@@ -848,9 +767,7 @@ NetworkStatus
 <td>
 <code>node</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NodeStatus">
-NodeStatus
-</a>
+<a href="#nodestatus">NodeStatus</a>
 </em>
 </td>
 <td>
@@ -861,26 +778,30 @@ NodeStatus
 <td>
 <code>securityGroups</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.SecurityGroup">
-[]SecurityGroup
-</a>
+<a href="#securitygroup">SecurityGroup</a> array
 </em>
 </td>
 <td>
 <p>SecurityGroups is a list of security groups that have been created.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.KeyStoneURL">KeyStoneURL
+
+
+<h3 id="keystoneurl">KeyStoneURL
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>)
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
 </p>
+
 <p>
-<p>KeyStoneURL is a region-URL mapping for auth{n,z} in OpenStack (pointing to KeyStone).</p>
+KeyStoneURL is a region-URL mapping for auth{n,z} in OpenStack (pointing to KeyStone).
 </p>
+
 <table>
 <thead>
 <tr>
@@ -889,6 +810,7 @@ NodeStatus
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>region</code></br>
@@ -922,18 +844,23 @@ string
 <p>CACert is the CA Bundle for the KeyStoneURL.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.LoadBalancerClass">LoadBalancerClass
+
+
+<h3 id="loadbalancerclass">LoadBalancerClass
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>, 
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPool">FloatingPool</a>)
+(<em>Appears on:</em><a href="#controlplaneconfig">ControlPlaneConfig</a>, <a href="#floatingpool">FloatingPool</a>)
 </p>
+
 <p>
-<p>LoadBalancerClass defines a restricted network setting for generic LoadBalancer classes.</p>
+LoadBalancerClass defines a restricted network setting for generic LoadBalancer classes.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -942,6 +869,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -1022,21 +950,26 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
-configuration is done.</p>
+<p>SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool<br />configuration is done.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.LoadBalancerProvider">LoadBalancerProvider
+
+
+<h3 id="loadbalancerprovider">LoadBalancerProvider
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Constraints">Constraints</a>)
+(<em>Appears on:</em><a href="#constraints">Constraints</a>)
 </p>
+
 <p>
-<p>LoadBalancerProvider contains constraints regarding allowed values of the &lsquo;loadBalancerProvider&rsquo; block in the control plane config.</p>
+LoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the control plane config.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1045,6 +978,7 @@ configuration is done.</p>
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -1068,17 +1002,23 @@ string
 <p>Region is the region name.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImage">MachineImage
+
+
+<h3 id="machineimage">MachineImage
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
+(<em>Appears on:</em><a href="#workerstatus">WorkerStatus</a>)
 </p>
+
 <p>
-<p>MachineImage is a mapping from logical names and versions to provider-specific machine image data.</p>
+MachineImage is a mapping from logical names and versions to provider-specific machine image data.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1087,6 +1027,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -1147,24 +1088,30 @@ string
 <td>
 <code>capabilities</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+<a href="#capabilities">Capabilities</a>
 </em>
 </td>
 <td>
 <p>Capabilities of the machine image.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">MachineImageFlavor
+
+
+<h3 id="machineimageflavor">MachineImageFlavor
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion</a>)
+(<em>Appears on:</em><a href="#machineimageversion">MachineImageVersion</a>)
 </p>
+
 <p>
-<p>MachineImageFlavor groups all RegionAMIMappings for a specific set of capabilities.</p>
+MachineImageFlavor groups all RegionAMIMappings for a specific set of capabilities.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1173,13 +1120,12 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>regions</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.RegionIDMapping">
-[]RegionIDMapping
-</a>
+<a href="#regionidmapping">RegionIDMapping</a> array
 </em>
 </td>
 <td>
@@ -1201,24 +1147,30 @@ string
 <td>
 <code>capabilities</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+<a href="#capabilities">Capabilities</a>
 </em>
 </td>
 <td>
 <p>Capabilities that are supported by the Image ID in this set.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion
+
+
+<h3 id="machineimageversion">MachineImageVersion
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImages">MachineImages</a>)
+(<em>Appears on:</em><a href="#machineimages">MachineImages</a>)
 </p>
+
 <p>
-<p>MachineImageVersion contains a version and a provider-specific identifier.</p>
+MachineImageVersion contains a version and a provider-specific identifier.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1227,6 +1179,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>version</code></br>
@@ -1253,9 +1206,7 @@ string
 <td>
 <code>regions</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.RegionIDMapping">
-[]RegionIDMapping
-</a>
+<a href="#regionidmapping">RegionIDMapping</a> array
 </em>
 </td>
 <td>
@@ -1266,26 +1217,30 @@ string
 <td>
 <code>capabilityFlavors</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">
-[]MachineImageFlavor
-</a>
+<a href="#machineimageflavor">MachineImageFlavor</a> array
 </em>
 </td>
 <td>
 <p>CapabilityFlavors is grouping of region AMIs by capabilities.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImages">MachineImages
+
+
+<h3 id="machineimages">MachineImages
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>)
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
 </p>
+
 <p>
-<p>MachineImages is a mapping from logical names and versions to provider-specific identifiers.</p>
+MachineImages is a mapping from logical names and versions to provider-specific identifiers.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1294,6 +1249,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -1309,26 +1265,30 @@ string
 <td>
 <code>versions</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">
-[]MachineImageVersion
-</a>
+<a href="#machineimageversion">MachineImageVersion</a> array
 </em>
 </td>
 <td>
 <p>Versions contains versions and a provider-specific identifier.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.MachineLabel">MachineLabel
+
+
+<h3 id="machinelabel">MachineLabel
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerConfig">WorkerConfig</a>)
+(<em>Appears on:</em><a href="#workerconfig">WorkerConfig</a>)
 </p>
+
 <p>
-<p>MachineLabel define key value pair to label machines.</p>
+MachineLabel define key value pair to label machines.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1337,6 +1297,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -1363,24 +1324,30 @@ string
 <td>
 <code>triggerRollingOnUpdate</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
 <p>TriggerRollingOnUpdate controls if the machines should be rolled if the value changes</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus
+
+
+<h3 id="networkstatus">NetworkStatus
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>)
+(<em>Appears on:</em><a href="#infrastructurestatus">InfrastructureStatus</a>)
 </p>
+
 <p>
-<p>NetworkStatus contains information about a generated Network or resources created in an existing Network.</p>
+NetworkStatus contains information about a generated Network or resources created in an existing Network.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1389,6 +1356,7 @@ bool
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>id</code></br>
@@ -1415,9 +1383,7 @@ string
 <td>
 <code>floatingPool</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.FloatingPoolStatus">
-FloatingPoolStatus
-</a>
+<a href="#floatingpoolstatus">FloatingPoolStatus</a>
 </em>
 </td>
 <td>
@@ -1428,9 +1394,7 @@ FloatingPoolStatus
 <td>
 <code>router</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.RouterStatus">
-RouterStatus
-</a>
+<a href="#routerstatus">RouterStatus</a>
 </em>
 </td>
 <td>
@@ -1441,9 +1405,7 @@ RouterStatus
 <td>
 <code>subnets</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Subnet">
-[]Subnet
-</a>
+<a href="#subnet">Subnet</a> array
 </em>
 </td>
 <td>
@@ -1454,9 +1416,7 @@ RouterStatus
 <td>
 <code>shareNetwork</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetworkStatus">
-ShareNetworkStatus
-</a>
+<a href="#sharenetworkstatus">ShareNetworkStatus</a>
 </em>
 </td>
 <td>
@@ -1464,17 +1424,23 @@ ShareNetworkStatus
 <p>ShareNetwork contains information about a created/provided ShareNetwork</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks
+
+
+<h3 id="networks">Networks
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureConfig">InfrastructureConfig</a>)
+(<em>Appears on:</em><a href="#infrastructureconfig">InfrastructureConfig</a>)
 </p>
+
 <p>
-<p>Networks holds information about the Kubernetes and infrastructure networks.</p>
+Networks holds information about the Kubernetes and infrastructure networks.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1483,13 +1449,12 @@ ShareNetworkStatus
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>router</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Router">
-Router
-</a>
+<a href="#router">Router</a>
 </em>
 </td>
 <td>
@@ -1505,8 +1470,7 @@ string
 </em>
 </td>
 <td>
-<p>Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
-Deprecated: use <code>workers</code> instead.</p>
+<p>Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).<br />Deprecated: use `workers` instead.</p>
 </td>
 </tr>
 <tr>
@@ -1536,9 +1500,7 @@ string
 <td>
 <code>shareNetwork</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetwork">
-ShareNetwork
-</a>
+<a href="#sharenetwork">ShareNetwork</a>
 </em>
 </td>
 <td>
@@ -1550,9 +1512,7 @@ ShareNetwork
 <td>
 <code>ipv6</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.IPv6Config">
-IPv6Config
-</a>
+<a href="#ipv6config">IPv6Config</a>
 </em>
 </td>
 <td>
@@ -1560,17 +1520,23 @@ IPv6Config
 <p>IPv6 holds information about the IPv6 CIDRs.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.NodeStatus">NodeStatus
+
+
+<h3 id="nodestatus">NodeStatus
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>)
+(<em>Appears on:</em><a href="#infrastructurestatus">InfrastructureStatus</a>)
 </p>
+
 <p>
-<p>NodeStatus contains information about Node related resources.</p>
+NodeStatus contains information about Node related resources.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1579,6 +1545,7 @@ IPv6Config
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>keyName</code></br>
@@ -1590,28 +1557,37 @@ string
 <p>KeyName is the name of the SSH key.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Purpose">Purpose
-(<code>string</code> alias)</p></h3>
-<p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.SecurityGroup">SecurityGroup</a>, 
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Subnet">Subnet</a>)
-</p>
-<p>
-<p>Purpose is a purpose of a resource.</p>
-</p>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.RegionIDMapping">RegionIDMapping
+
+
+<h3 id="purpose">Purpose
 </h3>
+<p><em>Underlying type: string</em></p>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">MachineImageFlavor</a>, 
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion</a>)
+(<em>Appears on:</em><a href="#securitygroup">SecurityGroup</a>, <a href="#subnet">Subnet</a>)
 </p>
+
 <p>
-<p>RegionIDMapping is a mapping to the correct ID for the machine image in the given region.</p>
+Purpose is a purpose of a resource.
 </p>
+
+
+<h3 id="regionidmapping">RegionIDMapping
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#machineimageflavor">MachineImageFlavor</a>, <a href="#machineimageversion">MachineImageVersion</a>)
+</p>
+
+<p>
+RegionIDMapping is a mapping to the correct ID for the machine image in the given region.
+</p>
+
 <table>
 <thead>
 <tr>
@@ -1620,6 +1596,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -1654,17 +1631,23 @@ string
 <p>Architecture is the CPU architecture of the machine image</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Router">Router
+
+
+<h3 id="router">Router
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks</a>)
+(<em>Appears on:</em><a href="#networks">Networks</a>)
 </p>
+
 <p>
-<p>Router indicates whether to use an existing router or create a new one.</p>
+Router indicates whether to use an existing router or create a new one.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1673,6 +1656,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>id</code></br>
@@ -1684,17 +1668,23 @@ string
 <p>ID is the router id of an existing OpenStack router.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.RouterStatus">RouterStatus
+
+
+<h3 id="routerstatus">RouterStatus
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>)
+(<em>Appears on:</em><a href="#networkstatus">NetworkStatus</a>)
 </p>
+
 <p>
-<p>RouterStatus contains information about a generated Router or resources attached to an existing Router.</p>
+RouterStatus contains information about a generated Router or resources attached to an existing Router.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1703,6 +1693,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>id</code></br>
@@ -1722,32 +1713,37 @@ string
 </em>
 </td>
 <td>
-<p>IP is the router ip.
-Deprecated: use ExternalFixedIPs instead.</p>
+<p>IP is the router ip.<br />Deprecated: use ExternalFixedIPs instead.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>externalFixedIP</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
-<p>ExternalFixedIPs is the list of the router&rsquo;s assigned external fixed IPs.</p>
+<p>ExternalFixedIPs is the list of the router's assigned external fixed IPs.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.SecurityGroup">SecurityGroup
+
+
+<h3 id="securitygroup">SecurityGroup
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>)
+(<em>Appears on:</em><a href="#infrastructurestatus">InfrastructureStatus</a>)
 </p>
+
 <p>
-<p>SecurityGroup is an OpenStack security group related to a Network.</p>
+SecurityGroup is an OpenStack security group related to a Network.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1756,13 +1752,12 @@ Deprecated: use ExternalFixedIPs instead.</p>
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>purpose</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Purpose">
-Purpose
-</a>
+<a href="#purpose">Purpose</a>
 </em>
 </td>
 <td>
@@ -1791,17 +1786,23 @@ string
 <p>Name is the security group name.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroup">ServerGroup
+
+
+<h3 id="servergroup">ServerGroup
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerConfig">WorkerConfig</a>)
+(<em>Appears on:</em><a href="#workerconfig">WorkerConfig</a>)
 </p>
+
 <p>
-<p>ServerGroup contains configuration data for setting up a server group.</p>
+ServerGroup contains configuration data for setting up a server group.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1810,6 +1811,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>policy</code></br>
@@ -1818,21 +1820,26 @@ string
 </em>
 </td>
 <td>
-<p>Policy describes the kind of affinity policy for instances of the server group.
-<a href="https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html">https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html</a></p>
+<p>Policy describes the kind of affinity policy for instances of the server group.<br />https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroupDependency">ServerGroupDependency
+
+
+<h3 id="servergroupdependency">ServerGroupDependency
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
+(<em>Appears on:</em><a href="#workerstatus">WorkerStatus</a>)
 </p>
+
 <p>
-<p>ServerGroupDependency is a reference to an external machine dependency of OpenStack server groups.</p>
+ServerGroupDependency is a reference to an external machine dependency of OpenStack server groups.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1841,6 +1848,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>poolName</code></br>
@@ -1860,7 +1868,7 @@ string
 </em>
 </td>
 <td>
-<p>ID is the provider&rsquo;s generated ID for a server group</p>
+<p>ID is the provider's generated ID for a server group</p>
 </td>
 </tr>
 <tr>
@@ -1874,17 +1882,23 @@ string
 <p>Name is the name of the server group</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetwork">ShareNetwork
+
+
+<h3 id="sharenetwork">ShareNetwork
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Networks">Networks</a>)
+(<em>Appears on:</em><a href="#networks">Networks</a>)
 </p>
+
 <p>
-<p>ShareNetwork holds information about the share network (used for shared file systems like NFS)</p>
+ShareNetwork holds information about the share network (used for shared file systems like NFS)
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1893,28 +1907,35 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>enabled</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
 <p>Enabled is the switch to enable the creation of a share network</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.ShareNetworkStatus">ShareNetworkStatus
+
+
+<h3 id="sharenetworkstatus">ShareNetworkStatus
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>)
+(<em>Appears on:</em><a href="#networkstatus">NetworkStatus</a>)
 </p>
+
 <p>
-<p>ShareNetworkStatus contains information about a generated ShareNetwork</p>
+ShareNetworkStatus contains information about a generated ShareNetwork
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1923,6 +1944,7 @@ bool
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>id</code></br>
@@ -1945,17 +1967,23 @@ string
 <p>Name is the Network name.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Storage">Storage
+
+
+<h3 id="storage">Storage
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>)
+(<em>Appears on:</em><a href="#controlplaneconfig">ControlPlaneConfig</a>)
 </p>
+
 <p>
-<p>Storage contains configuration for storage in the cluster.</p>
+Storage contains configuration for storage in the cluster.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1964,13 +1992,12 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>csiManila</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CSIManila">
-CSIManila
-</a>
+<a href="#csimanila">CSIManila</a>
 </em>
 </td>
 <td>
@@ -1978,17 +2005,23 @@ CSIManila
 <p>CSIManila contains configuration for CSI Manila driver (support for NFS volumes)</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.StorageClassDefinition">StorageClassDefinition
+
+
+<h3 id="storageclassdefinition">StorageClassDefinition
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>)
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
 </p>
+
 <p>
-<p>StorageClassDefinition is a definition of a storageClass</p>
+StorageClassDefinition is a definition of a storageClass
 </p>
+
 <table>
 <thead>
 <tr>
@@ -1997,6 +2030,7 @@ CSIManila
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -2012,7 +2046,7 @@ string
 <td>
 <code>default</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
@@ -2036,7 +2070,7 @@ string
 <td>
 <code>parameters</code></br>
 <em>
-map[string]string
+object (keys:string, values:string)
 </em>
 </td>
 <td>
@@ -2048,7 +2082,7 @@ map[string]string
 <td>
 <code>annotations</code></br>
 <em>
-map[string]string
+object (keys:string, values:string)
 </em>
 </td>
 <td>
@@ -2060,7 +2094,7 @@ map[string]string
 <td>
 <code>labels</code></br>
 <em>
-map[string]string
+object (keys:string, values:string)
 </em>
 </td>
 <td>
@@ -2092,17 +2126,23 @@ string
 <p>VolumeBindingMode sets bindingMode for the storageclass</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.Subnet">Subnet
+
+
+<h3 id="subnet">Subnet
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>)
+(<em>Appears on:</em><a href="#networkstatus">NetworkStatus</a>)
 </p>
+
 <p>
-<p>Subnet is an OpenStack subnet related to a Network.</p>
+Subnet is an OpenStack subnet related to a Network.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -2111,13 +2151,12 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>purpose</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.Purpose">
-Purpose
-</a>
+<a href="#purpose">Purpose</a>
 </em>
 </td>
 <td>
@@ -2135,13 +2174,19 @@ string
 <p>ID is the subnet id.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="openstack.provider.extensions.gardener.cloud/v1alpha1.WorkerConfig">WorkerConfig
+
+
+<h3 id="workerconfig">WorkerConfig
 </h3>
+
+
 <p>
-<p>WorkerConfig contains configuration data for a worker pool.</p>
+WorkerConfig contains configuration data for a worker pool.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -2150,39 +2195,34 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>nodeTemplate</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/extensions/v1alpha1.NodeTemplate
+<a href="#nodetemplate">NodeTemplate</a>
 </em>
 </td>
 <td>
-<p>NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate
-nodeTemplate during scaling a nodeGroup from zero.</p>
+<p>NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate<br />nodeTemplate during scaling a nodeGroup from zero.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>serverGroup</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.ServerGroup">
-ServerGroup
-</a>
+<a href="#servergroup">ServerGroup</a>
 </em>
 </td>
 <td>
-<p>ServerGroup contains configuration data for the worker pool&rsquo;s server group. If this object is present,
-OpenStack provider extension will try to create a new server group for instances of this worker pool.</p>
+<p>ServerGroup contains configuration data for the worker pool's server group. If this object is present,<br />OpenStack provider extension will try to create a new server group for instances of this worker pool.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>machineLabels</code></br>
 <em>
-<a href="#openstack.provider.extensions.gardener.cloud/v1alpha1.MachineLabel">
-[]MachineLabel
-</a>
+<a href="#machinelabel">MachineLabel</a> array
 </em>
 </td>
 <td>
@@ -2193,19 +2233,62 @@ OpenStack provider extension will try to create a new server group for instances
 <td>
 <code>additionalSecurityGroups</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>AdditionalSecurityGroups is a list of names of pre-existing OpenStack security
-groups to attach to every node in this worker pool, in addition to the
-auto-managed &ldquo;nodes&rdquo; security group.</p>
+<p>AdditionalSecurityGroups is a list of names of pre-existing OpenStack security<br />groups to attach to every node in this worker pool, in addition to the<br />auto-managed "nodes" security group.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<hr/>
-<p><em>
-Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>
-</em></p>
+
+
+<h3 id="workerstatus">WorkerStatus
+</h3>
+
+
+<p>
+WorkerStatus contains information about created worker resources.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#machineimage">MachineImage</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages is a list of machine images that have been used in this worker. Usually, the extension controller<br />gets the mapping from name/version to the provider-specific machine image data in its componentconfig. However, if<br />a version that is still in use gets removed from this componentconfig it cannot reconcile anymore existing `Worker`<br />resources that are still using this version. Hence, it stores the used versions in the provider status to ensure<br />reconciliation is possible.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serverGroupDependencies</code></br>
+<em>
+<a href="#servergroupdependency">ServerGroupDependency</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServerGroupDependencies is a list of external server group dependencies.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+

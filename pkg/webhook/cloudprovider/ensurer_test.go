@@ -11,10 +11,9 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,8 +32,7 @@ var _ = Describe("Ensurer", func() {
 		scheme  *runtime.Scheme
 		cluster *extensionscontroller.Cluster
 
-		ctrl *gomock.Controller
-		mgr  *mockmanager.MockManager
+		mgr test.FakeManager
 
 		authUrl = "foo://bar"
 	)
@@ -43,9 +41,7 @@ var _ = Describe("Ensurer", func() {
 		scheme = runtime.NewScheme()
 		install.Install(scheme)
 
-		ctrl = gomock.NewController(GinkgoT())
-		mgr = mockmanager.NewMockManager(ctrl)
-		mgr.EXPECT().GetScheme().Return(scheme)
+		mgr = test.FakeManager{Scheme: scheme}
 
 		cluster = &extensionscontroller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{

@@ -11,8 +11,8 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -39,7 +39,6 @@ var _ = Describe("Shoot validator", func() {
 			shootValidator extensionswebhook.Validator
 
 			ctrl      *gomock.Controller
-			mgr       *mockmanager.MockManager
 			c         *mockclient.MockClient
 			apiReader *mockclient.MockReader
 			shoot     *core.Shoot
@@ -63,10 +62,7 @@ var _ = Describe("Shoot validator", func() {
 			c = mockclient.NewMockClient(ctrl)
 			apiReader = mockclient.NewMockReader(ctrl)
 
-			mgr = mockmanager.NewMockManager(ctrl)
-			mgr.EXPECT().GetScheme().Return(scheme).Times(2)
-			mgr.EXPECT().GetClient().Return(c)
-			mgr.EXPECT().GetAPIReader().Return(apiReader)
+			mgr := test.FakeManager{Scheme: scheme, Client: c, APIReader: apiReader}
 			shootValidator = validator.NewShootValidator(mgr)
 
 			regionName = "eu-de-1"

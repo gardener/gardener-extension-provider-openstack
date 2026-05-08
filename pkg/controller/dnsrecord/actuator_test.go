@@ -9,8 +9,8 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,7 +44,6 @@ const (
 var _ = Describe("Actuator", func() {
 	var (
 		ctrl                          *gomock.Controller
-		mgr                           *mockmanager.MockManager
 		c                             *mockclient.MockClient
 		sw                            *mockclient.MockStatusWriter
 		openstackClientFactoryFactory *mockopenstackclient.MockFactoryFactory
@@ -73,8 +72,7 @@ var _ = Describe("Actuator", func() {
 		ctx = context.TODO()
 		logger = log.Log.WithName("test")
 
-		mgr = mockmanager.NewMockManager(ctrl)
-		mgr.EXPECT().GetClient().Return(c)
+		mgr := test.FakeManager{Client: c}
 
 		a = NewActuator(mgr, openstackClientFactoryFactory)
 

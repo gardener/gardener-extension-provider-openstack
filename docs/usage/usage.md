@@ -296,6 +296,21 @@ Every OpenStack shoot cluster will be deployed with the OpenStack Cinder CSI dri
 It is compatible with the legacy in-tree volume provisioner that was deprecated by the Kubernetes community and will be removed in future versions of Kubernetes.
 End-users might want to update their custom `StorageClass`es to the new `cinder.csi.openstack.org` provisioner.
 
+### VolumeSnapshotClass
+
+Every OpenStack shoot cluster is deployed with a managed `VolumeSnapshotClass` named `csi-cinder` for the Cinder CSI driver:
+
+```yaml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: csi-cinder
+driver: cinder.csi.openstack.org
+deletionPolicy: Delete
+```
+
+By default, this class is annotated as the cluster-wide default (`snapshot.storage.kubernetes.io/is-default-class: "true"`), so `VolumeSnapshot` objects that do not explicitly reference a snapshot class will use it automatically.
+
 ## Kubernetes Versions per Worker Pool
 
 This extension supports `gardener/gardener`'s `WorkerPoolKubernetesVersion` feature gate, i.e., having [worker pools with overridden Kubernetes versions](https://github.com/gardener/gardener/blob/8a9c88866ec5fce59b5acf57d4227eeeb73669d7/example/90-shoot.yaml#L69-L70) since `gardener-extension-provider-openstack@v1.23`.

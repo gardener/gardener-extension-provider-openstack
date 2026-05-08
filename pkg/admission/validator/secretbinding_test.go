@@ -10,8 +10,8 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -34,7 +34,6 @@ var _ = Describe("SecretBinding validator", func() {
 			secretBindingValidator extensionswebhook.Validator
 
 			ctrl      *gomock.Controller
-			mgr       *mockmanager.MockManager
 			apiReader *mockclient.MockReader
 
 			ctx           = context.TODO()
@@ -52,9 +51,7 @@ var _ = Describe("SecretBinding validator", func() {
 
 			apiReader = mockclient.NewMockReader(ctrl)
 
-			mgr = mockmanager.NewMockManager(ctrl)
-			mgr.EXPECT().GetAPIReader().Return(apiReader)
-
+			mgr := test.FakeManager{APIReader: apiReader}
 			secretBindingValidator = validator.NewSecretBindingValidator(mgr)
 		})
 

@@ -72,6 +72,12 @@ type WorkerConfig struct {
 
 	// MachineLabels define key value pairs to add to machines.
 	MachineLabels []MachineLabel `json:"machineLabels,omitempty"`
+
+	// AdditionalSecurityGroups is a list of names of pre-existing OpenStack security
+	// groups to attach to every node in this worker pool, in addition to the
+	// auto-managed "nodes" security group.
+	// +optional
+	AdditionalSecurityGroups []string `json:"additionalSecurityGroups,omitempty"`
 }
 
 // MachineLabel define key value pair to label machines.

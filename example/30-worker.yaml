@@ -114,3 +114,5 @@ spec:
 #          cpu: 2
 #          gpu: 0
 #          memory: 50Gi
+#      additionalSecurityGroups:
+#      - my-existing-security-group

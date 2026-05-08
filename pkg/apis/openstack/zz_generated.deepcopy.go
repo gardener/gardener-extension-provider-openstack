@@ -966,6 +966,11 @@ func (in *WorkerConfig) DeepCopyInto(out *WorkerConfig) {
 		*out = make([]MachineLabel, len(*in))
 		copy(*out, *in)
 	}
+	if in.AdditionalSecurityGroups != nil {
+		in, out := &in.AdditionalSecurityGroups, &out.AdditionalSecurityGroups
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

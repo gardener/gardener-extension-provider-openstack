@@ -2189,6 +2189,20 @@ OpenStack provider extension will try to create a new server group for instances
 <p>MachineLabels define key value pairs to add to machines.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>additionalSecurityGroups</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdditionalSecurityGroups is a list of names of pre-existing OpenStack security
+groups to attach to every node in this worker pool, in addition to the
+auto-managed &ldquo;nodes&rdquo; security group.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>

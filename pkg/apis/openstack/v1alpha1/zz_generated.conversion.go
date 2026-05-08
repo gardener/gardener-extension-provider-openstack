@@ -1232,6 +1232,7 @@ func autoConvert_v1alpha1_WorkerConfig_To_openstack_WorkerConfig(in *WorkerConfi
 	out.NodeTemplate = (*extensionsv1alpha1.NodeTemplate)(unsafe.Pointer(in.NodeTemplate))
 	out.ServerGroup = (*openstack.ServerGroup)(unsafe.Pointer(in.ServerGroup))
 	out.MachineLabels = *(*[]openstack.MachineLabel)(unsafe.Pointer(&in.MachineLabels))
+	out.AdditionalSecurityGroups = *(*[]string)(unsafe.Pointer(&in.AdditionalSecurityGroups))
 	return nil
 }
 
@@ -1244,6 +1245,7 @@ func autoConvert_openstack_WorkerConfig_To_v1alpha1_WorkerConfig(in *openstack.W
 	out.NodeTemplate = (*extensionsv1alpha1.NodeTemplate)(unsafe.Pointer(in.NodeTemplate))
 	out.ServerGroup = (*ServerGroup)(unsafe.Pointer(in.ServerGroup))
 	out.MachineLabels = *(*[]MachineLabel)(unsafe.Pointer(&in.MachineLabels))
+	out.AdditionalSecurityGroups = *(*[]string)(unsafe.Pointer(&in.AdditionalSecurityGroups))
 	return nil
 }
 

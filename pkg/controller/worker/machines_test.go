@@ -825,27 +825,29 @@ var _ = Describe("Machines", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.UpdateMachineDeployments()
+					// When using global image names (machineImageID==""), Image field is set;
+					// when using image IDs, Image is empty.
+					expectedImage := ""
+					if usesGlobalImageNames {
+						expectedImage = machineImage
+					}
 					machineImages := []apiv1alpha1.MachineImage{
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesAmd,
 						},
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesArm,
 						},
 					}
 					if !isCapabilitiesCloudProfile {
-						// When using global image names (machineImageID==""), Image field is set;
-						// when using image IDs, Image is empty.
-						expectedImage := ""
-						if usesGlobalImageNames {
-							expectedImage = machineImage
-						}
 						machineImages = []apiv1alpha1.MachineImage{
 							{
 								Name:         machineImageName,
@@ -913,25 +915,29 @@ var _ = Describe("Machines", func() {
 
 					err := workerDelegate.DeployMachineClasses(ctx)
 					Expect(err).NotTo(HaveOccurred())
+					// When using global image names (machineImageID==""), Image field is set;
+					// when using image IDs, Image is empty.
+					expectedImage := ""
+					if usesGlobalImageNames {
+						expectedImage = machineImage
+					}
 					machineImages := []apiv1alpha1.MachineImage{
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesAmd,
 						},
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesArm,
 						},
 					}
 					if !isCapabilitiesCloudProfile {
-						expectedImage := ""
-						if usesGlobalImageNames {
-							expectedImage = machineImage
-						}
 						machineImages = []apiv1alpha1.MachineImage{
 							{
 								Name:         machineImageName,

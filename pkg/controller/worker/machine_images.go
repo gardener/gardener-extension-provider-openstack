@@ -119,6 +119,7 @@ func appendMachineImage(machineImages []api.MachineImage, machineImage api.Machi
 	machineImages = append(machineImages, api.MachineImage{
 		Name:         machineImage.Name,
 		Version:      machineImage.Version,
+		Image:        machineImage.Image,
 		ID:           machineImage.ID,
 		Capabilities: machineImage.Capabilities,
 	})

@@ -71,24 +71,22 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, newObj, _ client.
 	}
 
 	allErrs := field.ErrorList{}
-	if err := p.validateMachineImagesOnlyInNamespacedCloudProfile(cpConfig); err != nil {
-		allErrs = append(allErrs, err.(*field.Error))
-	}
+	allErrs = append(allErrs, p.validateMachineImagesOnlyInNamespacedCloudProfile(cpConfig)...)
 
 	allErrs = append(allErrs, p.validateMachineImages(cpConfig, profile.Spec.MachineImages, parentProfile.Spec)...)
 	return allErrs.ToAggregate()
 }
 
 // validateNamespacedCloudProfileProviderConfig checks that only machineImages are set in the CloudProfileConfig passed with a NamespacedCloudProfile.
-func (p *namespacedCloudProfile) validateMachineImagesOnlyInNamespacedCloudProfile(providerConfig *api.CloudProfileConfig) error {
+func (p *namespacedCloudProfile) validateMachineImagesOnlyInNamespacedCloudProfile(providerConfig *api.CloudProfileConfig) field.ErrorList {
 	validationProviderConfig := &api.CloudProfileConfig{
 		MachineImages: providerConfig.MachineImages,
 	}
 	if !equality.Semantic.DeepEqual(validationProviderConfig, providerConfig) {
-		return field.Forbidden(
+		return field.ErrorList{field.Forbidden(
 			field.NewPath("spec.providerConfig"),
 			"must only set machineImages",
-		)
+		)}
 	}
 	return nil
 }

@@ -5,8 +5,8 @@ go 1.26.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/coreos/go-systemd/v22 v22.7.0
+	github.com/elastic/crd-ref-docs v0.1.0
 	github.com/gardener/etcd-druid/api v0.36.2
 	github.com/gardener/gardener v1.139.4
 	github.com/gardener/gardener/pkg/apis v1.139.4
@@ -37,7 +37,11 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/MichaelTJones/walk v0.0.0-20161122175330-4748e29d5718 // indirect
+	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0 // indirect
+	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mgutz/str v1.2.0 // indirect
 )
 

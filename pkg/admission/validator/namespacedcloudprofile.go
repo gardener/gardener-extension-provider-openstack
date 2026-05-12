@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/validation"
 )
 
@@ -72,28 +71,22 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, newObj, _ client.
 	}
 
 	allErrs := field.ErrorList{}
-	if err := p.validateMachineImagesOnlyInNamespacedCloudProfile(cpConfig); err != nil {
-		allErrs = append(allErrs, err.(*field.Error))
-	}
+	allErrs = append(allErrs, p.validateMachineImagesOnlyInNamespacedCloudProfile(cpConfig)...)
 
-	// TODO(Riesop): Remove TransformSpecToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
-	if err := helper.SimulateTransformToParentFormat(cpConfig, profile, parentProfile.Spec.MachineCapabilities); err != nil {
-		return err
-	}
 	allErrs = append(allErrs, p.validateMachineImages(cpConfig, profile.Spec.MachineImages, parentProfile.Spec)...)
 	return allErrs.ToAggregate()
 }
 
 // validateNamespacedCloudProfileProviderConfig checks that only machineImages are set in the CloudProfileConfig passed with a NamespacedCloudProfile.
-func (p *namespacedCloudProfile) validateMachineImagesOnlyInNamespacedCloudProfile(providerConfig *api.CloudProfileConfig) error {
+func (p *namespacedCloudProfile) validateMachineImagesOnlyInNamespacedCloudProfile(providerConfig *api.CloudProfileConfig) field.ErrorList {
 	validationProviderConfig := &api.CloudProfileConfig{
 		MachineImages: providerConfig.MachineImages,
 	}
 	if !equality.Semantic.DeepEqual(validationProviderConfig, providerConfig) {
-		return field.Forbidden(
+		return field.ErrorList{field.Forbidden(
 			field.NewPath("spec.providerConfig"),
 			"must only set machineImages",
-		)
+		)}
 	}
 	return nil
 }
@@ -132,6 +125,12 @@ func (p *namespacedCloudProfile) validateMachineImages(providerConfig *api.Cloud
 				))
 
 				// no need to check the capabilities and architectures if the version is not defined in the providerConfig
+				continue
+			}
+
+			// If the version exists in the parent and has no providerConfig entry, it's an
+			// expirationDate-only override that doesn't change image mappings — skip validation.
+			if existsInParent && !exists {
 				continue
 			}
 
@@ -184,6 +183,26 @@ func validateMachineImageCapabilities(machineImage core.MachineImage, version ga
 	allErrs := field.ErrorList{}
 	path := field.NewPath("spec.providerConfig.machineImages")
 	defaultedCapabilityFlavors := gardencorev1beta1helper.GetImageFlavorsWithAppliedDefaults(version.CapabilityFlavors, capabilityDefinitions)
+
+	if len(providerImageVersion.CapabilityFlavors) > 0 {
+		allErrs = append(allErrs, validateCapabilityFlavorsFormat(machineImage, version, providerImageVersion, capabilityDefinitions, defaultedCapabilityFlavors, path)...)
+	} else if len(providerImageVersion.Regions) > 0 {
+		allErrs = append(allErrs, validateRegionsFormatWithCapabilities(machineImage, version, providerImageVersion, defaultedCapabilityFlavors, path)...)
+	} else {
+		// Neither regions nor capabilityFlavors set - error for each expected capability flavor
+		for _, coreDefaultedCapabilityFlavor := range defaultedCapabilityFlavors {
+			allErrs = append(allErrs, field.Required(path,
+				fmt.Sprintf("machine image version %s@%s has a capabilityFlavor %v not defined in the NamespacedCloudProfile providerConfig",
+					machineImage.Name, version.Version, coreDefaultedCapabilityFlavor.Capabilities)))
+		}
+	}
+
+	return allErrs
+}
+
+// validateCapabilityFlavorsFormat validates provider config using the new capabilityFlavors format.
+func validateCapabilityFlavorsFormat(machineImage core.MachineImage, version gardencorev1beta1.MachineImageVersion, providerImageVersion api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, defaultedCapabilityFlavors []gardencorev1beta1.MachineImageFlavor, path *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
 	regionsCapabilitiesMap := map[string][]gardencorev1beta1.Capabilities{}
 
 	// 1. Create an error for each capabilityFlavor in the providerConfig that is not defined in the core machine image version
@@ -219,7 +238,6 @@ func validateMachineImageCapabilities(machineImage core.MachineImage, version ga
 			allErrs = append(allErrs, field.Required(path,
 				fmt.Sprintf("machine image version %s@%s has a capabilityFlavor %v not defined in the NamespacedCloudProfile providerConfig",
 					machineImage.Name, version.Version, coreDefaultedCapabilityFlavor.Capabilities)))
-			// no need to check the regions if the capabilityFlavor is not defined in the providerConfig
 			continue
 		}
 
@@ -237,6 +255,52 @@ func validateMachineImageCapabilities(machineImage core.MachineImage, version ga
 					fmt.Sprintf("machine image version %s@%s is missing region %q in capabilityFlavor %v in the NamespacedCloudProfile providerConfig",
 						machineImage.Name, version.Version, region, coreDefaultedCapabilityFlavor.Capabilities)))
 			}
+		}
+	}
+
+	return allErrs
+}
+
+// validateRegionsFormatWithCapabilities validates provider config using the old regions format
+// in a capabilities-enabled CloudProfile.
+func validateRegionsFormatWithCapabilities(machineImage core.MachineImage, version gardencorev1beta1.MachineImageVersion, providerImageVersion api.MachineImageVersion, defaultedCapabilityFlavors []gardencorev1beta1.MachineImageFlavor, path *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Collect unique architectures from regions
+	architectureSet := make(map[string]struct{})
+	for _, region := range providerImageVersion.Regions {
+		arch := ptr.Deref(region.Architecture, constants.ArchitectureAMD64)
+		architectureSet[arch] = struct{}{}
+	}
+
+	// Check for excess architectures not in spec
+	for arch := range architectureSet {
+		isFound := false
+		for _, coreDefaultedCapabilityFlavor := range defaultedCapabilityFlavors {
+			archValues, hasArch := coreDefaultedCapabilityFlavor.Capabilities[constants.ArchitectureName]
+			if hasArch && len(archValues) > 0 && archValues[0] == arch {
+				isFound = true
+				break
+			}
+		}
+		if !isFound {
+			allErrs = append(allErrs, field.Forbidden(path,
+				fmt.Sprintf("machine image version %s@%s has an excess architecture %q in regions, which is not defined in the machineImages spec",
+					machineImage.Name, version.Version, arch)))
+		}
+	}
+
+	// Check that each expected capability flavor has a corresponding architecture in regions
+	for _, coreDefaultedCapabilityFlavor := range defaultedCapabilityFlavors {
+		archValues, hasArch := coreDefaultedCapabilityFlavor.Capabilities[constants.ArchitectureName]
+		if !hasArch || len(archValues) == 0 {
+			continue
+		}
+		expectedArch := archValues[0]
+		if _, exists := architectureSet[expectedArch]; !exists {
+			allErrs = append(allErrs, field.Required(path,
+				fmt.Sprintf("machine image version %s@%s has a capabilityFlavor %v not defined in the NamespacedCloudProfile providerConfig",
+					machineImage.Name, version.Version, coreDefaultedCapabilityFlavor.Capabilities)))
 		}
 	}
 

@@ -825,16 +825,24 @@ var _ = Describe("Machines", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Test workerDelegate.UpdateMachineDeployments()
+					// When using global image names (machineImageID==""), Image field is set;
+					// when using image IDs, Image is empty.
+					expectedImage := ""
+					if usesGlobalImageNames {
+						expectedImage = machineImage
+					}
 					machineImages := []apiv1alpha1.MachineImage{
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesAmd,
 						},
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesArm,
 						},
@@ -844,12 +852,14 @@ var _ = Describe("Machines", func() {
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: &archAMD,
 							},
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: &archARM,
 							},
@@ -905,16 +915,24 @@ var _ = Describe("Machines", func() {
 
 					err := workerDelegate.DeployMachineClasses(ctx)
 					Expect(err).NotTo(HaveOccurred())
+					// When using global image names (machineImageID==""), Image field is set;
+					// when using image IDs, Image is empty.
+					expectedImage := ""
+					if usesGlobalImageNames {
+						expectedImage = machineImage
+					}
 					machineImages := []apiv1alpha1.MachineImage{
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesAmd,
 						},
 						{
 							Name:         machineImageName,
 							Version:      machineImageVersion,
+							Image:        expectedImage,
 							ID:           machineImageID,
 							Capabilities: capabilitiesArm,
 						},
@@ -924,12 +942,14 @@ var _ = Describe("Machines", func() {
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 							},
 							{
 								Name:         machineImageName,
 								Version:      machineImageVersion,
+								Image:        expectedImage,
 								ID:           machineImageID,
 								Architecture: ptr.To(v1beta1constants.ArchitectureARM64),
 							},

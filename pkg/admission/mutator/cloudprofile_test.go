@@ -260,6 +260,108 @@ var _ = Describe("CloudProfile Mutator", func() {
 					}),
 				))
 			})
+
+			It("should convert old-format regions to capabilityFlavors", func() {
+				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"os-1","versions":[
+    {"version":"1.0.0","regions":[
+      {"name":"eu01","id":"os1-eu01-amd64","architecture":"amd64"},
+      {"name":"eu01","id":"os1-eu01-arm64","architecture":"arm64"}
+    ]},
+    {"version":"1.0.1","regions":[
+      {"name":"eu01","id":"os1-eu01-amd64-v2"}
+    ]}
+  ]}
+]}`)}
+				Expect(cloudProfileMutator.Mutate(ctx, cloudProfile, nil)).To(Succeed())
+				Expect(cloudProfile.Spec.MachineImages).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("os-1"),
+						"Versions": ConsistOf(
+							MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("1.0.0")}),
+								"CapabilityFlavors": ConsistOf(
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"amd64"}}),
+									}),
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"arm64"}}),
+									}),
+								),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("1.0.1")}),
+								"CapabilityFlavors": ConsistOf(
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"amd64"}}),
+									}),
+								),
+							}),
+						),
+					}),
+				))
+			})
+
+			It("should handle mixed format across versions within the same image", func() {
+				cloudProfile.Spec.MachineImages = []v1beta1.MachineImage{
+					{
+						Name: "os-1",
+						Versions: []v1beta1.MachineImageVersion{
+							{ExpirableVersion: v1beta1.ExpirableVersion{Version: "1.0.0"}},
+							{ExpirableVersion: v1beta1.ExpirableVersion{Version: "1.0.1"}},
+						},
+					},
+				}
+				// v1.0.0 uses old format (regions with architecture), v1.0.1 uses new format (capabilityFlavors)
+				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"os-1","versions":[
+    {"version":"1.0.0","regions":[
+      {"name":"eu01","id":"os1-eu01-amd64","architecture":"amd64"},
+      {"name":"eu01","id":"os1-eu01-arm64","architecture":"arm64"}
+    ]},
+    {"version":"1.0.1","capabilityFlavors":[
+      {"capabilities":{"architecture":["amd64"]},"regions":[{"name":"eu01","id":"os1-eu01-amd64-v2"}]},
+      {"capabilities":{"architecture":["arm64"]},"regions":[{"name":"eu01","id":"os1-eu01-arm64-v2"}]}
+    ]}
+  ]}
+]}`)}
+				Expect(cloudProfileMutator.Mutate(ctx, cloudProfile, nil)).To(Succeed())
+				Expect(cloudProfile.Spec.MachineImages).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("os-1"),
+						"Versions": ConsistOf(
+							MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("1.0.0")}),
+								"CapabilityFlavors": ConsistOf(
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"amd64"}}),
+									}),
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"arm64"}}),
+									}),
+								),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("1.0.1")}),
+								"CapabilityFlavors": ConsistOf(
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"amd64"}}),
+									}),
+									MatchFields(IgnoreExtras, Fields{
+										"Capabilities": Equal(v1beta1.Capabilities{"architecture": []string{"arm64"}}),
+									}),
+								),
+							}),
+						),
+					}),
+				))
+			})
 		})
 
 	})

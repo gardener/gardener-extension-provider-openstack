@@ -533,6 +533,147 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 				})
 			})
+
+			Context("mixed format validation (capabilities CloudProfile)", func() {
+				BeforeEach(func() {
+					if !isCapabilitiesCloudProfile {
+						Skip("mixed format tests only apply to capabilities CloudProfiles")
+					}
+				})
+
+				It("should allow old-format regions in a capabilities CloudProfile", func() {
+					// Use old format (regions with architecture) instead of capabilityFlavors
+					cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = nil
+					cloudProfileConfig.MachineImages[0].Versions[0].Regions = []api.RegionIDMapping{{
+						Name:         "eu01",
+						ID:           "ubuntu-amd64-id",
+						Architecture: ptr.To("amd64"),
+					}}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid both regions AND capabilityFlavors on the same version", func() {
+					cloudProfileConfig.MachineImages[0].Versions[0].Regions = []api.RegionIDMapping{{
+						Name:         "eu01",
+						ID:           "ubuntu-amd64-id",
+						Architecture: ptr.To("amd64"),
+					}}
+					// capabilityFlavors is already set from BeforeEach
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("root.machineImages[0].versions[0]"),
+					}))))
+				})
+
+				It("should allow mixed format across versions within the same image", func() {
+					capabilityDefinitions = []v1beta1.CapabilityDefinition{{
+						Name:   v1beta1constants.ArchitectureName,
+						Values: []string{"amd64", "arm64"},
+					}}
+					// Version 1.2.3: old format (regions with architecture)
+					cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = nil
+					cloudProfileConfig.MachineImages[0].Versions[0].Regions = []api.RegionIDMapping{
+						{Name: "eu01", ID: "ubuntu-1.2.3-amd64", Architecture: ptr.To("amd64")},
+						{Name: "eu01", ID: "ubuntu-1.2.3-arm64", Architecture: ptr.To("arm64")},
+					}
+					// Version 2.0.0: new format (capabilityFlavors)
+					cloudProfileConfig.MachineImages[0].Versions = append(cloudProfileConfig.MachineImages[0].Versions, api.MachineImageVersion{
+						Version: "2.0.0",
+						CapabilityFlavors: []api.MachineImageFlavor{
+							{
+								Regions:      []api.RegionIDMapping{{Name: "eu01", ID: "ubuntu-2.0.0-amd64"}},
+								Capabilities: v1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}},
+							},
+							{
+								Regions:      []api.RegionIDMapping{{Name: "eu01", ID: "ubuntu-2.0.0-arm64"}},
+								Capabilities: v1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}},
+							},
+						},
+					})
+
+					// Spec version for 1.2.3: uses CapabilityFlavors with separate per-arch entries
+					machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+					}
+					// Spec version for 2.0.0: also uses CapabilityFlavors
+					machineImages[0].Versions = append(machineImages[0].Versions, core.MachineImageVersion{
+						ExpirableVersion: core.ExpirableVersion{Version: "2.0.0"},
+						CapabilityFlavors: []core.MachineImageFlavor{
+							{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
+							{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+						},
+					})
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should fail when old-format regions are missing a required architecture", func() {
+					capabilityDefinitions = []v1beta1.CapabilityDefinition{{
+						Name:   v1beta1constants.ArchitectureName,
+						Values: []string{"amd64", "arm64"},
+					}}
+					// Old format regions only provide amd64
+					cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = nil
+					cloudProfileConfig.MachineImages[0].Versions[0].Regions = []api.RegionIDMapping{{
+						Name:         "eu01",
+						ID:           "ubuntu-amd64-id",
+						Architecture: ptr.To("amd64"),
+					}}
+					// Spec requires both amd64 and arm64 via separate CapabilityFlavors
+					machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"amd64"}}},
+						{Capabilities: core.Capabilities{v1beta1constants.ArchitectureName: []string{"arm64"}}},
+					}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.machineImages[0].versions[0].capabilityFlavors[1]"),
+						"Detail": ContainSubstring("arm64"),
+					}))))
+				})
+
+				It("should default architecture to amd64 for old-format regions without explicit architecture", func() {
+					cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = nil
+					cloudProfileConfig.MachineImages[0].Versions[0].Regions = []api.RegionIDMapping{{
+						Name: "eu01",
+						ID:   "ubuntu-amd64-id",
+						// No Architecture set - should default to amd64
+					}}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid architecture field in capability flavor regions", func() {
+					cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Regions = []api.RegionIDMapping{{
+						Name:         "eu01",
+						ID:           "ubuntu-amd64-id",
+						Architecture: ptr.To("amd64"),
+					}}
+
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("root.machineImages[0].versions[0].capabilityFlavors[0].regions[0].architecture"),
+					}))))
+				})
+
+				It("should forbid capabilityFlavors in a non-capabilities CloudProfile", func() {
+					// This test verifies the inverse: capabilityFlavors are forbidden when no capabilityDefinitions
+					errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, nil, fldPath)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("root.machineImages[0].versions[0].capabilityFlavors"),
+					}))))
+				})
+			})
 		})
 
 		Context("server group policy validation", func() {

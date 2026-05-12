@@ -44,75 +44,17 @@ var _ = Describe("Helper", func() {
 		Entry("entry exists", []api.SecurityGroup{{Name: "bar", Purpose: purpose}}, purpose, &api.SecurityGroup{Name: "bar", Purpose: purpose}, false),
 	)
 
-	DescribeTable("#FindMachineImage",
-		func(machineImages []api.MachineImage, name, version, architecture string, expectedMachineImage *api.MachineImage, expectErr bool) {
-			machineImage, err := FindMachineImage(machineImages, name, version, architecture)
-			expectResults(machineImage, expectedMachineImage, err, expectErr)
-		},
-
-		Entry("list is nil",
-			nil,
-			"foo", "1.2.3", "",
-			nil, true,
-		),
-		Entry("empty list",
-			[]api.MachineImage{},
-			"foo", "1.2.3", "",
-			nil, true,
-		),
-		Entry("entry not found (name mismatch)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
-			"foo", "1.2.3", "",
-			nil, true,
-		),
-		Entry("entry not found (version mismatch)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
-			"foo", "1.2.3", "",
-			nil, true,
-		),
-		Entry("entry not found (architecture mismatch)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: ptr.To("amd64")}},
-			"bar", "1.2.3", "arm64",
-			nil, true,
-		),
-		Entry("entry exists (architecture is ignored, amd64)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
-			"bar", "1.2.3", "amd64",
-			&api.MachineImage{Name: "bar", Version: "1.2.3"}, false,
-		),
-		Entry("entry exists (architecture is ignored, arm64)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3"}},
-			"bar", "1.2.3", "arm64",
-			&api.MachineImage{Name: "bar", Version: "1.2.3"}, false,
-		),
-		Entry("entry exists (architecture amd64)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: ptr.To("amd64")}},
-			"bar", "1.2.3", "amd64",
-			&api.MachineImage{Name: "bar", Version: "1.2.3", Architecture: ptr.To("amd64")}, false,
-		),
-		Entry("entry exists (architecture arm64)",
-			[]api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: ptr.To("arm64")}},
-			"bar", "1.2.3", "arm64",
-			&api.MachineImage{Name: "bar", Version: "1.2.3", Architecture: ptr.To("arm64")}, false,
-		),
-		Entry("entry exists (multiple architectures)",
-			[]api.MachineImage{
-				{Name: "bar", Version: "1.2.3", ID: "amd", Architecture: ptr.To("amd64")},
-				{Name: "bar", Version: "1.2.3", ID: "arm", Architecture: ptr.To("arm64")},
-			},
-			"bar", "1.2.3", "amd64",
-			&api.MachineImage{Name: "bar", Version: "1.2.3", ID: "amd", Architecture: ptr.To("amd64")}, false,
-		),
-	)
-
 	regionName := "eu-de-1"
 
-	Describe("#FindImageForCloudProfile", func() {
+	Describe("#FindImageInCloudProfile (legacy format)", func() {
 		var (
-			cfg *api.CloudProfileConfig
+			cfg                   *api.CloudProfileConfig
+			capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
 		)
 
 		BeforeEach(func() {
+			capabilityDefinitions = NormalizeCapabilityDefinitions(nil)
+
 			cfg = &api.CloudProfileConfig{
 				MachineImages: []api.MachineImages{
 					{
@@ -153,108 +95,74 @@ var _ = Describe("Helper", func() {
 			}
 		})
 
-		Context("no image found", func() {
-			It("should not find image in nil list", func() {
-				cfg.MachineImages = nil
-
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "amd64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
-			})
-
-			It("should not find image in empty list", func() {
-				cfg.MachineImages = []api.MachineImages{}
-
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "amd64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
-			})
-
-			It("should not find image for wrong image name", func() {
-				image, err := FindImageFromCloudProfile(cfg, "gardenlinux", "1.0", "eu01", "amd64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
-			})
-
-			It("should not find image for wrong version", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.1", "eu01", "amd64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
-			})
-
-		})
-
-		Context("without region mapping", func() {
-			It("should fallback to image name (amd64)", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "amd64")
+		Context("without region mapping (global image name only)", func() {
+			It("should find image for amd64 via global image name", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}
+				flavor, err := FindImageInCloudProfile(cfg, "flatcar", "1.0", "eu01", caps, capabilityDefinitions)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image).To(Equal(&api.MachineImage{
-					Name:         "flatcar",
-					Version:      "1.0",
-					Image:        "flatcar_1.0",
-					Architecture: ptr.To("amd64"),
-				}))
+				Expect(flavor.Image).To(Equal("flatcar_1.0"))
+				Expect(flavor.Capabilities).To(Equal(gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}))
 			})
 
-			It("should not fallback to image name (not amd64)", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "1.0", "eu01", "arm64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			It("should not find image for arm64 (only amd64 default available)", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}
+				_, err := FindImageInCloudProfile(cfg, "flatcar", "1.0", "eu01", caps, capabilityDefinitions)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		Context("with region mapping, without architectures", func() {
-			It("should fallback to image name if region is not mapped", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "2.0", "eu02", "amd64")
+			It("should use the region ID for mapped region", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}
+				flavor, err := FindImageInCloudProfile(cfg, "flatcar", "2.0", "eu01", caps, capabilityDefinitions)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image).To(Equal(&api.MachineImage{
-					Name:         "flatcar",
-					Version:      "2.0",
-					Image:        "flatcar_2.0",
-					Architecture: ptr.To("amd64"),
-				}))
+				Expect(flavor.Regions[0].ID).To(Equal("flatcar_eu01_2.0"))
+				Expect(flavor.Image).To(Equal("flatcar_2.0"))
 			})
 
-			It("should use the correct mapping (without architecture)", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "2.0", "eu01", "amd64")
+			It("should fallback to global image name for unmapped region", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}
+				flavor, err := FindImageInCloudProfile(cfg, "flatcar", "2.0", "eu02", caps, capabilityDefinitions)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image).To(Equal(&api.MachineImage{
-					Name:         "flatcar",
-					Version:      "2.0",
-					ID:           "flatcar_eu01_2.0",
-					Architecture: ptr.To("amd64"),
-				}))
+				Expect(flavor.Regions).To(BeEmpty())
+				Expect(flavor.Image).To(Equal("flatcar_2.0"))
 			})
 
-			It("should not find image because of non-amd64 architecture", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "2.0", "eu01", "arm64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+			It("should not find image for non-amd64 architecture", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}
+				_, err := FindImageInCloudProfile(cfg, "flatcar", "2.0", "eu01", caps, capabilityDefinitions)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		Context("with region mapping and architectures", func() {
 			It("should not find image if architecture is not mapped", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "3.0", "eu01", "ppc64")
-				Expect(image).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find an image")))
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"ppc64"}}
+				_, err := FindImageInCloudProfile(cfg, "flatcar", "3.0", "eu01", caps, capabilityDefinitions)
+				Expect(err).To(HaveOccurred())
 			})
 
-			It("should pick the correctly mapped architecture", func() {
-				image, err := FindImageFromCloudProfile(cfg, "flatcar", "3.0", "eu01", "arm64")
+			It("should pick the correctly mapped architecture (arm64)", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}
+				flavor, err := FindImageInCloudProfile(cfg, "flatcar", "3.0", "eu01", caps, capabilityDefinitions)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image).To(Equal(&api.MachineImage{
-					Name:         "flatcar",
-					Version:      "3.0",
-					ID:           "flatcar_eu01_3.0_arm64",
-					Architecture: ptr.To("arm64"),
-				}))
+				Expect(flavor.Regions[0].ID).To(Equal("flatcar_eu01_3.0_arm64"))
+				Expect(flavor.Capabilities).To(Equal(gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}))
+			})
+
+			It("should pick the correctly mapped architecture (amd64)", func() {
+				caps := gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}
+				flavor, err := FindImageInCloudProfile(cfg, "flatcar", "3.0", "eu01", caps, capabilityDefinitions)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(flavor.Regions[0].ID).To(Equal("flatcar_eu01_3.0_amd64"))
+				Expect(flavor.Capabilities).To(Equal(gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}))
 			})
 		})
 	})
 
 	DescribeTableSubtree("Select Worker Images", func(hasCapabilities bool) {
 		var capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
+		var workerStatusCapabilityDefinitions []gardencorev1beta1.CapabilityDefinition
 		var machineTypeCapabilities gardencorev1beta1.Capabilities
 		var imageCapabilities gardencorev1beta1.Capabilities
 		region := "europe"
@@ -264,6 +172,7 @@ var _ = Describe("Helper", func() {
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 				{Name: "capability1", Values: []string{"value1", "value2", "value3"}},
 			}
+			workerStatusCapabilityDefinitions = capabilityDefinitions
 			machineTypeCapabilities = gardencorev1beta1.Capabilities{
 				"architecture": []string{"amd64"},
 				"capability1":  []string{"value2"},
@@ -272,6 +181,13 @@ var _ = Describe("Helper", func() {
 				"architecture": []string{"amd64"},
 				"capability1":  []string{"value2"},
 			}
+		} else {
+			// For FindImageInCloudProfile: normalized defaults (always non-empty)
+			capabilityDefinitions = NormalizeCapabilityDefinitions(nil)
+			// For FindImageInWorkerStatus: original (empty) spec.MachineCapabilities
+			// since the worker status is an external source that may be in legacy format
+			workerStatusCapabilityDefinitions = nil
+			machineTypeCapabilities = gardencorev1beta1.Capabilities{}
 		}
 
 		DescribeTable("#FindImageInWorkerStatus",
@@ -283,7 +199,7 @@ var _ = Describe("Helper", func() {
 						expectedMachineImage.Architecture = nil
 					}
 				}
-				machineImage, err := FindImageInWorkerStatus(machineImages, name, version, arch, machineTypeCapabilities, capabilityDefinitions)
+				machineImage, err := FindImageInWorkerStatus(machineImages, name, version, arch, machineTypeCapabilities, workerStatusCapabilityDefinitions)
 				expectResults(machineImage, expectedMachineImage, err, expectErr)
 			},
 
@@ -298,13 +214,11 @@ var _ = Describe("Helper", func() {
 
 		DescribeTable("#FindImageInCloudProfile",
 			func(profileImages []api.MachineImages, imageName, version, regionName string, arch *string, expectedID string) {
-				if hasCapabilities {
-					machineTypeCapabilities["architecture"] = []string{*arch}
-				}
+				machineTypeCapabilities["architecture"] = []string{ptr.Deref(arch, "amd64")}
 				cfg := &api.CloudProfileConfig{}
 				cfg.MachineImages = profileImages
 
-				imageFlavor, err := FindImageInCloudProfile(cfg, imageName, version, regionName, arch, machineTypeCapabilities, capabilityDefinitions)
+				imageFlavor, err := FindImageInCloudProfile(cfg, imageName, version, regionName, machineTypeCapabilities, capabilityDefinitions)
 
 				if expectedID != "" {
 					Expect(err).NotTo(HaveOccurred())
@@ -424,6 +338,7 @@ func makeStatusMachineImages(name, version, id string, arch *string, capabilitie
 }
 
 func expectResults(result, expected interface{}, err error, expectErr bool) {
+	GinkgoHelper()
 	if !expectErr {
 		Expect(result).To(Equal(expected))
 		Expect(err).NotTo(HaveOccurred())

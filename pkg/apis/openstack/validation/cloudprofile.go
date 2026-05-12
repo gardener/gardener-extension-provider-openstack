@@ -190,9 +190,19 @@ func validateMachineImageVersion(capabilityDefinitions []gardencorev1beta1.Capab
 	}
 
 	if len(capabilityDefinitions) > 0 {
-		allErrs = append(allErrs, validateCapabilityFlavors(version, capabilityDefinitions, jdxPath)...)
+		// Both regions and capabilityFlavors on the same version is forbidden
+		if len(version.Regions) > 0 && len(version.CapabilityFlavors) > 0 {
+			allErrs = append(allErrs, field.Forbidden(jdxPath, "must not set both regions and capabilityFlavors on the same version"))
+			return allErrs
+		}
+		if len(version.CapabilityFlavors) > 0 {
+			allErrs = append(allErrs, validateCapabilityFlavors(version, capabilityDefinitions, jdxPath)...)
+		} else if len(version.Regions) > 0 {
+			// Old format with regions in a capabilities-enabled CloudProfile (mixed format)
+			allErrs = append(allErrs, validateRegions(version.Regions, false, jdxPath)...)
+		}
 	} else {
-		allErrs = append(allErrs, validateRegions(version.Regions, capabilityDefinitions, jdxPath)...)
+		allErrs = append(allErrs, validateRegions(version.Regions, false, jdxPath)...)
 		if len(version.CapabilityFlavors) > 0 {
 			allErrs = append(allErrs, field.Forbidden(jdxPath.Child("capabilityFlavors"), "must not be set as CloudProfile does not define capabilities. Use regions instead."))
 		}
@@ -204,22 +214,19 @@ func validateMachineImageVersion(capabilityDefinitions []gardencorev1beta1.Capab
 func validateCapabilityFlavors(version api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// When using capabilities, regions must not be set
-	if len(version.Regions) > 0 {
-		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("regions"), "must not be set as CloudProfile defines capabilities. Use capabilityFlavors.regions instead."))
-	}
-
 	// Validate each flavor's capabilities and regions
 	for k, capabilitySet := range version.CapabilityFlavors {
 		kdxPath := jdxPath.Child("capabilityFlavors").Index(k)
 		allErrs = append(allErrs, gardener.ValidateCapabilities(capabilitySet.Capabilities, capabilityDefinitions, kdxPath.Child("capabilities"))...)
-		allErrs = append(allErrs, validateRegions(capabilitySet.Regions, capabilityDefinitions, kdxPath)...)
+		allErrs = append(allErrs, validateRegions(capabilitySet.Regions, true, kdxPath)...)
 	}
 	return allErrs
 }
 
 // validates the regions of a machine image version or capability flavor.
-func validateRegions(regions []api.RegionIDMapping, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
+// When isCapabilityFlavor is true, Architecture field in regions is forbidden.
+// When isCapabilityFlavor is false, Architecture field is validated against valid architectures.
+func validateRegions(regions []api.RegionIDMapping, isCapabilityFlavor bool, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for k, region := range regions {
@@ -232,14 +239,12 @@ func validateRegions(regions []api.RegionIDMapping, capabilityDefinitions []gard
 		if len(region.ID) == 0 {
 			allErrs = append(allErrs, field.Required(kdxPath.Child("id"), "must provide an image ID"))
 		}
-		if len(capabilityDefinitions) == 0 {
+		if !isCapabilityFlavor {
 			if !slices.Contains(v1beta1constants.ValidArchitectures, arch) {
 				allErrs = append(allErrs, field.NotSupported(kdxPath.Child("architecture"), arch, v1beta1constants.ValidArchitectures))
 			}
 		}
-		// This should be commented in once the defaulting of the architecture field is implemented via mutating webhook
-		// currently there is no way to distinguish between a user set architecture and the default one
-		if len(capabilityDefinitions) > 0 {
+		if isCapabilityFlavor {
 			if region.Architecture != nil {
 				allErrs = append(allErrs, field.Forbidden(kdxPath.Child("architecture"), "must be defined in .capabilities.architecture"))
 			}
@@ -423,17 +428,45 @@ func validateImageFlavorMapping(machineImage core.MachineImage, version core.Mac
 	}
 
 	defaultedCapabilityFlavors := gardencorev1beta1helper.GetImageFlavorsWithAppliedDefaults(v1beta1Version.CapabilityFlavors, capabilityDefinitions)
-	for idxCapability, defaultedCapabilitySet := range defaultedCapabilityFlavors {
-		isFound := false
-		// search for the corresponding imageVersion.MachineImageFlavor
-		for _, providerCapabilitySet := range imageVersion.CapabilityFlavors {
-			providerDefaultedCapabilities := gardencorev1beta1.GetCapabilitiesWithAppliedDefaults(providerCapabilitySet.Capabilities, capabilityDefinitions)
-			if gardencorev1beta1helper.AreCapabilitiesEqual(defaultedCapabilitySet.Capabilities, providerDefaultedCapabilities) {
-				isFound = true
-				break
+
+	if len(imageVersion.CapabilityFlavors) > 0 {
+		// New format: validate against capability flavors
+		for idxCapability, defaultedCapabilitySet := range defaultedCapabilityFlavors {
+			isFound := false
+			// search for the corresponding imageVersion.MachineImageFlavor
+			for _, providerCapabilitySet := range imageVersion.CapabilityFlavors {
+				providerDefaultedCapabilities := gardencorev1beta1.GetCapabilitiesWithAppliedDefaults(providerCapabilitySet.Capabilities, capabilityDefinitions)
+				if gardencorev1beta1helper.AreCapabilitiesEqual(defaultedCapabilitySet.Capabilities, providerDefaultedCapabilities) {
+					isFound = true
+					break
+				}
+			}
+			if !isFound {
+				allErrs = append(allErrs, field.Required(machineImageVersionPath.Child("capabilityFlavors").Index(idxCapability),
+					fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and capabilitySet %v", machineImage.Name, version.Version, defaultedCapabilitySet.Capabilities)))
 			}
 		}
-		if !isFound {
+	} else if len(imageVersion.Regions) > 0 {
+		// Old format (mixed): validate that regions cover all required architectures from capability flavors
+		architecturesMap := utils.CreateMapFromSlice(imageVersion.Regions, func(re api.RegionIDMapping) string {
+			return ptr.Deref(re.Architecture, v1beta1constants.ArchitectureAMD64)
+		})
+		availableArchitectures := slices.Collect(maps.Keys(architecturesMap))
+
+		for idxCapability, defaultedCapabilitySet := range defaultedCapabilityFlavors {
+			archValues, hasArch := defaultedCapabilitySet.Capabilities[v1beta1constants.ArchitectureName]
+			if !hasArch || len(archValues) == 0 {
+				continue
+			}
+			expectedArch := archValues[0]
+			if !slices.Contains(availableArchitectures, expectedArch) {
+				allErrs = append(allErrs, field.Required(machineImageVersionPath.Child("capabilityFlavors").Index(idxCapability),
+					fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and architecture %s", machineImage.Name, version.Version, expectedArch)))
+			}
+		}
+	} else {
+		// Neither regions nor capabilityFlavors set
+		for idxCapability, defaultedCapabilitySet := range defaultedCapabilityFlavors {
 			allErrs = append(allErrs, field.Required(machineImageVersionPath.Child("capabilityFlavors").Index(idxCapability),
 				fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and capabilitySet %v", machineImage.Name, version.Version, defaultedCapabilitySet.Capabilities)))
 		}

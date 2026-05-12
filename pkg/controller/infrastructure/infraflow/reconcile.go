@@ -305,9 +305,13 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	desired := &subnets.Subnet{
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
-		CIDR:           fctx.workersCIDR(),
 		IPVersion:      4,
 		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
+	}
+	if fctx.config.Networks.SubnetPool != nil {
+		desired.SubnetPoolID = fctx.config.Networks.SubnetPool.ID
+	} else {
+		desired.CIDR = fctx.workersCIDR()
 	}
 	current, err := fctx.findExistingSubnet(ctx)
 	if err != nil {
@@ -324,20 +328,16 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 		}
 	} else {
 		log.Info("creating...")
-		var subnetPoolID string
 		var prefixlen *int
 		if fctx.config.Networks.SubnetPool != nil {
-			subnetPoolID = fctx.config.Networks.SubnetPool.ID
 			prefixlen = ptr.To(fctx.config.Networks.SubnetPool.PrefixLength)
-			desired.CIDR = "" // let the pool allocate
-			desired.SubnetPoolID = subnetPoolID
 		}
 		created, err := fctx.access.CreateSubnet(ctx, desired, prefixlen)
 		if err != nil {
 			return err
 		}
 		fctx.state.Set(IdentifierSubnet, created.ID)
-		if subnetPoolID != "" {
+		if fctx.config.Networks.SubnetPool != nil {
 			allocatedCIDR, err := fctx.waitForSubnetCIDR(ctx, log, created.ID)
 			if err != nil {
 				return err

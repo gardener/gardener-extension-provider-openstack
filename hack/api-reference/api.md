@@ -1470,6 +1470,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).<br />Deprecated: use `workers` instead.</p>
 </td>
 </tr>
@@ -1481,6 +1482,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).<br />Mutually exclusive with SubnetPool.</p>
 </td>
 </tr>
@@ -2194,8 +2196,7 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>CIDR is the CIDR of the subnet. This is only set for subnets that were allocated from a subnet pool.</p>
+<p>CIDR is the CIDR of the subnet.</p>
 </td>
 </tr>
 

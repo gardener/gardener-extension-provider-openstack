@@ -31,10 +31,12 @@ type Networks struct {
 	Router *Router `json:"router,omitempty"`
 	// Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	// Deprecated: use `workers` instead.
-	Worker string `json:"worker"`
+	// +optional
+	Worker string `json:"worker,omitempty"`
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	// Mutually exclusive with SubnetPool.
-	Workers string `json:"workers"`
+	// +optional
+	Workers string `json:"workers,omitempty"`
 	// SubnetPool specifies an OpenStack subnet pool to use for automatic CIDR allocation
 	// for the worker subnet. Mutually exclusive with Workers/Worker CIDR fields.
 	// +optional
@@ -170,9 +172,8 @@ type Subnet struct {
 	Purpose Purpose `json:"purpose"`
 	// ID is the subnet id.
 	ID string `json:"id"`
-	// CIDR is the CIDR of the subnet. This is only set for subnets that were allocated from a subnet pool.
-	// +optional
-	CIDR string `json:"cidr,omitempty"`
+	// CIDR is the CIDR of the subnet.
+	CIDR string `json:"cidr"`
 }
 
 // SecurityGroup is an OpenStack security group related to a Network.

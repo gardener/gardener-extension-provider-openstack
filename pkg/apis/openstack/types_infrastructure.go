@@ -28,9 +28,11 @@ type Networks struct {
 	Router *Router
 	// Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	// Deprecated: use `workers` instead.
+	// +optional
 	Worker string
 	// Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).
 	// Mutually exclusive with SubnetPool.
+	// +optional
 	Workers string
 	// SubnetPool specifies an OpenStack subnet pool to use for automatic CIDR allocation
 	// for the worker subnet. Mutually exclusive with Workers/Worker CIDR fields.
@@ -160,7 +162,7 @@ type Subnet struct {
 	Purpose Purpose
 	// ID is the subnet id.
 	ID string
-	// CIDR is the CIDR of the subnet. This is only set for subnets that were allocated from a subnet pool.
+	// CIDR is the CIDR of the subnet.
 	CIDR string
 }
 

@@ -272,14 +272,15 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 	}
 
 	if v := fctx.state.Get(IdentifierSubnet); v != nil {
-		subnet := openstackv1alpha1.Subnet{
+		cidr := fctx.workersCIDR()
+		if allocated := fctx.state.Get(IdentifierWorkersCIDR); allocated != nil {
+			cidr = *allocated
+		}
+		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
 			Purpose: openstackv1alpha1.PurposeNodes,
 			ID:      *v,
-		}
-		if cidr := fctx.state.Get(IdentifierWorkersCIDR); cidr != nil {
-			subnet.CIDR = *cidr
-		}
-		status.Networks.Subnets = append(status.Networks.Subnets, subnet)
+			CIDR:    cidr,
+		})
 	}
 
 	if v := fctx.state.Get(IdentifierSubnetIPv6); v != nil {

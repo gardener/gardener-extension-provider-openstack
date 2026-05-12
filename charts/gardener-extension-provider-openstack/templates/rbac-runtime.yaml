@@ -11,6 +11,8 @@ rules:
     resources:
     - backupbuckets
     - backupbuckets/status
+    - backupentries
+    - backupentries/status
     - dnsrecords
     - dnsrecords/status
     verbs:

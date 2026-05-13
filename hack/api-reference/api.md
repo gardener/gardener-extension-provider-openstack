@@ -1470,6 +1470,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).<br />Deprecated: use `workers` instead.</p>
 </td>
 </tr>
@@ -1481,7 +1482,20 @@ string
 </em>
 </td>
 <td>
-<p>Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).</p>
+<em>(Optional)</em>
+<p>Workers is a CIDRs of a worker subnet (private) to create (used for the VMs).<br />Mutually exclusive with SubnetPool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>subnetPool</code></br>
+<em>
+<a href="#subnetpool">SubnetPool</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubnetPool specifies an OpenStack subnet pool to use for automatic CIDR allocation<br />for the worker subnet. Mutually exclusive with Workers/Worker CIDR fields.</p>
 </td>
 </tr>
 <tr>
@@ -2172,6 +2186,65 @@ string
 </td>
 <td>
 <p>ID is the subnet id.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cidr</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>CIDR is the CIDR of the subnet.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="subnetpool">SubnetPool
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#networks">Networks</a>)
+</p>
+
+<p>
+SubnetPool specifies an OpenStack subnet pool from which a CIDR will be automatically allocated.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>id</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ID is the ID of the OpenStack subnet pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>prefixLength</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<p>PrefixLength is the prefix length (e.g. 24 for a /24 subnet) to request from the pool.</p>
 </td>
 </tr>
 

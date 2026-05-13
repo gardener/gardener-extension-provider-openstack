@@ -18,6 +18,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/subnetpools"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
@@ -157,6 +158,10 @@ type Networking interface {
 	ListSubnets(ctx context.Context, listOpts subnets.ListOpts) ([]subnets.Subnet, error)
 	UpdateSubnet(ctx context.Context, id string, updateOpts subnets.UpdateOpts) (*subnets.Subnet, error)
 	DeleteSubnet(ctx context.Context, subnetID string) error
+	// SubnetPools
+	ListSubnetPools(ctx context.Context, listOpts subnetpools.ListOpts) ([]subnetpools.SubnetPool, error)
+	CreateSubnetPool(ctx context.Context, createOpts subnetpools.CreateOpts) (*subnetpools.SubnetPool, error)
+	DeleteSubnetPool(ctx context.Context, id string) error
 	// Ports
 	GetPort(ctx context.Context, portID string) (*ports.Port, error)
 	GetRouterInterfacePort(ctx context.Context, routerID, subnetID string) (*ports.Port, error)

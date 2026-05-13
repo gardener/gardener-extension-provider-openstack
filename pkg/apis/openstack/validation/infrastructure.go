@@ -29,8 +29,18 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 	}
 
 	networksPath := fldPath.Child("networks")
-	if len(infra.Networks.Worker) == 0 && len(infra.Networks.Workers) == 0 {
-		allErrs = append(allErrs, field.Required(networksPath.Child("workers"), "must specify the network range for the worker network"))
+
+	hasSubnetPool := infra.Networks.SubnetPool != nil
+	hasWorkerCIDR := len(infra.Networks.Worker) > 0 || len(infra.Networks.Workers) > 0
+
+	if !hasWorkerCIDR && !hasSubnetPool {
+		allErrs = append(allErrs, field.Required(networksPath.Child("workers"),
+			"must specify either the network range for the worker network or a subnetPool"))
+	}
+
+	if hasWorkerCIDR && hasSubnetPool {
+		allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetPool"), infra.Networks.SubnetPool,
+			"subnetPool is mutually exclusive with workers/worker CIDR fields"))
 	}
 
 	var workerCIDR cidrvalidation.CIDR
@@ -45,8 +55,12 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(networksPath.Child("workers"), infra.Networks.Workers)...)
 	}
 
-	if nodes != nil {
+	if nodes != nil && workerCIDR != nil {
 		allErrs = append(allErrs, nodes.ValidateSubset(workerCIDR)...)
+	}
+
+	if hasSubnetPool {
+		allErrs = append(allErrs, validateSubnetPool(infra.Networks.SubnetPool, networksPath.Child("subnetPool"))...)
 	}
 
 	if infra.Networks.ID != nil {
@@ -72,6 +86,18 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 		allErrs = append(allErrs, validateIPv6Config(infra.Networks.IPv6, networksPath.Child("ipv6"))...)
 	}
 
+	return allErrs
+}
+
+func validateSubnetPool(pool *api.SubnetPool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if pool.ID == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("id"), "subnet pool id must not be empty"))
+	}
+	if pool.PrefixLength <= 0 || pool.PrefixLength > 32 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("prefixLength"), pool.PrefixLength,
+			"prefix length must be between 1 and 32"))
+	}
 	return allErrs
 }
 
@@ -124,20 +150,18 @@ func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorLi
 func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.InfrastructureConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	newNetworks := newConfig.DeepCopy().Networks
-	oldNetworks := oldConfig.DeepCopy().Networks
+	networksPath := fldPath.Child("networks")
 
-	// only enablement of share network enablement is allowed as update operation. Therefore we ignore it, when checking for other updates.
-	// TODO: allow both enabling and disabling of share networks.
-	if oldNetworks.ShareNetwork == nil || !oldNetworks.ShareNetwork.Enabled {
-		newNetworks.ShareNetwork = nil
-		oldNetworks.ShareNetwork = nil
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.ID, oldConfig.Networks.ID, networksPath.Child("id"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Router, oldConfig.Networks.Router, networksPath.Child("router"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Worker, oldConfig.Networks.Worker, networksPath.Child("worker"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Workers, oldConfig.Networks.Workers, networksPath.Child("workers"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.IPv6, oldConfig.Networks.IPv6, networksPath.Child("ipv6"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.SubnetPool, oldConfig.Networks.SubnetPool, networksPath.Child("subnetPool"))...)
+	// TODO: allow both enabling and disabling of share networks; for now only enabling is allowed.
+	if oldConfig.Networks.ShareNetwork != nil && oldConfig.Networks.ShareNetwork.Enabled {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.ShareNetwork, oldConfig.Networks.ShareNetwork, networksPath.Child("shareNetwork"))...)
 	}
-	// networks.ipv6 is immutable and checked explicitly below for a precise error field.
-	newNetworks.IPv6 = nil
-	oldNetworks.IPv6 = nil
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks, oldNetworks, fldPath.Child("networks"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.IPv6, oldConfig.Networks.IPv6, fldPath.Child("networks").Child("ipv6"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolName, oldConfig.FloatingPoolName, fldPath.Child("floatingPoolName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.FloatingPoolSubnetName, oldConfig.FloatingPoolSubnetName, fldPath.Child("floatingPoolSubnetName"))...)
 

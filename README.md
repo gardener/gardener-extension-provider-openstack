@@ -1,4 +1,4 @@
-# [Gardener Extension for OpenStack provider](https://gardener.cloud)
+# Gardener Extension for OpenStack provider
 
 [![REUSE status](https://api.reuse.software/badge/github.com/gardener/gardener-extension-provider-openstack)](https://api.reuse.software/info/github.com/gardener/gardener-extension-provider-openstack)
 [![Build](https://github.com/gardener/gardener-extension-provider-openstack/actions/workflows/non-release.yaml/badge.svg)](https://github.com/gardener/gardener-extension-provider-openstack/actions/workflows/non-release.yaml)

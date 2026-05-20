@@ -1,0 +1,116 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.62.0
+release_notes:
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: aaronfern
+  category: other
+  contents: newly created machines not moved to `Pending` state without valid node
+    name and providerID from provider
+  mimetype: text/markdown
+  reference: '[#1070](https://github.com/gardener/machine-controller-manager/pull/1070)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: r4mek
+  category: other
+  contents: Fix machines termination in machine set replica management to avoid needless
+    scale-up of machines because of stale replica count.
+  mimetype: text/markdown
+  reference: '[#1069](https://github.com/gardener/machine-controller-manager/pull/1069)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: r4mek
+  category: other
+  contents: Fixing an issue where a rapid scale up and scale down can result in a
+    cordoned machine in the cluster.
+  mimetype: text/markdown
+  reference: '[#1087](https://github.com/gardener/machine-controller-manager/pull/1087)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: viragvoros
+  category: other
+  contents: machine-controller-manager now allows configuring the retry duration for
+    ResourceExhausted errors during machine creation with the `--resource-exhausted-retry`
+    CLI flag in machine-controller-manager-provider. If not specified, the default
+    `machineutils.LongRetry` stays unchanged.
+  mimetype: text/markdown
+  reference: '[#1083](https://github.com/gardener/machine-controller-manager/pull/1083)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: bugfix
+  contents: Machine controller no longer adds finalizers or reconciles nodes with
+    no associated machine
+  mimetype: text/markdown
+  reference: '[#1065](https://github.com/gardener/machine-controller-manager/pull/1065)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: takoverflow
+  category: bugfix
+  contents: Exclude terminating machines when managing machineset replicas to allow
+    for faster replacement of a failed machine.
+  mimetype: text/markdown
+  reference: '[#1086](https://github.com/gardener/machine-controller-manager/pull/1086)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: bugfix
+  contents: Merged node finalizer removal and node object deletion into a single atomic
+    step during machine deletion
+  mimetype: text/markdown
+  reference: '[#1097](https://github.com/gardener/machine-controller-manager/pull/1097)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: other
+  contents: Track preserved failed machines in field `preservedFailedReplicas` in
+    the Status of MCS and MCD, and prevent these machines from resulting in MCD being
+    marked as unhealthy.
+  mimetype: text/markdown
+  reference: '[#1092](https://github.com/gardener/machine-controller-manager/pull/1092)'
+  type: standard
+- audience: user
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: feature
+  contents: 'Introduce support for preservation of machines (both Running and Failed),
+    and the backing node (if it exists). '
+  mimetype: text/markdown
+  reference: '[#1059](https://github.com/gardener/machine-controller-manager/pull/1059)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: takoverflow
+  category: other
+  contents: Golang version used is now upgraded to `1.26.2`
+  mimetype: text/markdown
+  reference: '[#1096](https://github.com/gardener/machine-controller-manager/pull/1096)'
+  type: standard

@@ -923,6 +923,10 @@ func (vp *valuesProvider) addCSIManilaValues(
 		"clusterID": cp.Namespace,
 	}
 
+	infraConfig, err := helper.InfrastructureConfigFromRawExtension(cluster.Shoot.Spec.Provider.InfrastructureConfig)
+	if err != nil {
+		return fmt.Errorf("could not decode infrastructure config of controlplane '%s': %w", k8sclient.ObjectKeyFromObject(cp), err)
+	}
 	infraStatus, err := vp.getInfrastructureStatus(cp)
 	if err != nil {
 		return err
@@ -952,10 +956,16 @@ func (vp *valuesProvider) addCSIManilaValues(
 	if err != nil {
 		return fmt.Errorf("could not find nodes subnet in infrastructure status: %w", err)
 	}
+	shareClient := nodesSubnet.CIDR
+	// If the status has not yet been updated, we need to fall back to the value from the spec
+	// TODO remove in future release
+	if shareClient == "" {
+		shareClient = infraConfig.WorkersCIDR()
+	}
 	values["openstack"] = map[string]interface{}{
 		"availabilityZones":           vp.getAllWorkerPoolsZones(cluster),
 		"shareNetworkID":              shareNetworkID,
-		"shareClient":                 nodesSubnet.CIDR,
+		"shareClient":                 shareClient,
 		"authURL":                     authURL,
 		"region":                      cp.Spec.Region,
 		"domainName":                  domainName,

@@ -41,7 +41,7 @@ func (w *WorkerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, region string, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (*api.MachineImage, error) {
+func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, region string, arch string, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (*api.MachineImage, error) {
 	selectedMachineImage := &api.MachineImage{
 		Name:    name,
 		Version: version,
@@ -68,14 +68,9 @@ func (w *WorkerDelegate) selectMachineImageForWorkerPool(name, version string, r
 
 		// Pass the original (non-normalized) MachineCapabilities so FindImageInWorkerStatus
 		// can distinguish legacy format (Architecture field) from capability format (Capabilities field).
-		return helper.FindImageInWorkerStatus(workerStatus.MachineImages, name, version, nil, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities)
+		return helper.FindImageInWorkerStatus(workerStatus.MachineImages, name, version, arch, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities)
 	}
 
-	archValues := machineCapabilities[v1beta1constants.ArchitectureName]
-	arch := v1beta1constants.ArchitectureAMD64
-	if len(archValues) > 0 {
-		arch = archValues[0]
-	}
 	return nil, worker.ErrorMachineImageNotFound(name, version, arch, region)
 }
 

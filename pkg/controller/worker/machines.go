@@ -138,7 +138,7 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 		capabilityDefinitions := helper.NormalizeCapabilityDefinitions(w.cluster.CloudProfile.Spec.MachineCapabilities)
 		architecture := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
 		machineTypeCapabilities := helper.NormalizeMachineTypeCapabilities(machineTypeFromCloudProfile.Capabilities, &architecture, capabilityDefinitions)
-		machineImage, err := w.selectMachineImageForWorkerPool(pool.MachineImage.Name, pool.MachineImage.Version, w.worker.Spec.Region, machineTypeCapabilities, capabilityDefinitions)
+		machineImage, err := w.selectMachineImageForWorkerPool(pool.MachineImage.Name, pool.MachineImage.Version, w.worker.Spec.Region, architecture, machineTypeCapabilities, capabilityDefinitions)
 		if err != nil {
 			return err
 		}

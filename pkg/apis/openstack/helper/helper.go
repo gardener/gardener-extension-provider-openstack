@@ -214,17 +214,18 @@ func convertRegionsToCapabilityFlavors(regions []api.RegionIDMapping, image stri
 // The worker status is an external source that may contain images in either legacy format (Architecture field)
 // or capability format (Capabilities field). The capabilityDefinitions parameter should be the original
 // (non-normalized) spec.MachineCapabilities from the CloudProfile to distinguish the two cases.
-func FindImageInWorkerStatus(machineImages []api.MachineImage, name string, version string, architecture *string, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (*api.MachineImage, error) {
+// An empty architecture is treated as the default architecture (amd64).
+func FindImageInWorkerStatus(machineImages []api.MachineImage, name string, version string, architecture string, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (*api.MachineImage, error) {
+	if architecture == "" {
+		architecture = v1beta1constants.ArchitectureAMD64
+	}
 	if len(capabilityDefinitions) == 0 {
 		for _, statusMachineImage := range machineImages {
-			if statusMachineImage.Architecture == nil {
-				statusMachineImage.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
-			}
-			if statusMachineImage.Name == name && statusMachineImage.Version == version && ptr.Equal(architecture, statusMachineImage.Architecture) {
+			if statusMachineImage.Name == name && statusMachineImage.Version == version && architecture == ptr.Deref(statusMachineImage.Architecture, v1beta1constants.ArchitectureAMD64) {
 				return &statusMachineImage, nil
 			}
 		}
-		return nil, fmt.Errorf("no machine image found for image %q with version %q and architecture %q", name, version, *architecture)
+		return nil, fmt.Errorf("no machine image found for image %q with version %q and architecture %q", name, version, architecture)
 	}
 
 	// Capability format: find the best matching capability set.

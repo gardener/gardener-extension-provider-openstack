@@ -191,9 +191,9 @@ var _ = Describe("Helper", func() {
 		}
 
 		DescribeTable("#FindImageInWorkerStatus",
-			func(machineImages []api.MachineImage, name, version string, arch *string, expectedMachineImage *api.MachineImage, expectErr bool) {
+			func(machineImages []api.MachineImage, name, version string, arch string, expectedMachineImage *api.MachineImage, expectErr bool) {
 				if hasCapabilities {
-					machineTypeCapabilities["architecture"] = []string{*arch}
+					machineTypeCapabilities["architecture"] = []string{arch}
 					if expectedMachineImage != nil {
 						expectedMachineImage.Capabilities = imageCapabilities
 						expectedMachineImage.Architecture = nil
@@ -203,13 +203,13 @@ var _ = Describe("Helper", func() {
 				expectResults(machineImage, expectedMachineImage, err, expectErr)
 			},
 
-			Entry("list is nil", nil, "bar", "1.2.3", ptr.To("amd64"), nil, true),
-			Entry("empty list", []api.MachineImage{}, "image", "1.2.3", ptr.To("amd64"), nil, true),
-			Entry("entry not found (no name)", makeStatusMachineImages("bar", "1.2.3", "id-1234", ptr.To("amd64"), imageCapabilities), "foo", "1.2.3", ptr.To("amd64"), nil, true),
-			Entry("entry not found (no version)", makeStatusMachineImages("bar", "1.2.3", "id-1234", ptr.To("amd64"), imageCapabilities), "bar", "1.2.ś", ptr.To("amd64"), nil, true),
-			Entry("entry not found (no architecture)", []api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: ptr.To("arm64"), Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}}}, "bar", "1.2.3", ptr.To("amd64"), nil, true),
-			Entry("entry exists if architecture is nil", makeStatusMachineImages("bar", "1.2.3", "id-1234", nil, imageCapabilities), "bar", "1.2.3", ptr.To("amd64"), &api.MachineImage{Name: "bar", Version: "1.2.3", ID: "id-1234", Architecture: ptr.To("amd64")}, false),
-			Entry("entry exists", makeStatusMachineImages("bar", "1.2.3", "id-1234", ptr.To("amd64"), imageCapabilities), "bar", "1.2.3", ptr.To("amd64"), &api.MachineImage{Name: "bar", Version: "1.2.3", ID: "id-1234", Architecture: ptr.To("amd64")}, false),
+			Entry("list is nil", nil, "bar", "1.2.3", "amd64", nil, true),
+			Entry("empty list", []api.MachineImage{}, "image", "1.2.3", "amd64", nil, true),
+			Entry("entry not found (no name)", makeStatusMachineImages("bar", "1.2.3", "id-1234", ptr.To("amd64"), imageCapabilities), "foo", "1.2.3", "amd64", nil, true),
+			Entry("entry not found (no version)", makeStatusMachineImages("bar", "1.2.3", "id-1234", ptr.To("amd64"), imageCapabilities), "bar", "1.2.ś", "amd64", nil, true),
+			Entry("entry not found (no architecture)", []api.MachineImage{{Name: "bar", Version: "1.2.3", Architecture: ptr.To("arm64"), Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}}}, "bar", "1.2.3", "amd64", nil, true),
+			Entry("entry exists if architecture is nil", makeStatusMachineImages("bar", "1.2.3", "id-1234", nil, imageCapabilities), "bar", "1.2.3", "amd64", &api.MachineImage{Name: "bar", Version: "1.2.3", ID: "id-1234", Architecture: nil}, false),
+			Entry("entry exists", makeStatusMachineImages("bar", "1.2.3", "id-1234", ptr.To("amd64"), imageCapabilities), "bar", "1.2.3", "amd64", &api.MachineImage{Name: "bar", Version: "1.2.3", ID: "id-1234", Architecture: ptr.To("amd64")}, false),
 		)
 
 		DescribeTable("#FindImageInCloudProfile",

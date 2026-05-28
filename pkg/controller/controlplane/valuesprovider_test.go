@@ -754,6 +754,45 @@ var _ = Describe("ValuesProvider", func() {
 					"calico-mutating-admission-policy": enabledFalse,
 				}))
 			})
+			It("should fall back to Workers CIDR from infra config when nodes subnet CIDR is empty in infra status", func() {
+				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+
+				// Simulate a shoot whose infrastructure status was written before the CIDR field
+				// was populated in the subnet status (pre-subnet-pool feature).
+				cpManila := defaultControlPlaneWithManila(true)
+				// Override the subnet to have an empty CIDR.
+				cpManila.Spec.InfrastructureProviderStatus = &runtime.RawExtension{
+					Raw: encode(&api.InfrastructureStatus{
+						Networks: api.NetworkStatus{
+							Name: technicalID,
+							FloatingPool: api.FloatingPoolStatus{
+								ID: "floating-network-id",
+							},
+							Router: api.RouterStatus{
+								ID: "routerID",
+							},
+							Subnets: []api.Subnet{
+								{
+									ID:      "subnet-acbd1234",
+									Purpose: api.PurposeNodes,
+									CIDR:    "", // empty: pre-dates the field being written
+								},
+							},
+							ShareNetwork: &api.ShareNetworkStatus{
+								ID:   "1111-2222-3333-4444",
+								Name: "sharenetwork",
+							},
+						},
+					}),
+				}
+
+				values, err := vp.GetControlPlaneShootChartValues(ctx, cpManila, cluster, fakeSecretsManager, map[string]string{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(values).To(HaveKey(openstack.CSIDriverManila))
+				// Falls back to Workers CIDR from infra config ("10.200.0.0/19").
+				Expect(values[openstack.CSIDriverManila]).To(HaveKeyWithValue("openstack", HaveKeyWithValue("shareClient", "10.200.0.0/19")))
+			})
+
 			It("should return correct shoot control plane chart if CSI Manila is enabled and subnet pool is used", func() {
 				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 

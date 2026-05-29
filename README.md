@@ -40,6 +40,7 @@ The following lists known compatibility issues of this extension controller with
 | OpenStack Extension | Gardener | Action | Notes |
 | ----- | ----- | --- |  --------------- |
 | `< v1.12.0` | `> v1.10.0` |  Please update the provider version to `>= v1.12.0` or disable the feature gate `MountHostCADirectories` in the Gardenlet. | Applies if feature flag `MountHostCADirectories` in the Gardenlet is enabled. This is to prevent duplicate volume mounts to `/usr/share/ca-certificates` in the Shoot API Server. |
+| `>= v1.56.0` | `< v1.135.0` | Please update Gardener to version `>= v1.135.0`. | The shoot API field `shoot.spec.dns.providers[].secretName` has been deprecated in favor of `shoot.spec.dns.providers[].credentialsRef` which is available in Gardener `>= v1.135.0`; the provider extension is adapted to use the new field from `v1.56.0` onward. |
 
 ## How to start using or developing this extension controller locally
 

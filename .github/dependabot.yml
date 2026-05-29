@@ -38,3 +38,10 @@ updates:
   labels:
   - area/compliance
   - kind/enhancement
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  labels:
+  - area/compliance
+  - kind/enhancement

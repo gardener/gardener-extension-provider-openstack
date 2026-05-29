@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -280,27 +279,30 @@ func (s *shoot) validateDNS(ctx context.Context, shoot *core.Shoot) field.ErrorL
 			continue
 		}
 
-		providerFldPath := providersPath.Index(i)
+		credentialsFldPath := providersPath.Index(i).Child("credentialsRef")
 
-		if ptr.Deref(p.SecretName, "") == "" {
-			allErrs = append(allErrs, field.Required(providerFldPath.Child("secretName"),
-				fmt.Sprintf("secretName must be specified for %v provider", openstack.DNSType)))
+		if p.CredentialsRef == nil {
+			allErrs = append(allErrs, field.Required(credentialsFldPath,
+				fmt.Sprintf("credentialsRef must be specified for %v provider", openstack.DNSType)))
 			continue
 		}
 
-		secret := &corev1.Secret{}
-		key := client.ObjectKey{Namespace: shoot.Namespace, Name: *p.SecretName}
-		if err := s.apiReader.Get(ctx, key, secret); err != nil {
+		credentials, err := kutil.GetCredentialsByCrossVersionObjectReference(ctx, s.apiReader, *p.CredentialsRef, shoot.Namespace)
+		if err != nil {
 			if apierrors.IsNotFound(err) {
-				allErrs = append(allErrs, field.Invalid(providerFldPath.Child("secretName"),
-					*p.SecretName, "referenced secret not found"))
+				allErrs = append(allErrs, field.NotFound(credentialsFldPath, p.CredentialsRef.String()))
 			} else {
-				allErrs = append(allErrs, field.InternalError(providerFldPath.Child("secretName"), err))
+				allErrs = append(allErrs, field.InternalError(credentialsFldPath, err))
 			}
 			continue
 		}
 
-		allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(secret, providerFldPath, true)...)
+		switch creds := credentials.(type) {
+		case *corev1.Secret:
+			allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(creds, credentialsFldPath, true)...)
+		default:
+			allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret"))
+		}
 	}
 
 	return allErrs

@@ -9,7 +9,9 @@ import (
 	"fmt"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/security"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,15 +50,16 @@ func (cb *credentialsBinding) Validate(ctx context.Context, newObj, oldObj clien
 
 	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets
 	// under the hood. The latter increases the memory usage of the component.
-	var credentialsKey = client.ObjectKey{Namespace: credentialsBinding.CredentialsRef.Namespace, Name: credentialsBinding.CredentialsRef.Name}
-	switch {
-	case credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && credentialsBinding.CredentialsRef.Kind == "Secret":
-		secret := &corev1.Secret{}
-		if err := cb.apiReader.Get(ctx, credentialsKey, secret); err != nil {
-			return err
-		}
+	credentials, err := kutil.GetCredentialsByObjectReference(ctx, cb.apiReader, credentialsBinding.CredentialsRef)
+	if err != nil {
+		return err
+	}
 
-		return openstackvalidation.ValidateCloudProviderSecret(secret, field.NewPath("secret"), false).ToAggregate()
+	switch creds := credentials.(type) {
+	case *corev1.Secret:
+		return openstackvalidation.ValidateCloudProviderSecret(creds, field.NewPath("secret"), false).ToAggregate()
+	case *gardencorev1beta1.InternalSecret:
+		return openstackvalidation.ValidateCloudProviderSecretData(creds.Data, field.NewPath("secret"), false).ToAggregate()
 	default:
 		return fmt.Errorf("unsupported credentials reference: version %q, kind %q", credentialsBinding.CredentialsRef.APIVersion, credentialsBinding.CredentialsRef.Kind)
 	}

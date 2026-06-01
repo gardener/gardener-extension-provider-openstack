@@ -649,7 +649,7 @@ var _ = Describe("Shoot validator", func() {
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
-						"Detail": ContainSubstring("supported credentials type is Secret"),
+						"Detail": ContainSubstring("supported credentials type is Secret or InternalSecret"),
 					}))))
 				})
 
@@ -727,6 +727,71 @@ var _ = Describe("Shoot validator", func() {
 
 					err := shootValidator.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should pass with valid primary OpenStack DNS provider using InternalSecret", func() {
+					dnsInternalSecretKey := client.ObjectKey{Namespace: namespace, Name: "dns-internal-secret"}
+					dnsInternalSecret := &gardencorev1beta1.InternalSecret{
+						Data: map[string][]byte{
+							openstack.AuthURL:    []byte("https://keystone.example.com:5000/v3"),
+							openstack.DomainName: []byte("my-domain"),
+							openstack.TenantName: []byte("my-tenant"),
+							openstack.UserName:   []byte("my-user"),
+							openstack.Password:   []byte("my-password"),
+						},
+					}
+					shoot.Spec.DNS = &core.DNS{
+						Providers: []core.DNSProvider{
+							{
+								Type:    ptr.To(openstack.DNSType),
+								Primary: ptr.To(true),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+									Kind:       "InternalSecret",
+									Name:       "dns-internal-secret",
+								},
+							},
+						},
+					}
+					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					apiReader.EXPECT().Get(ctx, dnsInternalSecretKey, &gardencorev1beta1.InternalSecret{}).SetArg(2, *dnsInternalSecret)
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should fail when DNS InternalSecret has validation errors", func() {
+					dnsInternalSecretKey := client.ObjectKey{Namespace: namespace, Name: "dns-internal-secret"}
+					dnsInternalSecret := &gardencorev1beta1.InternalSecret{
+						Data: map[string][]byte{
+							// missing authURL (required for DNS)
+							openstack.DomainName: []byte("my-domain"),
+							openstack.TenantName: []byte("my-tenant"),
+							openstack.UserName:   []byte("my-user"),
+							openstack.Password:   []byte("my-password"),
+						},
+					}
+					shoot.Spec.DNS = &core.DNS{
+						Providers: []core.DNSProvider{
+							{
+								Type:    ptr.To(openstack.DNSType),
+								Primary: ptr.To(true),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+									Kind:       "InternalSecret",
+									Name:       "dns-internal-secret",
+								},
+							},
+						},
+					}
+					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					apiReader.EXPECT().Get(ctx, dnsInternalSecretKey, &gardencorev1beta1.InternalSecret{}).SetArg(2, *dnsInternalSecret)
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.providers[0].credentialsRef.data[authURL]"),
+					}))))
 				})
 			})
 

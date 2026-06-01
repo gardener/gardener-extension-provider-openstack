@@ -229,7 +229,7 @@ func newValidationContext(decoder runtime.Decoder, shoot *core.Shoot, cloudProfi
 }
 
 func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.Shoot) (*corev1.Secret, error) {
-	var secretKey client.ObjectKey
+	var credentialsRef corev1.ObjectReference
 	if shoot.Spec.SecretBindingName != nil {
 		var (
 			bindingKey    = client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}
@@ -238,7 +238,12 @@ func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.
 		if err := kutil.LookupObject(ctx, s.client, s.apiReader, bindingKey, secretBinding); err != nil {
 			return nil, err
 		}
-		secretKey = client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}
+		credentialsRef = corev1.ObjectReference{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+			Namespace:  secretBinding.SecretRef.Namespace,
+			Name:       secretBinding.SecretRef.Name,
+		}
 	} else {
 		var (
 			bindingKey         = client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}
@@ -247,17 +252,27 @@ func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.
 		if err := kutil.LookupObject(ctx, s.client, s.apiReader, bindingKey, credentialsBinding); err != nil {
 			return nil, err
 		}
-		secretKey = client.ObjectKey{Namespace: credentialsBinding.CredentialsRef.Namespace, Name: credentialsBinding.CredentialsRef.Name}
+		credentialsRef = credentialsBinding.CredentialsRef
 	}
 
 	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets
 	// under the hood. The latter increases the memory usage of the component.
-	secret := &corev1.Secret{}
-	if err := s.apiReader.Get(ctx, secretKey, secret); err != nil {
+	credentials, err := kutil.GetCredentialsByObjectReference(ctx, s.apiReader, credentialsRef)
+	if err != nil {
 		return nil, err
 	}
 
-	return secret, nil
+	switch creds := credentials.(type) {
+	case *corev1.Secret:
+		return creds, nil
+	case *gardencorev1beta1.InternalSecret:
+		return &corev1.Secret{
+			ObjectMeta: creds.ObjectMeta,
+			Data:       creds.Data,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported credentials reference: version %q, kind %q", credentialsRef.APIVersion, credentialsRef.Kind)
+	}
 }
 
 // validateDNS validates all openstack provider entries in the Shoot spec.
@@ -310,8 +325,10 @@ func (s *shoot) validateDNS(ctx context.Context, shoot *core.Shoot) field.ErrorL
 			switch creds := credentials.(type) {
 			case *corev1.Secret:
 				allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(creds, credentialsFldPath, true)...)
+			case *gardencorev1beta1.InternalSecret:
+				allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecretData(creds.Data, credentialsFldPath, true)...)
 			default:
-				allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret"))
+				allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret or InternalSecret"))
 			}
 		} else { // TODO(@wpross): Remove this else branch once support for Kubernetes 1.34 is dropped
 			secretNameFldPath := providerFldPath.Child("secretName")

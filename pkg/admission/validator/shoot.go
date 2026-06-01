@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -279,29 +280,51 @@ func (s *shoot) validateDNS(ctx context.Context, shoot *core.Shoot) field.ErrorL
 			continue
 		}
 
-		credentialsFldPath := providersPath.Index(i).Child("credentialsRef")
+		providerFldPath := providersPath.Index(i)
+		credentialsFldPath := providerFldPath.Child("credentialsRef")
 
-		if p.CredentialsRef == nil {
+		// Push users towards credentialsRef when neither field is set
+		// TODO(@wpross): Remove this check once support for Kubernetes 1.34 is dropped and secretName is no longer accepted.
+		if p.CredentialsRef == nil && ptr.Deref(p.SecretName, "") == "" {
 			allErrs = append(allErrs, field.Required(credentialsFldPath,
 				fmt.Sprintf("credentialsRef must be specified for %v provider", openstack.DNSType)))
 			continue
 		}
 
-		credentials, err := kutil.GetCredentialsByCrossVersionObjectReference(ctx, s.apiReader, *p.CredentialsRef, shoot.Namespace)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				allErrs = append(allErrs, field.NotFound(credentialsFldPath, p.CredentialsRef.String()))
-			} else {
-				allErrs = append(allErrs, field.InternalError(credentialsFldPath, err))
-			}
-			continue
-		}
+		// TODO(@wpross) Uncomment this check once support for Kubernetes 1.34
+		// if p.CredentialsRef == nil {
+		// 	allErrs = append(allErrs, field.Required(credentialsFldPath, fmt.Sprintf("credentialsRef must be specified for %v provider", openstack.DNSType)))
+		// }
 
-		switch creds := credentials.(type) {
-		case *corev1.Secret:
-			allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(creds, credentialsFldPath, true)...)
-		default:
-			allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret"))
+		if p.CredentialsRef != nil {
+			credentials, err := kutil.GetCredentialsByCrossVersionObjectReference(ctx, s.apiReader, *p.CredentialsRef, shoot.Namespace)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					allErrs = append(allErrs, field.NotFound(credentialsFldPath, p.CredentialsRef.String()))
+				} else {
+					allErrs = append(allErrs, field.InternalError(credentialsFldPath, err))
+				}
+				continue
+			}
+
+			switch creds := credentials.(type) {
+			case *corev1.Secret:
+				allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(creds, credentialsFldPath, true)...)
+			default:
+				allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret"))
+			}
+		} else { // TODO(@wpross): Remove this else branch once support for Kubernetes 1.34 is dropped
+			secretNameFldPath := providerFldPath.Child("secretName")
+			secret := &corev1.Secret{}
+			if err := s.apiReader.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *p.SecretName}, secret); err != nil {
+				if apierrors.IsNotFound(err) {
+					allErrs = append(allErrs, field.NotFound(secretNameFldPath, *p.SecretName))
+				} else {
+					allErrs = append(allErrs, field.InternalError(secretNameFldPath, err))
+				}
+				continue
+			}
+			allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(secret, secretNameFldPath, true)...)
 		}
 	}
 

@@ -325,10 +325,8 @@ func (s *shoot) validateDNS(ctx context.Context, shoot *core.Shoot) field.ErrorL
 			switch creds := credentials.(type) {
 			case *corev1.Secret:
 				allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecret(creds, credentialsFldPath, true)...)
-			case *gardencorev1beta1.InternalSecret:
-				allErrs = append(allErrs, openstackvalidation.ValidateCloudProviderSecretData(creds.Data, credentialsFldPath, true)...)
 			default:
-				allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret or InternalSecret"))
+				allErrs = append(allErrs, field.Invalid(credentialsFldPath, p.CredentialsRef.String(), "supported credentials type is Secret"))
 			}
 		} else { // TODO(@wpross): Remove this else branch once support for Kubernetes 1.34 is dropped
 			secretNameFldPath := providerFldPath.Child("secretName")

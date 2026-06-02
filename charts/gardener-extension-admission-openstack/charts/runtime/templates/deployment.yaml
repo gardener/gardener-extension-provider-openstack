@@ -76,6 +76,9 @@ spec:
           initialDelaySeconds: 5
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

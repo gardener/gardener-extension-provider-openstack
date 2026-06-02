@@ -117,6 +117,9 @@ spec:
           initialDelaySeconds: 5
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
         ports:
         - name: webhook-server
           containerPort: {{ tpl .Values.webhookConfig.serverPort . }}

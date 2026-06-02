@@ -79,6 +79,8 @@ spec:
           capabilities:
             drop: [ALL]
           runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

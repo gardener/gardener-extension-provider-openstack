@@ -120,6 +120,8 @@ spec:
           capabilities:
             drop: [ALL]
           runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         ports:
         - name: webhook-server
           containerPort: {{ tpl .Values.webhookConfig.serverPort . }}

@@ -78,14 +78,10 @@ func (s *shoot) Validate(ctx context.Context, newObj, oldObj client.Object) erro
 
 	var credentials *openstack.Credentials
 	if shoot.Spec.SecretBindingName != nil || shoot.Spec.CredentialsBindingName != nil {
-		secret, err := s.getCloudProviderSecretForShoot(ctx, shoot)
+		var err error
+		credentials, err = s.getCloudProviderCredentialsForShoot(ctx, shoot)
 		if err != nil {
 			return fmt.Errorf("failed to get cloud provider credentials: %v", err)
-		}
-
-		credentials, err = openstack.ExtractCredentials(secret, false)
-		if err != nil {
-			return fmt.Errorf("invalid cloud credentials: %v", err)
 		}
 	}
 
@@ -228,7 +224,7 @@ func newValidationContext(decoder runtime.Decoder, shoot *core.Shoot, cloudProfi
 	}, nil
 }
 
-func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.Shoot) (*corev1.Secret, error) {
+func (s *shoot) getCloudProviderCredentialsForShoot(ctx context.Context, shoot *core.Shoot) (*openstack.Credentials, error) {
 	var credentialsRef corev1.ObjectReference
 	if shoot.Spec.SecretBindingName != nil {
 		var (
@@ -257,19 +253,16 @@ func (s *shoot) getCloudProviderSecretForShoot(ctx context.Context, shoot *core.
 
 	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets
 	// under the hood. The latter increases the memory usage of the component.
-	credentials, err := kutil.GetCredentialsByObjectReference(ctx, s.apiReader, credentialsRef)
+	creds, err := kutil.GetCredentialsByObjectReference(ctx, s.apiReader, credentialsRef)
 	if err != nil {
 		return nil, err
 	}
 
-	switch creds := credentials.(type) {
+	switch c := creds.(type) {
 	case *corev1.Secret:
-		return creds, nil
+		return openstack.ExtractCredentials(c, false)
 	case *gardencorev1beta1.InternalSecret:
-		return &corev1.Secret{
-			ObjectMeta: creds.ObjectMeta,
-			Data:       creds.Data,
-		}, nil
+		return openstack.ExtractCredentialsFromData(c.Data, false)
 	default:
 		return nil, fmt.Errorf("unsupported credentials reference: version %q, kind %q", credentialsRef.APIVersion, credentialsRef.Kind)
 	}

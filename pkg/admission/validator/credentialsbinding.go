@@ -57,7 +57,7 @@ func (cb *credentialsBinding) Validate(ctx context.Context, newObj, oldObj clien
 
 	switch creds := credentials.(type) {
 	case *corev1.Secret:
-		return openstackvalidation.ValidateCloudProviderSecret(creds, field.NewPath("secret"), false).ToAggregate()
+		return openstackvalidation.ValidateCloudProviderSecretData(creds.Data, field.NewPath("secret"), false).ToAggregate()
 	case *gardencorev1beta1.InternalSecret:
 		return openstackvalidation.ValidateCloudProviderSecretData(creds.Data, field.NewPath("secret"), false).ToAggregate()
 	default:

@@ -46,7 +46,11 @@ func GetCredentials(ctx context.Context, c client.Client, secretRef corev1.Secre
 
 // ExtractCredentials generates a credentials object for a given provider secret.
 func ExtractCredentials(secret *corev1.Secret, allowDNSKeys bool) (*Credentials, error) {
-	return ExtractCredentialsFromData(secret.Data, allowDNSKeys)
+	credentials, err := ExtractCredentialsFromData(secret.Data, allowDNSKeys)
+	if err != nil {
+		return nil, fmt.Errorf("%w in secret %s/%s", err, secret.Namespace, secret.Name)
+	}
+	return credentials, nil
 }
 
 // ExtractCredentialsFromData generates a credentials object from a raw secret data map.

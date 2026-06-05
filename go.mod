@@ -9,7 +9,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.3.0
 	github.com/gardener/etcd-druid/api v0.36.3
 	github.com/gardener/gardener v1.142.0
-	github.com/gardener/gardener/pkg/apis v1.142.0
+	github.com/gardener/gardener/pkg/apis v1.144.0
 	github.com/gardener/machine-controller-manager v0.62.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
@@ -23,15 +23,15 @@ require (
 	go.uber.org/mock v0.6.0
 	golang.org/x/tools v0.46.0
 	gopkg.in/inf.v0 v0.9.1
-	k8s.io/api v0.35.4
-	k8s.io/apiextensions-apiserver v0.35.4
-	k8s.io/apimachinery v0.35.4
+	k8s.io/api v0.35.5
+	k8s.io/apiextensions-apiserver v0.35.5
+	k8s.io/apimachinery v0.35.5
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.6.0
-	k8s.io/client-go v0.35.4
-	k8s.io/code-generator v0.35.4
-	k8s.io/component-base v0.35.4
+	k8s.io/client-go v0.35.5
+	k8s.io/code-generator v0.35.5
+	k8s.io/component-base v0.35.5
 	k8s.io/kubelet v0.35.4
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/controller-tools v0.20.1
 )
@@ -224,7 +224,7 @@ require (
 	helm.sh/helm/v3 v3.20.2 // indirect
 	istio.io/api v1.29.2 // indirect
 	istio.io/client-go v1.29.2 // indirect
-	k8s.io/apiserver v0.35.4 // indirect
+	k8s.io/apiserver v0.35.5 // indirect
 	k8s.io/cluster-bootstrap v0.35.4 // indirect
 	k8s.io/component-helpers v0.35.4 // indirect
 	k8s.io/gengo/v2 v2.0.0-20251215205346-5ee0d033ba5b // indirect

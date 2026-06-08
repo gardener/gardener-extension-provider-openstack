@@ -25,7 +25,7 @@ jobs:
         echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
     - name: Block merge if release milestone is missing
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |

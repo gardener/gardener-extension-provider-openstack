@@ -21,6 +21,13 @@ import (
 // It checks required fields (domainName, tenantName), validates authentication methods (username/password or application credentials),
 // and ensures all field values meet format requirements. When allowDNSKeys is true, DNS-specific key aliases (e.g., OS_DOMAIN_NAME) are accepted.
 func ValidateCloudProviderSecret(secret *corev1.Secret, fldPath *field.Path, allowDNSKeys bool) field.ErrorList {
+	return ValidateCloudProviderSecretData(secret.Data, fldPath, allowDNSKeys)
+}
+
+// ValidateCloudProviderSecretData validates OpenStack credentials from a raw data map.
+// It is equivalent to ValidateCloudProviderSecret but accepts a map[string][]byte directly,
+// allowing validation of both corev1.Secret and gardencorev1beta1.InternalSecret data.
+func ValidateCloudProviderSecretData(data map[string][]byte, fldPath *field.Path, allowDNSKeys bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 	dataPath := fldPath.Child("data")
 
@@ -57,51 +64,51 @@ func ValidateCloudProviderSecret(secret *corev1.Secret, fldPath *field.Path, all
 	}
 
 	// validate required fields (domainName, tenantName)
-	domainName, domainNameKey, errs := validateRequiredField(secret, dataPath, openstack.DomainName, domainNameDNSKey)
+	domainName, domainNameKey, errs := validateRequiredField(data, dataPath, openstack.DomainName, domainNameDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateDomainName(domainName, dataPath.Key(domainNameKey))...)
 
-	tenantName, tenantNameKey, errs := validateRequiredField(secret, dataPath, openstack.TenantName, tenantNameDNSKey)
+	tenantName, tenantNameKey, errs := validateRequiredField(data, dataPath, openstack.TenantName, tenantNameDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateTenantName(tenantName, dataPath.Key(tenantNameKey))...)
 
 	// get optional fields
-	userName, userNameKey, errs := getOptionalField(secret, dataPath, openstack.UserName, userNameDNSKey)
+	userName, userNameKey, errs := getOptionalField(data, dataPath, openstack.UserName, userNameDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateUserName(userName, dataPath.Key(userNameKey))...)
 
-	password, passwordKey, errs := getOptionalField(secret, dataPath, openstack.Password, passwordDNSKey)
+	password, passwordKey, errs := getOptionalField(data, dataPath, openstack.Password, passwordDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validatePassword(password, dataPath.Key(passwordKey))...)
 
-	appCredID, appCredIDKey, errs := getOptionalField(secret, dataPath, openstack.ApplicationCredentialID, appCredIDDNSKey)
+	appCredID, appCredIDKey, errs := getOptionalField(data, dataPath, openstack.ApplicationCredentialID, appCredIDDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateAppCredentialID(appCredID, dataPath.Key(appCredIDKey))...)
 
-	appCredName, appCredNameKey, errs := getOptionalField(secret, dataPath, openstack.ApplicationCredentialName, appCredNameDNSKey)
+	appCredName, appCredNameKey, errs := getOptionalField(data, dataPath, openstack.ApplicationCredentialName, appCredNameDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateAppCredentialName(appCredName, dataPath.Key(appCredNameKey))...)
 
-	appCredSecret, appCredSecretKey, errs := getOptionalField(secret, dataPath, openstack.ApplicationCredentialSecret, appCredSecretDNSKey)
+	appCredSecret, appCredSecretKey, errs := getOptionalField(data, dataPath, openstack.ApplicationCredentialSecret, appCredSecretDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateAppCredentialSecret(appCredSecret, dataPath.Key(appCredSecretKey))...)
 
 	// authURL is required for DNS secrets, optional for infrastructure secrets
 	var authURL, authURLKey string
 	if allowDNSKeys {
-		authURL, authURLKey, errs = validateRequiredField(secret, dataPath, openstack.AuthURL, authURLDNSKey)
+		authURL, authURLKey, errs = validateRequiredField(data, dataPath, openstack.AuthURL, authURLDNSKey)
 		allErrs = append(allErrs, errs...)
 	} else {
-		authURL, authURLKey, errs = getOptionalField(secret, dataPath, openstack.AuthURL, authURLDNSKey)
+		authURL, authURLKey, errs = getOptionalField(data, dataPath, openstack.AuthURL, authURLDNSKey)
 		allErrs = append(allErrs, errs...)
 	}
 	allErrs = append(allErrs, validateHTTPURL(authURL, dataPath.Key(authURLKey))...)
 
-	caCert, caCertKey, errs := getOptionalField(secret, dataPath, openstack.CACert, caBundleDNSKey)
+	caCert, caCertKey, errs := getOptionalField(data, dataPath, openstack.CACert, caBundleDNSKey)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateCACert(caCert, dataPath.Key(caCertKey))...)
 
-	insecure, insecureKey, errs := getOptionalField(secret, dataPath, openstack.Insecure, nil)
+	insecure, insecureKey, errs := getOptionalField(data, dataPath, openstack.Insecure, nil)
 	allErrs = append(allErrs, errs...)
 	allErrs = append(allErrs, validateInsecure(insecure, dataPath.Key(insecureKey))...)
 
@@ -111,22 +118,22 @@ func ValidateCloudProviderSecret(secret *corev1.Secret, fldPath *field.Path, all
 		appCredID, appCredIDKey, appCredName, appCredNameKey, appCredSecret, appCredSecretKey, dataPath)...)
 
 	// make sure that only expected keys exist
-	allErrs = append(allErrs, validateNoUnexpectedKeys(secret, dataPath, expectedKeys)...)
+	allErrs = append(allErrs, validateNoUnexpectedKeys(data, dataPath, expectedKeys)...)
 
 	return allErrs
 }
 
-// validateRequiredField checks if a required field exists in the secret and is non-empty.
+// validateRequiredField checks if a required field exists in the data map and is non-empty.
 // It first looks for the standard key, then falls back to the DNS key if provided and allowDNSKeys is true.
 // Returns the field value, the actual key used (standard or DNS), and any validation errors.
-func validateRequiredField(secret *corev1.Secret, fldPath *field.Path, key string, dnsKey *string) (string, string, field.ErrorList) {
+func validateRequiredField(data map[string][]byte, fldPath *field.Path, key string, dnsKey *string) (string, string, field.ErrorList) {
 	allErrs := field.ErrorList{}
 
-	value, ok := secret.Data[key]
+	value, ok := data[key]
 	actualKey := key
 	if !ok && dnsKey != nil {
 		actualKey = *dnsKey
-		value, ok = secret.Data[actualKey]
+		value, ok = data[actualKey]
 	}
 
 	if !ok {
@@ -141,18 +148,18 @@ func validateRequiredField(secret *corev1.Secret, fldPath *field.Path, key strin
 	return string(value), actualKey, allErrs
 }
 
-// getOptionalField extracts an optional field value from the secret.
+// getOptionalField extracts an optional field value from the data map.
 // It first checks for the standard key, then falls back to the DNS key if provided.
 // Returns the field value (empty string if not found) and the actual key used.
 // Returns an error if the key is used but no value provided.
-func getOptionalField(secret *corev1.Secret, fldPath *field.Path, key string, dnsKey *string) (string, string, field.ErrorList) {
+func getOptionalField(data map[string][]byte, fldPath *field.Path, key string, dnsKey *string) (string, string, field.ErrorList) {
 	allErrs := field.ErrorList{}
 
-	value, ok := secret.Data[key]
+	value, ok := data[key]
 	actualKey := key
 	if !ok && dnsKey != nil {
 		actualKey = *dnsKey
-		if value, ok = secret.Data[*dnsKey]; !ok {
+		if value, ok = data[*dnsKey]; !ok {
 			return "", key, allErrs
 		}
 	}
@@ -232,13 +239,13 @@ func validateAuthCombination(
 			userNameKey, pwKey))}
 }
 
-// validateNoUnexpectedKeys ensures that the secret contains only expected keys.
+// validateNoUnexpectedKeys ensures that the data map contains only expected keys.
 // Any key not in the expectedKeys list is reported as a forbidden field.
-func validateNoUnexpectedKeys(secret *corev1.Secret, fldPath *field.Path, expectedKeys []string) field.ErrorList {
+func validateNoUnexpectedKeys(data map[string][]byte, fldPath *field.Path, expectedKeys []string) field.ErrorList {
 	allErrs := field.ErrorList{}
 	expectedKeysSet := sets.NewString(expectedKeys...)
 
-	for k := range secret.Data {
+	for k := range data {
 		if !expectedKeysSet.Has(k) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Key(k),
 				fmt.Sprintf("unexpected field %q", k)))

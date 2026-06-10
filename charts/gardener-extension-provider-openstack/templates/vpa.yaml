@@ -7,9 +7,11 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-      - containerName: '*'
+      - containerName: gardener-extension-provider-openstack
         controlledValues: RequestsOnly
-        controlledResources: ["memory"]
+        controlledResources: ["memory", "cpu"]
+      - containerName: '*'
+        mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

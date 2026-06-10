@@ -13,19 +13,17 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"go.uber.org/mock/gomock"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/validator"
 	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -40,10 +38,7 @@ var _ = Describe("Shoot validator", func() {
 		var (
 			shootValidator extensionswebhook.Validator
 
-			ctrl      *gomock.Controller
-			c         *mockclient.MockClient
-			apiReader *mockclient.MockReader
-			shoot     *core.Shoot
+			shoot *core.Shoot
 
 			ctx = context.Background()
 
@@ -51,21 +46,15 @@ var _ = Describe("Shoot validator", func() {
 			imageName    string
 			imageVersion string
 			architecture *string
+
+			scheme *runtime.Scheme
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-
-			scheme := runtime.NewScheme()
+			scheme = runtime.NewScheme()
 			Expect(apisopenstack.AddToScheme(scheme)).To(Succeed())
 			Expect(apiv1alpha1.AddToScheme(scheme)).To(Succeed())
 			Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
-
-			c = mockclient.NewMockClient(ctrl)
-			apiReader = mockclient.NewMockReader(ctrl)
-
-			mgr := test.FakeManager{Scheme: scheme, Client: c, APIReader: apiReader}
-			shootValidator = validator.NewShootValidator(mgr)
 
 			regionName = "eu-de-1"
 			imageName = "Foo"
@@ -134,6 +123,18 @@ var _ = Describe("Shoot validator", func() {
 		Context("Workerless Shoot", func() {
 			BeforeEach(func() {
 				shoot.Spec.Provider.Workers = nil
+
+				// No cloud profile lookup happens for workerless shoots; build a minimal validator.
+				clientScheme := runtime.NewScheme()
+				Expect(gardencorev1beta1.AddToScheme(clientScheme)).To(Succeed())
+				c := fakeclient.NewClientBuilder().WithScheme(clientScheme).Build()
+
+				apiReaderScheme := runtime.NewScheme()
+				Expect(corev1.AddToScheme(apiReaderScheme)).To(Succeed())
+				apiReader := fakeclient.NewClientBuilder().WithScheme(apiReaderScheme).Build()
+
+				mgr := test.FakeManager{Scheme: scheme, Client: c, APIReader: apiReader}
+				shootValidator = validator.NewShootValidator(mgr)
 			})
 
 			It("should not validate", func() {
@@ -144,17 +145,11 @@ var _ = Describe("Shoot validator", func() {
 
 		Context("Shoot creation", func() {
 			var (
-				cloudProfileKey           client.ObjectKey
-				namespacedCloudProfileKey client.ObjectKey
-
 				cloudProfile           *gardencorev1beta1.CloudProfile
 				namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
 			)
 
 			BeforeEach(func() {
-				cloudProfileKey = client.ObjectKey{Name: "openstack"}
-				namespacedCloudProfileKey = client.ObjectKey{Name: "openstack-nscpfl", Namespace: namespace}
-
 				cloudProfile = &gardencorev1beta1.CloudProfile{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openstack",
@@ -203,7 +198,8 @@ var _ = Describe("Shoot validator", func() {
 
 				namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "openstack-nscpfl",
+						Name:      "openstack-nscpfl",
+						Namespace: namespace,
 					},
 					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
 						Parent: gardencorev1beta1.CloudProfileReference{
@@ -217,23 +213,38 @@ var _ = Describe("Shoot validator", func() {
 				}
 			})
 
+			// buildValidator constructs a shootValidator with a fakeclient containing the given objects.
+			// Call this at the start of each It that needs the current state of cloudProfile/namespacedCloudProfile.
+			buildValidator := func(objects ...client.Object) extensionswebhook.Validator {
+				clientScheme := runtime.NewScheme()
+				Expect(gardencorev1beta1.AddToScheme(clientScheme)).To(Succeed())
+				c := fakeclient.NewClientBuilder().WithScheme(clientScheme).WithObjects(objects...).Build()
+
+				apiReaderScheme := runtime.NewScheme()
+				Expect(corev1.AddToScheme(apiReaderScheme)).To(Succeed())
+				apiReader := fakeclient.NewClientBuilder().WithScheme(apiReaderScheme).Build()
+
+				mgr := test.FakeManager{Scheme: scheme, Client: c, APIReader: apiReader}
+				return validator.NewShootValidator(mgr)
+			}
+
 			It("should work for CloudProfile referenced from Shoot", func() {
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "openstack",
 				}
-				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				v := buildValidator(cloudProfile)
 
-				err := shootValidator.Validate(ctx, shoot, nil)
+				err := v.Validate(ctx, shoot, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should work for CloudProfile referenced from cloudProfileName", func() {
 				shoot.Spec.CloudProfileName = ptr.To("openstack")
 				shoot.Spec.CloudProfile = nil
-				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				v := buildValidator(cloudProfile)
 
-				err := shootValidator.Validate(ctx, shoot, nil)
+				err := v.Validate(ctx, shoot, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -242,9 +253,9 @@ var _ = Describe("Shoot validator", func() {
 					Kind: "NamespacedCloudProfile",
 					Name: "openstack-nscpfl",
 				}
-				c.EXPECT().Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{}).SetArg(2, *namespacedCloudProfile)
+				v := buildValidator(namespacedCloudProfile)
 
-				err := shootValidator.Validate(ctx, shoot, nil)
+				err := v.Validate(ctx, shoot, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -254,9 +265,9 @@ var _ = Describe("Shoot validator", func() {
 					Name: "openstack-nscpfl",
 				}
 				namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = nil
-				c.EXPECT().Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{}).SetArg(2, *namespacedCloudProfile)
+				v := buildValidator(namespacedCloudProfile)
 
-				err := shootValidator.Validate(ctx, shoot, nil)
+				err := v.Validate(ctx, shoot, nil)
 				Expect(err).To(MatchError(And(
 					ContainSubstring("providerConfig is not given for cloud profile"),
 					ContainSubstring("NamespacedCloudProfile"),
@@ -272,8 +283,11 @@ var _ = Describe("Shoot validator", func() {
 					}
 				})
 
+				JustBeforeEach(func() {
+					shootValidator = buildValidator(cloudProfile)
+				})
+
 				It("should succeed when networking is configured with dual-stack and subnetPoolID", func() {
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 						Raw: encode(&apiv1alpha1.InfrastructureConfig{
@@ -296,7 +310,6 @@ var _ = Describe("Shoot validator", func() {
 				})
 
 				It("should succeed when networking is configured with dual-stack and IPv6 config", func() {
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 						Raw: encode(&apiv1alpha1.InfrastructureConfig{
@@ -321,7 +334,6 @@ var _ = Describe("Shoot validator", func() {
 				})
 
 				It("should return err when networking is configured to use dual-stack without subnetPoolID or IPv6 config", func() {
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 
 					err := shootValidator.Validate(ctx, shoot, nil)
@@ -332,7 +344,6 @@ var _ = Describe("Shoot validator", func() {
 				})
 
 				It("should return err when networking is configured to use IPv6-only", func() {
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
 					err := shootValidator.Validate(ctx, shoot, nil)
@@ -348,14 +359,11 @@ var _ = Describe("Shoot validator", func() {
 
 		Context("DNS validation", func() {
 			var (
-				cloudProfileKey client.ObjectKey
-				cloudProfile    *gardencorev1beta1.CloudProfile
-				dnsSecretKey    client.ObjectKey
-				dnsSecret       *corev1.Secret
+				cloudProfile *gardencorev1beta1.CloudProfile
+				dnsSecret    *corev1.Secret
 			)
 
 			BeforeEach(func() {
-				cloudProfileKey = client.ObjectKey{Name: "openstack"}
 				cloudProfile = &gardencorev1beta1.CloudProfile{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openstack",
@@ -398,7 +406,6 @@ var _ = Describe("Shoot validator", func() {
 					},
 				}
 
-				dnsSecretKey = client.ObjectKey{Namespace: namespace, Name: "dns-secret"}
 				dnsSecret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "dns-secret",
@@ -419,11 +426,27 @@ var _ = Describe("Shoot validator", func() {
 				}
 			})
 
+			// buildDNSValidator constructs a shootValidator with cloudProfile in the main client
+			// and the given apiReader objects (DNS secrets, workload identities, etc.).
+			buildDNSValidator := func(apiReaderObjects ...client.Object) extensionswebhook.Validator {
+				clientScheme := runtime.NewScheme()
+				Expect(gardencorev1beta1.AddToScheme(clientScheme)).To(Succeed())
+				c := fakeclient.NewClientBuilder().WithScheme(clientScheme).WithObjects(cloudProfile).Build()
+
+				apiReaderScheme := runtime.NewScheme()
+				Expect(corev1.AddToScheme(apiReaderScheme)).To(Succeed())
+				Expect(securityv1alpha1.AddToScheme(apiReaderScheme)).To(Succeed())
+				apiReader := fakeclient.NewClientBuilder().WithScheme(apiReaderScheme).WithObjects(apiReaderObjects...).Build()
+
+				mgr := test.FakeManager{Scheme: scheme, Client: c, APIReader: apiReader}
+				return validator.NewShootValidator(mgr)
+			}
+
 			It("should pass when shoot has no DNS configuration", func() {
 				shoot.Spec.DNS = nil
-				c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+				v := buildDNSValidator()
 
-				err := shootValidator.Validate(ctx, shoot, nil)
+				err := v.Validate(ctx, shoot, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -442,9 +465,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -462,9 +485,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -482,9 +505,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -511,9 +534,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -549,10 +572,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+					v := buildDNSValidator(dnsSecret)
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -574,9 +596,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.providers[1].credentialsRef"),
@@ -594,9 +616,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
 						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
@@ -618,9 +640,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInternal),
 						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
@@ -642,10 +664,14 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "dns-workload-identity"}, &securityv1alpha1.WorkloadIdentity{}).Return(nil)
+					v := buildDNSValidator(&securityv1alpha1.WorkloadIdentity{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "dns-workload-identity",
+							Namespace: namespace,
+						},
+					})
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
@@ -667,10 +693,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).Return(apierrors.NewNotFound(corev1.Resource("Secret"), "dns-secret"))
+					v := buildDNSValidator() // no dnsSecret → not found
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotFound),
 						"Field": Equal("spec.dns.providers[0].credentialsRef"),
@@ -698,10 +723,9 @@ var _ = Describe("Shoot validator", func() {
 						openstack.UserName:   []byte("my-user"),
 						openstack.Password:   []byte("my-password"),
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+					v := buildDNSValidator(dnsSecret)
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.providers[0].credentialsRef.data[authURL]"),
@@ -722,10 +746,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+					v := buildDNSValidator(dnsSecret)
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
@@ -741,9 +764,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
+					v := buildDNSValidator()
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
 						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
@@ -761,10 +784,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+					v := buildDNSValidator(dnsSecret)
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -778,10 +800,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).Return(apierrors.NewNotFound(corev1.Resource("Secret"), "dns-secret"))
+					v := buildDNSValidator() // no dnsSecret → not found
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotFound),
 						"Field": Equal("spec.dns.providers[0].secretName"),
@@ -805,10 +826,9 @@ var _ = Describe("Shoot validator", func() {
 						openstack.UserName:   []byte("my-user"),
 						openstack.Password:   []byte("my-password"),
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+					v := buildDNSValidator(dnsSecret)
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.providers[0].secretName.data[authURL]"),
@@ -830,10 +850,9 @@ var _ = Describe("Shoot validator", func() {
 							},
 						},
 					}
-					c.EXPECT().Get(ctx, cloudProfileKey, &gardencorev1beta1.CloudProfile{}).SetArg(2, *cloudProfile)
-					apiReader.EXPECT().Get(ctx, dnsSecretKey, &corev1.Secret{}).SetArg(2, *dnsSecret)
+					v := buildDNSValidator(dnsSecret)
 
-					err := shootValidator.Validate(ctx, shoot, nil)
+					err := v.Validate(ctx, shoot, nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})

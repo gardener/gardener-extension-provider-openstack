@@ -13,7 +13,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	k8smocks "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,6 +20,8 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	apiv1alpha1 "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
@@ -35,8 +36,6 @@ var _ = Describe("#MachineDependencies", func() {
 
 		osFactory      *mocks.MockFactory
 		computeClient  *mocks.MockCompute
-		cl             *k8smocks.MockClient
-		statusCl       *k8smocks.MockStatusWriter
 		scheme         *runtime.Scheme
 		workerDelegate genericactuator.WorkerDelegate
 	)
@@ -47,14 +46,10 @@ var _ = Describe("#MachineDependencies", func() {
 		osFactory = mocks.NewMockFactory(ctrl)
 		computeClient = mocks.NewMockCompute(ctrl)
 
-		cl = k8smocks.NewMockClient(ctrl)
-		statusCl = k8smocks.NewMockStatusWriter(ctrl)
-
-		cl.EXPECT().Status().AnyTimes().Return(statusCl)
-
 		scheme = runtime.NewScheme()
 		_ = api.AddToScheme(scheme)
 		_ = apiv1alpha1.AddToScheme(scheme)
+		_ = extensionsv1alpha1.AddToScheme(scheme)
 	})
 
 	AfterEach(func() {
@@ -66,6 +61,7 @@ var _ = Describe("#MachineDependencies", func() {
 			namespace   string
 			technicalID string
 			w           *extensionsv1alpha1.Worker
+			cl          client.Client
 		)
 
 		BeforeEach(func() {
@@ -74,9 +70,15 @@ var _ = Describe("#MachineDependencies", func() {
 
 			w = &extensionsv1alpha1.Worker{
 				ObjectMeta: metav1.ObjectMeta{
+					Name:      "worker",
 					Namespace: namespace,
 				},
 			}
+			cl = fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(w).
+				WithStatusSubresource(&extensionsv1alpha1.Worker{}).
+				Build()
 			osFactory.EXPECT().Compute(gomock.Any()).AnyTimes().Return(computeClient, nil)
 		})
 
@@ -92,12 +94,11 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				ctx := context.Background()
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
 			})
 
@@ -117,6 +118,7 @@ var _ = Describe("#MachineDependencies", func() {
 
 				pools = append(pools, *(newWorkerPoolWithPolicy(pool1, &policy)), *(newWorkerPoolWithPolicy(pool2, &policy)))
 				w.Spec.Pools = append(w.Spec.Pools, pools...)
+				syncWorkerSpec(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -150,12 +152,11 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					}).Times(1)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(2))
 				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
@@ -184,6 +185,7 @@ var _ = Describe("#MachineDependencies", func() {
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
+				syncWorkerSpec(ctx, cl, w)
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -204,11 +206,10 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
@@ -220,6 +221,7 @@ var _ = Describe("#MachineDependencies", func() {
 
 				// Second reconcile - policy changed, should recreate
 				w.Spec.Pools[0] = *(newWorkerPoolWithPolicy("pool", &newPolicy))
+				syncWorkerSpec(ctx, cl, w)
 				computeClient.EXPECT().GetServerGroup(ctx, "id").Return(&servergroups.ServerGroup{
 					ID:       "id",
 					Name:     serverGroupName,
@@ -241,11 +243,10 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err = workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
-				workerStatus = w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus = decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
@@ -277,15 +278,9 @@ var _ = Describe("#MachineDependencies", func() {
 
 				// Empty worker status (no server group dependencies)
 				// This simulates the scenario where GenerateMachineDeployments would trigger PreReconcileHook
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{},
-					},
-				}
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -308,14 +303,13 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				// Directly call PreReconcileHook (which is what GenerateMachineDeployments would do)
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that server group dependencies were created
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
 				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
@@ -351,15 +345,9 @@ var _ = Describe("#MachineDependencies", func() {
 				}
 
 				// Empty worker status (no server group dependencies)
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{},
-					},
-				}
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				workerDelegate, _ = worker.NewWorkerDelegate(
@@ -392,14 +380,13 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					}).Times(1)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				// Directly call PreReconcileHook
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that server group dependencies were created for both pools
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(2))
 				Expect(workerStatus.ServerGroupDependencies).To(ContainElements(
@@ -431,6 +418,7 @@ var _ = Describe("#MachineDependencies", func() {
 				pool := newWorkerPoolWithPolicy(poolName, &policy)
 				pool.KubernetesVersion = &k8sVersion
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
+				syncWorkerSpec(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
@@ -456,12 +444,11 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
 				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("new-id"))
 			})
@@ -471,17 +458,15 @@ var _ = Describe("#MachineDependencies", func() {
 				pool := newWorkerPoolWithPolicy(poolName, &policy)
 				pool.KubernetesVersion = &k8sVersion
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &api.WorkerStatus{
-						ServerGroupDependencies: []api.ServerGroupDependency{
-							{
-								ID:       "existing-old-id",
-								Name:     oldSGName,
-								PoolName: poolName,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						ID:       "existing-old-id",
+						Name:     oldSGName,
+						PoolName: poolName,
 					},
-				}
+				})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
@@ -503,12 +488,11 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
 				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("existing-old-id"))
 				Expect(workerStatus.ServerGroupDependencies[0].Name).To(Equal(oldSGName))
@@ -519,6 +503,7 @@ var _ = Describe("#MachineDependencies", func() {
 				pool := newWorkerPoolWithPolicy(poolName, &policy)
 				pool.KubernetesVersion = &k8sVersion
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
+				syncWorkerSpec(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
@@ -544,12 +529,11 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
 				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("new-id"))
 			})
@@ -561,6 +545,7 @@ var _ = Describe("#MachineDependencies", func() {
 				pool := newWorkerPoolWithPolicy(poolName, &newPolicy)
 				pool.KubernetesVersion = &k8sVersion
 				w.Spec.Pools = append(w.Spec.Pools, *pool)
+				syncWorkerSpec(ctx, cl, w)
 
 				cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
 				cluster.Shoot.Spec.Kubernetes.Version = k8sVersion
@@ -593,12 +578,11 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					})
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PreReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
 				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal("new-id-with-new-policy"))
 			})
@@ -613,21 +597,14 @@ var _ = Describe("#MachineDependencies", func() {
 					serverGroupName = technicalID + "-" + poolName + "-" + "rand"
 				)
 
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-							{
-								PoolName: poolName,
-								ID:       serverGroupID,
-								Name:     serverGroupName,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName,
+						ID:       serverGroupID,
+						Name:     serverGroupName,
 					},
-				}
+				})
+				syncWorkerStatus(ctx, cl, w)
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -644,12 +621,11 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID).Return(nil)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
 			})
 
@@ -668,21 +644,15 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-							{
-								PoolName: poolName,
-								ID:       serverGroupID,
-								Name:     serverGroupName,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName,
+						ID:       serverGroupID,
+						Name:     serverGroupName,
 					},
-				}
+				})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -703,12 +673,11 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, oldServerGroupID).Return(nil)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 			})
 
@@ -727,28 +696,22 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				deletionTime := metav1.NewTime(time.Now())
-				w.DeletionTimestamp = &deletionTime
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(poolName1, &policy)), *(newWorkerPoolWithPolicy(poolName2, &policy)))
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-							{
-								PoolName: poolName1,
-								ID:       serverGroupID1,
-								Name:     serverGroupName1,
-							},
-							{
-								PoolName: poolName2,
-								ID:       serverGroupID2,
-								Name:     serverGroupName2,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName1,
+						ID:       serverGroupID1,
+						Name:     serverGroupName1,
 					},
-				}
+					{
+						PoolName: poolName2,
+						ID:       serverGroupID2,
+						Name:     serverGroupName2,
+					},
+				})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
+				w.DeletionTimestamp = &deletionTime
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -770,12 +733,11 @@ var _ = Describe("#MachineDependencies", func() {
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID1).Return(nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID2).Return(nil)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostReconcileHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
 			})
 		})
@@ -789,21 +751,14 @@ var _ = Describe("#MachineDependencies", func() {
 					serverGroupName = technicalID + "-" + poolName + "-" + "rand"
 				)
 
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-							{
-								PoolName: poolName,
-								ID:       serverGroupID,
-								Name:     serverGroupName,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName,
+						ID:       serverGroupID,
+						Name:     serverGroupName,
 					},
-				}
+				})
+				syncWorkerStatus(ctx, cl, w)
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -820,12 +775,11 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID).Return(nil)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostDeleteHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
 			})
 
@@ -844,21 +798,15 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy("pool", &policy)))
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-							{
-								PoolName: poolName,
-								ID:       serverGroupID,
-								Name:     serverGroupName,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName,
+						ID:       serverGroupID,
+						Name:     serverGroupName,
 					},
-				}
+				})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -879,12 +827,11 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, oldServerGroupID).Return(nil)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostDeleteHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).NotTo(BeEmpty())
 			})
 
@@ -903,28 +850,22 @@ var _ = Describe("#MachineDependencies", func() {
 				)
 
 				deletionTime := metav1.NewTime(time.Now())
-				w.DeletionTimestamp = &deletionTime
 				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(poolName1, &policy)), *(newWorkerPoolWithPolicy(poolName2, &policy)))
-				w.Status.ProviderStatus = &runtime.RawExtension{
-					Object: &apiv1alpha1.WorkerStatus{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "WorkerStatus",
-							APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
-						},
-						ServerGroupDependencies: []apiv1alpha1.ServerGroupDependency{
-							{
-								PoolName: poolName1,
-								ID:       serverGroupID1,
-								Name:     serverGroupName1,
-							},
-							{
-								PoolName: poolName2,
-								ID:       serverGroupID2,
-								Name:     serverGroupName2,
-							},
-						},
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName1,
+						ID:       serverGroupID1,
+						Name:     serverGroupName1,
 					},
-				}
+					{
+						PoolName: poolName2,
+						ID:       serverGroupID2,
+						Name:     serverGroupName2,
+					},
+				})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
+				w.DeletionTimestamp = &deletionTime
 				workerDelegate, _ = worker.NewWorkerDelegate(
 					cl,
 					scheme,
@@ -946,12 +887,11 @@ var _ = Describe("#MachineDependencies", func() {
 				}, nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID1).Return(nil)
 				computeClient.EXPECT().DeleteServerGroup(ctx, serverGroupID2).Return(nil)
-				expectStatusUpdateToSucceed(ctx, statusCl)
 
 				err := workerDelegate.PostDeleteHook(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				workerStatus := w.Status.ProviderStatus.Object.(*apiv1alpha1.WorkerStatus)
+				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
 			})
 		})
@@ -1020,6 +960,45 @@ func newClusterWithDefaultCloudProfileConfig(name, technicalID string) *extensio
 	}
 }
 
-func expectStatusUpdateToSucceed(ctx context.Context, statusWriter *k8smocks.MockStatusWriter) {
-	statusWriter.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).Return(nil)
+// decodeWorkerStatus decodes the WorkerStatus from the Worker's ProviderStatus.
+// After a fakeclient Status().Patch(), the Object field is nil and the status is
+// stored as raw JSON bytes — use this helper instead of a direct type assertion.
+// This helper decodes the raw JSON bytes into a WorkerStatus struct for easier assertions in tests.
+func decodeWorkerStatus(w *extensionsv1alpha1.Worker) *apiv1alpha1.WorkerStatus {
+	Expect(w.Status.ProviderStatus).NotTo(BeNil())
+	raw, err := w.Status.ProviderStatus.MarshalJSON()
+	Expect(err).NotTo(HaveOccurred())
+	status := &apiv1alpha1.WorkerStatus{}
+	Expect(json.Unmarshal(raw, status)).To(Succeed())
+	return status
+}
+
+// workerProviderStatusRaw serialises a WorkerStatus to a RawExtension for use in
+// test setup (fakeclient stores objects as JSON, so Object must be pre-serialised).
+func workerProviderStatusRaw(deps []apiv1alpha1.ServerGroupDependency) *runtime.RawExtension {
+	raw, err := json.Marshal(&apiv1alpha1.WorkerStatus{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "WorkerStatus",
+		},
+		ServerGroupDependencies: deps,
+	})
+	Expect(err).NotTo(HaveOccurred())
+	return &runtime.RawExtension{Raw: raw}
+}
+
+// syncWorkerSpec pushes w's spec and metadata (but not status) into the fakeclient
+// store so that subsequent Status().Patch() calls do not clobber in-memory spec changes.
+// It saves and restores the in-memory w.Status so that a subsequent syncWorkerStatus call
+// can still push the intended status.
+func syncWorkerSpec(ctx context.Context, cl client.Client, w *extensionsv1alpha1.Worker) {
+	savedStatus := w.Status.DeepCopy()
+	Expect(cl.Update(ctx, w)).To(Succeed())
+	w.Status = *savedStatus
+}
+
+// syncWorkerStatus pushes w.Status into the fakeclient store so that
+// the WorkerDelegate's seedClient can read it back via the status subresource.
+func syncWorkerStatus(ctx context.Context, cl client.Client, w *extensionsv1alpha1.Worker) {
+	Expect(cl.Status().Update(ctx, w)).To(Succeed())
 }

@@ -13,7 +13,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
@@ -47,7 +46,6 @@ const (
 var _ = Describe("ConfigValidator", func() {
 	var (
 		ctrl                          *gomock.Controller
-		c                             *mockclient.MockClient
 		openstackClientFactoryFactory *mockopenstackclient.MockFactoryFactory
 		openstackClientFactory        *mockopenstackclient.MockFactory
 		networkingClient              *mockopenstackclient.MockNetworking
@@ -62,7 +60,6 @@ var _ = Describe("ConfigValidator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		c = mockclient.NewMockClient(ctrl)
 		openstackClientFactoryFactory = mockopenstackclient.NewMockFactoryFactory(ctrl)
 		openstackClientFactory = mockopenstackclient.NewMockFactory(ctrl)
 		networkingClient = mockopenstackclient.NewMockNetworking(ctrl)
@@ -70,6 +67,25 @@ var _ = Describe("ConfigValidator", func() {
 		ctx = context.TODO()
 		logger = log.Log.WithName("test")
 
+		scheme := runtime.NewScheme()
+		Expect(corev1.AddToScheme(scheme)).To(Succeed())
+
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				openstack.DomainName: []byte(domainName),
+				openstack.TenantName: []byte(tenantName),
+				openstack.UserName:   []byte(userName),
+				openstack.Password:   []byte(password),
+				openstack.AuthURL:    []byte(authURL),
+			},
+		}
+
+		c := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
 		mgr := test.FakeManager{Client: c}
 		cv = NewConfigValidator(mgr, openstackClientFactoryFactory, logger)
 
@@ -123,12 +139,6 @@ var _ = Describe("ConfigValidator", func() {
 
 	Describe("#Validate", func() {
 		BeforeEach(func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-					*obj = *secret
-					return nil
-				},
-			)
 			openstackClientFactoryFactory.EXPECT().NewFactory(ctx, credentials).Return(openstackClientFactory, nil)
 			openstackClientFactory.EXPECT().Networking(gomock.Any()).Return(networkingClient, nil)
 		})

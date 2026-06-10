@@ -10,15 +10,15 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	. "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
@@ -44,8 +44,6 @@ const (
 var _ = Describe("Actuator", func() {
 	var (
 		ctrl                          *gomock.Controller
-		c                             *mockclient.MockClient
-		sw                            *mockclient.MockStatusWriter
 		openstackClientFactoryFactory *mockopenstackclient.MockFactoryFactory
 		openstackClientFactory        *mockopenstackclient.MockFactory
 		dnsClient                     *mockopenstackclient.MockDNS
@@ -61,20 +59,31 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		c = mockclient.NewMockClient(ctrl)
-		sw = mockclient.NewMockStatusWriter(ctrl)
 		openstackClientFactoryFactory = mockopenstackclient.NewMockFactoryFactory(ctrl)
 		openstackClientFactory = mockopenstackclient.NewMockFactory(ctrl)
 		dnsClient = mockopenstackclient.NewMockDNS(ctrl)
 
-		c.EXPECT().Status().Return(sw).AnyTimes()
-
 		ctx = context.TODO()
 		logger = log.Log.WithName("test")
 
-		mgr := test.FakeManager{Client: c}
+		scheme := runtime.NewScheme()
+		Expect(corev1.AddToScheme(scheme)).To(Succeed())
+		Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-		a = NewActuator(mgr, openstackClientFactoryFactory)
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				openstack.DNSDomainName: []byte(domainName),
+				openstack.DNSTenantName: []byte(tenantName),
+				openstack.DNSUserName:   []byte(userName),
+				openstack.DNSPassword:   []byte(password),
+				openstack.DNSAuthURL:    []byte(authURL),
+			},
+		}
 
 		dns = &extensionsv1alpha1.DNSRecord{
 			ObjectMeta: metav1.ObjectMeta{
@@ -94,20 +103,15 @@ var _ = Describe("Actuator", func() {
 				Values:     []string{address},
 			},
 		}
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{
-				openstack.DNSDomainName: []byte(domainName),
-				openstack.DNSTenantName: []byte(tenantName),
-				openstack.DNSUserName:   []byte(userName),
-				openstack.DNSPassword:   []byte(password),
-				openstack.DNSAuthURL:    []byte(authURL),
-			},
-		}
+
+		c := fakeclient.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(secret, dns).
+			WithStatusSubresource(&extensionsv1alpha1.DNSRecord{}).
+			Build()
+		mgr := test.FakeManager{Client: c}
+		a = NewActuator(mgr, openstackClientFactoryFactory)
+
 		credentials = &openstack.Credentials{
 			DomainName: domainName,
 			TenantName: tenantName,
@@ -129,27 +133,14 @@ var _ = Describe("Actuator", func() {
 
 	Describe("#Reconcile", func() {
 		It("should reconcile the DNSRecord", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-					*obj = *secret
-					return nil
-				},
-			)
 			openstackClientFactoryFactory.EXPECT().NewFactory(ctx, credentials).Return(openstackClientFactory, nil)
 			openstackClientFactory.EXPECT().DNS().Return(dnsClient, nil)
 			dnsClient.EXPECT().GetZones(ctx).Return(zones, nil)
 			dnsClient.EXPECT().CreateOrUpdateRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA), []string{address}, 120).Return(nil)
-			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, obj *extensionsv1alpha1.DNSRecord, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(obj.Status).To(Equal(extensionsv1alpha1.DNSRecordStatus{
-						Zone: ptr.To(zone),
-					}))
-					return nil
-				},
-			)
 
 			err := a.Reconcile(ctx, logger, dns, nil)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(dns.Status.Zone).To(Equal(ptr.To(zone)))
 		})
 	})
 
@@ -157,12 +148,6 @@ var _ = Describe("Actuator", func() {
 		It("should delete the DNSRecord", func() {
 			dns.Status.Zone = ptr.To(zone)
 
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-					*obj = *secret
-					return nil
-				},
-			)
 			openstackClientFactoryFactory.EXPECT().NewFactory(ctx, credentials).Return(openstackClientFactory, nil)
 			openstackClientFactory.EXPECT().DNS().Return(dnsClient, nil)
 			dnsClient.EXPECT().DeleteRecordSet(ctx, zone, dnsName, string(extensionsv1alpha1.DNSRecordTypeA)).Return(nil)

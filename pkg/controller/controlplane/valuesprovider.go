@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
@@ -24,8 +25,10 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1alpha1 "k8s.io/api/admissionregistration/v1alpha1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -244,8 +247,12 @@ var (
 			{
 				Name: "calico-mutating-admission-policy",
 				Objects: []*chart.Object{
-					{Type: &admissionregistrationv1alpha1.MutatingAdmissionPolicy{}, Name: "calico-node-status-patch"},
-					{Type: &admissionregistrationv1alpha1.MutatingAdmissionPolicyBinding{}, Name: "calico-node-status-patch"},
+					{Type: &admissionregistrationv1alpha1.MutatingAdmissionPolicy{}, Name: "block-calico-network-unavailable"},
+					{Type: &admissionregistrationv1alpha1.MutatingAdmissionPolicyBinding{}, Name: "block-calico-network-unavailable-binding"},
+					{Type: &admissionregistrationv1beta1.MutatingAdmissionPolicy{}, Name: "block-calico-network-unavailable"},
+					{Type: &admissionregistrationv1beta1.MutatingAdmissionPolicyBinding{}, Name: "block-calico-network-unavailable-binding"},
+					// TODO(@DockToFuture): Add admissionregistrationv1.MutatingAdmissionPolicy and admissionregistrationv1.MutatingAdmissionPolicyBinding
+					// cleanup entries once k8s.io/api v0.36.x is available (MutatingAdmissionPolicy graduates to v1 in K8s 1.36).
 				},
 			},
 		},
@@ -828,11 +835,16 @@ func (vp *valuesProvider) getControlPlaneShootChartValues(
 		mutatingAdmissionPolicyEnabled = !overlayEnabled
 	}
 
+	calicoMutatingAdmissionPolicyValues := map[string]interface{}{"enabled": mutatingAdmissionPolicyEnabled}
+	if mutatingAdmissionPolicyEnabled {
+		calicoMutatingAdmissionPolicyValues["apiVersion"] = mutatingAdmissionPolicyAPIVersion(cluster)
+	}
+
 	return map[string]interface{}{
 		openstack.CloudControllerManagerName: map[string]interface{}{"enabled": true},
 		openstack.CSINodeName:                csiNodeDriverValues,
 		openstack.CSIDriverManila:            csiDriverManilaValues,
-		"calico-mutating-admission-policy":   map[string]interface{}{"enabled": mutatingAdmissionPolicyEnabled},
+		"calico-mutating-admission-policy":   calicoMutatingAdmissionPolicyValues,
 	}, nil
 }
 
@@ -871,26 +883,69 @@ func (vp *valuesProvider) isUsingCalico(cluster *extensionscontroller.Cluster) b
 	return *cluster.Shoot.Spec.Networking.Type == "calico"
 }
 
+// constraintK8sGreaterEqual136 is a version constraint for Kubernetes versions >= 1.36.
+var constraintK8sGreaterEqual136 = versionutils.MustNewConstraint(">= 1.36-0")
+
 // isMutatingAdmissionPolicyEnabled returns true if the MutatingAdmissionPolicy feature is enabled in the cluster.
 func (vp *valuesProvider) isMutatingAdmissionPolicyEnabled(cluster *extensionscontroller.Cluster) bool {
-	// Check if feature gates are set and if MutatingAdmissionPolicy is enabled
-	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer == nil ||
-		cluster.Shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates == nil {
+	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return false
+	}
+
+	// For K8s >= 1.36, MutatingAdmissionPolicy is GA (locked on, cannot be disabled).
+	if constraintK8sGreaterEqual136.Check(k8sVersion) {
+		return true
+	}
+
+	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		return false
+	}
+	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates == nil {
 		return false
 	}
 	if enabled, ok := cluster.Shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates["MutatingAdmissionPolicy"]; !ok || !enabled {
 		return false
 	}
-
-	// Check if the API is enabled in runtime config
 	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig == nil {
 		return false
 	}
-	if enabled, ok := cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig["admissionregistration.k8s.io/v1alpha1"]; !ok || !enabled {
-		return false
+
+	rc := cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig
+
+	// For K8s >= 1.34 and < 1.36, MutatingAdmissionPolicy is in beta but disabled by default.
+	// Users must explicitly enable the feature gate and opt in via RuntimeConfig.
+	if versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
+		return rc["admissionregistration.k8s.io/v1beta1"]
 	}
 
-	return true
+	return rc["admissionregistration.k8s.io/v1alpha1"] || rc["admissionregistration.k8s.io/v1beta1"]
+}
+
+func mutatingAdmissionPolicyAPIVersion(cluster *extensionscontroller.Cluster) string {
+	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return "v1alpha1"
+	}
+
+	// For K8s >= 1.36, MutatingAdmissionPolicy is GA
+	if constraintK8sGreaterEqual136.Check(k8sVersion) {
+		return "v1"
+	}
+
+	// For K8s >= 1.34, MutatingAdmissionPolicy is beta
+	if versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
+		return "v1beta1"
+	}
+
+	// For older versions, prefer v1beta1 over v1alpha1 when explicitly enabled
+	if cluster.Shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+		cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig != nil &&
+		cluster.Shoot.Spec.Kubernetes.KubeAPIServer.RuntimeConfig["admissionregistration.k8s.io/v1beta1"] {
+		return "v1beta1"
+	}
+
+	return "v1alpha1"
 }
 
 func (vp *valuesProvider) getControlPlaneShootChartCSIManilaValues(

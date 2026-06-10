@@ -1,6 +1,6 @@
 {{- if .Values.enabled }}
 ---
-apiVersion: admissionregistration.k8s.io/v1alpha1
+apiVersion: admissionregistration.k8s.io/{{ .Values.apiVersion }}
 kind: MutatingAdmissionPolicyBinding
 metadata:
   name: block-calico-network-unavailable-binding
@@ -8,7 +8,7 @@ spec:
   policyName: block-calico-network-unavailable
 ---
 # MutatingAdmissionPolicy to block Calico from setting the NetworkUnavailable condition on nodes.
-apiVersion: admissionregistration.k8s.io/v1alpha1
+apiVersion: admissionregistration.k8s.io/{{ .Values.apiVersion }}
 kind: MutatingAdmissionPolicy
 metadata:
   name: block-calico-network-unavailable

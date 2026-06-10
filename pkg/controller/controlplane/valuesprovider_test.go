@@ -230,9 +230,9 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 
-		domainName  = "domain-name"
-		tenantName  = "tenant-name"
-		cpSecret    = &corev1.Secret{
+		domainName = "domain-name"
+		tenantName = "tenant-name"
+		cpSecret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: namespace,
@@ -247,7 +247,7 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 
-		cpConfig    = &corev1.Secret{
+		cpConfig = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      openstack.CloudProviderConfigName,
 				Namespace: namespace,

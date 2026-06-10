@@ -32,8 +32,8 @@ var _ = Describe("SecretBinding validator", func() {
 		var (
 			secretBindingValidator extensionswebhook.Validator
 
-			scheme    *runtime.Scheme
-			ctx       = context.TODO()
+			scheme        *runtime.Scheme
+			ctx           = context.TODO()
 			secretBinding = &core.SecretBinding{
 				SecretRef: corev1.SecretReference{
 					Name:      name,

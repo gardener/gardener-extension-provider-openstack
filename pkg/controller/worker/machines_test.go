@@ -1101,7 +1101,6 @@ var _ = Describe("Machines", func() {
 							}
 							workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
-
 							result, err := workerDelegate.GenerateMachineDeployments(ctx)
 							Expect(err).NotTo(HaveOccurred())
 							Expect(result[0].Labels).To(HaveKeyWithValue("k1", "v1"))
@@ -1268,7 +1267,6 @@ var _ = Describe("Machines", func() {
 
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
-
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				resultSettings := result[0].MachineConfiguration
 				resultNodeConditions := strings.Join(testNodeConditions, ",")
@@ -1291,7 +1289,6 @@ var _ = Describe("Machines", func() {
 				}
 				w.Spec.Pools[1].ClusterAutoscaler = nil
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
-
 
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)
 				Expect(err).NotTo(HaveOccurred())

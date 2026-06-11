@@ -113,6 +113,11 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
+          runAsUser: 2000
+          runAsGroup: 2000
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -142,6 +147,11 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
+          runAsUser: 2000
+          runAsGroup: 2000
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -170,6 +180,11 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
+          runAsUser: 2000
+          runAsGroup: 2000
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -199,6 +214,11 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
+          runAsUser: 2000
+          runAsGroup: 2000
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}
@@ -216,6 +236,11 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          runAsNonRoot: true
+          runAsUser: 2000
+          runAsGroup: 2000
         volumeMounts:
         - name: socket-dir
           mountPath: /csi

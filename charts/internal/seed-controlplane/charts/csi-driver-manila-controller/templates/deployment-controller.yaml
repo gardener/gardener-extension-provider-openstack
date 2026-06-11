@@ -75,6 +75,11 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 2000
+            runAsGroup: 2000
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -110,6 +115,11 @@ spec:
               protocol: TCP
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 2000
+            runAsGroup: 2000
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -139,6 +149,11 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 2000
+            runAsGroup: 2000
           volumeMounts:
             - name: nfs-fwd-plugin-dir
               mountPath: /csi
@@ -164,6 +179,11 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 2000
+            runAsGroup: 2000
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -188,6 +208,11 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 2000
+            runAsGroup: 2000
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -213,6 +238,11 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 2000
+            runAsGroup: 2000
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi

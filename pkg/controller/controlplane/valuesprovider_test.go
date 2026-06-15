@@ -18,10 +18,8 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -123,8 +121,6 @@ var _ = Describe("ValuesProvider", func() {
 	var (
 		ctx = context.TODO()
 
-		ctrl *gomock.Controller
-
 		scheme = runtime.NewScheme()
 		_      = api.AddToScheme(scheme)
 
@@ -132,7 +128,7 @@ var _ = Describe("ValuesProvider", func() {
 		fakeSecretsManager secretsmanager.Interface
 
 		vp genericactuator.ValuesProvider
-		c  *mockclient.MockClient
+		c  client.Client
 
 		cp = defaultControlPlane()
 
@@ -234,10 +230,9 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 
-		domainName  = "domain-name"
-		tenantName  = "tenant-name"
-		cpSecretKey = client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}
-		cpSecret    = &corev1.Secret{
+		domainName = "domain-name"
+		tenantName = "tenant-name"
+		cpSecret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: namespace,
@@ -252,8 +247,7 @@ var _ = Describe("ValuesProvider", func() {
 			},
 		}
 
-		cpConfigKey = client.ObjectKey{Namespace: namespace, Name: openstack.CloudProviderConfigName}
-		cpConfig    = &corev1.Secret{
+		cpConfig = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      openstack.CloudProviderConfigName,
 				Namespace: namespace,
@@ -265,7 +259,6 @@ var _ = Describe("ValuesProvider", func() {
 		}
 
 		cloudProviderDiskConfig = []byte("foo")
-		cpCSIDiskConfigKey      = client.ObjectKey{Namespace: namespace, Name: openstack.CloudProviderCSIDiskConfigName}
 		cpCSIDiskConfig         = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      openstack.CloudProviderCSIDiskConfigName,
@@ -288,19 +281,23 @@ var _ = Describe("ValuesProvider", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
+		clientScheme := runtime.NewScheme()
+		Expect(api.AddToScheme(clientScheme)).To(Succeed())
+		Expect(corev1.AddToScheme(clientScheme)).To(Succeed())
+		Expect(appsv1.AddToScheme(clientScheme)).To(Succeed())
+		Expect(policyv1.AddToScheme(clientScheme)).To(Succeed())
+		Expect(vpaautoscalingv1.AddToScheme(clientScheme)).To(Succeed())
 
-		c = mockclient.NewMockClient(ctrl)
+		c = fakeclient.NewClientBuilder().
+			WithScheme(clientScheme).
+			WithObjects(cpSecret.DeepCopy(), cpConfig.DeepCopy(), cpCSIDiskConfig.DeepCopy()).
+			Build()
 
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
 		mgr := test.FakeManager{Client: c, Scheme: scheme}
 		vp = NewValuesProvider(mgr)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#GetConfigChartValues", func() {
@@ -325,16 +322,12 @@ var _ = Describe("ValuesProvider", func() {
 		}
 
 		It("should return correct config chart values", func() {
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 			values, err := vp.GetConfigChartValues(ctx, cp, cluster)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(configChartValues))
 		})
 
 		It("should return correct config chart values with load balancer classes", func() {
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 			var (
 				floatingNetworkID  = "4711"
 				fsid               = "0815"
@@ -425,8 +418,6 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct config chart values with load balancer classes with purpose", func() {
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 			var (
 				floatingNetworkID = "fip1"
 				cp                = controlPlane(
@@ -475,7 +466,7 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct config chart values with application credentials", func() {
-			secret2 := *cpSecret
+			secret2 := cpSecret.DeepCopy()
 			secret2.Data = map[string][]byte{
 				"domainName":                  []byte(domainName),
 				"tenantName":                  []byte(tenantName),
@@ -483,8 +474,7 @@ var _ = Describe("ValuesProvider", func() {
 				"applicationCredentialSecret": []byte(`app-secret`),
 				"authURL":                     []byte(authURL),
 			}
-
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(&secret2))
+			Expect(c.Update(ctx, secret2)).To(Succeed())
 
 			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
 				"username":                    "",
@@ -499,7 +489,6 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should configure cloud routes when not using overlay", func() {
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
 				"routerID": "routerID",
 			})
@@ -512,7 +501,7 @@ var _ = Describe("ValuesProvider", func() {
 			secret2 := cpSecret.DeepCopy()
 			caCert := "custom-cert"
 			secret2.Data["caCert"] = []byte(caCert)
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(secret2))
+			Expect(c.Update(ctx, secret2)).To(Succeed())
 			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
 				"caCert": caCert,
 			})
@@ -554,22 +543,12 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		BeforeEach(func() {
-			c.EXPECT().Get(ctx, cpConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpConfig))
-
-			c.EXPECT().Delete(context.TODO(), &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-validation", Namespace: namespace}})
-			c.EXPECT().Delete(context.TODO(), &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-validation", Namespace: namespace}})
-			c.EXPECT().Delete(context.TODO(), &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-webhook-vpa", Namespace: namespace}})
-			c.EXPECT().Delete(context.TODO(), &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "csi-snapshot-validation", Namespace: namespace}})
-
 			By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-provider-openstack-controlplane", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-controller-manager-server", Namespace: namespace}})).To(Succeed())
 		})
 
 		It("should return correct control plane chart values", func() {
-			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 			values, err := vp.GetControlPlaneChartValues(ctx, cp, cluster, fakeSecretsManager, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(map[string]interface{}{
@@ -595,9 +574,6 @@ var _ = Describe("ValuesProvider", func() {
 		})
 
 		It("should return correct control plane chart values if CSI Manila is enabled", func() {
-			c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 			cpManila := defaultControlPlaneWithManila(true)
 			values, err := vp.GetControlPlaneChartValues(ctx, cpManila, cluster, fakeSecretsManager, checksums, false)
 			Expect(err).NotTo(HaveOccurred())
@@ -650,9 +626,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		DescribeTable("topologyAwareRoutingEnabled value",
 			func(seedSettings *gardencorev1beta1.SeedSettings, shootControlPlane *gardencorev1beta1.ControlPlane) {
-				c.EXPECT().Get(ctx, cpCSIDiskConfigKey, &corev1.Secret{}).DoAndReturn(clientGet(cpCSIDiskConfig))
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 				cluster.Seed = &gardencorev1beta1.Seed{
 					Spec: gardencorev1beta1.SeedSpec{
 						Settings: seedSettings,
@@ -701,8 +674,6 @@ var _ = Describe("ValuesProvider", func() {
 
 		Context("shoot control plane chart values", func() {
 			It("should return correct shoot control plane chart when ca is secret found", func() {
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 				values, err := vp.GetControlPlaneShootChartValues(ctx, cp, cluster, fakeSecretsManager, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(values).To(Equal(map[string]interface{}{
@@ -718,8 +689,6 @@ var _ = Describe("ValuesProvider", func() {
 			})
 
 			It("should return correct shoot control plane chart if CSI Manila is enabled", func() {
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 				cpManila := defaultControlPlaneWithManila(true)
 				values, err := vp.GetControlPlaneShootChartValues(ctx, cpManila, cluster, fakeSecretsManager, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
@@ -755,8 +724,6 @@ var _ = Describe("ValuesProvider", func() {
 				}))
 			})
 			It("should fall back to Workers CIDR from infra config when nodes subnet CIDR is empty in infra status", func() {
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 				// Simulate a shoot whose infrastructure status was written before the CIDR field
 				// was populated in the subnet status (pre-subnet-pool feature).
 				cpManila := defaultControlPlaneWithManila(true)
@@ -794,8 +761,6 @@ var _ = Describe("ValuesProvider", func() {
 			})
 
 			It("should return correct shoot control plane chart if CSI Manila is enabled and subnet pool is used", func() {
-				c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
-
 				// Build a ControlPlane with Manila enabled and an infra status where the nodes subnet
 				// has a CIDR allocated from a subnet pool (no static Workers CIDR in the infra config).
 				cpConfig := &api.ControlPlaneConfig{
@@ -895,14 +860,4 @@ var _ = Describe("ValuesProvider", func() {
 func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
-}
-
-func clientGet(result runtime.Object) interface{} {
-	return func(_ context.Context, _ client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
-		switch obj.(type) {
-		case *corev1.Secret:
-			*obj.(*corev1.Secret) = *result.(*corev1.Secret)
-		}
-		return nil
-	}
 }

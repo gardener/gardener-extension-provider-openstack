@@ -62,6 +62,20 @@ func sliceToPtr[T any](slice []T) []*T {
 	return res
 }
 
+// filterDNSServersByIPFamily returns only the DNS servers matching the given IP family.
+// OpenStack rejects DNS nameservers whose address family doesn't match the subnet's IP version.
+func filterDNSServersByIPFamily(dnsServers []string, ipFamily gardencorev1beta1.IPFamily) []string {
+	var result []string
+	for _, ip := range dnsServers {
+		if ipFamily == gardencorev1beta1.IPFamilyIPv4 && netutils.IsIPv4String(ip) {
+			result = append(result, ip)
+		} else if ipFamily == gardencorev1beta1.IPFamilyIPv6 && netutils.IsIPv6String(ip) {
+			result = append(result, ip)
+		}
+	}
+	return result
+}
+
 // ComputeEgressCIDRs converts an IP to a CIDR depending on the IP family.
 func ComputeEgressCIDRs(ips []string) []string {
 	var result []string

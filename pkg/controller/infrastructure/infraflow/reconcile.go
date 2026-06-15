@@ -306,7 +306,7 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
 		IPVersion:      4,
-		DNSNameservers: fctx.cloudProfileConfig.DNSServers,
+		DNSNameservers: filterDNSServersByIPFamily(fctx.cloudProfileConfig.DNSServers, gardencorev1beta1.IPFamilyIPv4),
 	}
 	if fctx.config.Networks.SubnetPool != nil {
 		desired.SubnetPoolID = fctx.config.Networks.SubnetPool.ID
@@ -378,7 +378,7 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 			NetworkID:       networkID,
 			CIDR:            nodeCIDR,
 			IPVersion:       6,
-			DNSNameservers:  fctx.cloudProfileConfig.DNSServers,
+			DNSNameservers:  filterDNSServersByIPFamily(fctx.cloudProfileConfig.DNSServers, gardencorev1beta1.IPFamilyIPv6),
 			IPv6RAMode:      "slaac",
 			IPv6AddressMode: "slaac",
 			SubnetPoolID:    subnetPoolID,
@@ -388,7 +388,7 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 			NetworkID:      networkID,
 			CIDR:           podCIDR,
 			IPVersion:      6,
-			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
+			DNSNameservers: filterDNSServersByIPFamily(fctx.cloudProfileConfig.DNSServers, gardencorev1beta1.IPFamilyIPv6),
 			SubnetPoolID:   subnetPoolID,
 		},
 		{
@@ -396,7 +396,7 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 			NetworkID:      networkID,
 			CIDR:           serviceCIDR,
 			IPVersion:      6,
-			DNSNameservers: fctx.cloudProfileConfig.DNSServers,
+			DNSNameservers: filterDNSServersByIPFamily(fctx.cloudProfileConfig.DNSServers, gardencorev1beta1.IPFamilyIPv6),
 			SubnetPoolID:   subnetPoolID,
 		},
 	}

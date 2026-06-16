@@ -970,17 +970,17 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(testVP.isMutatingAdmissionPolicyEnabled(testCluster)).To(BeTrue())
 		})
 
-		It("should return true if feature gate is enabled and v1beta1 is in RuntimeConfig", func() {
+		It("should return false for K8s < 1.34 if feature gate is enabled and only v1beta1 is in RuntimeConfig", func() {
 			testCluster.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 				KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 					FeatureGates: map[string]bool{"MutatingAdmissionPolicy": true},
 				},
 				RuntimeConfig: map[string]bool{"admissionregistration.k8s.io/v1beta1": true},
 			}
-			Expect(testVP.isMutatingAdmissionPolicyEnabled(testCluster)).To(BeTrue())
+			Expect(testVP.isMutatingAdmissionPolicyEnabled(testCluster)).To(BeFalse())
 		})
 
-		It("should return true if feature gate is enabled and both v1alpha1 and v1beta1 are in RuntimeConfig", func() {
+		It("should return true for K8s < 1.34 if feature gate is enabled and both v1alpha1 and v1beta1 are in RuntimeConfig", func() {
 			testCluster.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 				KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 					FeatureGates: map[string]bool{"MutatingAdmissionPolicy": true},
@@ -1113,21 +1113,21 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1alpha1"))
 		})
 
-		It("should return v1beta1 if v1beta1 is in RuntimeConfig (< 1.34)", func() {
+		It("should return v1alpha1 if v1beta1 is in RuntimeConfig (< 1.34, v1beta1 not supported)", func() {
 			testCluster.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 				RuntimeConfig: map[string]bool{"admissionregistration.k8s.io/v1beta1": true},
 			}
-			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1beta1"))
+			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1alpha1"))
 		})
 
-		It("should return v1beta1 if both v1alpha1 and v1beta1 are in RuntimeConfig (< 1.34)", func() {
+		It("should return v1alpha1 if both v1alpha1 and v1beta1 are in RuntimeConfig (< 1.34)", func() {
 			testCluster.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 				RuntimeConfig: map[string]bool{
 					"admissionregistration.k8s.io/v1alpha1": true,
 					"admissionregistration.k8s.io/v1beta1":  true,
 				},
 			}
-			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1beta1"))
+			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1alpha1"))
 		})
 
 		It("should return v1alpha1 if v1beta1 is explicitly disabled in RuntimeConfig (< 1.34)", func() {

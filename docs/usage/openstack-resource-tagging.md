@@ -2,6 +2,7 @@
 
 This document describes which OpenStack resources are tagged by
 `gardener-extension-provider-openstack` and what tags are applied to each resource type.
+At the moment, tagging is implemented only for worker node virtual machines.
 
 ## Overview
 
@@ -83,7 +84,7 @@ in Kubernetes label keys. Worker pool label keys and machine label keys are
 sanitized before being applied as OpenStack metadata tags.
 
 **Allowed characters in tag keys:** `a-zA-Z0-9 -_:.` (alphanumeric, hyphen,
-underscore, colon, period, space)
+underscore, colon, period, space), see [OpenStack documentation](https://docs.openstack.org/api-ref/compute/#server-tags-servers-tags).
 
 Any character outside this set is replaced with a hyphen (`-`).
 
@@ -98,3 +99,26 @@ Any character outside this set is replaced with a hyphen (`-`).
 
 Note that only tag **keys** are sanitized; tag **values** are passed through
 unchanged.
+
+### Collision Handling
+
+If two different original keys sanitize to the same tag key, the last value
+written wins.
+if both are present in the same label source, one will silently overwrite the
+other with no error or warning.
+
+Avoid defining label keys that differ only in characters that are replaced by
+`-`, as the resulting tag value is unpredictable.
+
+### Precedence Across Label Sources
+
+Tags from multiple sources are merged in the following order (later sources
+overwrite earlier ones):
+
+1. `workers[].labels` (pool-level labels)
+2. `workerConfig.machineLabels` (provider-specific machine labels)
+3. System tags (`kubernetes.io-cluster-*`, `kubernetes.io-role-node`)
+
+This means `machineLabels` **take precedence** over `workers[].labels` when both
+produce the same tag key after sanitization, and the system tags always win over
+both user-defined sources.

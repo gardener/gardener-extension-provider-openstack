@@ -104,7 +104,7 @@ unchanged.
 
 If two different original keys sanitize to the same tag key, the last value
 written wins.
-if both are present in the same label source, one will silently overwrite the
+If both are present in the same label source, one will silently overwrite the
 other with no error or warning.
 
 Avoid defining label keys that differ only in characters that are replaced by

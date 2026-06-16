@@ -1,12 +1,12 @@
 # OpenStack Resource Tagging
 
-This document describes which OpenStack resources are tagged by
-`gardener-extension-provider-openstack` and what tags are applied to each resource type.
-At the moment, tagging is implemented only for worker node virtual machines.
+This document describes which OpenStack resources are annotated by
+`gardener-extension-provider-openstack` and what metadata is applied to each resource type.
+At the moment, metadata tagging is implemented only for worker node virtual machines.
 
 ## Overview
 
-The extension applies metadata tags to OpenStack resources for two primary purposes:
+The extension sets server metadata on OpenStack resources for two primary purposes:
 
 1. **Ownership identification** — marking resources as Gardener-managed so they
    can be found, filtered, and reconciled correctly.
@@ -18,10 +18,10 @@ The extension applies metadata tags to OpenStack resources for two primary purpo
 
 ### Virtual Machines (Worker Nodes)
 
-Worker node VMs receive metadata tags derived from the worker pool configuration
+Worker node VMs receive server metadata entries derived from the worker pool configuration
 in the Shoot spec.
 
-| Tag Key | Value | Source |
+| Metadata Key | Value | Source |
 |---|---|---|
 | `kubernetes.io-cluster-{technicalID}` | `"1"` | Shoot technical ID |
 | `kubernetes.io-role-node` | `"1"` | Static |
@@ -46,7 +46,7 @@ spec:
           value: my-value
 ```
 
-The resulting VM metadata tags are:
+The resulting VM server metadata entries are:
 
 ```text
 kubernetes.io-cluster-shoot--my-project--my-cluster: "1"
@@ -58,7 +58,7 @@ custom-label: my-value
 
 > Note: Label keys `worker.gardener.cloud/pool` and `custom/label` are sanitized
 > to `worker.gardener.cloud-pool` and `custom-label` because `/` is not allowed
-> in OpenStack metadata keys (see [Tag Sanitization](#tag-sanitization) below).
+> in OpenStack server metadata keys (see [Metadata Key Sanitization](#metadata-key-sanitization) below).
 
 #### Machine Labels (`workerConfig.machineLabels`)
 
@@ -77,48 +77,48 @@ providerConfig:
     triggerRollingOnUpdate: true
 ```
 
-## Tag Sanitization
+## Metadata Key Sanitization
 
-OpenStack server metadata keys do not allow certain characters that are common
-in Kubernetes label keys. Worker pool label keys and machine label keys are
-sanitized before being applied as OpenStack metadata tags.
+Worker pool label keys and machine label keys are sanitized before being set as
+server metadata to avoid issues with characters that are not supported by all
+OpenStack deployments or the machine-controller-manager.
 
-**Allowed characters in tag keys:** `a-zA-Z0-9 -_:.` (alphanumeric, hyphen,
-underscore, colon, period, space), see [OpenStack documentation](https://docs.openstack.org/api-ref/compute/#server-tags-servers-tags).
+**Allowed characters in metadata keys:** `a-zA-Z0-9 -_:.` (alphanumeric, hyphen,
+underscore, colon, period, space).
 
 Any character outside this set is replaced with a hyphen (`-`).
 
 **Examples:**
 
-| Original Kubernetes Label Key | Sanitized OpenStack Tag Key |
+| Original Kubernetes Label Key | Sanitized Metadata Key |
 |---|---|
 | `worker.gardener.cloud/pool` | `worker.gardener.cloud-pool` |
 | `kubernetes.io/role` | `kubernetes.io-role` |
 | `my_label` | `my_label` (unchanged) |
 | `label:with:colons` | `label:with:colons` (unchanged) |
 
-Note that only tag **keys** are sanitized; tag **values** are passed through
+Note that only metadata **keys** are sanitized; metadata **values** are passed through
 unchanged.
 
 ### Collision Handling
 
-If two different original keys sanitize to the same tag key, the last value
+If two different original keys sanitize to the same metadata key, the last value
 written wins.
 If both are present in the same label source, one will silently overwrite the
 other with no error or warning.
 
 Avoid defining label keys that differ only in characters that are replaced by
-`-`, as the resulting tag value is unpredictable.
+`-`, as the resulting metadata value is unpredictable.
 
 ### Precedence Across Label Sources
 
-Tags from multiple sources are merged in the following order (later sources
+Metadata from multiple sources are merged in the following order (later sources
 overwrite earlier ones):
 
 1. `workers[].labels` (pool-level labels)
 2. `workerConfig.machineLabels` (provider-specific machine labels)
-3. System tags (`kubernetes.io-cluster-*`, `kubernetes.io-role-node`)
+3. System metadata (`kubernetes.io-cluster-*`, `kubernetes.io-role-node`)
 
 This means `machineLabels` **take precedence** over `workers[].labels` when both
-produce the same tag key after sanitization, and the system tags always win over
+produce the same metadata key after sanitization, and the system metadata always win over
 both user-defined sources.

@@ -74,6 +74,8 @@ spec:
           failureThreshold: 5
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
         volumeMounts:
         - name: socket-dir
           mountPath: {{ .Values.socketPath }}

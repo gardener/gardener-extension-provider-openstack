@@ -75,6 +75,8 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -110,6 +112,8 @@ spec:
               protocol: TCP
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -139,6 +143,8 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           volumeMounts:
             - name: nfs-fwd-plugin-dir
               mountPath: /csi
@@ -164,6 +170,8 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -188,6 +196,8 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi
@@ -213,6 +223,8 @@ spec:
 {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           volumeMounts:
             - name: nfs-plugin-dir
               mountPath: /csi

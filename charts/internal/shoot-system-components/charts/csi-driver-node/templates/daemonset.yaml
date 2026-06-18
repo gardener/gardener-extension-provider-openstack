@@ -109,6 +109,8 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
         volumeMounts:
         - name: plugin-dir
           mountPath: /csi
@@ -125,6 +127,8 @@ spec:
 {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
         volumeMounts:
         - name: plugin-dir
           mountPath: /csi

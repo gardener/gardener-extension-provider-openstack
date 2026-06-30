@@ -1,0 +1,98 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended', // https://docs.renovatebot.com/presets-config/#configrecommended
+    ':semanticCommitsDisabled', // Disable "chore(deps): " prefixes in PR titles
+    'github>gardener/ci-infra//config/renovate/automerge-with-tide.json5',
+  ],
+  labels: [
+    'area/compliance',
+    'kind/enhancement',
+  ],
+  postUpdateOptions: [
+    'gomodTidy',
+  ],
+  prFooter: '**Release note**:\n```other dependency\nNONE\n```',
+  rebaseWhen: 'conflicted',
+  dependencyDashboard: false,
+  packageRules: [
+    // github-actions: auto-merge all updates
+    {
+      matchManagers: ['github-actions'],
+      automerge: true,
+    },
+    // gomod: non-gardener, non-provider
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: [
+        '!github.com/gardener/**',
+        '!github.com/gophercloud/**',
+        '!k8s.io/**',
+        '!sigs.k8s.io/**',
+        '!github.com/gardener/etcd-druid/**',
+        '!github.com/prometheus-operator/**',
+      ],
+      groupName: 'non-gardener-dependencies',
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      automerge: true,
+    },
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: [
+        '!github.com/gardener/**',
+        '!github.com/gophercloud/**',
+        '!k8s.io/**',
+        '!sigs.k8s.io/**',
+        '!github.com/gardener/etcd-druid/**',
+        '!github.com/prometheus-operator/**',
+      ],
+      groupName: 'non-gardener-dependencies',
+      matchUpdateTypes: ['major'],
+    },
+    // gomod: provider SDK
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: ['github.com/gophercloud/**'],
+      groupName: 'provider-sdk-dependencies',
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      automerge: true,
+    },
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: ['github.com/gophercloud/**'],
+      groupName: 'provider-sdk-dependencies',
+      matchUpdateTypes: ['major'],
+    },
+    // gomod: gardener dependencies — manual only
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: [
+        'github.com/gardener/gardener',
+        'github.com/gardener/gardener/**',
+      ],
+      groupName: 'gardener-dependencies',
+    },
+    // Disable ignored packages from dependabot ignore list
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: [
+        'k8s.io/**',
+        'sigs.k8s.io/**',
+        'github.com/gardener/etcd-druid/**',
+        'github.com/prometheus-operator/**',
+      ],
+      enabled: false,
+    },
+    // Disable Go toolchain updates in go.mod — managed via Dockerfile instead
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: ['go'],
+      enabled: false,
+    },
+    // Disable Helm updates
+    {
+      matchManagers: ['helm-values', 'helmv3', 'helmfile', 'helm-requirements'],
+      enabled: false,
+    },
+  ],
+}

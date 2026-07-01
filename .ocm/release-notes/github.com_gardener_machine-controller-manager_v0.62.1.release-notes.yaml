@@ -1,0 +1,17 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.62.1
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: bugfix
+  contents: Fix preservation reconcile loop to avoid unconditionally uncordoning nodes
+    unrelated to machine preservation, prevent spurious writes on non-preserved machines,
+    and eliminate conflict errors caused by stale machine object comparison in the
+    defer annotation sync.
+  mimetype: text/markdown
+  reference: '[#1111](https://github.com/gardener/machine-controller-manager/pull/1111)'
+  type: standard

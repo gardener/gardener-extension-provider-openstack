@@ -199,7 +199,7 @@ images:
 - name: csi-driver-nfs
   sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
   repository: registry.k8s.io/sig-storage/nfsplugin
-  tag: v4.13.2
+  tag: v4.13.4
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -285,7 +285,7 @@ images:
 - name: csi-resizer
   sourceRepository: github.com/kubernetes-csi/external-resizer
   repository: registry.k8s.io/sig-storage/csi-resizer
-  tag: v2.2.0
+  tag: v2.2.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:

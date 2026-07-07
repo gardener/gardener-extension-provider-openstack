@@ -1,5 +1,5 @@
 ############# builder
-FROM --platform=$BUILDPLATFORM golang:1.26.4 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.5 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener-extension-provider-openstack
 

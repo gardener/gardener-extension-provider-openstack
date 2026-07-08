@@ -883,10 +883,6 @@ func (vp *valuesProvider) isUsingCalico(cluster *extensionscontroller.Cluster) b
 	return *cluster.Shoot.Spec.Networking.Type == "calico"
 }
 
-// constraintK8sGreaterEqual136 is a version constraint for Kubernetes versions >= 1.36.
-// TODO: Replace with versionutils.ConstraintK8sGreaterEqual136 from g/g once it is available.
-var constraintK8sGreaterEqual136 = versionutils.MustNewConstraint(">= 1.36-0")
-
 // isMutatingAdmissionPolicyEnabled returns true if the MutatingAdmissionPolicy feature is enabled in the cluster.
 func (vp *valuesProvider) isMutatingAdmissionPolicyEnabled(cluster *extensionscontroller.Cluster) bool {
 	k8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
@@ -895,7 +891,7 @@ func (vp *valuesProvider) isMutatingAdmissionPolicyEnabled(cluster *extensionsco
 	}
 
 	// For K8s >= 1.36, MutatingAdmissionPolicy is GA (locked on, cannot be disabled).
-	if constraintK8sGreaterEqual136.Check(k8sVersion) {
+	if versionutils.ConstraintK8sGreaterEqual136.Check(k8sVersion) {
 		return true
 	}
 
@@ -931,7 +927,7 @@ func mutatingAdmissionPolicyAPIVersion(cluster *extensionscontroller.Cluster) st
 	}
 
 	// For K8s >= 1.36, MutatingAdmissionPolicy is GA
-	if constraintK8sGreaterEqual136.Check(k8sVersion) {
+	if versionutils.ConstraintK8sGreaterEqual136.Check(k8sVersion) {
 		return "v1"
 	}
 

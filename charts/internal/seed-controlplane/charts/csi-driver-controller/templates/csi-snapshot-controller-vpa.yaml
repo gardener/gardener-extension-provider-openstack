@@ -15,4 +15,4 @@ spec:
     kind: Deployment
     name: csi-snapshot-controller
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate

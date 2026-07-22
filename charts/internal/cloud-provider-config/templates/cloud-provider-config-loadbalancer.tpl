@@ -8,6 +8,7 @@ lb-version="v2"
 lb-provider="{{ .Values.lbProvider }}"
 {{- if eq .Values.lbProvider "ovn" }}
 lb-method="SOURCE_IP_PORT"
+manage-security-groups=true
 {{- end }}
 floating-network-id="{{ .Values.floatingNetworkID }}"
 {{- if .Values.floatingSubnetID }}

@@ -39,6 +39,7 @@ import (
 	openstackdnsrecord "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
 	openstackinfrastructure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	openstackselfhostedshootexposure "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/selfhostedshootexposure"
 	openstackworker "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
 	openstackseedprovider "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/seedprovider"
@@ -108,6 +109,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			MaxConcurrentReconciles: 5,
 		}
 
+		// options for the selfhostedshootexposure controller
+		selfHostedShootExposureCtrlOpts = &controllercmd.ControllerOptions{
+			MaxConcurrentReconciles: 5,
+		}
+
 		// options for the webhook server
 		webhookServerOptions = &webhookcmd.ServerOptions{
 			Namespace: os.Getenv("WEBHOOK_CONFIG_NAMESPACE"),
@@ -135,6 +141,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
 			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
 			controllercmd.PrefixOption("worker-", workerCtrlOpts),
+			controllercmd.PrefixOption("selfhostedshootexposure-", selfHostedShootExposureCtrlOpts),
 			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
 			controllercmd.PrefixOption("heartbeat-", heartbeatCtrlOpts),
 			controllerSwitches,
@@ -225,6 +232,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
 			openstackworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
+
+			selfHostedShootExposureCtrlOpts.Completed().Apply(&openstackselfhostedshootexposure.DefaultAddOptions.Controller)
+			reconcileOpts.Completed().Apply(&openstackselfhostedshootexposure.DefaultAddOptions.IgnoreOperationAnnotation)
+			openstackselfhostedshootexposure.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
 
 			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil); err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)

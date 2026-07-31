@@ -247,3 +247,12 @@ func IgnoreNotFoundError(err error) error {
 	}
 	return err
 }
+
+// IsConflictError checks if an error returned by OpenStack is caused by HTTP 409 status code.
+func IsConflictError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return gophercloud.ResponseCodeIs(err, http.StatusConflict)
+}

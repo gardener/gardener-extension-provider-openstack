@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/secret-cloud-provider-config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/secret-cloud-provider-disk-config-csi-node: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         node.gardener.cloud/wait-for-csi-node-openstack: {{ include "csi-driver-node.provisioner" . }}
       labels:
         node.gardener.cloud/critical-component: "true"
@@ -152,4 +152,4 @@ spec:
           type: Directory
       - name: cloud-provider-config
         secret:
-          secretName: cloud-provider-config
+          secretName: cloud-provider-disk-config-csi-node

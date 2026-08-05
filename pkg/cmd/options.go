@@ -14,6 +14,7 @@ import (
 	extensionshealthcheckcontroller "github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	extensionsinfrastructurecontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
+	extensionsselfhostedshootexposurecontroller "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionscloudproviderwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
@@ -26,6 +27,7 @@ import (
 	dnsrecordcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/dnsrecord"
 	healthcheckcontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure"
+	selfhostedshootexposurecontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/selfhostedshootexposure"
 	workercontroller "github.com/gardener/gardener-extension-provider-openstack/pkg/controller/worker"
 	cloudproviderwebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/cloudprovider"
 	controlplanewebhook "github.com/gardener/gardener-extension-provider-openstack/pkg/webhook/controlplane"
@@ -44,6 +46,7 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 		controllercmd.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
 		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
 		controllercmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
+		controllercmd.Switch(extensionsselfhostedshootexposurecontroller.ControllerName, selfhostedshootexposurecontroller.AddToManager),
 	)
 }
 

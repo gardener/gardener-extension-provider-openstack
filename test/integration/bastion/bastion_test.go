@@ -538,7 +538,7 @@ func createClusters(name string) (*extensionsv1alpha1.Cluster, *controller.Clust
 				Object: shoot,
 				Raw:    shootJSON,
 			},
-			Seed: runtime.RawExtension{
+			Seed: &runtime.RawExtension{
 				Object: seed,
 				Raw:    seedJSON,
 			},

@@ -236,7 +236,7 @@ var _ = BeforeSuite(func() {
 			CloudProfile: runtime.RawExtension{
 				Raw: cloudProfileJSON,
 			},
-			Seed: runtime.RawExtension{
+			Seed: &runtime.RawExtension{
 				Raw: []byte("{}"),
 			},
 			Shoot: runtime.RawExtension{

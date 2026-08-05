@@ -9,13 +9,5 @@
 package tools
 
 import (
-	_ "github.com/gardener/gardener/.github"
-	_ "github.com/gardener/gardener/.github/ISSUE_TEMPLATE"
-	_ "github.com/gardener/gardener/hack"
-
-	_ "github.com/elastic/crd-ref-docs"
-	_ "go.uber.org/mock/mockgen"
-	_ "golang.org/x/tools/cmd/goimports"
-	_ "k8s.io/code-generator"
-	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
+	_ "github.com/gardener/gardener/hack/tools"
 )

@@ -373,7 +373,7 @@ func (w *WorkerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 	pool.ProviderConfig = nil
 
 	// Generate the worker pool hash.
-	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData, additionalHashData, nil)
+	return worker.WorkerPoolHash(pool, w.cluster, additionalHashData, nil)
 }
 
 // NormalizeLabelsForMachineClass because metadata in OpenStack resources do not allow for certain characters that present in k8s labels e.g. "/",

@@ -10,7 +10,7 @@ healthPort: 8081
 vpa:
   enabled: true
   updatePolicy:
-    updateMode: "Recreate"
+    updateMode: "InPlaceOrRecreate"
 enableOverlayAsDefaultForCalico: true
 enableOverlayAsDefaultForCilium: true
 webhookConfig:

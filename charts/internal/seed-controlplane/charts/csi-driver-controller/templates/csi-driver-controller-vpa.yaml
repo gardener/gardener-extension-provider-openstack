@@ -30,4 +30,4 @@ spec:
     kind: Deployment
     name: csi-driver-controller
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate

@@ -115,6 +115,7 @@ var _ = Describe("Machines", func() {
 				userData                    []byte
 				userDataSecretName          string
 				userDataSecretDataKey       string
+				nodeAgentSecretName         string
 				networkID                   string
 				podCIDR                     string
 				subnetID                    string
@@ -204,6 +205,7 @@ var _ = Describe("Machines", func() {
 				userData = []byte("some-user-data")
 				userDataSecretName = "userdata-secret-name"
 				userDataSecretDataKey = "userdata-secret-key"
+				nodeAgentSecretName = "node-agent-secret-name"
 				networkID = "network-id"
 				podCIDR = "1.2.3.4/5"
 				subnetID = "subnetID"
@@ -477,6 +479,7 @@ var _ = Describe("Machines", func() {
 									zone1,
 									zone2,
 								},
+								NodeAgentSecretName: &nodeAgentSecretName,
 							},
 							{
 								Name:           namePool2,
@@ -502,8 +505,9 @@ var _ = Describe("Machines", func() {
 									zone1,
 									zone2,
 								},
-								UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-								KubernetesVersion: ptr.To(shootVersion),
+								UpdateStrategy:      ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+								KubernetesVersion:   ptr.To(shootVersion),
+								NodeAgentSecretName: &nodeAgentSecretName,
 							},
 							{
 								Name:           namePool3,
@@ -529,16 +533,17 @@ var _ = Describe("Machines", func() {
 									zone1,
 									zone2,
 								},
-								UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
-								KubernetesVersion: ptr.To(shootVersion),
+								UpdateStrategy:      ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+								KubernetesVersion:   ptr.To(shootVersion),
+								NodeAgentSecretName: &nodeAgentSecretName,
 							},
 						},
 					},
 				}
 
-				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil, nil)
-				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
-				workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
+				workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil)
+				workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
+				workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil)
 
 				fakeScheme := runtime.NewScheme()
 				Expect(corev1.AddToScheme(fakeScheme)).To(Succeed())
@@ -804,9 +809,9 @@ var _ = Describe("Machines", func() {
 						},
 					}
 
-					workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil, nil)
-					workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
-					workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
+					workerPoolHash1, _ = worker.WorkerPoolHash(w.Spec.Pools[0], cluster, nil, nil)
+					workerPoolHash2, _ = worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
+					workerPoolHash3, _ = worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil)
 
 				})
 
@@ -953,9 +958,9 @@ var _ = Describe("Machines", func() {
 						workerDelegate, _ := NewWorkerDelegate(c, scheme, chartApplier, workerWithServerGroup, cluster, nil)
 
 						// Test workerDelegate.DeployMachineClasses()
-						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, []string{serverGroupID1}, nil)
-						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil, nil)
-						workerPoolHash3, _ := worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil, nil)
+						workerPoolHash1, _ := worker.WorkerPoolHash(w.Spec.Pools[0], cluster, []string{serverGroupID1}, nil)
+						workerPoolHash2, _ := worker.WorkerPoolHash(w.Spec.Pools[1], cluster, nil, nil)
+						workerPoolHash3, _ := worker.WorkerPoolHash(w.Spec.Pools[2], cluster, nil, nil)
 						machineClassPool1Zone1 := useDefaultMachineClassWith(defaultMachineClass, map[string]interface{}{
 							"availabilityZone": zone1,
 							"serverGroupID":    serverGroupID1,
@@ -1211,7 +1216,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("should fail because the version is invalid", func() {
-				clusterWithoutImages.Shoot.Spec.Kubernetes.Version = "invalid"
+				w.Spec.Pools[2].KubernetesVersion = ptr.To("invalid")
 				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, cluster, nil)
 
 				result, err := workerDelegate.GenerateMachineDeployments(ctx)

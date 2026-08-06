@@ -4,7 +4,6 @@ on:
   pull_request:
     types:
       - opened
-      - edited
       - reopened
       - synchronize
   pull_request_target:
@@ -15,6 +14,10 @@ on:
     - 'master'
     - 'release-*'
   workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

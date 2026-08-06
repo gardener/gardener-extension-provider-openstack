@@ -4,9 +4,6 @@ on:
     types:
     - opened
     - reopened
-    - synchronize
-    - labeled
-    - unlabeled
     - milestoned
     - demilestoned
 
@@ -15,23 +12,22 @@ jobs:
     name: Check Release Milestone
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v7
-      with:
-        ref: master
-        path: './'
-
-    - id: version
-      run: |
-        echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
-
     - name: Block merge if release milestone is missing
       uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
+          const { data: versionFile } = await github.rest.repos.getContent({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            path: 'VERSION',
+            ref: 'master'
+          });
+          const version = Buffer.from(versionFile.content, 'base64').toString().trim();
+
           const nextMinorRegex = /^(v[0-9]+\.[0-9]+)\.0-dev/gmi;
 
-          let match = nextMinorRegex.exec('${{ steps.version.outputs.version }}');
+          let match = nextMinorRegex.exec(version);
           if (match == null) {
             core.info('VERSION does not indicate that the next version is a new minor release - skipping check');
             return;

@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.4.4
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.13.0
-	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/onsi/ginkgo/v2 v2.32.1
 	github.com/onsi/gomega v1.42.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.92.1
 	github.com/spf13/cobra v1.10.2

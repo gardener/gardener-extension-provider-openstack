@@ -184,7 +184,7 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 	}
 
 	if len(fips) == 1 {
-		if fips[0].Status == "ACTIVE" {
+		if fips[0].Status == "ACTIVE" || (fips[0].Status == "DOWN" && fips[0].PortID == "") {
 			opts.Logr.Info("Found existing public IP address for bastion instance", "name", opts.BastionInstanceName, "ip", fips[0].FloatingIP)
 			return fips[0], nil
 		}
@@ -259,11 +259,12 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 			return err
 		}
 
-		if fip.Status != "ACTIVE" {
-			return fmt.Errorf("fip not active yet, status: %s", fip.Status)
+		switch fip.Status {
+		case "ACTIVE", "DOWN":
+			return nil
+		default:
+			return fmt.Errorf("fip in undefined state, status: %s", fip.Status)
 		}
-
-		return nil
 	})
 
 	return fip, err

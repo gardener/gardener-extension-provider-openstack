@@ -65,12 +65,12 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 		return nil, fmt.Errorf("failed to parse Kubernetes version for worker pool %q: %w", pool.Name, err)
 	}
 	forceNewNameFormat := versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion)
-
-	// Generate expected server group names
-	name := generateServerGroupNameV2(string(w.cluster.Shoot.GetUID()), pool.Name, poolProviderConfig.ServerGroup.Policy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate server group name for worker pool %q: %w", pool.Name, err)
+	uuid := string(w.cluster.Shoot.GetUID())
+	if len(uuid) == 0 {
+		uuid = string(w.cluster.Shoot.Status.UID)
 	}
+	// Generate expected server group names
+	name := generateServerGroupNameV2(uuid, pool.Name, poolProviderConfig.ServerGroup.Policy)
 
 	policyMatch := func(sg *servergroups.ServerGroup) bool {
 		return sg != nil && len(sg.Policies) > 0 && sg.Policies[0] == poolProviderConfig.ServerGroup.Policy
@@ -196,7 +196,13 @@ func (w *WorkerDelegate) cleanupServerGroupDependencies(ctx context.Context, com
 	// TODO remove after K8s v1.35.0 is the minimum required version, as the old name format will no longer be generated for new server groups and existing server groups should have been deleted by then.
 	// append both name formats for deletion
 	workerManagedServerGroups := filterServerGroupsByPrefix(groups, fmt.Sprintf("%s-", w.ClusterTechnicalName()))
-	workerManagedServerGroups = append(workerManagedServerGroups, filterServerGroupsByPrefix(groups, generateServerGroupNamePrefixV2(string(w.cluster.Shoot.GetUID())))...)
+	uuid := string(w.cluster.Shoot.GetUID())
+	if len(uuid) == 0 {
+		uuid = string(w.cluster.Shoot.Status.UID)
+	}
+	if len(uuid) > 0 {
+		workerManagedServerGroups = append(workerManagedServerGroups, filterServerGroupsByPrefix(groups, generateServerGroupNamePrefixV2(uuid))...)
+	}
 
 	// handles case [c]
 	for _, group := range workerManagedServerGroups {

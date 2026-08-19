@@ -22,6 +22,8 @@ rules:
   - dnsrecords/status
   - infrastructures
   - infrastructures/status
+  - selfhostedshootexposures
+  - selfhostedshootexposures/status
   - workers
   - workers/status
   verbs:

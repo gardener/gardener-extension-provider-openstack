@@ -174,7 +174,7 @@ func Retry(maxRetries int, delay time.Duration, log logr.Logger, fn func() error
 func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackclient.Networking, infraStatus *openstackapi.InfrastructureStatus) (floatingips.FloatingIP, error) {
 	opts.Logr.Info("Ensuring public IP address for bastion instance", "name", opts.BastionInstanceName)
 
-	fips, err := findFipByName(ctx, client, opts.BastionInstanceName)
+	fips, err := client.GetFipByName(ctx, opts.BastionInstanceName)
 	if err != nil {
 		return floatingips.FloatingIP{}, err
 	}
@@ -184,7 +184,7 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 	}
 
 	if len(fips) == 1 {
-		if fips[0].Status == "ACTIVE" {
+		if fips[0].Status == "ACTIVE" || (fips[0].Status == "DOWN" && fips[0].PortID == "") {
 			opts.Logr.Info("Found existing public IP address for bastion instance", "name", opts.BastionInstanceName, "ip", fips[0].FloatingIP)
 			return fips[0], nil
 		}
@@ -259,11 +259,12 @@ func ensurePublicIPAddress(ctx context.Context, opts Options, client openstackcl
 			return err
 		}
 
-		if fip.Status != "ACTIVE" {
-			return fmt.Errorf("fip not active yet, status: %s", fip.Status)
+		switch fip.Status {
+		case "ACTIVE", "DOWN":
+			return nil
+		default:
+			return fmt.Errorf("fip in undefined state, status: %s", fip.Status)
 		}
-
-		return nil
 	})
 
 	return fip, err
@@ -426,7 +427,7 @@ func ensureSecurityGroupRules(ctx context.Context, client openstackclient.Networ
 	}
 	wantedRules = append(wantedRules, EgressAllowSSHToWorker(opts, secGroupID, infraStatus.SecurityGroups[0].ID))
 
-	currentRules, err := listRules(ctx, client, secGroupID)
+	currentRules, err := client.ListRules(ctx, rules.ListOpts{SecGroupID: secGroupID})
 	if err != nil {
 		return fmt.Errorf("failed to list rules: %w", err)
 	}
@@ -441,7 +442,7 @@ func ensureSecurityGroupRules(ctx context.Context, client openstackclient.Networ
 	}
 
 	for _, rule := range rulesToDelete {
-		if err := deleteRule(ctx, client, rule.ID); err != nil {
+		if err := client.DeleteRule(ctx, rule.ID); err != nil {
 			if openstackclient.IsNotFoundError(err) {
 				continue
 			}
@@ -524,7 +525,7 @@ func ruleEqual(a rules.CreateOpts, b rules.SecGroupRule) bool {
 }
 
 func createSecurityGroupRuleIfNotExist(ctx context.Context, log logr.Logger, client openstackclient.Networking, createOpts rules.CreateOpts) error {
-	if _, err := createRules(ctx, client, createOpts); err != nil {
+	if _, err := client.CreateRule(ctx, createOpts); err != nil {
 		if gophercloud.ResponseCodeIs(err, http.StatusConflict) {
 			log.Info("Security Group Rule already exists", "rule", createOpts.Description)
 			return nil
@@ -538,7 +539,7 @@ func createSecurityGroupRuleIfNotExist(ctx context.Context, log logr.Logger, cli
 func ensureSecurityGroup(ctx context.Context, client openstackclient.Networking, opts Options) (groups.SecGroup, error) {
 	opts.Logr.Info("Ensuring security group for bastion", "name", opts.SecurityGroup)
 
-	securityGroups, err := getSecurityGroups(ctx, client, opts.SecurityGroup)
+	securityGroups, err := client.GetSecurityGroupByName(ctx, opts.SecurityGroup)
 	if err != nil {
 		return groups.SecGroup{}, err
 	}
@@ -553,7 +554,7 @@ func ensureSecurityGroup(ctx context.Context, client openstackclient.Networking,
 	}
 
 	opts.Logr.Info("Creating new security group", "security group", opts.SecurityGroup)
-	result, err := createSecurityGroup(ctx, client, groups.CreateOpts{
+	result, err := client.CreateSecurityGroup(ctx, groups.CreateOpts{
 		Name:        opts.SecurityGroup,
 		Description: opts.SecurityGroup,
 	})

@@ -12,8 +12,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
-	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -118,41 +116,6 @@ func GetIPs(s servers.Server, opts Options) (string, string, error) {
 func createFloatingIP(ctx context.Context, client openstackclient.Networking, parameters floatingips.CreateOpts) (floatingips.FloatingIP, error) {
 	fip, err := client.CreateFloatingIP(ctx, parameters)
 	return ptr.Deref(fip, floatingips.FloatingIP{}), err
-}
-
-func deleteFloatingIP(ctx context.Context, client openstackclient.Networking, id string) error {
-	return client.DeleteFloatingIP(ctx, id)
-}
-
-func findFipByName(ctx context.Context, client openstackclient.Networking, name string) ([]floatingips.FloatingIP, error) {
-	return client.GetFipByName(ctx, name)
-}
-
-func createSecurityGroup(ctx context.Context, client openstackclient.Networking, createOpts groups.CreateOpts) (*groups.SecGroup, error) {
-	return client.CreateSecurityGroup(ctx, createOpts)
-}
-
-func deleteSecurityGroup(ctx context.Context, client openstackclient.Networking, groupid string) error {
-	return client.DeleteSecurityGroup(ctx, groupid)
-}
-
-func getSecurityGroups(ctx context.Context, client openstackclient.Networking, name string) ([]groups.SecGroup, error) {
-	return client.GetSecurityGroupByName(ctx, name)
-}
-
-func createRules(ctx context.Context, client openstackclient.Networking, createOpts rules.CreateOpts) (*rules.SecGroupRule, error) {
-	return client.CreateRule(ctx, createOpts)
-}
-
-func listRules(ctx context.Context, client openstackclient.Networking, secGroupID string) ([]rules.SecGroupRule, error) {
-	listOpts := rules.ListOpts{
-		SecGroupID: secGroupID,
-	}
-	return client.ListRules(ctx, listOpts)
-}
-
-func deleteRule(ctx context.Context, client openstackclient.Networking, ruleID string) error {
-	return client.DeleteRule(ctx, ruleID)
 }
 
 func useBastionControllerConfig(bastionConfig *controllerconfig.BastionConfig) bool {

@@ -432,15 +432,15 @@ var _ = Describe("ValuesProvider", func() {
 				},
 				nil,
 			)
-		
+
 			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
 				"internalLoadBalancer": true,
 			})
-		
+
 			values, err := vp.GetConfigChartValues(ctx, cp, cluster)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values).To(Equal(expectedValues))
-		})					
+		})
 
 		It("should return correct config chart values with load balancer classes with purpose", func() {
 			var (

@@ -5,6 +5,7 @@ monitor-delay="{{ .Values.monitorDelay }}"
 monitor-timeout="{{ .Values.monitorTimeout }}"
 monitor-max-retries={{ .Values.monitorMaxRetries }}
 lb-version="v2"
+internal-lb={{ .Values.internalLoadBalancer }}
 lb-provider="{{ .Values.lbProvider }}"
 {{- if eq .Values.lbProvider "ovn" }}
 lb-method="SOURCE_IP_PORT"

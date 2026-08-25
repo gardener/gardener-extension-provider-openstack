@@ -12,6 +12,7 @@ insecure: false
 region: eu
 # [LoadBalancer]
 lbProvider: foobar
+internalLoadBalancer: false
 # floatingNetworkID: foo-bar-123
 # floatingSubnetID: asd12345
 # floatingSubnetName: "*abc*"

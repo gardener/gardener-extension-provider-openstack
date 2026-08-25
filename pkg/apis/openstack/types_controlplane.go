@@ -40,6 +40,9 @@ const (
 type CloudControllerManagerConfig struct {
 	// FeatureGates contains information about enabled feature gates.
 	FeatureGates map[string]bool
+	// InternalLoadBalancer configures all Services of type LoadBalancer
+    // to be internal and prevents creating external load balancers.
+    InternalLoadBalancer bool
 }
 
 // Storage contains configuration for storage in the cluster.

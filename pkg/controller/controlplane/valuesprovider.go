@@ -547,9 +547,9 @@ func getConfigChartValues(
 	}
 
 	if cpConfig.CloudControllerManager != nil {
-    values["internalLoadBalancer"] =
-        cpConfig.CloudControllerManager.InternalLoadBalancer
-    }
+		values["internalLoadBalancer"] =
+			cpConfig.CloudControllerManager.InternalLoadBalancer
+	}
 
 	if !isUsingOverlay {
 		values["routerID"] = infraStatus.Networks.Router.ID

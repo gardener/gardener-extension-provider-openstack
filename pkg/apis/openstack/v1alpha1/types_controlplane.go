@@ -38,9 +38,9 @@ type CloudControllerManagerConfig struct {
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// InternalLoadBalancer configures all Services of type LoadBalancer
-    // to be internal and prevents creating external load balancers.
-    // +optional
-    InternalLoadBalancer bool `json:"internalLoadBalancer,omitempty"`
+	// to be internal and prevents creating external load balancers.
+	// +optional
+	InternalLoadBalancer bool `json:"internalLoadBalancer,omitempty"`
 }
 
 // Storage contains configuration for storage in the cluster.

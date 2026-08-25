@@ -412,6 +412,7 @@ func Convert_openstack_CSIManila_To_v1alpha1_CSIManila(in *openstack.CSIManila, 
 
 func autoConvert_v1alpha1_CloudControllerManagerConfig_To_openstack_CloudControllerManagerConfig(in *CloudControllerManagerConfig, out *openstack.CloudControllerManagerConfig, s conversion.Scope) error {
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
+	out.InternalLoadBalancer = in.InternalLoadBalancer
 	return nil
 }
 
@@ -422,6 +423,7 @@ func Convert_v1alpha1_CloudControllerManagerConfig_To_openstack_CloudControllerM
 
 func autoConvert_openstack_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *openstack.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
+	out.InternalLoadBalancer = in.InternalLoadBalancer
 	return nil
 }
 

@@ -309,6 +309,7 @@ var _ = Describe("ValuesProvider", func() {
 			"region":                      region,
 			"subnetID":                    "subnet-acbd1234",
 			"lbProvider":                  "load-balancer-provider",
+			"internalLoadBalancer":        false,
 			"floatingNetworkID":           "floating-network-id",
 			"insecure":                    false,
 			"authUrl":                     authURL,
@@ -411,6 +412,30 @@ var _ = Describe("ValuesProvider", func() {
 					},
 				})
 			)
+
+			values, err := vp.GetConfigChartValues(ctx, cp, cluster)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values).To(Equal(expectedValues))
+		})
+
+		It("should return correct config chart values with internal load balancer enabled", func() {
+			cp := controlPlane(
+				"floating-network-id",
+				&api.ControlPlaneConfig{
+					LoadBalancerProvider: "load-balancer-provider",
+					CloudControllerManager: &api.CloudControllerManagerConfig{
+						InternalLoadBalancer: true,
+						FeatureGates: map[string]bool{
+							"SomeKubernetesFeature": true,
+						},
+					},
+				},
+				nil,
+			)
+
+			expectedValues := utils.MergeMaps(configChartValues, map[string]interface{}{
+				"internalLoadBalancer": true,
+			})
 
 			values, err := vp.GetConfigChartValues(ctx, cp, cluster)
 			Expect(err).NotTo(HaveOccurred())

@@ -80,6 +80,18 @@ object (keys:string, values:boolean)
 <p>FeatureGates contains information about enabled feature gates.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>internalLoadBalancer</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InternalLoadBalancer configures all Services of type LoadBalancer<br />to be internal and prevents creating external load balancers.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

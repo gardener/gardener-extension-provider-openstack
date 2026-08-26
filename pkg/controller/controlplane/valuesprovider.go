@@ -547,8 +547,7 @@ func getConfigChartValues(
 	}
 
 	if cpConfig.CloudControllerManager != nil {
-		values["internalLoadBalancer"] =
-			cpConfig.CloudControllerManager.InternalLoadBalancer
+		values["internalLoadBalancer"] = cpConfig.CloudControllerManager.InternalLoadBalancer
 	}
 
 	if !isUsingOverlay {

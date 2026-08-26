@@ -420,7 +420,7 @@ var _ = Describe("ValuesProvider", func() {
 
 		It("should return correct config chart values with internal load balancer enabled", func() {
 			cp := controlPlane(
-				floatingNetworkID,
+				"floating-network-id",
 				&api.ControlPlaneConfig{
 					LoadBalancerProvider: "load-balancer-provider",
 					CloudControllerManager: &api.CloudControllerManagerConfig{

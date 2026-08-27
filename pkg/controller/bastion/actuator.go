@@ -66,9 +66,12 @@ func deleteBastionInstance(ctx context.Context, client openstackclient.Compute, 
 	return client.DeleteServer(ctx, id)
 }
 
-// GetIPs returns the first found private and public IPs for the given server and options.
-func GetIPs(s servers.Server, opts Options) (string, string, error) {
-	var privateIP, publicIP string
+// GetPrivateIP returns the first found private (fixed) IP for the given server.
+// The public (floating) IP is not read from the server addresses because the
+// floating IP is associated at the Neutron port level, which is not reliably
+// reflected in Nova's server addresses view.
+func GetPrivateIP(s servers.Server, opts Options) (string, error) {
+	var privateIP string
 
 	type InstanceNic struct {
 		MacAddr string `json:"OS-EXT-IPS-MAC:mac_addr"`
@@ -81,38 +84,28 @@ func GetIPs(s servers.Server, opts Options) (string, string, error) {
 
 	addresses, ok := s.Addresses[opts.ShootName]
 	if !ok {
-		return "", "", fmt.Errorf("network %q not found in server addresses", opts.ShootName)
+		return "", fmt.Errorf("network %q not found in server addresses", opts.ShootName)
 	}
 	bytes, err := json.Marshal(addresses)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	err = json.Unmarshal(bytes, &instanceNic)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
 	for _, v := range instanceNic {
-		switch v.Type {
-		case "fixed":
-			if privateIP == "" {
-				privateIP = v.Addr
-			}
-		case "floating":
-			if publicIP == "" {
-				publicIP = v.Addr
-			}
+		if v.Type == "fixed" && privateIP == "" {
+			privateIP = v.Addr
 		}
 	}
 
 	if privateIP == "" {
-		return "", "", fmt.Errorf("no private IP found")
-	}
-	if publicIP == "" {
-		return "", "", fmt.Errorf("no public IP found")
+		return "", fmt.Errorf("no private IP found")
 	}
 
-	return privateIP, publicIP, nil
+	return privateIP, nil
 }
 
 func createFloatingIP(ctx context.Context, client openstackclient.Networking, parameters floatingips.CreateOpts) (floatingips.FloatingIP, error) {

@@ -97,7 +97,7 @@ func removeBastionInstance(ctx context.Context, client openstackclient.Compute, 
 }
 
 func removePublicIPAddress(ctx context.Context, client openstackclient.Networking, opts BaseOptions) error {
-	fips, err := findFipByName(ctx, client, opts.BastionInstanceName)
+	fips, err := client.GetFipByName(ctx, opts.BastionInstanceName)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func removePublicIPAddress(ctx context.Context, client openstackclient.Networkin
 	}
 
 	opts.Logr.Info("Deleting Public IP", "public IP ID", fips[0].ID)
-	err = deleteFloatingIP(ctx, client, fips[0].ID)
+	err = client.DeleteFloatingIP(ctx, fips[0].ID)
 	if err != nil {
 		return fmt.Errorf("failed to terminate bastion Public IP: %w", err)
 	}
@@ -117,7 +117,7 @@ func removePublicIPAddress(ctx context.Context, client openstackclient.Networkin
 }
 
 func removeSecurityGroup(ctx context.Context, client openstackclient.Networking, opts BaseOptions) error {
-	bastionSecurityGroups, err := getSecurityGroups(ctx, client, opts.SecurityGroup)
+	bastionSecurityGroups, err := client.GetSecurityGroupByName(ctx, opts.SecurityGroup)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func removeSecurityGroup(ctx context.Context, client openstackclient.Networking,
 	}
 
 	opts.Logr.Info("Deleting Bastion Security Group", "security group ID", bastionSecurityGroups[0].ID)
-	return deleteSecurityGroup(ctx, client, bastionSecurityGroups[0].ID)
+	return client.DeleteSecurityGroup(ctx, bastionSecurityGroups[0].ID)
 }
 
 func isInstanceDeleted(ctx context.Context, client openstackclient.Compute, opts BaseOptions) (bool, error) {

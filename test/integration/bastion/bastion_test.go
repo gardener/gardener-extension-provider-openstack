@@ -787,8 +787,12 @@ func verifyCreation(options bastionctrl.Options) {
 	Expect(servers[0].Name).To(Equal(options.BastionInstanceName))
 
 	By("checking bastion ingress IPs exist")
-	privateIP, externalIP, err := bastionctrl.GetIPs(servers[0], options)
+	privateIP, err := bastionctrl.GetPrivateIP(servers[0], options)
 	Expect(err).To(Succeed())
-	Expect(privateIP).NotTo(BeNil())
-	Expect(externalIP).NotTo(BeNil())
+	Expect(privateIP).NotTo(BeEmpty())
+
+	fips, err := networkClient.GetFipByName(context.Background(), options.BastionInstanceName)
+	Expect(err).To(Succeed())
+	Expect(fips).To(HaveLen(1))
+	Expect(fips[0].FloatingIP).NotTo(BeEmpty())
 }

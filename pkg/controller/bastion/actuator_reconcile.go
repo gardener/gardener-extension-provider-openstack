@@ -145,7 +145,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	}
 
 	// check if the instance already exists and has an IP
-	endpoints, err := ensureEndpoints(instance, opts)
+	endpoints, err := ensureEndpoints(instance, fipID, opts)
 	if err != nil {
 		return util.DetermineError(err, helper.KnownCodes)
 	}
@@ -328,14 +328,14 @@ func ensureComputeInstance(ctx context.Context, client openstackclient.Compute, 
 	return instance, err
 }
 
-func getInstanceEndpoints(instance servers.Server, opts Options) (bastionEndpoints, error) {
+func getInstanceEndpoints(instance servers.Server, floatingIP floatingips.FloatingIP, opts Options) (bastionEndpoints, error) {
 	if instance.Status != "ACTIVE" {
 		return bastionEndpoints{}, errors.New("compute instance not active yet")
 	}
 
 	endpoints := bastionEndpoints{}
 
-	privateIP, externalIP, err := GetIPs(instance, opts)
+	privateIP, err := GetPrivateIP(instance, opts)
 	if err != nil {
 		return bastionEndpoints{}, fmt.Errorf("no IP found: %w", err)
 	}
@@ -344,7 +344,7 @@ func getInstanceEndpoints(instance servers.Server, opts Options) (bastionEndpoin
 		endpoints.private = ingress
 	}
 
-	if ingress := addressToIngress("", externalIP); ingress != nil {
+	if ingress := addressToIngress("", floatingIP.FloatingIP); ingress != nil {
 		endpoints.public = ingress
 	}
 	return endpoints, nil
@@ -577,9 +577,9 @@ func ensureShootWorkerSecurityGroupRules(ctx context.Context, client openstackcl
 	return nil
 }
 
-func ensureEndpoints(instance servers.Server, opts Options) (bastionEndpoints, error) {
+func ensureEndpoints(instance servers.Server, floatingIP floatingips.FloatingIP, opts Options) (bastionEndpoints, error) {
 	// check if the instance already exists and has an IP
-	endpoints, err := getInstanceEndpoints(instance, opts)
+	endpoints, err := getInstanceEndpoints(instance, floatingIP, opts)
 	if err != nil {
 		return bastionEndpoints{}, err
 	}

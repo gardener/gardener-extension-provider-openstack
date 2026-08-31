@@ -32,15 +32,21 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 
 	hasSubnetPool := infra.Networks.SubnetPool != nil
 	hasWorkerCIDR := len(infra.Networks.Worker) > 0 || len(infra.Networks.Workers) > 0
+	hasExistingSubnet := infra.Networks.SubnetID != nil
 
-	if !hasWorkerCIDR && !hasSubnetPool {
+	if !hasWorkerCIDR && !hasSubnetPool && !hasExistingSubnet {
 		allErrs = append(allErrs, field.Required(networksPath.Child("workers"),
-			"must specify either the network range for the worker network or a subnetPool"))
+			"must specify either the network range for the worker network, a subnetPool, or an existing subnetId"))
 	}
 
 	if hasWorkerCIDR && hasSubnetPool {
 		allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetPool"), infra.Networks.SubnetPool,
 			"subnetPool is mutually exclusive with workers/worker CIDR fields"))
+	}
+
+	if hasExistingSubnet && (hasWorkerCIDR || hasSubnetPool) {
+		allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID,
+			"subnetId is mutually exclusive with workers/worker CIDR fields and subnetPool"))
 	}
 
 	var workerCIDR cidrvalidation.CIDR
@@ -66,6 +72,39 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 	if infra.Networks.ID != nil {
 		allErrs = append(allErrs, uuid(*infra.Networks.ID, networksPath.Child("id"))...)
 	}
+
+	if infra.Networks.SubnetID != nil {
+		if infra.Networks.ID == nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("subnetId"), infra.Networks.SubnetID,
+				"networks.id must be provided when networks.subnetId is set"))
+		}
+		if infra.Networks.Router == nil || infra.Networks.Router.ID == "" {
+			allErrs = append(allErrs, field.Required(networksPath.Child("router"),
+				"networks.router.id must be provided when networks.subnetId is set; the router must already have an interface to the subnet"))
+		}
+		allErrs = append(allErrs, uuid(*infra.Networks.SubnetID, networksPath.Child("subnetId"))...)
+	}
+
+	if infra.Networks.SecurityGroupID != nil {
+		if infra.Networks.ID == nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("securityGroupId"), infra.Networks.SecurityGroupID,
+				"networks.id must be provided when networks.securityGroupId is set"))
+		}
+		allErrs = append(allErrs, uuid(*infra.Networks.SecurityGroupID, networksPath.Child("securityGroupId"))...)
+	}
+
+	if infra.Networks.ShareNetworkID != nil {
+		if infra.Networks.ID == nil {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("shareNetworkId"), infra.Networks.ShareNetworkID,
+				"networks.id must be provided when networks.shareNetworkId is set"))
+		}
+		if infra.Networks.ShareNetwork != nil && infra.Networks.ShareNetwork.Enabled {
+			allErrs = append(allErrs, field.Invalid(networksPath.Child("shareNetworkId"), infra.Networks.ShareNetworkID,
+				"networks.shareNetworkId is mutually exclusive with networks.shareNetwork.enabled"))
+		}
+		allErrs = append(allErrs, uuid(*infra.Networks.ShareNetworkID, networksPath.Child("shareNetworkId"))...)
+	}
+
 	if infra.Networks.Router != nil {
 		if infra.Networks.Router.ID == "" {
 			allErrs = append(allErrs, field.Invalid(networksPath.Child("router", "id"), infra.Networks.Router.ID, "router id must not be empty when router key is provided"))
@@ -84,6 +123,20 @@ func ValidateInfrastructureConfig(infra *api.InfrastructureConfig, nodesCIDR *st
 
 	if infra.Networks.IPv6 != nil {
 		allErrs = append(allErrs, validateIPv6Config(infra.Networks.IPv6, networksPath.Child("ipv6"))...)
+		if infra.Networks.IPv6.NodeSubnetID != nil {
+			if infra.Networks.ID == nil {
+				allErrs = append(allErrs, field.Invalid(networksPath.Child("ipv6", "nodeSubnetId"), infra.Networks.IPv6.NodeSubnetID,
+					"networks.id must be provided when networks.ipv6.nodeSubnetId is set"))
+			}
+			if infra.Networks.Router == nil || infra.Networks.Router.ID == "" {
+				allErrs = append(allErrs, field.Required(networksPath.Child("router"),
+					"networks.router.id must be provided when networks.ipv6.nodeSubnetId is set; the router must already have an interface to the subnet"))
+			}
+			if infra.Networks.SubnetID == nil {
+				allErrs = append(allErrs, field.Required(networksPath.Child("subnetId"),
+					"networks.subnetId must be provided when networks.ipv6.nodeSubnetId is set; BYO dual-stack requires BYO IPv4 subnet"))
+			}
+		}
 	}
 
 	return allErrs
@@ -104,10 +157,41 @@ func validateSubnetPool(pool *api.SubnetPool, fldPath *field.Path) field.ErrorLi
 func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	hasBYONodeSubnet := ipv6.NodeSubnetID != nil
 	hasExplicitCIDRs := ipv6.NodeCIDR != "" || ipv6.PodCIDR != "" || ipv6.ServiceCIDR != ""
 
+	if hasBYONodeSubnet {
+		if ipv6.SubnetPoolID != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeSubnetId"), ipv6.NodeSubnetID,
+				"nodeSubnetId is mutually exclusive with subnetPoolID"))
+		}
+		if ipv6.NodeCIDR != "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeSubnetId"), ipv6.NodeSubnetID,
+				"nodeSubnetId is mutually exclusive with nodeCIDR"))
+		}
+		allErrs = append(allErrs, uuid(*ipv6.NodeSubnetID, fldPath.Child("nodeSubnetId"))...)
+
+		for _, f := range []struct {
+			cidr string
+			path *field.Path
+		}{
+			{ipv6.PodCIDR, fldPath.Child("podCIDR")},
+			{ipv6.ServiceCIDR, fldPath.Child("serviceCIDR")},
+		} {
+			if f.cidr == "" {
+				allErrs = append(allErrs, field.Required(f.path, "must be set when nodeSubnetId is used"))
+				continue
+			}
+			c := cidrvalidation.NewCIDR(f.cidr, f.path)
+			allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(c)...)
+			allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(f.path, f.cidr)...)
+			allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily([]cidrvalidation.CIDR{c}, cidrvalidation.IPFamilyIPv6)...)
+		}
+		return allErrs
+	}
+
 	if ipv6.SubnetPoolID == nil && !hasExplicitCIDRs {
-		allErrs = append(allErrs, field.Required(fldPath, "either subnetPoolID or explicit CIDRs (nodeCIDR, podCIDR, serviceCIDR) must be set"))
+		allErrs = append(allErrs, field.Required(fldPath, "either subnetPoolID, explicit CIDRs (nodeCIDR, podCIDR, serviceCIDR), or nodeSubnetId must be set"))
 		return allErrs
 	}
 
@@ -153,6 +237,9 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 	networksPath := fldPath.Child("networks")
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.ID, oldConfig.Networks.ID, networksPath.Child("id"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.SubnetID, oldConfig.Networks.SubnetID, networksPath.Child("subnetId"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.SecurityGroupID, oldConfig.Networks.SecurityGroupID, networksPath.Child("securityGroupId"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.ShareNetworkID, oldConfig.Networks.ShareNetworkID, networksPath.Child("shareNetworkId"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Router, oldConfig.Networks.Router, networksPath.Child("router"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Worker, oldConfig.Networks.Worker, networksPath.Child("worker"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Workers, oldConfig.Networks.Workers, networksPath.Child("workers"))...)

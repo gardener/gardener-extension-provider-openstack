@@ -12,7 +12,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
@@ -47,11 +46,6 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	classes := slices.DeleteFunc(opts.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
 		return !supportedExtensionClasses.Has(class)
 	})
-	if len(classes) == 0 {
-		log.Log.Info("No supported extension classes left after filtering, skipping bastion controller registration")
-		return nil
-	}
-
 	return bastion.Add(mgr, bastion.AddArgs{
 		Actuator:          newActuator(mgr, openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials), &opts.BastionConfig),
 		ControllerOptions: opts.Controller,

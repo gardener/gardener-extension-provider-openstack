@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -58,11 +57,6 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 	classes := slices.DeleteFunc(opts.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
 		return !supportedExtensionClasses.Has(class)
 	})
-	if len(classes) == 0 {
-		log.Log.Info("No supported extension classes left after filtering, skipping worker controller registration")
-		return nil
-	}
-
 	return worker.Add(ctx, mgr, worker.AddArgs{
 		Actuator:               NewActuator(mgr, opts.GardenCluster),
 		ControllerOptions:      opts.Controller,

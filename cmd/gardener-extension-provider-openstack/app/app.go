@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -214,13 +215,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&openstackbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&openstackbackupentry.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&openstackdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)
-			openstackinfrastructure.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
-			openstackcontrolplane.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
-			openstackworker.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
-			openstackbastion.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
-			openstackbackupbucket.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
-			openstackbackupentry.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
-			openstackdnsrecord.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackinfrastructure.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			openstackcontrolplane.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			openstackworker.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			openstackbastion.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			openstackbackupbucket.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			openstackbackupentry.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			openstackdnsrecord.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
 			workerCtrlOpts.Completed().Apply(&openstackworker.DefaultAddOptions.Controller)
 			openstackworker.DefaultAddOptions.GardenCluster = gardenCluster
 			openstackworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster

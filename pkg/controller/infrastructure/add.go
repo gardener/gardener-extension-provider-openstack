@@ -6,9 +6,11 @@ package infrastructure
 
 import (
 	"context"
+	"slices"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,6 +23,9 @@ import (
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
+
+	// supportedExtensionClasses are the extension classes supported by the infrastructure controller.
+	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassShoot)
 )
 
 // AddOptions are options to apply when adding the OpenStack infrastructure controller to the manager.
@@ -39,6 +44,14 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given AddOptions to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, options AddOptions) error {
+	classes := slices.DeleteFunc(options.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
+		return !supportedExtensionClasses.Has(class)
+	})
+	if len(classes) == 0 {
+		log.Log.Info("No supported extension classes left after filtering, skipping infrastructure controller registration")
+		return nil
+	}
+
 	return infrastructure.Add(mgr, infrastructure.AddArgs{
 		Actuator:          NewActuator(mgr, true),
 		ConfigValidator:   NewConfigValidator(mgr, openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials), log.Log),
@@ -46,7 +59,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, options A
 		Predicates:        infrastructure.DefaultPredicates(ctx, mgr, options.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
 		KnownCodes:        helper.KnownCodes,
-		ExtensionClasses:  options.ExtensionClasses,
+		ExtensionClasses:  classes,
 	})
 }
 

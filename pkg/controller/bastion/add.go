@@ -6,10 +6,13 @@ package bastion
 
 import (
 	"context"
+	"slices"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	controllerconfig "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/config"
@@ -20,6 +23,9 @@ import (
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
+
+	// supportedExtensionClasses are the extension classes supported by the bastion controller.
+	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassShoot)
 )
 
 // AddOptions are Options to apply when adding the Openstack bastion controller to the manager.
@@ -38,12 +44,20 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
+	classes := slices.DeleteFunc(opts.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
+		return !supportedExtensionClasses.Has(class)
+	})
+	if len(classes) == 0 {
+		log.Log.Info("No supported extension classes left after filtering, skipping bastion controller registration")
+		return nil
+	}
+
 	return bastion.Add(mgr, bastion.AddArgs{
 		Actuator:          newActuator(mgr, openstackclient.FactoryFactoryFunc(openstackclient.NewOpenstackClientFromCredentials), &opts.BastionConfig),
 		ControllerOptions: opts.Controller,
 		Predicates:        bastion.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
-		ExtensionClasses:  opts.ExtensionClasses,
+		ExtensionClasses:  classes,
 	})
 }
 

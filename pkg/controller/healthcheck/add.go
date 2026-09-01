@@ -30,6 +30,7 @@ var (
 	defaultSyncPeriod = time.Second * 30
 	// DefaultAddOptions are the default DefaultAddArgs for AddToManager.
 	DefaultAddOptions = healthcheck.DefaultAddArgs{
+		ExtensionClasses: []extensionsv1alpha1.ExtensionClass{extensionsv1alpha1.ExtensionClassShoot},
 		HealthCheckConfig: apisconfigv1alpha1.HealthCheckConfig{
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			ShootRESTOptions: &apisconfigv1alpha1.RESTOptions{

@@ -143,8 +143,9 @@ func validateStorage(storage *api.Storage, networks api.Networks, fldPath *field
 	if storage == nil || storage.CSIManila == nil || !storage.CSIManila.Enabled {
 		return allErrs
 	}
-	if networks.ShareNetwork == nil || !networks.ShareNetwork.Enabled {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("csiManila", "enabled"), storage.CSIManila.Enabled, "share network must be created if CSI manila driver is enabled"))
+	hasShareNetwork := (networks.ShareNetwork != nil && networks.ShareNetwork.Enabled) || networks.ShareNetworkID != nil
+	if !hasShareNetwork {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("csiManila", "enabled"), storage.CSIManila.Enabled, "share network must be created or provided (networks.shareNetworkId) if CSI manila driver is enabled"))
 	}
 	return allErrs
 }

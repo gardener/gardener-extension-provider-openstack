@@ -111,18 +111,21 @@ provided subnet before the shoot is created — Gardener validates this at admis
 The subnet must be configured for node bootstrap to succeed:
 - **DHCP enabled** — nodes receive their IP address via DHCP on first boot
 - **Gateway IP set** — required so nodes can route traffic off-subnet (toward the seed API server)
-- **DNS nameservers set** — nodes must resolve the seed API server hostname during bootstrap
+- **DNS nameservers** — leave unset unless `cloudProfileConfig.dnsServers` is non-empty for your environment; when unset, OpenStack's built-in DHCP DNS is used (same as managed subnets). Setting public resolvers like `8.8.8.8` will break DNS in private OpenStack deployments where those addresses are unreachable
 
 ```bash
 # Create the network
 openstack network create my-network
 
-# Create the subnet with DHCP (default) and DNS nameservers
+# Create the subnet with DHCP (default).
+# Do NOT set explicit DNS nameservers unless your operator requires specific ones
+# (i.e. cloudProfileConfig.dnsServers is non-empty for your environment).
+# When dnsServers is empty, Gardener sets none and nodes use OpenStack's built-in
+# DHCP DNS. Setting public resolvers like 8.8.8.8 will break DNS if they are not
+# reachable from the tenant network (common in private OpenStack deployments).
 openstack subnet create my-subnet \
   --network my-network \
-  --subnet-range 10.250.0.0/19 \
-  --dns-nameserver 8.8.8.8 \
-  --dns-nameserver 8.8.4.4
+  --subnet-range 10.250.0.0/19
 
 # Create the router and attach it to an external network
 openstack router create my-router
@@ -132,9 +135,11 @@ openstack router set my-router --external-gateway <floating-pool-network-name>
 openstack router add subnet my-router my-subnet
 ```
 
-⚠️ If DHCP is disabled, the gateway IP is missing, or DNS nameservers are not configured, worker
-nodes will be created in OpenStack but will fail to bootstrap — they will appear as `Pending`
-machines in the machine-controller-manager and never join the cluster.
+⚠️ If DHCP is disabled, the gateway IP is missing, DNS nameservers are not configured, or the
+configured DNS servers are not reachable from the tenant network, worker nodes will be created in
+OpenStack but will fail to bootstrap — they will appear as `Pending` machines in the
+machine-controller-manager and never join the cluster. Node-level DNS failures also prevent the
+Manila CSI driver from authenticating to the OpenStack identity endpoint at mount time.
 
 ⚠️ `networks.subnetId` is mutually exclusive with `networks.workers`, `networks.worker`, and
 `networks.subnetPool`.

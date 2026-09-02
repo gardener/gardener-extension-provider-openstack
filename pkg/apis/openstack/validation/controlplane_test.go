@@ -114,6 +114,16 @@ var _ = Describe("ControlPlaneConfig validation", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should return no error if CSI Manila is enabled and BYO share network is provided", func() {
+			shareNetworkID := "cabcf1af-a69d-4284-b751-ddb0dd6c1a7a"
+			controlPlane.Storage = &api.Storage{CSIManila: &api.CSIManila{Enabled: true}}
+			infraConfig.Networks.ShareNetworkID = &shareNetworkID
+
+			errorList := ValidateControlPlaneConfig(controlPlane, infraConfig, "1.33.0", nilPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should fail if csiManila is enabled without shareNetwork, even when subnetId is set", func() {
 			subnetID := "a4bc1e9f-4c1f-4e7b-9f62-1234567890ab"
 			controlPlane.Storage = &api.Storage{CSIManila: &api.CSIManila{Enabled: true}}

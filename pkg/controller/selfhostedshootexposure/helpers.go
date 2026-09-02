@@ -66,12 +66,11 @@ func exposureTag(exposure *extensionsv1alpha1.SelfHostedShootExposure) string {
 // control-plane machines on the exposure port. The amphora backend address is not discoverable, so
 // the rule cannot be scoped to a single source; it opens the exposure port (the TLS-protected
 // kube-apiserver) from anywhere.
-func securityGroupRuleOpts(exposure *extensionsv1alpha1.SelfHostedShootExposure, securityGroupID string, family gardencorev1beta1.IPFamily) rules.CreateOpts {
+func securityGroupRuleOpts(exposure *extensionsv1alpha1.SelfHostedShootExposure, securityGroupID string, family gardencorev1beta1.IPFamily, nodes string) rules.CreateOpts {
 	etherType := rules.EtherType4
-	prefix := "0.0.0.0/0"
+	prefix := nodes
 	if family == gardencorev1beta1.IPFamilyIPv6 {
 		etherType = rules.EtherType6
-		prefix = "::/0"
 	}
 	port := int(exposure.Spec.Port)
 	return rules.CreateOpts{

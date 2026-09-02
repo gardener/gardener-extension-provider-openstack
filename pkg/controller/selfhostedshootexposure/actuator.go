@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	apisopenstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	openstackclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
@@ -160,8 +162,17 @@ func ensureFloatingIP(ctx context.Context, networkingClient openstackclient.Netw
 // ensureSecurityGroupRule ensures the control-plane machines' security group allows ingress on
 // the exposure port so the load balancer (and its health-monitor probes) can reach the members.
 // It is idempotent: it creates the rule if absent and replaces it if the desired shape changed.
-func ensureSecurityGroupRule(ctx context.Context, networkingClient openstackclient.Networking, exposure *extensionsv1alpha1.SelfHostedShootExposure, securityGroupID string, family gardencorev1beta1.IPFamily) error {
-	desired := securityGroupRuleOpts(exposure, securityGroupID, family)
+func ensureSecurityGroupRule(ctx context.Context, networkingClient openstackclient.Networking, exposure *extensionsv1alpha1.SelfHostedShootExposure, securityGroupID string, family gardencorev1beta1.IPFamily, subnets []apisopenstack.Subnet) error {
+	purpose := apisopenstack.PurposeNodes
+	if family == gardencorev1beta1.IPFamilyIPv6 {
+		purpose = apisopenstack.PurposeNodesIPv6
+	}
+	subnet, err := helper.FindSubnetByPurpose(subnets, purpose)
+	if err != nil {
+		return fmt.Errorf("could not find nodes subnet for %s: %w", purpose, err)
+	}
+
+	desired := securityGroupRuleOpts(exposure, securityGroupID, family, subnet.CIDR)
 
 	existing, err := networkingClient.ListRules(ctx, rules.ListOpts{
 		SecGroupID:  securityGroupID,

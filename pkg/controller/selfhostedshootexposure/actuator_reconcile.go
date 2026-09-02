@@ -133,7 +133,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 			Cause:        fmt.Errorf("waiting for nodes security group in infrastructure status: %w", err),
 		}
 	}
-	if err := ensureSecurityGroupRule(ctx, networkingClient, exposure, nodesSecurityGroup.ID, family); err != nil {
+	if err := ensureSecurityGroupRule(ctx, networkingClient, exposure, nodesSecurityGroup.ID, family, infraStatus.Networks.Subnets); err != nil {
 		return nil, util.DetermineError(err, helper.KnownCodes)
 	}
 

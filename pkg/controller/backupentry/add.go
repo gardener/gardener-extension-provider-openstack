@@ -6,10 +6,12 @@ package backupentry
 
 import (
 	"context"
+	"slices"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -19,6 +21,9 @@ import (
 var (
 	// DefaultAddOptions are the default DefaultAddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
+
+	// supportedExtensionClasses are the extension classes supported by the backupentry controller.
+	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassGarden, extensionsv1alpha1.ExtensionClassShoot)
 )
 
 // AddOptions are options to apply when adding the Openstack backupbucket controller to the manager.
@@ -34,12 +39,15 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts AddOptions) error {
+	classes := slices.DeleteFunc(opts.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
+		return !supportedExtensionClasses.Has(class)
+	})
 	return backupentry.Add(mgr, backupentry.AddArgs{
 		Actuator:          genericactuator.NewActuator(mgr, newActuator(mgr)),
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              openstack.Type,
-		ExtensionClasses:  opts.ExtensionClasses,
+		ExtensionClasses:  classes,
 	})
 }
 

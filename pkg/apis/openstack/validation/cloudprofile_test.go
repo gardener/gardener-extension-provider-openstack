@@ -691,6 +691,85 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				}))))
 			})
 		})
+
+		Context("storage class validation", func() {
+			It("should allow region specific storage class settings", func() {
+				cloudProfileConfig.StorageClasses = []api.StorageClassDefinition{{
+					Name:       "example-sc",
+					Parameters: map[string]string{"type": "storage_premium_perf0"},
+					Regions: []api.StorageClassRegion{
+						{Name: "europe-west", Parameters: map[string]string{"type": "premium"}},
+						{Name: "asia", Unavailable: ptr.To(true)},
+					},
+				}}
+
+				Expect(ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)).To(BeEmpty())
+			})
+
+			It("should forbid empty region names", func() {
+				cloudProfileConfig.StorageClasses = []api.StorageClassDefinition{{
+					Name:    "example-sc",
+					Regions: []api.StorageClassRegion{{Name: ""}},
+				}}
+
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("root.storageClasses[0].regions[0].name"),
+				}))))
+			})
+
+			It("should forbid duplicate regions for the same storage class", func() {
+				cloudProfileConfig.StorageClasses = []api.StorageClassDefinition{{
+					Name: "example-sc",
+					Regions: []api.StorageClassRegion{
+						{Name: "europe-west", Parameters: map[string]string{"type": "premium"}},
+						{Name: "europe-west", Unavailable: ptr.To(true)},
+					},
+				}}
+
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("root.storageClasses[0].regions[1].name"),
+				}))))
+			})
+
+			It("should allow the same region for different storage classes", func() {
+				cloudProfileConfig.StorageClasses = []api.StorageClassDefinition{
+					{
+						Name:    "example-sc",
+						Regions: []api.StorageClassRegion{{Name: "europe-west", Unavailable: ptr.To(true)}},
+					},
+					{
+						Name:    "other-sc",
+						Regions: []api.StorageClassRegion{{Name: "europe-west", Unavailable: ptr.To(true)}},
+					},
+				}
+
+				Expect(ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)).To(BeEmpty())
+			})
+
+			It("should forbid parameters for a region in which the storage class is unavailable", func() {
+				cloudProfileConfig.StorageClasses = []api.StorageClassDefinition{{
+					Name: "example-sc",
+					Regions: []api.StorageClassRegion{{
+						Name:        "asia",
+						Unavailable: ptr.To(true),
+						Parameters:  map[string]string{"type": "premium"},
+					}},
+				}}
+
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("root.storageClasses[0].regions[0].parameters"),
+				}))))
+			})
+		})
 	},
 		Entry("CloudProfile uses regions only", false),
 		Entry("CloudProfile uses capabilities", true))

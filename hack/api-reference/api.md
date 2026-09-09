@@ -614,7 +614,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.<br />Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).</p>
+<p>SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.<br />Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR) and NodeSubnetID.</p>
 </td>
 </tr>
 <tr>
@@ -626,7 +626,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeCIDR is the CIDR of the node subnet.</p>
+<p>NodeCIDR is the CIDR of the IPv6 node subnet to create.<br />Required when neither subnetPoolID nor nodeSubnetId is set.<br />Mutually exclusive with nodeSubnetId.</p>
 </td>
 </tr>
 <tr>
@@ -638,7 +638,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>PodCIDR is the CIDR of the pods.</p>
+<p>PodCIDR is the IPv6 CIDR for pods.<br />Required when nodeCIDR is set or nodeSubnetId is set.</p>
 </td>
 </tr>
 <tr>
@@ -650,7 +650,19 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ServiceCIDR is the CIDR of the services.</p>
+<p>ServiceCIDR is the IPv6 CIDR for services.<br />Required when nodeCIDR is set or nodeSubnetId is set.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeSubnetId</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes.<br />When set, Gardener will not create an IPv6 node subnet.<br />Requires networks.id and networks.router.id. Mutually exclusive with subnetPoolID and nodeCIDR.<br />podCIDR and serviceCIDR must be set explicitly when nodeSubnetId is used.</p>
 </td>
 </tr>
 
@@ -1520,6 +1532,42 @@ string
 <td>
 <em>(Optional)</em>
 <p>ID is the ID of an existing private network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>subnetId</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubnetID is the ID of an existing subnet. If provided, the workers will be deployed into this subnet<br />instead of a new subnet being created. Requires networks.id to be set as well.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>securityGroupId</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecurityGroupID is the ID of an existing security group to use for worker nodes.<br />When set, Gardener will not create a security group and will use this one instead.<br />Requires networks.id to be set. The security group must allow node-to-node traffic,<br />TCP/UDP on ports 30000-32767, and all egress.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shareNetworkId</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShareNetworkID is the ID of an existing Manila share network to use for NFS volumes.<br />When set, Gardener will use it instead of creating one and will not delete it on shoot teardown.<br />Requires networks.id to be set. Mutually exclusive with shareNetwork.enabled.</p>
 </td>
 </tr>
 <tr>

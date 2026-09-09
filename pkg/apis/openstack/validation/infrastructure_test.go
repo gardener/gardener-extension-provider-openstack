@@ -111,7 +111,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal("networks.workers"),
-				"Detail": Equal("must specify either the network range for the worker network or a subnetPool"),
+				"Detail": Equal("must specify either the network range for the worker network, a subnetPool, or an existing subnetId"),
 			}))
 		})
 
@@ -255,6 +255,93 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("networks.subnetPool"),
+			}))))
+		})
+	})
+
+	Context("SubnetID", func() {
+		It("should pass with valid network, subnet and router IDs", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid subnetId without router id", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = nil // explicitly clear the router set in BeforeEach
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("networks.router"),
+				"Detail": ContainSubstring("networks.router.id must be provided when networks.subnetId is set"),
+			}))))
+		})
+
+		It("should forbid subnetId without network id", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.subnetId"),
+				"Detail": ContainSubstring("networks.id must be provided"),
+			}))))
+		})
+
+		It("should forbid invalid subnetId (not a UUID)", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To("not-a-uuid")
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetId"),
+			}))))
+		})
+
+		It("should forbid subnetId combined with workers CIDR", func() {
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.subnetId"),
+				"Detail": ContainSubstring("mutually exclusive"),
+			}))))
+		})
+
+		It("should allow shareNetwork enabled together with subnetId", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+			infrastructureConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid changing networks.subnetId after creation", func() {
+			newConfig := infrastructureConfig.DeepCopy()
+			id := uuid.New().String()
+			newConfig.Networks.SubnetID = ptr.To(id)
+			// keep the same router as in oldConfig to isolate the subnetId immutability check
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetId"),
 			}))))
 		})
 	})

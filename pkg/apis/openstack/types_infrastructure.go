@@ -40,6 +40,21 @@ type Networks struct {
 	SubnetPool *SubnetPool
 	// ID is the ID of an existing private network.
 	ID *string
+	// SubnetID is the ID of an existing subnet. If provided, the workers will be deployed into this subnet
+	// instead of a new subnet being created. Requires networks.id to be set as well.
+	// +optional
+	SubnetID *string
+	// SecurityGroupID is the ID of an existing security group to use for worker nodes.
+	// When set, Gardener will not create a security group and will use this one instead.
+	// Requires networks.id to be set. The security group must allow node-to-node traffic,
+	// TCP/UDP on ports 30000-32767, and all egress.
+	// +optional
+	SecurityGroupID *string
+	// ShareNetworkID is the ID of an existing Manila share network to use for NFS volumes.
+	// When set, Gardener will use it instead of creating one and will not delete it on shoot teardown.
+	// Requires networks.id to be set. Mutually exclusive with shareNetwork.enabled.
+	// +optional
+	ShareNetworkID *string
 	// ShareNetwork holds information about the share network (used for shared file systems like NFS)
 	ShareNetwork *ShareNetwork
 	// IPv6 holds information about the IPv6 CIDRs.
@@ -58,14 +73,27 @@ type SubnetPool struct {
 // IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
 type IPv6Config struct {
 	// SubnetPoolID is the ID of the subnet pool to use for IPv6 subnet allocation.
-	// Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR).
+	// Mutually exclusive with explicit CIDR fields (NodeCIDR, PodCIDR, ServiceCIDR) and NodeSubnetID.
 	SubnetPoolID *string
-	// NodeCIDR is the CIDR of the node subnet.
+	// NodeCIDR is the CIDR of the IPv6 node subnet to create.
+	// Required when neither SubnetPoolID nor NodeSubnetID is set.
+	// Mutually exclusive with NodeSubnetID.
+	// +optional
 	NodeCIDR string
-	// PodCIDR is the CIDR of the pods.
+	// PodCIDR is the IPv6 CIDR for pods.
+	// Required when NodeCIDR is set or NodeSubnetID is set.
+	// +optional
 	PodCIDR string
-	// ServiceCIDR is the CIDR of the services.
+	// ServiceCIDR is the IPv6 CIDR for services.
+	// Required when NodeCIDR is set or NodeSubnetID is set.
+	// +optional
 	ServiceCIDR string
+	// NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes.
+	// When set, Gardener will not create an IPv6 node subnet.
+	// Requires networks.id and networks.router.id. Mutually exclusive with SubnetPoolID and NodeCIDR.
+	// PodCIDR and ServiceCIDR must be set explicitly when NodeSubnetID is used.
+	// +optional
+	NodeSubnetID *string
 }
 
 // Router indicates whether to use an existing router or create a new one.

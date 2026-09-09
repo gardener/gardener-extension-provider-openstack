@@ -296,6 +296,11 @@ func (in *IPv6Config) DeepCopyInto(out *IPv6Config) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.NodeSubnetID != nil {
+		in, out := &in.NodeSubnetID, &out.NodeSubnetID
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
@@ -678,6 +683,21 @@ func (in *Networks) DeepCopyInto(out *Networks) {
 	}
 	if in.ID != nil {
 		in, out := &in.ID, &out.ID
+		*out = new(string)
+		**out = **in
+	}
+	if in.SubnetID != nil {
+		in, out := &in.SubnetID, &out.SubnetID
+		*out = new(string)
+		**out = **in
+	}
+	if in.SecurityGroupID != nil {
+		in, out := &in.SecurityGroupID, &out.SecurityGroupID
+		*out = new(string)
+		**out = **in
+	}
+	if in.ShareNetworkID != nil {
+		in, out := &in.ShareNetworkID, &out.ShareNetworkID
 		*out = new(string)
 		**out = **in
 	}

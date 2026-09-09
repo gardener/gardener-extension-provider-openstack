@@ -14,6 +14,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/pools"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
@@ -172,8 +173,13 @@ type Networking interface {
 // Loadbalancing describes the operations of a client interacting with OpenStack's Octavia service.
 type Loadbalancing interface {
 	ListLoadbalancers(ctx context.Context, listOpts loadbalancers.ListOpts) ([]loadbalancers.LoadBalancer, error)
+	CreateLoadbalancer(ctx context.Context, opts loadbalancers.CreateOpts) (*loadbalancers.LoadBalancer, error)
 	DeleteLoadbalancer(ctx context.Context, id string, opts loadbalancers.DeleteOpts) error
 	GetLoadbalancer(ctx context.Context, id string) (*loadbalancers.LoadBalancer, error)
+	// Pools
+	ListPools(ctx context.Context, opts pools.ListOpts) ([]pools.Pool, error)
+	// Members
+	BatchUpdatePoolMembers(ctx context.Context, poolID string, opts []pools.BatchUpdateMemberOpts) error
 }
 
 // SharedFilesystem describes operations for OpenStack's Manila service.

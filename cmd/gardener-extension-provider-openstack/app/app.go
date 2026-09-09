@@ -235,7 +235,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			selfHostedShootExposureCtrlOpts.Completed().Apply(&openstackselfhostedshootexposure.DefaultAddOptions.Controller)
 			reconcileOpts.Completed().Apply(&openstackselfhostedshootexposure.DefaultAddOptions.IgnoreOperationAnnotation)
-			openstackselfhostedshootexposure.DefaultAddOptions.ExtensionClasses = generalOpts.Completed().ExtensionClasses
+			openstackselfhostedshootexposure.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
 
 			if _, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil); err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)

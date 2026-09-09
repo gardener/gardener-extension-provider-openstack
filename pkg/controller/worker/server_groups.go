@@ -24,7 +24,7 @@ func generateServerGroupNamePrefixV1(clusterName, poolName string) string {
 }
 
 func generateServerGroupNamePrefixV2(uuid string) string {
-	return uuid[:18] + "-"
+	return uuid[:min(len(uuid), 18)] + "-"
 }
 
 func generateServerGroupNameV2(uuid, poolName, policy string) string {

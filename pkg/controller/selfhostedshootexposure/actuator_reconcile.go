@@ -10,6 +10,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	ctrlerror "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/go-logr/logr"
@@ -27,7 +28,12 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 		return nil, err
 	}
 
-	nodesSubnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, openstackapi.PurposeNodes)
+	family := primaryIPFamily(cluster)
+	nodesPurpose := openstackapi.PurposeNodes
+	if family == gardencorev1beta1.IPFamilyIPv6 {
+		nodesPurpose = openstackapi.PurposeNodesIPv6
+	}
+	nodesSubnet, err := helper.FindSubnetByPurpose(infraStatus.Networks.Subnets, nodesPurpose)
 	if err != nil {
 		return nil, &ctrlerror.RequeueAfterError{
 			RequeueAfter: requeueAfterDependency,
@@ -49,7 +55,6 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 		}
 	}
 
-	family := primaryIPFamily(cluster)
 	memberAddresses, err := desiredMemberAddresses(exposure, family)
 	if err != nil {
 		return nil, err

@@ -43,6 +43,7 @@ var _ = Describe("Actuator", func() {
 		shootName   = "shoot--project--test"
 		namespace   = "shoot--project--test"
 		subnetID    = "subnet-id-1"
+		subnetCIDR  = "10.11.12.0/24"
 		fipPoolID   = "fip-pool-id-1"
 		fipIP       = "1.2.3.4"
 		lbID        = "lb-id-1"
@@ -77,7 +78,7 @@ var _ = Describe("Actuator", func() {
 			Networks: openstackv1alpha1.NetworkStatus{
 				FloatingPool: openstackv1alpha1.FloatingPoolStatus{ID: fipPoolID},
 				Subnets: []openstackv1alpha1.Subnet{
-					{Purpose: openstackv1alpha1.PurposeNodes, ID: subnetID},
+					{Purpose: openstackv1alpha1.PurposeNodes, ID: subnetID, CIDR: subnetCIDR},
 				},
 			},
 			SecurityGroups: []openstackv1alpha1.SecurityGroup{
@@ -218,7 +219,7 @@ var _ = Describe("Actuator", func() {
 			nwClient.EXPECT().CreateRule(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, opts rules.CreateOpts) (*rules.SecGroupRule, error) {
 					Expect(opts.SecGroupID).To(Equal(nodesSGID))
-					Expect(opts.RemoteIPPrefix).To(Equal("0.0.0.0/0"))
+					Expect(opts.RemoteIPPrefix).To(Equal(subnetCIDR))
 					Expect(opts.PortRangeMin).To(Equal(6443))
 					Expect(opts.PortRangeMax).To(Equal(6443))
 					Expect(string(opts.Direction)).To(Equal("ingress"))
@@ -252,7 +253,7 @@ var _ = Describe("Actuator", func() {
 				Protocol:       "tcp",
 				PortRangeMin:   6443,
 				PortRangeMax:   6443,
-				RemoteIPPrefix: "0.0.0.0/0",
+				RemoteIPPrefix: subnetCIDR,
 			}}, nil)
 			nwClient.EXPECT().GetFipByName(ctx, exposureTag).Return([]floatingips.FloatingIP{{ID: fipID, FloatingIP: fipIP, PortID: "stale-port"}}, nil)
 			nwClient.EXPECT().UpdateFIPWithPort(ctx, fipID, vipPortID).Return(nil)
@@ -365,7 +366,7 @@ var _ = Describe("Actuator", func() {
 			nwClient.EXPECT().DeleteRule(ctx, "stale-rule").Return(nil)
 			nwClient.EXPECT().CreateRule(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, opts rules.CreateOpts) (*rules.SecGroupRule, error) {
-					Expect(opts.RemoteIPPrefix).To(Equal("0.0.0.0/0"))
+					Expect(opts.RemoteIPPrefix).To(Equal(subnetCIDR))
 					return &rules.SecGroupRule{ID: "rule-1"}, nil
 				})
 			nwClient.EXPECT().GetFipByName(ctx, exposureTag).Return([]floatingips.FloatingIP{{ID: fipID, FloatingIP: fipIP, PortID: vipPortID}}, nil)

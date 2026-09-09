@@ -63,7 +63,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 
 	log.Info("Deleting load balancer", "id", lb.ID)
 	if err := lbClient.DeleteLoadbalancer(ctx, lb.ID, deleteOptsCascade()); err != nil {
-		return util.DetermineError(fmt.Errorf("could not delete load balancer: %w", err), helper.KnownCodes)
+		return requeueOnConflict(util.DetermineError(fmt.Errorf("could not delete load balancer: %w", err), helper.KnownCodes))
 	}
 	return &ctrlerror.RequeueAfterError{
 		RequeueAfter: requeueAfterProvisioning,

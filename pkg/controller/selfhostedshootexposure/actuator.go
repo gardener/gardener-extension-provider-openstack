@@ -182,14 +182,20 @@ func ensureSecurityGroupRule(ctx context.Context, networkingClient openstackclie
 		return fmt.Errorf("could not list security group rules: %w", err)
 	}
 
+	foundRule := false
 	for _, rule := range existing {
 		if securityGroupRuleMatches(rule, desired) {
-			return nil
+			foundRule = true
+			continue
 		}
 		// The rule drifted from what we want (e.g. port or ether type changed): replace it.
 		if err := networkingClient.DeleteRule(ctx, rule.ID); openstackclient.IgnoreNotFoundError(err) != nil {
 			return fmt.Errorf("could not delete stale security group rule %s: %w", rule.ID, err)
 		}
+	}
+
+	if foundRule {
+		return nil
 	}
 
 	if _, err := networkingClient.CreateRule(ctx, desired); err != nil {

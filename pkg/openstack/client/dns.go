@@ -88,8 +88,15 @@ func (c *DNSClient) getRecordSet(ctx context.Context, zoneID, name, recordType s
 	if err != nil {
 		return nil, err
 	}
-	if len(rss) > 0 {
-		return &rss[0], nil
+	// Designate's server-side name filter treats '*' in a wildcard name as a SQL LIKE
+	// wildcard, so a query for "*.sub.domain.tld." also matches any sibling record sharing
+	// that suffix (e.g. "abc.sub.domain.tld."). We therefore cannot trust the filter and
+	// must match the exact name ourselves. See https://bugs.launchpad.net/designate/+bug/2167327.
+	normalizedName := normalizeName(ensureTrailingDot(name))
+	for i := range rss {
+		if normalizeName(rss[i].Name) == normalizedName {
+			return &rss[i], nil
+		}
 	}
 	return nil, nil
 }

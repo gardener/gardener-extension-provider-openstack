@@ -462,6 +462,50 @@ var _ = Describe("InfrastructureConfig validation", func() {
 				"Field": Equal("networks.ipv6"),
 			}))))
 		})
+
+		It("should pass with valid BYO nodeSubnetId and large enough podCIDR", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To("bc3d8461-eeec-4425-a01e-e3100f151913")
+			infrastructureConfig.Networks.SubnetID = ptr.To("cad4d8d0-871c-478b-8ac1-605a54d5eac0")
+			infrastructureConfig.Networks.Router = &api.Router{ID: "4609b94d-0af2-4ae8-bb2a-2c11966e15d0"}
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeSubnetID: ptr.To("1898ce8a-c9de-480f-8969-fb87e2987886"),
+				PodCIDR:      "fd00::/56",
+				ServiceCIDR:  "fd01::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid BYO nodeSubnetId with podCIDR prefix length > 64", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To("bc3d8461-eeec-4425-a01e-e3100f151913")
+			infrastructureConfig.Networks.SubnetID = ptr.To("cad4d8d0-871c-478b-8ac1-605a54d5eac0")
+			infrastructureConfig.Networks.Router = &api.Router{ID: "4609b94d-0af2-4ae8-bb2a-2c11966e15d0"}
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeSubnetID: ptr.To("1898ce8a-c9de-480f-8969-fb87e2987886"),
+				PodCIDR:      "fd00::/112",
+				ServiceCIDR:  "fd01::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6.podCIDR"),
+			}))))
+		})
+
+		It("should forbid explicit IPv6 CIDRs with podCIDR prefix length > 64", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "2001:db8:1::/64",
+				PodCIDR:     "2001:db8:2::/112",
+				ServiceCIDR: "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6.podCIDR"),
+			}))))
+		})
 	})
 
 	Describe("#ValidateInfrastructureConfigUpdate", func() {

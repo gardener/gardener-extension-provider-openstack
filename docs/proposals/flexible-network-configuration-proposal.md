@@ -24,6 +24,7 @@ reviewers:
   - [Validation Rules](#validation-rules)
   - [Configuration Patterns](#configuration-patterns)
   - [Share Network (Manila CSI) Considerations](#share-network-manila-csi-considerations)
+  - [BYO IPv6 Node Subnet (Dual-Stack)](#byo-ipv6-node-subnet-dual-stack)
   - [Delete Semantics](#delete-semantics)
   - [Implementation Status](#implementation-status)
 - [What Is Missing Compared to Other Providers](#what-is-missing-compared-to-other-providers)
@@ -68,7 +69,7 @@ via `networks.id`). This prevents the integration patterns described above.
 
 ### Non-Goals
 
-- Supporting BYO subnets for IPv6 or dual-stack configurations in the initial implementation.
+- ~~Supporting BYO subnets for IPv6 or dual-stack configurations in the initial implementation.~~ _(implemented — see [BYO IPv6 Node Subnet](#byo-ipv6-node-subnet-dual-stack))_
 - Allowing partial BYO configurations (e.g., mixing BYO subnet with a Gardener-created subnet).
 - Validating pod CIDR overlap between clusters sharing a subnet (the user is responsible).
 - User-managed egress / CCM route controller changes
@@ -99,7 +100,7 @@ The **Design Principle** is: BYO resources are referenced, never created or dele
 ### API Changes
 
 The `Networks` struct in `InfrastructureConfig` gains three new optional fields (`SubnetID`,
-`SecurityGroupID`, `ShareNetworkID`):
+`SecurityGroupID`, `ShareNetworkID`), and `IPv6Config` gains a new `NodeSubnetID` field:
 
 ```go
 // Networks holds information about the Kubernetes and infrastructure networks.
@@ -134,7 +135,24 @@ type Networks struct {
     // ShareNetwork holds information about the share network (used for shared file systems like NFS)
     // +optional
     ShareNetwork *ShareNetwork `json:"shareNetwork,omitempty"`
+
+    // IPv6 holds the IPv6 configuration. Used for dual-stack clusters.
+    // +optional
+    IPv6 *IPv6Config `json:"ipv6,omitempty"`
     // ...
+}
+
+// IPv6Config contains the IPv6 CIDR configuration for nodes, pods, and services.
+type IPv6Config struct {
+    // ... existing fields (SubnetPoolID, NodeCIDR, PodCIDR, ServiceCIDR) ...
+
+    // NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes.
+    // When set, Gardener will NOT create an IPv6 node subnet.
+    // Requires networks.id, networks.router.id, and networks.subnetId.
+    // PodCIDR and ServiceCIDR must be set explicitly.
+    // Mutually exclusive with SubnetPoolID and NodeCIDR.
+    // +optional
+    NodeSubnetID *string `json:"nodeSubnetId,omitempty"`
 }
 ```
 
@@ -175,6 +193,16 @@ existing resources and will not create or delete any of them.
 | `shareNetworkId` must be a valid UUID | `networks.shareNetworkId` | OpenStack IDs are UUIDs |
 | `shareNetworkId` is mutually exclusive with `shareNetwork.enabled` | `networks.shareNetworkId` | Cannot combine BYO and managed share network |
 | `shareNetworkId` is immutable | `networks.shareNetworkId` | Once set, cannot be changed |
+| `ipv6.nodeSubnetId` requires `networks.id` | `networks.ipv6.nodeSubnetId` | Parent network must be specified |
+| `ipv6.nodeSubnetId` requires `networks.router.id` | `networks.ipv6.nodeSubnetId` | Router must have an interface to the IPv6 subnet |
+| `ipv6.nodeSubnetId` requires `networks.subnetId` | `networks.ipv6.nodeSubnetId` | BYO dual-stack requires BYO IPv4 subnet |
+| `ipv6.nodeSubnetId` must be a valid UUID | `networks.ipv6.nodeSubnetId` | OpenStack IDs are UUIDs |
+| `ipv6.nodeSubnetId` is mutually exclusive with `ipv6.subnetPoolId` | `networks.ipv6.nodeSubnetId` | Cannot combine BYO subnet with pool-based allocation |
+| `ipv6.nodeSubnetId` is mutually exclusive with `ipv6.nodeCIDR` | `networks.ipv6.nodeSubnetId` | Cannot specify both a CIDR and an existing subnet |
+| `ipv6.podCIDR` is required when `ipv6.nodeSubnetId` is set | `networks.ipv6.podCIDR` | Needed to configure KCM, CNI, and kube-proxy |
+| `ipv6.serviceCIDR` is required when `ipv6.nodeSubnetId` is set | `networks.ipv6.serviceCIDR` | Needed to configure kube-apiserver and kube-proxy |
+| `ipv6.podCIDR` prefix length must be ≤ /64 | `networks.ipv6.podCIDR` | KCM allocates /64 per node; a smaller cluster CIDR cannot be subdivided |
+| `ipv6` is immutable | `networks.ipv6` | Once set, the entire IPv6 config block cannot be changed |
 
 #### Dynamic validation (config validator, requires OpenStack API)
 
@@ -186,6 +214,8 @@ existing resources and will not create or delete any of them.
 | Router must have interface to subnet | `networks.router` | If both `router.id` and `subnetId` are set, the router must already have a port on the subnet |
 | Security group must exist | `networks.securityGroupId` | The specified security group must be retrievable |
 | Share network must exist | `networks.shareNetworkId` | The specified share network must be retrievable |
+| IPv6 node subnet must exist in the network | `networks.ipv6.nodeSubnetId` | The subnet must belong to the specified network |
+| Router must have interface to IPv6 node subnet | `networks.router` | The router must already have a port on the IPv6 subnet |
 
 ### Configuration Patterns
 
@@ -271,6 +301,84 @@ discover and adopt it automatically without creating a new one.
 If the user pre-provisioned the share network and wants it to survive shoot deletion, use
 `networks.shareNetworkId` instead of `shareNetwork.enabled`.
 
+---
+
+### BYO IPv6 Node Subnet (Dual-Stack)
+
+`networks.ipv6.nodeSubnetId` extends the BYO pattern to dual-stack clusters. It allows users to
+provide an existing IPv6 subnet for worker nodes instead of having Gardener create one.
+
+#### Constraints
+
+- Requires `networks.id`, `networks.router.id`, and `networks.subnetId` — BYO dual-stack is only
+  supported on top of a fully BYO IPv4 setup (Pattern 4).
+- The router must already have an interface attached to both the IPv4 and IPv6 subnets before
+  the shoot is created.
+- `ipv6.podCIDR` and `ipv6.serviceCIDR` must be set explicitly. These are virtual Kubernetes
+  address ranges (not Neutron subnets). Gardener propagates them into `shoot.status.networking`
+  so the gardenlet, KCM, CNI, kube-proxy, and CoreDNS pick them up. They cannot be derived from
+  the node subnet because `spec.networking.pods`/`services` only hold IPv4 CIDRs.
+- `ipv6.podCIDR` prefix length must be ≤ `/64`. The kube-controller-manager allocates a `/64`
+  per node (`--node-cidr-mask-size-ipv6=64`) and will crash with
+  `mask size of cluster CIDR must be less than or equal to --node-cidr-mask-size` if the cluster
+  pod CIDR is too small. A `/56` provides 256 per-node `/64` blocks and is a safe default.
+- `ipv6.nodeSubnetId` is mutually exclusive with `ipv6.subnetPoolId` and `ipv6.nodeCIDR`.
+- The entire `ipv6` block is immutable once set.
+
+#### Example
+
+```yaml
+apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
+kind: InfrastructureConfig
+floatingPoolName: MY-FLOATING-POOL
+networks:
+  id: "<network-uuid>"
+  subnetId: "<ipv4-nodes-subnet-uuid>"
+  router:
+    id: "<router-uuid>"
+  ipv6:
+    nodeSubnetId: "<ipv6-nodes-subnet-uuid>"
+    podCIDR: "fd00::/56"
+    serviceCIDR: "fd01::/112"
+```
+
+The shoot must also declare dual-stack in `spec.networking`:
+
+```yaml
+spec:
+  networking:
+    ipFamilies: [IPv4, IPv6]
+    pods: "10.96.0.0/11"
+    services: "100.64.0.0/13"
+```
+
+Note: `spec.networking.pods`/`services` are IPv4 only. The IPv6 pod/service CIDRs are carried
+exclusively through `networks.ipv6.podCIDR` / `networks.ipv6.serviceCIDR`.
+
+#### Resource Ownership
+
+| Resource | Owned by Gardener? |
+|---|---|
+| IPv6 node subnet (`ipv6.nodeSubnetId` not set, dual-stack) | Yes — created and deleted |
+| IPv6 node subnet (`ipv6.nodeSubnetId` set) | No — never touched |
+| IPv6 router interface (BYO IPv6 node subnet) | No — must pre-exist, never touched |
+
+#### Admission webhook changes
+
+The `validateShoot` function was updated to accept `ipv6.nodeSubnetId` as a valid IPv6 config
+for dual-stack shoots, in addition to the existing `subnetPoolId` and explicit CIDR paths:
+
+```go
+if core.IsDualStack(context.shoot.Spec.Networking.IPFamilies) {
+    ipv6 := context.infraConfig.Networks.IPv6
+    if ipv6 == nil || (ipv6.SubnetPoolID == nil && ipv6.NodeCIDR == "" && ipv6.NodeSubnetID == nil) {
+        allErrs = append(allErrs, field.Required(...))
+    }
+}
+```
+
+---
+
 ### Delete Semantics
 
 On shoot deletion, Gardener will:
@@ -280,9 +388,11 @@ On shoot deletion, Gardener will:
 - **NOT delete** the router if `networks.router.id` was set.
 - **NOT delete** the security group if `networks.securityGroupId` was set.
 - **NOT delete** the share network if `networks.shareNetworkId` was set.
+- **NOT delete** the IPv6 node subnet if `networks.ipv6.nodeSubnetId` was set.
 - **Delete** the router interface (if the router was not BYO and Gardener created it).
 - **Delete** the security group (if `networks.securityGroupId` was NOT set).
 - **Delete** the share network (if `networks.shareNetworkId` was NOT set and `shareNetwork.enabled` was true).
+- **Delete** the IPv6 node subnet (if `networks.ipv6.nodeSubnetId` was NOT set and dual-stack was enabled).
 - **Delete** the SSH key pair (always Gardener-managed).
 
 This matches the principle: BYO resources are never deleted by Gardener.
@@ -318,7 +428,19 @@ The following changes are already implemented on the `feature/existing-subnet` b
   - [x] Dynamic validation: security group existence check
   - [x] Infrastructure reconciliation: skip security group creation if `securityGroupId` is set
   - [x] Infrastructure deletion: skip security group deletion if `securityGroupId` was set
-- [x] Documentation updated
+- [x] BYO IPv6 node subnet: `networks.ipv6.nodeSubnetId` field added
+  - [x] Static validation: requires `networks.id`, `networks.router.id`, and `networks.subnetId`
+  - [x] Static validation: must be valid UUID
+  - [x] Static validation: mutually exclusive with `ipv6.subnetPoolId` and `ipv6.nodeCIDR`
+  - [x] Static validation: `ipv6.podCIDR` and `ipv6.serviceCIDR` required when `nodeSubnetId` is set
+  - [x] Static validation: `ipv6.podCIDR` prefix length must be ≤ `/64`
+  - [x] Immutability enforced (entire `ipv6` block) in `ValidateInfrastructureConfigUpdate`
+  - [x] Dynamic validation: IPv6 node subnet existence in network check
+  - [x] Dynamic validation: router-to-IPv6-subnet interface check
+  - [x] Infrastructure reconciliation: skip IPv6 node subnet creation if `nodeSubnetId` is set
+  - [x] Infrastructure deletion: skip IPv6 node subnet deletion if `nodeSubnetId` was set
+  - [x] Admission webhook: `nodeSubnetId` accepted as a valid dual-stack IPv6 config
+- [x] Documentation updated (`docs/usage/flexible-network-configuration.md`)
 
 ---
 

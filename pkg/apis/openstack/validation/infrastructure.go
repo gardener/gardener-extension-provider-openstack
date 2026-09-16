@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"net"
 	"reflect"
 	"sort"
 
@@ -187,6 +188,9 @@ func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorLi
 			allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(f.path, f.cidr)...)
 			allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily([]cidrvalidation.CIDR{c}, cidrvalidation.IPFamilyIPv6)...)
 		}
+		if ipv6.PodCIDR != "" {
+			allErrs = append(allErrs, validateIPv6PodCIDRPrefixLength(ipv6.PodCIDR, fldPath.Child("podCIDR"))...)
+		}
 		return allErrs
 	}
 
@@ -226,8 +230,27 @@ func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorLi
 		parsedCIDRs = append(parsedCIDRs, c)
 	}
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(parsedCIDRs, false)...)
+	if ipv6.PodCIDR != "" {
+		allErrs = append(allErrs, validateIPv6PodCIDRPrefixLength(ipv6.PodCIDR, fldPath.Child("podCIDR"))...)
+	}
 
 	return allErrs
+}
+
+// validateIPv6PodCIDRPrefixLength checks that the IPv6 pod CIDR prefix is ≤ 64.
+// The kube-controller-manager allocates a /64 per node (--node-cidr-mask-size-ipv6=64),
+// so the cluster pod CIDR must have a prefix length ≤ 64 to be subdividable.
+func validateIPv6PodCIDRPrefixLength(cidr string, fldPath *field.Path) field.ErrorList {
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil // parse errors reported elsewhere
+	}
+	ones, _ := ipNet.Mask.Size()
+	if ones > 64 {
+		return field.ErrorList{field.Invalid(fldPath, cidr,
+			"IPv6 pod CIDR prefix length must be ≤ 64; the kube-controller-manager allocates a /64 per node and cannot subdivide a smaller block")}
+	}
+	return nil
 }
 
 // ValidateInfrastructureConfigUpdate validates a InfrastructureConfig object.

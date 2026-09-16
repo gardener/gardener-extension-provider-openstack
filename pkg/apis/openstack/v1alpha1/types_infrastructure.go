@@ -94,8 +94,10 @@ type IPv6Config struct {
 	// Required when nodeCIDR is set or nodeSubnetId is set.
 	// +optional
 	ServiceCIDR string `json:"serviceCIDR,omitempty"`
-	// NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes.
-	// When set, Gardener will not create an IPv6 node subnet.
+	// NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes in a
+	// bring-your-own dual-stack setup. When set, Gardener uses this subnet as-is
+	// and does not create (or delete) an IPv6 node subnet; the node CIDR is read
+	// from the existing subnet, so nodeCIDR must not be set.
 	// Requires networks.id and networks.router.id. Mutually exclusive with subnetPoolID and nodeCIDR.
 	// podCIDR and serviceCIDR must be set explicitly when nodeSubnetId is used.
 	// +optional

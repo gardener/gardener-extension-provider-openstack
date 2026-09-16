@@ -662,7 +662,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes.<br />When set, Gardener will not create an IPv6 node subnet.<br />Requires networks.id and networks.router.id. Mutually exclusive with subnetPoolID and nodeCIDR.<br />podCIDR and serviceCIDR must be set explicitly when nodeSubnetId is used.</p>
+<p>NodeSubnetID is the ID of an existing IPv6 subnet for worker nodes in a<br />bring-your-own dual-stack setup. When set, Gardener uses this subnet as-is<br />and does not create (or delete) an IPv6 node subnet; the node CIDR is read<br />from the existing subnet, so nodeCIDR must not be set.<br />Requires networks.id and networks.router.id. Mutually exclusive with subnetPoolID and nodeCIDR.<br />podCIDR and serviceCIDR must be set explicitly when nodeSubnetId is used.</p>
 </td>
 </tr>
 

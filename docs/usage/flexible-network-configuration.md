@@ -244,7 +244,7 @@ networks:
     id: "<router-uuid>"
   ipv6:
     nodeSubnetId: "<ipv6-nodes-subnet-uuid>"
-    podCIDR: "fd00::/112"
+    podCIDR: "fd00::/56"
     serviceCIDR: "fd01::/112"
 ```
 
@@ -254,8 +254,8 @@ The shoot must also declare dual-stack in `spec.networking`:
 spec:
   networking:
     ipFamilies: [IPv4, IPv6]
-    pods: "10.96.0.0/11,fd00::/112"
-    services: "100.64.0.0/13,fd01::/112"
+    pods: "10.96.0.0/11"
+    services: "100.64.0.0/13"
 ```
 
 The router must already have an interface attached to both the IPv4 and IPv6 subnets before the
@@ -276,9 +276,37 @@ openstack subnet create my-subnet-ipv6 \
 openstack router add subnet my-router my-subnet-ipv6
 ```
 
+When using a BYO security group (`networks.securityGroupId`) together with dual-stack, the
+security group must include IPv6 ingress rules in addition to the IPv4 rules from Pattern 5:
+
+```bash
+# Node-to-node IPv6: allow all ingress within the security group
+openstack security group rule create my-worker-sg \
+  --protocol any --remote-group my-worker-sg --ingress --ethertype IPv6
+
+# NodePort range IPv6: TCP
+openstack security group rule create my-worker-sg \
+  --protocol tcp --dst-port 30000:32767 --remote-ip ::/0 --ingress --ethertype IPv6
+
+# NodePort range IPv6: UDP
+openstack security group rule create my-worker-sg \
+  --protocol udp --dst-port 30000:32767 --remote-ip ::/0 --ingress --ethertype IPv6
+```
+
+Without these rules, worker nodes will be created in OpenStack but will fail to join the cluster —
+they appear as `Pending` machines in the machine-controller-manager and the VPN component will also
+fail to become ready.
+
 `ipv6.podCIDR` and `ipv6.serviceCIDR` are virtual — they are Kubernetes address ranges for the
 CNI and kube-proxy respectively, not Neutron subnets. Pick any free IPv6 prefix (e.g. from ULA
 `fd00::/8`) that does not overlap with the node subnet or other shoots sharing the network.
+Gardener propagates these into `shoot.status.networking` so the gardenlet and CNI pick them up.
+
+The pod CIDR must be large enough for the kube-controller-manager to allocate a `/64` per node
+(`--node-cidr-mask-size-ipv6=64`). A `/56` provides 256 per-node `/64` blocks and is a safe
+default. Do **not** use `/112` or smaller — the KCM will crash with
+`mask size of cluster CIDR must be less than or equal to --node-cidr-mask-size`.
+The service CIDR `/112` is fine since services are not allocated per-node.
 
 ⚠️ `networks.ipv6.nodeSubnetId` is mutually exclusive with `networks.ipv6.subnetPoolID` and
 `networks.ipv6.nodeCIDR`. It requires `networks.subnetId` to be set — BYO dual-stack is only

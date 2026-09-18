@@ -148,12 +148,41 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, machineIma
 		allErrs = append(allErrs, field.Required(fldPath.Child("dhcpDomain"), "must provide a dhcp domain when the key is specified"))
 	}
 
+	allErrs = append(allErrs, validateStorageClasses(cloudProfile.StorageClasses, fldPath.Child("storageClasses"))...)
+
 	serverGroupPath := fldPath.Child("serverGroupPolicies")
 	for i, policy := range cloudProfile.ServerGroupPolicies {
 		idxPath := serverGroupPath.Index(i)
 
 		if len(policy) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath, "policy cannot be empty"))
+		}
+	}
+
+	return allErrs
+}
+
+// validateStorageClasses validates the storageClass definitions of a CloudProfileConfig.
+func validateStorageClasses(storageClasses []api.StorageClassDefinition, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, storageClass := range storageClasses {
+		idxPath := fldPath.Index(i)
+
+		regionsFound := sets.New[string]()
+		for j, region := range storageClass.Regions {
+			regionPath := idxPath.Child("regions").Index(j)
+
+			if len(region.Name) == 0 {
+				allErrs = append(allErrs, field.Required(regionPath.Child("name"), "must provide a region name"))
+			} else if regionsFound.Has(region.Name) {
+				allErrs = append(allErrs, field.Duplicate(regionPath.Child("name"), region.Name))
+			}
+			regionsFound.Insert(region.Name)
+
+			if ptr.Deref(region.Unavailable, false) && len(region.Parameters) > 0 {
+				allErrs = append(allErrs, field.Forbidden(regionPath.Child("parameters"), "must not provide parameters for a region in which the storageClass is unavailable"))
+			}
 		}
 	}
 

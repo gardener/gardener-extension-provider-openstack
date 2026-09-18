@@ -872,12 +872,83 @@ var _ = Describe("ValuesProvider", func() {
 	})
 
 	Describe("#GetStorageClassesChartValues", func() {
+		clusterWithStorageClasses := func(storageClasses []api.StorageClassDefinition) *extensionscontroller.Cluster {
+			config := *cloudProfileConfig
+			config.StorageClasses = storageClasses
+			configJSON, err := json.Marshal(&config)
+			Expect(err).NotTo(HaveOccurred())
+
+			clusterWithSc := *cluster
+			clusterWithSc.CloudProfile = &gardencorev1beta1.CloudProfile{
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					ProviderConfig: &runtime.RawExtension{
+						Raw: configJSON,
+					},
+				},
+			}
+			return &clusterWithSc
+		}
+
 		It("should return correct storage class chart values", func() {
 			values, err := vp.GetStorageClassesChartValues(ctx, cp, cluster)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(values["storageclasses"]).To(HaveLen(2))
 			Expect(values["storageclasses"].([]map[string]interface{})[0]["provisioner"]).To(Equal(openstack.CSIStorageProvisioner))
 			Expect(values["storageclasses"].([]map[string]interface{})[1]["provisioner"]).To(Equal(openstack.CSIStorageProvisioner))
+		})
+
+		It("should apply the region specific parameters of the shoot's region", func() {
+			clusterWithSc := clusterWithStorageClasses([]api.StorageClassDefinition{
+				{
+					Name:       "example-sc",
+					Parameters: map[string]string{"type": "storage_premium_perf0", "availability": "nova"},
+					Regions: []api.StorageClassRegion{
+						{Name: region, Parameters: map[string]string{"type": "premium"}},
+						{Name: "other-region", Parameters: map[string]string{"type": "not-used"}},
+					},
+				},
+			})
+
+			values, err := vp.GetStorageClassesChartValues(ctx, cp, clusterWithSc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values["storageclasses"]).To(HaveLen(1))
+			Expect(values["storageclasses"].([]map[string]interface{})[0]).To(HaveKeyWithValue("parameters", map[string]string{
+				"type":         "premium",
+				"availability": "nova",
+			}))
+		})
+
+		It("should not create storage classes which are unavailable in the shoot's region", func() {
+			clusterWithSc := clusterWithStorageClasses([]api.StorageClassDefinition{
+				{
+					Name:       "unavailable-sc",
+					Parameters: map[string]string{"type": "storage_premium_perf0"},
+					Regions:    []api.StorageClassRegion{{Name: region, Unavailable: ptr.To(true)}},
+				},
+				{
+					Name:       "available-sc",
+					Parameters: map[string]string{"type": "storage_standard"},
+					Regions:    []api.StorageClassRegion{{Name: "other-region", Unavailable: ptr.To(true)}},
+				},
+			})
+
+			values, err := vp.GetStorageClassesChartValues(ctx, cp, clusterWithSc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values["storageclasses"]).To(HaveLen(1))
+			Expect(values["storageclasses"].([]map[string]interface{})[0]).To(HaveKeyWithValue("name", "available-sc"))
+		})
+
+		It("should return no storage classes if all of them are unavailable in the shoot's region", func() {
+			clusterWithSc := clusterWithStorageClasses([]api.StorageClassDefinition{
+				{
+					Name:    "unavailable-sc",
+					Regions: []api.StorageClassRegion{{Name: region, Unavailable: ptr.To(true)}},
+				},
+			})
+
+			values, err := vp.GetStorageClassesChartValues(ctx, cp, clusterWithSc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(values["storageclasses"]).To(BeEmpty())
 		})
 	})
 

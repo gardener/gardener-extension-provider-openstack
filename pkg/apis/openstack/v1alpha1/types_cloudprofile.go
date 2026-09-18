@@ -216,4 +216,21 @@ type StorageClassDefinition struct {
 	// VolumeBindingMode sets bindingMode for the storageclass
 	// +optional
 	VolumeBindingMode *string `json:"volumeBindingMode,omitempty"`
+	// Regions contains region specific settings for the storageclass. At most one entry per region is allowed.
+	// +optional
+	Regions []StorageClassRegion `json:"regions,omitempty"`
+}
+
+// StorageClassRegion contains region specific settings for a storageClass.
+type StorageClassRegion struct {
+	// Name is the name of the region these settings apply to.
+	Name string `json:"name"`
+	// Unavailable indicates that the storageclass is not available in this region, i.e. it is not created at all.
+	// It must not be combined with parameters.
+	// +optional
+	Unavailable *bool `json:"unavailable,omitempty"`
+	// Parameters are region specific parameters for the storageclass (storageclass.parameters). They are merged
+	// into the parameters of the storageclass, taking precedence over entries with the same key.
+	// +optional
+	Parameters map[string]string `json:"parameters,omitempty"`
 }

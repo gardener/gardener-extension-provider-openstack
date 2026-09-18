@@ -11,6 +11,7 @@ images:
   csi-snapshot-controller: image-repository:image-tag
 
 socketPath: /var/lib/csi/sockets/pluginproxy
+metricsPort: 8080
 timeout: 3m
 userAgentHeaders: []
 maxEntries: 1000

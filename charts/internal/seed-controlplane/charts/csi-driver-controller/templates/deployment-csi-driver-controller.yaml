@@ -53,6 +53,7 @@ spec:
         - --provide-node-service=false
         - --kube-api-qps=100
         - --kube-api-burst=200
+        - --http-endpoint=:{{ .Values.metricsPort }}
         env:
         - name: CSI_ENDPOINT
           value: unix://{{ .Values.socketPath }}/csi.sock
@@ -63,6 +64,9 @@ spec:
         ports:
         - name: healthz
           containerPort: 9808
+          protocol: TCP
+        - name: metrics
+          containerPort: {{ .Values.metricsPort }}
           protocol: TCP
         livenessProbe:
           httpGet:

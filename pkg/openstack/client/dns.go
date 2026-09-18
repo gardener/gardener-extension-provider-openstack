@@ -6,7 +6,9 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/dns/v2/recordsets"
@@ -76,8 +78,9 @@ func (c *DNSClient) DeleteRecordSet(ctx context.Context, zoneID, name, recordTyp
 }
 
 func (c *DNSClient) getRecordSet(ctx context.Context, zoneID, name, recordType string) (*recordsets.RecordSet, error) {
+	name = ensureTrailingDot(name)
 	listOpts := recordsets.ListOpts{
-		Name: ensureTrailingDot(name),
+		Name: name,
 		Type: recordType,
 	}
 	allPages, err := recordsets.ListByZone(c.client, zoneID, listOpts).AllPages(ctx)
@@ -88,10 +91,20 @@ func (c *DNSClient) getRecordSet(ctx context.Context, zoneID, name, recordType s
 	if err != nil {
 		return nil, err
 	}
-	if len(rss) > 0 {
-		return &rss[0], nil
+
+	// Whenever we search for a wildcard record, the Designate API returns all
+	// subdomains, similar to a glob: https://bugs.launchpad.net/designate/+bug/2167327
+	filtered := slices.DeleteFunc(rss, func(r recordsets.RecordSet) bool {
+		return r.Name != name
+	})
+	switch len(filtered) {
+	case 0:
+		return nil, nil
+	case 1:
+		return &filtered[0], nil
+	default:
+		return nil, fmt.Errorf("more than one %s record found for %s", recordType, name)
 	}
-	return nil, nil
 }
 
 func normalizeName(name string) string {

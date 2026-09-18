@@ -111,7 +111,7 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal("networks.workers"),
-				"Detail": Equal("must specify either the network range for the worker network or a subnetPool"),
+				"Detail": Equal("must specify either the network range for the worker network, a subnetPool, or an existing subnetId"),
 			}))
 		})
 
@@ -259,6 +259,93 @@ var _ = Describe("InfrastructureConfig validation", func() {
 		})
 	})
 
+	Context("SubnetID", func() {
+		It("should pass with valid network, subnet and router IDs", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid subnetId without router id", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = nil // explicitly clear the router set in BeforeEach
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("networks.router"),
+				"Detail": ContainSubstring("networks.router.id must be provided when networks.subnetId is set"),
+			}))))
+		})
+
+		It("should forbid subnetId without network id", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.subnetId"),
+				"Detail": ContainSubstring("networks.id must be provided"),
+			}))))
+		})
+
+		It("should forbid invalid subnetId (not a UUID)", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To("not-a-uuid")
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetId"),
+			}))))
+		})
+
+		It("should forbid subnetId combined with workers CIDR", func() {
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("networks.subnetId"),
+				"Detail": ContainSubstring("mutually exclusive"),
+			}))))
+		})
+
+		It("should allow shareNetwork enabled together with subnetId", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.SubnetID = ptr.To(uuid.New().String())
+			infrastructureConfig.Networks.Router = &api.Router{ID: uuid.New().String()}
+			infrastructureConfig.Networks.ShareNetwork = &api.ShareNetwork{Enabled: true}
+
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, nil, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid changing networks.subnetId after creation", func() {
+			newConfig := infrastructureConfig.DeepCopy()
+			id := uuid.New().String()
+			newConfig.Networks.SubnetID = ptr.To(id)
+			// keep the same router as in oldConfig to isolate the subnetId immutability check
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.subnetId"),
+			}))))
+		})
+	})
+
 	Context("IPv6 config", func() {
 		It("should pass when networks.ipv6 is not set", func() {
 			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
@@ -373,6 +460,50 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("networks.ipv6"),
+			}))))
+		})
+
+		It("should pass with valid BYO nodeSubnetId and large enough podCIDR", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To("bc3d8461-eeec-4425-a01e-e3100f151913")
+			infrastructureConfig.Networks.SubnetID = ptr.To("cad4d8d0-871c-478b-8ac1-605a54d5eac0")
+			infrastructureConfig.Networks.Router = &api.Router{ID: "4609b94d-0af2-4ae8-bb2a-2c11966e15d0"}
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeSubnetID: ptr.To("1898ce8a-c9de-480f-8969-fb87e2987886"),
+				PodCIDR:      "fd00::/56",
+				ServiceCIDR:  "fd01::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid BYO nodeSubnetId with podCIDR prefix length > 64", func() {
+			infrastructureConfig.Networks.Workers = ""
+			infrastructureConfig.Networks.ID = ptr.To("bc3d8461-eeec-4425-a01e-e3100f151913")
+			infrastructureConfig.Networks.SubnetID = ptr.To("cad4d8d0-871c-478b-8ac1-605a54d5eac0")
+			infrastructureConfig.Networks.Router = &api.Router{ID: "4609b94d-0af2-4ae8-bb2a-2c11966e15d0"}
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeSubnetID: ptr.To("1898ce8a-c9de-480f-8969-fb87e2987886"),
+				PodCIDR:      "fd00::/112",
+				ServiceCIDR:  "fd01::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6.podCIDR"),
+			}))))
+		})
+
+		It("should forbid explicit IPv6 CIDRs with podCIDR prefix length > 64", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{
+				NodeCIDR:    "2001:db8:1::/64",
+				PodCIDR:     "2001:db8:2::/112",
+				ServiceCIDR: "2001:db8:3::/112",
+			}
+			errorList := ValidateInfrastructureConfig(infrastructureConfig, &nodes, nilPath)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6.podCIDR"),
 			}))))
 		})
 	})

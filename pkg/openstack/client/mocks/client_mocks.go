@@ -19,6 +19,7 @@ import (
 	servergroups "github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
 	servers "github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	loadbalancers "github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
+	pools "github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/pools"
 	floatingips "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
 	routers "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
 	groups "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
@@ -1135,6 +1136,35 @@ func (m *MockLoadbalancing) EXPECT() *MockLoadbalancingMockRecorder {
 	return m.recorder
 }
 
+// BatchUpdatePoolMembers mocks base method.
+func (m *MockLoadbalancing) BatchUpdatePoolMembers(ctx context.Context, poolID string, opts []pools.BatchUpdateMemberOpts) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchUpdatePoolMembers", ctx, poolID, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// BatchUpdatePoolMembers indicates an expected call of BatchUpdatePoolMembers.
+func (mr *MockLoadbalancingMockRecorder) BatchUpdatePoolMembers(ctx, poolID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchUpdatePoolMembers", reflect.TypeOf((*MockLoadbalancing)(nil).BatchUpdatePoolMembers), ctx, poolID, opts)
+}
+
+// CreateLoadbalancer mocks base method.
+func (m *MockLoadbalancing) CreateLoadbalancer(ctx context.Context, opts loadbalancers.CreateOpts) (*loadbalancers.LoadBalancer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateLoadbalancer", ctx, opts)
+	ret0, _ := ret[0].(*loadbalancers.LoadBalancer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateLoadbalancer indicates an expected call of CreateLoadbalancer.
+func (mr *MockLoadbalancingMockRecorder) CreateLoadbalancer(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLoadbalancer", reflect.TypeOf((*MockLoadbalancing)(nil).CreateLoadbalancer), ctx, opts)
+}
+
 // DeleteLoadbalancer mocks base method.
 func (m *MockLoadbalancing) DeleteLoadbalancer(ctx context.Context, id string, opts loadbalancers.DeleteOpts) error {
 	m.ctrl.T.Helper()
@@ -1177,6 +1207,21 @@ func (m *MockLoadbalancing) ListLoadbalancers(ctx context.Context, listOpts load
 func (mr *MockLoadbalancingMockRecorder) ListLoadbalancers(ctx, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLoadbalancers", reflect.TypeOf((*MockLoadbalancing)(nil).ListLoadbalancers), ctx, listOpts)
+}
+
+// ListPools mocks base method.
+func (m *MockLoadbalancing) ListPools(ctx context.Context, opts pools.ListOpts) ([]pools.Pool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPools", ctx, opts)
+	ret0, _ := ret[0].([]pools.Pool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPools indicates an expected call of ListPools.
+func (mr *MockLoadbalancingMockRecorder) ListPools(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPools", reflect.TypeOf((*MockLoadbalancing)(nil).ListPools), ctx, opts)
 }
 
 // MockSharedFilesystem is a mock of SharedFilesystem interface.

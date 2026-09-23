@@ -91,6 +91,8 @@ const (
 	CloudProviderDiskConfigName = "cloud-provider-disk-config"
 	// CloudProviderCSIDiskConfigName is the name of the secret containing the cloud provider config for disk/volume handling. It is used by csi-driver-controller.
 	CloudProviderCSIDiskConfigName = "cloud-provider-disk-config-csi"
+	// CloudProviderCSIDiskConfigNodeName is the name of the secret containing the cloud provider config for disk/volume handling. It is used by csi-driver-node in the shoot.
+	CloudProviderCSIDiskConfigNodeName = "cloud-provider-disk-config-csi-node"
 	// CloudProviderConfigDataKey is the key storing the cloud provider config as value in the cloud provider secret.
 	CloudProviderConfigDataKey = "cloudprovider.conf"
 	// CloudControllerManagerName is a constant for the name of the CloudController deployed by the worker controller.

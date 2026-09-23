@@ -188,7 +188,7 @@ var (
 					{Type: &appsv1.DaemonSet{}, Name: openstack.CSINodeName},
 					{Type: &storagev1.CSIDriver{}, Name: openstack.CSIStorageProvisioner},
 					{Type: &corev1.ServiceAccount{}, Name: openstack.CSIDriverName},
-					{Type: &corev1.Secret{}, Name: openstack.CloudProviderConfigName},
+					{Type: &corev1.Secret{}, Name: openstack.CloudProviderCSIDiskConfigNodeName},
 					{Type: &rbacv1.ClusterRole{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
 					{Type: &rbacv1.ClusterRoleBinding{}, Name: openstack.UsernamePrefix + openstack.CSIDriverName},
 					// csi-provisioner

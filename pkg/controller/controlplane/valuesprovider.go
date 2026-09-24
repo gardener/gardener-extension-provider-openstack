@@ -421,8 +421,9 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 	}
 	values := make(map[string]interface{})
 	if len(providerConfig.StorageClasses) != 0 {
-		allSc := make([]map[string]interface{}, len(providerConfig.StorageClasses))
-		for i, sc := range providerConfig.StorageClasses {
+		storageClasses := helper.StorageClassesForRegion(providerConfig.StorageClasses, controlPlane.Spec.Region)
+		allSc := make([]map[string]interface{}, 0, len(storageClasses))
+		for _, sc := range storageClasses {
 			var storageClassValues = map[string]interface{}{
 				"name": sc.Name,
 			}
@@ -454,7 +455,7 @@ func (vp *valuesProvider) GetStorageClassesChartValues(
 				storageClassValues["volumeBindingMode"] = sc.VolumeBindingMode
 			}
 
-			allSc[i] = storageClassValues
+			allSc = append(allSc, storageClassValues)
 		}
 		values["storageclasses"] = allSc
 		return values, nil

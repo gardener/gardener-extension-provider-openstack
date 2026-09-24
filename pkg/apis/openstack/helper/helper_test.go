@@ -264,6 +264,83 @@ var _ = Describe("Helper", func() {
 		Entry("no default URL", []api.KeyStoneURL{{URL: "bar", Region: "europe"}}, "", "asia", "", true),
 	)
 
+	DescribeTable("#StorageClassesForRegion",
+		func(storageClasses []api.StorageClassDefinition, region string, expected []api.StorageClassDefinition) {
+			Expect(StorageClassesForRegion(storageClasses, region)).To(Equal(expected))
+		},
+
+		Entry("list is nil", nil, "europe", []api.StorageClassDefinition{}),
+		Entry("no region specific settings",
+			[]api.StorageClassDefinition{{Name: "sc", Parameters: map[string]string{"type": "default"}}},
+			"europe",
+			[]api.StorageClassDefinition{{Name: "sc", Parameters: map[string]string{"type": "default"}}},
+		),
+		Entry("region specific settings for another region",
+			[]api.StorageClassDefinition{{
+				Name:       "sc",
+				Parameters: map[string]string{"type": "default"},
+				Regions:    []api.StorageClassRegion{{Name: "asia", Parameters: map[string]string{"type": "premium"}}},
+			}},
+			"europe",
+			[]api.StorageClassDefinition{{Name: "sc", Parameters: map[string]string{"type": "default"}}},
+		),
+		Entry("region specific parameters override the parameters with the same key only",
+			[]api.StorageClassDefinition{{
+				Name:       "sc",
+				Parameters: map[string]string{"type": "default", "availability": "nova"},
+				Regions:    []api.StorageClassRegion{{Name: "europe", Parameters: map[string]string{"type": "premium"}}},
+			}},
+			"europe",
+			[]api.StorageClassDefinition{{Name: "sc", Parameters: map[string]string{"type": "premium", "availability": "nova"}}},
+		),
+		Entry("region specific parameters are added if the storageClass has none",
+			[]api.StorageClassDefinition{{
+				Name:    "sc",
+				Regions: []api.StorageClassRegion{{Name: "europe", Parameters: map[string]string{"type": "premium"}}},
+			}},
+			"europe",
+			[]api.StorageClassDefinition{{Name: "sc", Parameters: map[string]string{"type": "premium"}}},
+		),
+		Entry("storageClass is unavailable in the region",
+			[]api.StorageClassDefinition{
+				{
+					Name:       "sc",
+					Parameters: map[string]string{"type": "default"},
+					Regions:    []api.StorageClassRegion{{Name: "europe", Unavailable: ptr.To(true)}},
+				},
+				{Name: "other-sc"},
+			},
+			"europe",
+			[]api.StorageClassDefinition{{Name: "other-sc"}},
+		),
+		Entry("storageClass is explicitly available in the region",
+			[]api.StorageClassDefinition{{
+				Name:       "sc",
+				Parameters: map[string]string{"type": "default"},
+				Regions:    []api.StorageClassRegion{{Name: "europe", Unavailable: ptr.To(false)}},
+			}},
+			"europe",
+			[]api.StorageClassDefinition{{Name: "sc", Parameters: map[string]string{"type": "default"}}},
+		),
+	)
+
+	It("#StorageClassesForRegion should not modify the given storageClasses", func() {
+		storageClasses := []api.StorageClassDefinition{{
+			Name:       "sc",
+			Parameters: map[string]string{"type": "default"},
+			Regions:    []api.StorageClassRegion{{Name: "europe", Parameters: map[string]string{"type": "premium"}}},
+		}}
+
+		Expect(StorageClassesForRegion(storageClasses, "europe")).To(Equal([]api.StorageClassDefinition{
+			{Name: "sc", Parameters: map[string]string{"type": "premium"}},
+		}))
+		Expect(storageClasses).To(Equal([]api.StorageClassDefinition{{
+			Name:       "sc",
+			Parameters: map[string]string{"type": "default"},
+			Regions:    []api.StorageClassRegion{{Name: "europe", Parameters: map[string]string{"type": "premium"}}},
+		}}))
+	})
+
 	DescribeTable("#FindFloatingPool",
 		func(floatingPools []api.FloatingPool, floatingPoolNamePattern, region string, domain, expectedFloatingPoolName *string) {
 			result, err := FindFloatingPool(floatingPools, floatingPoolNamePattern, region, domain)

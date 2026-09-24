@@ -64,7 +64,9 @@ jobs:
     needs:
       - release-to-github-and-bump
     uses: ./.github/workflows/close-milestone.yaml
+    permissions:
+      issues: write
     with:
-      name: ${{ needs.release-to-github-and-bump.outputs.component-descriptor.version }}
+      name: ${{ needs.release-to-github-and-bump.outputs.version }}
       strip_patch: true
     secrets: inherit

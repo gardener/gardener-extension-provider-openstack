@@ -16,6 +16,8 @@ on:
 jobs:
   close-milestone:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
     - name: Prepare milestone name
       id: prepare_name

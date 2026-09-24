@@ -1,0 +1,23 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shoot-csi-driver-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    prometheus: shoot
+spec:
+  selector:
+    matchLabels:
+      app: csi
+      role: controller
+  endpoints:
+  - port: metrics
+    relabelings:
+    - action: labelmap
+      regex: __meta_kubernetes_service_label_(.+)
+    metricRelabelings:
+    - sourceLabels:
+      - __name__
+      action: keep
+      regex: ^(openstack_api_request_duration_seconds_(bucket|sum|count)|openstack_api_requests_total|openstack_api_request_errors_total)$

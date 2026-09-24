@@ -302,6 +302,22 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	}
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 
+	// BYO subnet: user provided an existing subnet ID
+	if fctx.config.Networks.SubnetID != nil {
+		subnetID := *fctx.config.Networks.SubnetID
+		subnet, err := fctx.access.GetSubnetByID(ctx, subnetID)
+		if err != nil {
+			return fmt.Errorf("could not get existing subnet %q: %w", subnetID, err)
+		}
+		if subnet == nil {
+			return fmt.Errorf("existing subnet %q not found", subnetID)
+		}
+		fctx.state.Set(IdentifierSubnet, subnetID)
+		fctx.state.Set(IdentifierWorkersCIDR, subnet.CIDR)
+		log.Info("using existing subnet", "subnetID", subnetID, "cidr", subnet.CIDR)
+		return nil
+	}
+
 	desired := &subnets.Subnet{
 		Name:           fctx.defaultSubnetName(),
 		NetworkID:      networkID,
@@ -350,6 +366,13 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 
 func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
+
+	// BYO IPv6 node subnet: store the ID in state and skip creation.
+	if fctx.isByoDualStack() {
+		fctx.state.Set(IdentifierSubnetIPv6, *fctx.config.Networks.IPv6.NodeSubnetID)
+		log.Info("using existing IPv6 node subnet", "subnetID", *fctx.config.Networks.IPv6.NodeSubnetID)
+		return nil
+	}
 
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 	if networkID == "" {
@@ -426,6 +449,32 @@ func (fctx *FlowContext) ensureSubnetIPv6(ctx context.Context) error {
 
 func (fctx *FlowContext) ensureIPv6CIDRs(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
+
+	// BYO IPv6 node subnet: read the node CIDR from the existing subnet; pod/service CIDRs come from config.
+	if fctx.isByoDualStack() {
+		subnetID := *fctx.config.Networks.IPv6.NodeSubnetID
+		subnet, err := fctx.access.GetSubnetByID(ctx, subnetID)
+		if err != nil {
+			return fmt.Errorf("could not get existing IPv6 node subnet %q: %w", subnetID, err)
+		}
+		if subnet == nil {
+			return fmt.Errorf("existing IPv6 node subnet %q not found", subnetID)
+		}
+
+		podCIDR := fctx.config.Networks.IPv6.PodCIDR
+		serviceCIDR := fctx.config.Networks.IPv6.ServiceCIDR
+		ip, _, err := net.ParseCIDR(serviceCIDR)
+		if err != nil {
+			return fmt.Errorf("failed to parse configured IPv6 service CIDR %s: %w", serviceCIDR, err)
+		}
+		serviceCIDR = fmt.Sprintf("%s/112", ip.String())
+
+		fctx.state.Set(IdentifierNodeSubnetIPv6CIDR, subnet.CIDR)
+		fctx.state.Set(IdentifierPodSubnetIPv6CIDR, podCIDR)
+		fctx.state.Set(IdentifierServiceSubnetIPv6CIDR, serviceCIDR)
+		log.Info("using existing IPv6 node subnet CIDRs", "nodeCIDR", subnet.CIDR, "podCIDR", podCIDR, "serviceCIDR", serviceCIDR)
+		return nil
+	}
 
 	// If explicit IPv6 CIDRs are configured, use them directly
 	if fctx.hasExplicitIPv6Config() {
@@ -550,6 +599,12 @@ func (fctx *FlowContext) ensureRouterInterfaceIPv6(ctx context.Context) error {
 	if subnetIPv6ID == nil {
 		return fmt.Errorf("internal error: missing IPv6 subnetID")
 	}
+
+	// BYO IPv6 node subnet: the router interface must already exist (validated at admission).
+	if fctx.isByoDualStack() {
+		return nil
+	}
+
 	portID, err := fctx.access.GetRouterInterfacePortID(ctx, *routerID, *subnetIPv6ID)
 	if err != nil {
 		return err
@@ -563,6 +618,23 @@ func (fctx *FlowContext) ensureRouterInterfaceIPv6(ctx context.Context) error {
 
 func (fctx *FlowContext) ensureSecGroup(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
+
+	// BYO security group: use the user-provided one, skip creation.
+	if fctx.config.Networks.SecurityGroupID != nil {
+		sgID := *fctx.config.Networks.SecurityGroupID
+		sg, err := fctx.access.GetSecurityGroupByID(ctx, sgID)
+		if err != nil {
+			return fmt.Errorf("could not get existing security group %q: %w", sgID, err)
+		}
+		if sg == nil {
+			return fmt.Errorf("existing security group %q not found", sgID)
+		}
+		fctx.state.Set(IdentifierSecGroup, sgID)
+		fctx.state.Set(NameSecGroup, sg.Name)
+		fctx.state.SetObject(ObjectSecGroup, sg)
+		log.Info("using existing security group", "securityGroupID", sgID)
+		return nil
+	}
 
 	desired := &groups.SecGroup{
 		Name:        fctx.defaultSecurityGroupName(),
@@ -593,6 +665,11 @@ func (fctx *FlowContext) ensureSecGroup(ctx context.Context) error {
 
 func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
+
+	// BYO security group: user is responsible for all rules.
+	if fctx.config.Networks.SecurityGroupID != nil {
+		return nil
+	}
 
 	obj := fctx.state.GetObject(ObjectSecGroup)
 	if obj == nil {
@@ -713,6 +790,26 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) ensureShareNetwork(ctx context.Context) error {
+	// BYO share network: use the user-provided one, skip creation.
+	if fctx.config.Networks.ShareNetworkID != nil {
+		snID := *fctx.config.Networks.ShareNetworkID
+		sharedFilesystemClient, err := fctx.openstackClientFactory.SharedFilesystem(client.WithRegion(fctx.infra.Spec.Region))
+		if err != nil {
+			return err
+		}
+		sn, err := sharedFilesystemClient.GetShareNetwork(ctx, snID)
+		if err != nil {
+			return fmt.Errorf("could not get existing share network %q: %w", snID, err)
+		}
+		if sn == nil {
+			return fmt.Errorf("existing share network %q not found", snID)
+		}
+		fctx.state.Set(IdentifierShareNetwork, snID)
+		fctx.state.Set(NameShareNetwork, sn.Name)
+		shared.LogFromContext(ctx).Info("using existing share network", "shareNetworkID", snID)
+		return nil
+	}
+
 	if sn := fctx.config.Networks.ShareNetwork; sn == nil || !sn.Enabled {
 		return nil
 	}

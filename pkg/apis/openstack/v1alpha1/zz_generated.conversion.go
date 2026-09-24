@@ -593,6 +593,7 @@ func autoConvert_v1alpha1_IPv6Config_To_openstack_IPv6Config(in *IPv6Config, out
 	out.NodeCIDR = in.NodeCIDR
 	out.PodCIDR = in.PodCIDR
 	out.ServiceCIDR = in.ServiceCIDR
+	out.NodeSubnetID = (*string)(unsafe.Pointer(in.NodeSubnetID))
 	return nil
 }
 
@@ -606,6 +607,7 @@ func autoConvert_openstack_IPv6Config_To_v1alpha1_IPv6Config(in *openstack.IPv6C
 	out.NodeCIDR = in.NodeCIDR
 	out.PodCIDR = in.PodCIDR
 	out.ServiceCIDR = in.ServiceCIDR
+	out.NodeSubnetID = (*string)(unsafe.Pointer(in.NodeSubnetID))
 	return nil
 }
 
@@ -942,6 +944,9 @@ func autoConvert_v1alpha1_Networks_To_openstack_Networks(in *Networks, out *open
 	out.Workers = in.Workers
 	out.SubnetPool = (*openstack.SubnetPool)(unsafe.Pointer(in.SubnetPool))
 	out.ID = (*string)(unsafe.Pointer(in.ID))
+	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
+	out.SecurityGroupID = (*string)(unsafe.Pointer(in.SecurityGroupID))
+	out.ShareNetworkID = (*string)(unsafe.Pointer(in.ShareNetworkID))
 	out.ShareNetwork = (*openstack.ShareNetwork)(unsafe.Pointer(in.ShareNetwork))
 	out.IPv6 = (*openstack.IPv6Config)(unsafe.Pointer(in.IPv6))
 	return nil
@@ -958,6 +963,9 @@ func autoConvert_openstack_Networks_To_v1alpha1_Networks(in *openstack.Networks,
 	out.Workers = in.Workers
 	out.SubnetPool = (*SubnetPool)(unsafe.Pointer(in.SubnetPool))
 	out.ID = (*string)(unsafe.Pointer(in.ID))
+	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
+	out.SecurityGroupID = (*string)(unsafe.Pointer(in.SecurityGroupID))
+	out.ShareNetworkID = (*string)(unsafe.Pointer(in.ShareNetworkID))
 	out.ShareNetwork = (*ShareNetwork)(unsafe.Pointer(in.ShareNetwork))
 	out.IPv6 = (*IPv6Config)(unsafe.Pointer(in.IPv6))
 	return nil

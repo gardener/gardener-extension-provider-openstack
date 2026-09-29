@@ -94,7 +94,7 @@ func (c *DNSClient) getRecordSet(ctx context.Context, zoneID, name, recordType s
 	// must match the exact name ourselves. See https://bugs.launchpad.net/designate/+bug/2167327.
 	normalizedName := normalizeName(ensureTrailingDot(name))
 	for i := range rss {
-		if normalizeName(rss[i].Name) == normalizedName {
+		if strings.EqualFold(normalizeName(rss[i].Name), normalizedName) {
 			return &rss[i], nil
 		}
 	}

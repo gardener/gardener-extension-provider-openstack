@@ -2152,6 +2152,79 @@ string
 <p>VolumeBindingMode sets bindingMode for the storageclass</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>regions</code></br>
+<em>
+<a href="#storageclassregion">StorageClassRegion</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Regions contains region specific settings for the storageclass. At most one entry per region is allowed.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="storageclassregion">StorageClassRegion
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#storageclassdefinition">StorageClassDefinition</a>)
+</p>
+
+<p>
+StorageClassRegion contains region specific settings for a storageClass.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the region these settings apply to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>unavailable</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Unavailable indicates that the storageclass is not available in this region, i.e. it is not created at all.<br />It must not be combined with parameters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parameters</code></br>
+<em>
+object (keys:string, values:string)
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Parameters are region specific parameters for the storageclass (storageclass.parameters). They are merged<br />into the parameters of the storageclass, taking precedence over entries with the same key.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

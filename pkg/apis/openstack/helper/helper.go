@@ -6,6 +6,7 @@ package helper
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -299,6 +300,51 @@ func FindKeyStoneCACert(keyStoneURLs []api.KeyStoneURL, keystoneCABundle *string
 	}
 
 	return keystoneCABundle
+}
+
+// StorageClassesForRegion returns the storageClass definitions which are available in the given region with their
+// region specific settings applied. StorageClasses which are marked as unavailable in the given region are omitted,
+// region specific parameters are merged into the parameters of the respective storageClass.
+func StorageClassesForRegion(storageClasses []api.StorageClassDefinition, region string) []api.StorageClassDefinition {
+	result := make([]api.StorageClassDefinition, 0, len(storageClasses))
+
+	for _, sc := range storageClasses {
+		regionConfig := findStorageClassRegion(sc.Regions, region)
+
+		// the region specific settings are resolved here, hence they are not part of the result anymore.
+		sc.Regions = nil
+
+		if regionConfig == nil {
+			result = append(result, sc)
+			continue
+		}
+
+		if ptr.Deref(regionConfig.Unavailable, false) {
+			continue
+		}
+
+		if len(regionConfig.Parameters) > 0 {
+			parameters := make(map[string]string, len(sc.Parameters)+len(regionConfig.Parameters))
+			maps.Copy(parameters, sc.Parameters)
+			maps.Copy(parameters, regionConfig.Parameters)
+			sc.Parameters = parameters
+		}
+
+		result = append(result, sc)
+	}
+
+	return result
+}
+
+// findStorageClassRegion returns the settings for the given region or nil if the region is not configured.
+func findStorageClassRegion(regions []api.StorageClassRegion, region string) *api.StorageClassRegion {
+	for i, r := range regions {
+		if r.Name == region {
+			return &regions[i]
+		}
+	}
+
+	return nil
 }
 
 // FindFloatingPool receives a list of floating pools and tries to find the best

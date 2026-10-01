@@ -14,6 +14,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/go-logr/logr"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -22,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -169,6 +172,91 @@ var _ = Describe("ConfigValidator", func() {
 				"Field":  Equal("floatingPoolName"),
 				"Detail": Equal("could not get external network names: test"),
 			}))
+		})
+
+		Context("BYO subnet address family", func() {
+			const (
+				networkID    = "bc3d8461-eeec-4425-a01e-e3100f151913"
+				ipv4SubnetID = "cad4d8d0-871c-478b-8ac1-605a54d5eac0"
+				ipv6SubnetID = "1898ce8a-c9de-480f-8969-fb87e2987886"
+			)
+
+			setConfig := func(config *apisopenstack.InfrastructureConfig) {
+				config.FloatingPoolName = floatingPoolName
+				infra.Spec.ProviderConfig.Raw = encode(config)
+			}
+
+			BeforeEach(func() {
+				networkingClient.EXPECT().GetExternalNetworkNames(ctx).Return([]string{floatingPoolName}, nil)
+				networkingClient.EXPECT().ListNetwork(ctx, networks.ListOpts{ID: networkID}).
+					Return([]networks.Network{{ID: networkID}}, nil)
+			})
+
+			It("should allow an IPv4 subnetId backed by an IPv4 subnet", func() {
+				setConfig(&apisopenstack.InfrastructureConfig{
+					Networks: apisopenstack.Networks{
+						ID:       ptr.To(networkID),
+						SubnetID: ptr.To(ipv4SubnetID),
+					},
+				})
+				networkingClient.EXPECT().ListSubnets(ctx, subnets.ListOpts{ID: ipv4SubnetID, NetworkID: networkID}).
+					Return([]subnets.Subnet{{ID: ipv4SubnetID, IPVersion: 4}}, nil)
+
+				Expect(cv.Validate(ctx, infra)).To(BeEmpty())
+			})
+
+			It("should forbid an IPv4 subnetId backed by an IPv6 subnet", func() {
+				setConfig(&apisopenstack.InfrastructureConfig{
+					Networks: apisopenstack.Networks{
+						ID:       ptr.To(networkID),
+						SubnetID: ptr.To(ipv4SubnetID),
+					},
+				})
+				networkingClient.EXPECT().ListSubnets(ctx, subnets.ListOpts{ID: ipv4SubnetID, NetworkID: networkID}).
+					Return([]subnets.Subnet{{ID: ipv4SubnetID, IPVersion: 6}}, nil)
+
+				Expect(cv.Validate(ctx, infra)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("networks.subnetId"),
+				}))
+			})
+
+			It("should forbid an IPv6 nodeSubnetId backed by an IPv4 subnet (reused IPv4 subnet)", func() {
+				setConfig(&apisopenstack.InfrastructureConfig{
+					Networks: apisopenstack.Networks{
+						ID:       ptr.To(networkID),
+						SubnetID: ptr.To(ipv4SubnetID),
+						IPv6: &apisopenstack.IPv6Config{
+							NodeSubnetID: ptr.To(ipv4SubnetID),
+						},
+					},
+				})
+				networkingClient.EXPECT().ListSubnets(ctx, subnets.ListOpts{ID: ipv4SubnetID, NetworkID: networkID}).
+					Return([]subnets.Subnet{{ID: ipv4SubnetID, IPVersion: 4}}, nil).Times(2)
+
+				Expect(cv.Validate(ctx, infra)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("networks.ipv6.nodeSubnetId"),
+				}))
+			})
+
+			It("should allow correct families for both subnetId and nodeSubnetId", func() {
+				setConfig(&apisopenstack.InfrastructureConfig{
+					Networks: apisopenstack.Networks{
+						ID:       ptr.To(networkID),
+						SubnetID: ptr.To(ipv4SubnetID),
+						IPv6: &apisopenstack.IPv6Config{
+							NodeSubnetID: ptr.To(ipv6SubnetID),
+						},
+					},
+				})
+				networkingClient.EXPECT().ListSubnets(ctx, subnets.ListOpts{ID: ipv4SubnetID, NetworkID: networkID}).
+					Return([]subnets.Subnet{{ID: ipv4SubnetID, IPVersion: 4}}, nil)
+				networkingClient.EXPECT().ListSubnets(ctx, subnets.ListOpts{ID: ipv6SubnetID, NetworkID: networkID}).
+					Return([]subnets.Subnet{{ID: ipv6SubnetID, IPVersion: 6}}, nil)
+
+				Expect(cv.Validate(ctx, infra)).To(BeEmpty())
+			})
 		})
 	})
 })

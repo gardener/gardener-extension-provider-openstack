@@ -15,6 +15,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -76,7 +77,7 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 		allErrs = append(allErrs, c.validateNetwork(ctx, networkingClient, *config.Networks.ID, field.NewPath("networks").Child("id"))...)
 	}
 	if config.Networks.ID != nil && config.Networks.SubnetID != nil {
-		allErrs = append(allErrs, c.validateSubnet(ctx, networkingClient, *config.Networks.SubnetID, *config.Networks.ID, field.NewPath("networks").Child("subnetId"))...)
+		allErrs = append(allErrs, c.validateSubnet(ctx, networkingClient, *config.Networks.SubnetID, *config.Networks.ID, 4, field.NewPath("networks").Child("subnetId"))...)
 	}
 	if config.Networks.Router != nil && config.Networks.Router.ID != "" {
 		allErrs = append(allErrs, c.validateRouter(ctx, networkingClient, config.Networks.Router.ID, field.NewPath("networks").Child("router").Child("id"))...)
@@ -88,7 +89,7 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 		allErrs = append(allErrs, c.validateSecurityGroup(ctx, networkingClient, *config.Networks.SecurityGroupID, field.NewPath("networks").Child("securityGroupId"))...)
 	}
 	if config.Networks.IPv6 != nil && config.Networks.IPv6.NodeSubnetID != nil && config.Networks.ID != nil {
-		allErrs = append(allErrs, c.validateSubnet(ctx, networkingClient, *config.Networks.IPv6.NodeSubnetID, *config.Networks.ID, field.NewPath("networks").Child("ipv6").Child("nodeSubnetId"))...)
+		allErrs = append(allErrs, c.validateSubnet(ctx, networkingClient, *config.Networks.IPv6.NodeSubnetID, *config.Networks.ID, 6, field.NewPath("networks").Child("ipv6").Child("nodeSubnetId"))...)
 		if config.Networks.Router != nil && config.Networks.Router.ID != "" {
 			allErrs = append(allErrs, c.validateRouterHasSubnetInterface(ctx, networkingClient, config.Networks.Router.ID, *config.Networks.IPv6.NodeSubnetID, field.NewPath("networks").Child("router"))...)
 		}
@@ -99,7 +100,7 @@ func (c *configValidator) Validate(ctx context.Context, infra *extensionsv1alpha
 			allErrs = append(allErrs, field.InternalError(nil, fmt.Errorf("could not create OpenStack shared filesystem client: %w", err)))
 			return allErrs
 		}
-		allErrs = append(allErrs, c.validateShareNetwork(ctx, sharedFilesystemClient, *config.Networks.ShareNetworkID, field.NewPath("networks").Child("shareNetworkId"))...)
+		allErrs = append(allErrs, c.validateShareNetwork(ctx, sharedFilesystemClient, *config.Networks.ShareNetworkID, ptr.Deref(config.Networks.ID, ""), field.NewPath("networks").Child("shareNetworkId"))...)
 	}
 
 	return allErrs
@@ -138,7 +139,7 @@ func (c *configValidator) validateNetwork(ctx context.Context, networkingClient 
 	return allErrs
 }
 
-func (c *configValidator) validateSubnet(ctx context.Context, networkingClient openstackclient.Networking, subnetID, networkID string, fldPath *field.Path) field.ErrorList {
+func (c *configValidator) validateSubnet(ctx context.Context, networkingClient openstackclient.Networking, subnetID, networkID string, expectedIPVersion int, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	snets, err := networkingClient.ListSubnets(ctx, subnets.ListOpts{ID: subnetID, NetworkID: networkID})
@@ -148,6 +149,10 @@ func (c *configValidator) validateSubnet(ctx context.Context, networkingClient o
 	}
 	if len(snets) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath, subnetID, fmt.Sprintf("subnet %q not found in network %q", subnetID, networkID)))
+		return allErrs
+	}
+	if snets[0].IPVersion != expectedIPVersion {
+		allErrs = append(allErrs, field.Invalid(fldPath, subnetID, fmt.Sprintf("subnet %q has IP version %d, but %d is required", subnetID, snets[0].IPVersion, expectedIPVersion)))
 	}
 
 	return allErrs
@@ -199,7 +204,7 @@ func (c *configValidator) validateSecurityGroup(ctx context.Context, networkingC
 	return allErrs
 }
 
-func (c *configValidator) validateShareNetwork(ctx context.Context, sharedFilesystemClient openstackclient.SharedFilesystem, shareNetworkID string, fldPath *field.Path) field.ErrorList {
+func (c *configValidator) validateShareNetwork(ctx context.Context, sharedFilesystemClient openstackclient.SharedFilesystem, shareNetworkID, expectedNetworkID string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	sn, err := sharedFilesystemClient.GetShareNetwork(ctx, shareNetworkID)
@@ -209,6 +214,10 @@ func (c *configValidator) validateShareNetwork(ctx context.Context, sharedFilesy
 	}
 	if sn == nil {
 		allErrs = append(allErrs, field.NotFound(fldPath, shareNetworkID))
+		return allErrs
+	}
+	if expectedNetworkID != "" && sn.NeutronNetID != expectedNetworkID {
+		allErrs = append(allErrs, field.Invalid(fldPath, shareNetworkID, fmt.Sprintf("share network is associated with Neutron network %q, but must match the configured cluster network %q", sn.NeutronNetID, expectedNetworkID)))
 	}
 
 	return allErrs

@@ -172,6 +172,7 @@ func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorLi
 		}
 		allErrs = append(allErrs, uuid(*ipv6.NodeSubnetID, fldPath.Child("nodeSubnetId"))...)
 
+		var parsedCIDRs []cidrvalidation.CIDR
 		for _, f := range []struct {
 			cidr string
 			path *field.Path
@@ -187,7 +188,11 @@ func validateIPv6Config(ipv6 *api.IPv6Config, fldPath *field.Path) field.ErrorLi
 			allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(c)...)
 			allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(f.path, f.cidr)...)
 			allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily([]cidrvalidation.CIDR{c}, cidrvalidation.IPFamilyIPv6)...)
+			parsedCIDRs = append(parsedCIDRs, c)
 		}
+		// The node CIDR is read from the referenced subnet at reconcile time, so only the
+		// configured pod and service CIDRs can be checked for overlap statically.
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(parsedCIDRs, false)...)
 		if ipv6.PodCIDR != "" {
 			allErrs = append(allErrs, validateIPv6PodCIDRPrefixLength(ipv6.PodCIDR, fldPath.Child("podCIDR"))...)
 		}

@@ -13,3 +13,31 @@ aliases:
   - kon-angelo
   - matthias-horne
   - wpross
+  gardener-core-reviewers: # reviewers of the gardener/gardener repo
+  - acumino
+  - dimitar-kostadinov
+  - ialidzhikov
+  - LucaBernstein
+  - marc1404
+  - oliver-goetz
+  - plkokanov
+  - RadaBDimitrova
+  - rfranzke
+  - ScheererJ
+  - shafeeqes
+  - timebertt
+  - timuthy
+  gardener-networking-reviewers: # reviewers of the gardener/gardener-extension-networking-* repos
+  - axel7born
+  - DockToFuture
+  - domdom82
+  machine-controller-manager-reviewers: # reviewers of the gardener/machine-controller-manager repo
+  - aaronfern
+  - elankath
+  - thiyyakat
+  - unmarshall
+  - r4mek
+  security-reviewers:
+  - vpnachev
+  - dimityrmirchev
+  - georgibaltiev

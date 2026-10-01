@@ -36,7 +36,8 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 
 	needToDeleteNetwork := fctx.config.Networks.ID == nil
 	needToDeleteRouter := fctx.config.Networks.Router == nil
-	needToDeleteSubnet := fctx.config.Networks.SubnetID == nil
+	needToDeleteSubnet := !fctx.isByoIPv4()
+	needToDeleteSubnetIPv6 := !fctx.isByoDualStack()
 
 	_ = fctx.AddTask(g, "delete ssh key pair",
 		fctx.deleteSSHKeyPair,
@@ -103,16 +104,15 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 		fctx.deleteRouterInterfaceIPv6,
 		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs, k8sRoutes))
 
-	// subnet deletion only needed if subnet was not provided by user
-	_ = fctx.AddTask(g, "delete subnet",
+	deleteSubnet := fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
 		shared.DoIf(needToDeleteSubnet), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
-	_ = fctx.AddTask(g, "delete IPv6 subnet",
+	deleteSubnetIPv6 := fctx.AddTask(g, "delete IPv6 subnet",
 		fctx.deleteSubnetIPv6,
-		shared.DoIf(!needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterfaceIPv6, k8sLoadBalancersIPv6))
+		shared.DoIf(needToDeleteSubnetIPv6), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterfaceIPv6, k8sLoadBalancersIPv6))
 	_ = fctx.AddTask(g, "delete network",
 		fctx.deleteNetwork,
-		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6))
+		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6, deleteSubnet, deleteSubnetIPv6))
 	_ = fctx.AddTask(g, "delete router",
 		fctx.deleteRouter,
 		shared.DoIf(needToDeleteRouter), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6))
@@ -171,13 +171,6 @@ func (fctx *FlowContext) deleteSubnet(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) deleteSubnetIPv6(ctx context.Context) error {
-	// BYO IPv6 node subnet: never delete user-provided resources.
-	// Pod/service subnets are only created in the managed (non-BYO) path, so skip all three.
-	if fctx.isByoDualStack() {
-		fctx.state.Set(IdentifierSubnetIPv6, "")
-		return nil
-	}
-
 	for _, identifier := range []string{IdentifierSubnetIPv6, IdentifierSubnetIPv6Pod, IdentifierSubnetIPv6Svc} {
 		subnetIPv6ID := fctx.state.Get(identifier)
 		if subnetIPv6ID == nil {
@@ -219,7 +212,7 @@ func (fctx *FlowContext) recoverNetworkID(ctx context.Context) error {
 
 func (fctx *FlowContext) recoverSubnetID(ctx context.Context) error {
 	// BYO subnet: always recover from config
-	if fctx.config.Networks.SubnetID != nil {
+	if fctx.isByoIPv4() {
 		fctx.state.Set(IdentifierSubnet, *fctx.config.Networks.SubnetID)
 		return nil
 	}
@@ -264,7 +257,7 @@ func (fctx *FlowContext) recoverSubnetIPv6ID(ctx context.Context) error {
 
 func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
 	// BYO subnet: the router interface is user-managed, never remove it.
-	if fctx.config.Networks.SubnetID != nil {
+	if fctx.isByoIPv4() {
 		return nil
 	}
 

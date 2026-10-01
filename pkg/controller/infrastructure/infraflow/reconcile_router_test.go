@@ -97,6 +97,20 @@ var _ = Describe("ensureRouterInterface", func() {
 		Expect(fctx.ensureRouterInterface(ctx)).To(Succeed())
 	})
 
+	It("returns early without touching the router when a BYO subnet is used", func() {
+		subnetID := "11111111-2222-3333-4444-555555555555"
+
+		cfg := defaultInfraConfig()
+		cfg.Networks.SubnetID = &subnetID
+
+		fctx, _ := newFixture(ctrl, cfg)
+		fctx.state.Set(IdentifierRouter, "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr")
+		fctx.state.Set(IdentifierSubnet, subnetID)
+		// no GetRouterInterfacePortID / AddRouterInterfaceAndWait must be called
+
+		Expect(fctx.ensureRouterInterface(ctx)).To(Succeed())
+	})
+
 	It("calls AddRouterInterfaceAndWait when the interface does not exist", func() {
 		routerID := "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr"
 		subnetID := "11111111-2222-3333-4444-555555555555"

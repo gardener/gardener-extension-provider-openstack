@@ -303,7 +303,7 @@ func (fctx *FlowContext) ensureSubnet(ctx context.Context) error {
 	networkID := ptr.Deref(fctx.state.Get(IdentifierNetwork), "")
 
 	// BYO subnet: user provided an existing subnet ID
-	if fctx.config.Networks.SubnetID != nil {
+	if fctx.isByoIPv4() {
 		subnetID := *fctx.config.Networks.SubnetID
 		subnet, err := fctx.access.GetSubnetByID(ctx, subnetID)
 		if err != nil {
@@ -569,6 +569,12 @@ func (fctx *FlowContext) findExistingSubnetIPv6(ctx context.Context, subnetName 
 
 func (fctx *FlowContext) ensureRouterInterface(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
+
+	// BYO subnet: the router interface is user-managed and its existence is validated at
+	// admission; never attach Gardener-managed wiring to a user-provided subnet.
+	if fctx.isByoIPv4() {
+		return nil
+	}
 
 	routerID := fctx.state.Get(IdentifierRouter)
 	if routerID == nil {

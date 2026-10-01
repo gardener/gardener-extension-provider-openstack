@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate mockgen -destination=mocks/access_mocks.go -package=mocks . NetworkingAccess
 package access
 
 import (

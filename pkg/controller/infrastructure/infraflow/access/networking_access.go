@@ -486,8 +486,7 @@ func (a *networkingAccess) CreateSecurityGroup(ctx context.Context, desired *gro
 }
 
 func (a *networkingAccess) GetSecurityGroupByID(ctx context.Context, id string) (*groups.SecGroup, error) {
-	sg, err := a.networking.GetSecurityGroup(ctx, id)
-	return sg, client.IgnoreNotFoundError(err)
+	return a.networking.GetSecurityGroup(ctx, id)
 }
 
 func (a *networkingAccess) GetSecurityGroupByName(ctx context.Context, name string) ([]*groups.SecGroup, error) {

@@ -247,6 +247,21 @@ boolean
 </tr>
 <tr>
 <td>
+<code>rootDiskAvailabilityZone</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RootDiskAvailabilityZone specifies the availability zone in which the root disk volumes of worker machines are
+created if a root disk type is used. If unset, the availability zone of the machine is used. If set to the empty
+string, no availability zone is requested and Cinder uses its default availability zone. This allows for
+differences between volume and compute zone naming.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodeVolumeAttachLimit</code></br>
 <em>
 integer

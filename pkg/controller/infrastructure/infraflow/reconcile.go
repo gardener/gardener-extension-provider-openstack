@@ -704,6 +704,11 @@ func (fctx *FlowContext) ensureSSHKeyPair(ctx context.Context) error {
 		fctx.state.Set(NameKeyPair, "")
 	}
 
+	if len(fctx.infra.Spec.SSHPublicKey) == 0 {
+		fctx.state.Set(NameKeyPair, "")
+		return nil
+	}
+
 	log.Info("creating SSH key pair")
 	if keyPair, err = fctx.compute.CreateKeyPair(ctx, fctx.defaultSSHKeypairName(), string(fctx.infra.Spec.SSHPublicKey)); err != nil {
 		return err

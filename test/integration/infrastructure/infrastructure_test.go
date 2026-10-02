@@ -330,6 +330,59 @@ var _ = Describe("Infrastructure tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("with infrastructure that uses existing network, subnet, and router (BYO subnet)", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		subnetName := namespace + "-subnet"
+		routerName := namespace + "-router"
+
+		networkID := prepareNewNetwork(log, networkName)
+		subnetID := prepareNewSubnet(log, subnetName, *networkID, vpcCIDR)
+		routerID := prepareNewRouter(log, routerName)
+		prepareRouterInterface(log, *routerID, *subnetID)
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			teardownRouterInterface(log, *routerID, *subnetID)
+			teardownRouter(log, *routerID)
+			teardownSubnet(log, *subnetID)
+			teardownNetwork(log, *networkID)
+			framework.RemoveCleanupAction(cleanupHandle)
+		})
+
+		providerConfig := newProviderConfigWithBYOSubnet(*networkID, *subnetID, *routerID)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTestWithBYOSubnet(ctx, log, c, namespace, providerConfig, cloudProfileConfig, *subnetID)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("with infrastructure that uses existing security group (BYO security group)", func() {
+		namespace, err := generateNamespaceName()
+		Expect(err).NotTo(HaveOccurred())
+
+		networkName := namespace + "-network"
+		secGroupName := namespace + "-sg"
+
+		networkID := prepareNewNetwork(log, networkName)
+		secGroupID := prepareNewSecurityGroup(log, secGroupName)
+
+		var cleanupHandle framework.CleanupActionHandle
+		cleanupHandle = framework.AddCleanupAction(func() {
+			teardownSecurityGroup(log, *secGroupID)
+			teardownNetwork(log, *networkID)
+			framework.RemoveCleanupAction(cleanupHandle)
+		})
+
+		providerConfig := newProviderConfigWithBYOSecurityGroup(*networkID, *secGroupID)
+		cloudProfileConfig := newCloudProfileConfig(*region, *authURL)
+
+		err = runTestWithBYOSecurityGroup(ctx, log, c, namespace, providerConfig, cloudProfileConfig, *secGroupID)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("with infrastructure that uses a subnet pool", func() {
 		// subnetPoolPrefixLength is the prefix length of the /16 block assigned to each test's subnet pool.
 		// subnetPoolAllocationPrefixLength is the size of the subnet allocated from that pool by the reconciler.
@@ -843,6 +896,347 @@ func verifyDeletion(infrastructureIdentifier infrastructureIdentifiers, provider
 			Expect(routers).To(BeEmpty())
 		}
 	}
+}
+
+func newProviderConfigWithBYOSubnet(networkID, subnetID, routerID string) *openstackv1alpha1.InfrastructureConfig {
+	return &openstackv1alpha1.InfrastructureConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "InfrastructureConfig",
+		},
+		FloatingPoolName: *floatingPoolName,
+		Networks: openstackv1alpha1.Networks{
+			ID:       &networkID,
+			SubnetID: &subnetID,
+			Router:   &openstackv1alpha1.Router{ID: routerID},
+		},
+	}
+}
+
+func newProviderConfigWithBYOSecurityGroup(networkID, secGroupID string) *openstackv1alpha1.InfrastructureConfig {
+	return &openstackv1alpha1.InfrastructureConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "InfrastructureConfig",
+		},
+		FloatingPoolName: *floatingPoolName,
+		Networks: openstackv1alpha1.Networks{
+			ID:              &networkID,
+			Workers:         vpcCIDR,
+			SecurityGroupID: &secGroupID,
+		},
+	}
+}
+
+// runTestWithBYOSubnet runs the infrastructure test for BYO subnet. It verifies:
+// - Gardener uses the pre-existing subnet and router (does not create new ones)
+// - On deletion, the subnet and router are NOT deleted (they are BYO)
+func runTestWithBYOSubnet(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	namespaceName string,
+	providerConfig *openstackv1alpha1.InfrastructureConfig,
+	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
+	expectedSubnetID string,
+) error {
+	var (
+		namespace *corev1.Namespace
+		cluster   *extensionsv1alpha1.Cluster
+		infra     *extensionsv1alpha1.Infrastructure
+	)
+
+	var cleanupHandle framework.CleanupActionHandle
+	cleanupHandle = framework.AddCleanupAction(func() {
+		By("delete infrastructure")
+		Expect(client.IgnoreNotFound(c.Delete(ctx, infra))).To(Succeed())
+
+		By("wait until infrastructure is deleted")
+		err := extensions.WaitUntilExtensionObjectDeleted(
+			ctx, c, log, infra, "Infrastructure",
+			10*time.Second, 16*time.Minute,
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("verify BYO subnet still exists after deletion")
+		subnet, err := networkClient.GetSubnetByID(ctx, expectedSubnetID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(subnet).NotTo(BeNil(), "BYO subnet must not be deleted by Gardener")
+
+		By("verify BYO router still exists after deletion")
+		router, err := networkClient.GetRouterByID(ctx, providerConfig.Networks.Router.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(router).NotTo(BeNil(), "BYO router must not be deleted by Gardener")
+
+		By("verify BYO network still exists after deletion")
+		net, err := networkClient.GetNetworkByID(ctx, *providerConfig.Networks.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(net).NotTo(BeNil(), "BYO network must not be deleted by Gardener")
+
+		By("verify SSH key pair is deleted")
+		providerStatus := openstackv1alpha1.InfrastructureStatus{}
+		_, _, err = decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &providerStatus)
+		Expect(err).NotTo(HaveOccurred())
+		keyPair, _ := computeClient.GetKeyPair(ctx, providerStatus.Node.KeyName)
+		Expect(keyPair).To(BeNil(), "SSH key pair must be deleted by Gardener")
+
+		Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
+		Expect(client.IgnoreNotFound(c.Delete(ctx, cluster))).To(Succeed())
+
+		framework.RemoveCleanupAction(cleanupHandle)
+	})
+
+	if err := setupTestNamespaceAndCluster(ctx, c, namespaceName, cloudProfileConfig, &namespace, &cluster); err != nil {
+		return err
+	}
+
+	By("create infrastructure")
+	var err error
+	infra, err = newInfrastructure(namespaceName, providerConfig)
+	if err != nil {
+		return err
+	}
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
+		return err
+	}
+
+	By("wait until infrastructure is created")
+	Expect(extensions.WaitUntilExtensionObjectReady(
+		ctx, c, log, infra, kindInfrastructure,
+		10*time.Second, 6*time.Minute, 16*time.Minute, nil,
+	)).To(Succeed())
+
+	By("verify BYO subnet is used (not recreated)")
+	providerStatus := openstackv1alpha1.InfrastructureStatus{}
+	_, _, err = decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &providerStatus)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(providerStatus.Networks.Subnets).NotTo(BeEmpty())
+	Expect(providerStatus.Networks.Subnets[0].ID).To(Equal(expectedSubnetID),
+		"provider status must reference the pre-existing subnet, not a newly created one")
+
+	By("verify BYO router is used (not recreated)")
+	Expect(providerStatus.Networks.Router.ID).To(Equal(providerConfig.Networks.Router.ID),
+		"provider status must reference the pre-existing router")
+
+	By("test second reconciliation is idempotent")
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
+		return err
+	}
+	Expect(extensions.WaitUntilExtensionObjectReady(
+		ctx, c, log, infra, kindInfrastructure,
+		10*time.Second, 30*time.Second, 16*time.Minute, nil,
+	)).To(Succeed())
+	providerStatus2 := openstackv1alpha1.InfrastructureStatus{}
+	_, _, err = decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &providerStatus2)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(providerStatus2.Networks.Subnets[0].ID).To(Equal(expectedSubnetID))
+
+	return nil
+}
+
+// runTestWithBYOSecurityGroup runs the infrastructure test for BYO security group. It verifies:
+// - Gardener uses the pre-existing security group (does not create a new one)
+// - On deletion, the security group is NOT deleted (it is BYO)
+func runTestWithBYOSecurityGroup(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	namespaceName string,
+	providerConfig *openstackv1alpha1.InfrastructureConfig,
+	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
+	expectedSecGroupID string,
+) error {
+	var (
+		namespace *corev1.Namespace
+		cluster   *extensionsv1alpha1.Cluster
+		infra     *extensionsv1alpha1.Infrastructure
+	)
+
+	var cleanupHandle framework.CleanupActionHandle
+	cleanupHandle = framework.AddCleanupAction(func() {
+		By("delete infrastructure")
+		Expect(client.IgnoreNotFound(c.Delete(ctx, infra))).To(Succeed())
+
+		By("wait until infrastructure is deleted")
+		err := extensions.WaitUntilExtensionObjectDeleted(
+			ctx, c, log, infra, "Infrastructure",
+			10*time.Second, 16*time.Minute,
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("verify BYO security group still exists after deletion")
+		secGroup, err := networkClient.GetSecurityGroup(ctx, expectedSecGroupID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(secGroup).NotTo(BeNil(), "BYO security group must not be deleted by Gardener")
+
+		Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
+		Expect(client.IgnoreNotFound(c.Delete(ctx, cluster))).To(Succeed())
+
+		framework.RemoveCleanupAction(cleanupHandle)
+	})
+
+	if err := setupTestNamespaceAndCluster(ctx, c, namespaceName, cloudProfileConfig, &namespace, &cluster); err != nil {
+		return err
+	}
+
+	By("create infrastructure")
+	var err error
+	infra, err = newInfrastructure(namespaceName, providerConfig)
+	if err != nil {
+		return err
+	}
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
+		return err
+	}
+
+	By("wait until infrastructure is created")
+	Expect(extensions.WaitUntilExtensionObjectReady(
+		ctx, c, log, infra, kindInfrastructure,
+		10*time.Second, 6*time.Minute, 16*time.Minute, nil,
+	)).To(Succeed())
+
+	By("verify BYO security group is referenced in provider status")
+	providerStatus := openstackv1alpha1.InfrastructureStatus{}
+	_, _, err = decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &providerStatus)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(providerStatus.SecurityGroups).NotTo(BeEmpty())
+	Expect(providerStatus.SecurityGroups[0].ID).To(Equal(expectedSecGroupID),
+		"provider status must reference the pre-existing security group, not a newly created one")
+
+	By("test second reconciliation is idempotent")
+	if err := getAndCreateOrPatchSpec(ctx, c, infra); err != nil {
+		return err
+	}
+	Expect(extensions.WaitUntilExtensionObjectReady(
+		ctx, c, log, infra, kindInfrastructure,
+		10*time.Second, 30*time.Second, 16*time.Minute, nil,
+	)).To(Succeed())
+	providerStatus2 := openstackv1alpha1.InfrastructureStatus{}
+	_, _, err = decoder.Decode(infra.Status.ProviderStatus.Raw, nil, &providerStatus2)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(providerStatus2.SecurityGroups[0].ID).To(Equal(expectedSecGroupID))
+
+	return nil
+}
+
+// setupTestNamespaceAndCluster creates the namespace and cluster objects shared by BYO test runs.
+func setupTestNamespaceAndCluster(
+	ctx context.Context,
+	c client.Client,
+	namespaceName string,
+	cloudProfileConfig *openstackv1alpha1.CloudProfileConfig,
+	namespace **corev1.Namespace,
+	cluster **extensionsv1alpha1.Cluster,
+) error {
+	By("create namespace for test execution")
+	*namespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
+	}
+	if err := c.Create(ctx, *namespace); err != nil {
+		return err
+	}
+
+	cloudProfileConfigJSON, err := json.Marshal(cloudProfileConfig)
+	if err != nil {
+		return err
+	}
+	cloudprofile := gardenerv1beta1.CloudProfile{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gardenerv1beta1.SchemeGroupVersion.String(),
+			Kind:       "CloudProfile",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
+		Spec: gardenerv1beta1.CloudProfileSpec{
+			ProviderConfig: &runtime.RawExtension{Raw: cloudProfileConfigJSON},
+		},
+	}
+	cloudProfileJSON, err := json.Marshal(&cloudprofile)
+	if err != nil {
+		return err
+	}
+
+	By("create cluster")
+	*cluster = &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			CloudProfile: runtime.RawExtension{Raw: cloudProfileJSON},
+			Seed:         &runtime.RawExtension{Raw: []byte("{}")},
+			Shoot:        runtime.RawExtension{Raw: []byte("{}")},
+		},
+	}
+	if err := c.Create(ctx, *cluster); err != nil {
+		return err
+	}
+
+	By("deploy cloud provider secret into namespace")
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cloudprovider",
+			Namespace: namespaceName,
+		},
+		Data: map[string][]byte{
+			openstack.AuthURL:                     []byte(*authURL),
+			openstack.DomainName:                  []byte(*domainName),
+			openstack.Password:                    []byte(*password),
+			openstack.Region:                      []byte(*region),
+			openstack.TenantName:                  []byte(*tenantName),
+			openstack.UserName:                    []byte(*userName),
+			openstack.ApplicationCredentialID:     []byte(*appID),
+			openstack.ApplicationCredentialName:   []byte(*appName),
+			openstack.ApplicationCredentialSecret: []byte(*appSecret),
+		},
+	}
+	return getAndCreateOrPatchSpec(ctx, c, secret)
+}
+
+func prepareNewSubnet(log logr.Logger, subnetName, networkID, cidr string) *string {
+	log.Info("Creating subnet", "subnetName", subnetName, "networkID", networkID, "cidr", cidr)
+
+	createOpts := subnets.CreateOpts{
+		Name:      subnetName,
+		NetworkID: networkID,
+		IPVersion: 4,
+		CIDR:      cidr,
+	}
+	subnet, err := networkClient.CreateSubnet(ctx, createOpts)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Subnet created", "subnetID", subnet.ID)
+	return &subnet.ID
+}
+
+func teardownSubnet(log logr.Logger, subnetID string) {
+	log.Info("Deleting subnet", "subnetID", subnetID)
+	Expect(networkClient.DeleteSubnet(ctx, subnetID)).To(Succeed())
+	log.Info("Subnet deleted", "subnetID", subnetID)
+}
+
+func prepareRouterInterface(log logr.Logger, routerID, subnetID string) {
+	log.Info("Adding router interface", "routerID", routerID, "subnetID", subnetID)
+	_, err := networkClient.AddRouterInterface(ctx, routerID, routers.AddInterfaceOpts{SubnetID: subnetID})
+	Expect(err).NotTo(HaveOccurred())
+	log.Info("Router interface added", "routerID", routerID, "subnetID", subnetID)
+}
+
+func teardownRouterInterface(log logr.Logger, routerID, subnetID string) {
+	log.Info("Removing router interface", "routerID", routerID, "subnetID", subnetID)
+	_, err := networkClient.RemoveRouterInterface(ctx, routerID, routers.RemoveInterfaceOpts{SubnetID: subnetID})
+	Expect(err).NotTo(HaveOccurred())
+	log.Info("Router interface removed", "routerID", routerID, "subnetID", subnetID)
+}
+
+func prepareNewSecurityGroup(log logr.Logger, name string) *string {
+	log.Info("Creating security group", "name", name)
+	sg, err := networkClient.CreateSecurityGroup(ctx, groups.CreateOpts{Name: name})
+	Expect(err).NotTo(HaveOccurred())
+	log.Info("Security group created", "secGroupID", sg.ID)
+	return &sg.ID
+}
+
+func teardownSecurityGroup(log logr.Logger, secGroupID string) {
+	log.Info("Deleting security group", "secGroupID", secGroupID)
+	Expect(networkClient.DeleteSecurityGroup(ctx, secGroupID)).To(Succeed())
+	log.Info("Security group deleted", "secGroupID", secGroupID)
 }
 
 func getAndCreateOrPatchSpec(ctx context.Context, c client.Client, obj client.Object) error {

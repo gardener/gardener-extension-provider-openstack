@@ -175,12 +175,11 @@ func (s *shoot) validateShoot(ctx context.Context, context *validationContext) f
 		allErrs = append(allErrs, openstackvalidation.ValidateNetworking(context.shoot.Spec.Networking, nwPath)...)
 		allErrs = append(allErrs, openstackvalidation.ValidateInfrastructureConfig(context.infraConfig, context.shoot.Spec.Networking.Nodes, infraConfigPath)...)
 
-		// Validate that either networks.ipv6.subnetPoolID or explicit networks.ipv6 CIDRs are set for dual-stack shoots.
-		// It is valid to set both; in that case the explicit CIDRs take precedence.
+		// Validate that either networks.ipv6.subnetPoolID, explicit networks.ipv6 CIDRs, or networks.ipv6.nodeSubnetId are set for dual-stack shoots.
 		if core.IsDualStack(context.shoot.Spec.Networking.IPFamilies) {
 			ipv6 := context.infraConfig.Networks.IPv6
-			if ipv6 == nil || (ipv6.SubnetPoolID == nil && ipv6.NodeCIDR == "") {
-				allErrs = append(allErrs, field.Required(infraConfigPath, "either networks.ipv6.subnetPoolID or networks.ipv6 CIDRs must be set for dual-stack shoots"))
+			if ipv6 == nil || (ipv6.SubnetPoolID == nil && ipv6.NodeCIDR == "" && ipv6.NodeSubnetID == nil) {
+				allErrs = append(allErrs, field.Required(infraConfigPath, "either networks.ipv6.subnetPoolID, networks.ipv6 CIDRs, or networks.ipv6.nodeSubnetId must be set for dual-stack shoots"))
 			}
 		}
 	}

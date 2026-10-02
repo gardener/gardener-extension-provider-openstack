@@ -210,7 +210,8 @@ func (c *NetworkingClient) GetRouterByID(ctx context.Context, id string) (*route
 
 // GetSecurityGroup returns a security group info by id
 func (c *NetworkingClient) GetSecurityGroup(ctx context.Context, groupID string) (*groups.SecGroup, error) {
-	return groups.Get(ctx, c.client, groupID).Extract()
+	group, err := groups.Get(ctx, c.client, groupID).Extract()
+	return group, IgnoreNotFoundError(err)
 }
 
 // CreateRouter creates a router

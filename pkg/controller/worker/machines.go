@@ -240,6 +240,12 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 				}
 			}
 
+			// Compute and volume availability zones may differ. Only relevant if the machine-controller-manager
+			// creates the root volume itself, which is the case if a root disk type is set.
+			if _, hasRootDiskType := machineClassSpec["rootDiskType"]; hasRootDiskType && w.cloudProfileConfig.RootDiskAvailabilityZone != nil {
+				machineClassSpec["rootDiskAvailabilityZone"] = *w.cloudProfileConfig.RootDiskAvailabilityZone
+			}
+
 			if machineImage.ID != "" {
 				machineClassSpec["imageID"] = machineImage.ID
 			} else {

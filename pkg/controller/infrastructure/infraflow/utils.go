@@ -245,6 +245,16 @@ func (fctx *FlowContext) hasExplicitIPv6Config() bool {
 	return fctx.config.Networks.IPv6 != nil && fctx.config.Networks.IPv6.NodeCIDR != ""
 }
 
+// isByoIPv4 returns true if the user provided an existing IPv4 subnet.
+func (fctx *FlowContext) isByoIPv4() bool {
+	return fctx.config.Networks.SubnetID != nil
+}
+
+// isByoDualStack returns true if the user provided an existing IPv6 node subnet.
+func (fctx *FlowContext) isByoDualStack() bool {
+	return fctx.config.Networks.IPv6 != nil && fctx.config.Networks.IPv6.NodeSubnetID != nil
+}
+
 // isDualStack returns true if the shoot is configured for dual-stack networking.
 func (fctx *FlowContext) isDualStack() bool {
 	if fctx.shootNetworking == nil {

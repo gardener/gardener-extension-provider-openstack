@@ -36,6 +36,8 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 
 	needToDeleteNetwork := fctx.config.Networks.ID == nil
 	needToDeleteRouter := fctx.config.Networks.Router == nil
+	needToDeleteSubnet := !fctx.isByoIPv4()
+	needToDeleteSubnetIPv6 := !fctx.isByoDualStack()
 
 	_ = fctx.AddTask(g, "delete ssh key pair",
 		fctx.deleteSSHKeyPair,
@@ -102,16 +104,15 @@ func (fctx *FlowContext) buildDeleteGraph() *flow.Graph {
 		fctx.deleteRouterInterfaceIPv6,
 		shared.Timeout(defaultTimeout), shared.Dependencies(recoverIDs, k8sRoutes))
 
-	// subnet deletion only needed if network is given by spec
-	_ = fctx.AddTask(g, "delete subnet",
+	deleteSubnet := fctx.AddTask(g, "delete subnet",
 		fctx.deleteSubnet,
-		shared.DoIf(!needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
-	_ = fctx.AddTask(g, "delete IPv6 subnet",
+		shared.DoIf(needToDeleteSubnet), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, k8sLoadBalancers))
+	deleteSubnetIPv6 := fctx.AddTask(g, "delete IPv6 subnet",
 		fctx.deleteSubnetIPv6,
-		shared.DoIf(!needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterfaceIPv6, k8sLoadBalancersIPv6))
+		shared.DoIf(needToDeleteSubnetIPv6), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterfaceIPv6, k8sLoadBalancersIPv6))
 	_ = fctx.AddTask(g, "delete network",
 		fctx.deleteNetwork,
-		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6))
+		shared.DoIf(needToDeleteNetwork), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6, deleteSubnet, deleteSubnetIPv6))
 	_ = fctx.AddTask(g, "delete router",
 		fctx.deleteRouter,
 		shared.DoIf(needToDeleteRouter), shared.Timeout(defaultTimeout), shared.Dependencies(deleteRouterInterface, deleteRouterInterfaceIPv6))
@@ -210,6 +211,12 @@ func (fctx *FlowContext) recoverNetworkID(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) recoverSubnetID(ctx context.Context) error {
+	// BYO subnet: always recover from config
+	if fctx.isByoIPv4() {
+		fctx.state.Set(IdentifierSubnet, *fctx.config.Networks.SubnetID)
+		return nil
+	}
+
 	if fctx.state.Get(IdentifierSubnet) != nil {
 		return nil
 	}
@@ -225,6 +232,12 @@ func (fctx *FlowContext) recoverSubnetID(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) recoverSubnetIPv6ID(ctx context.Context) error {
+	// BYO IPv6 node subnet: always recover from config.
+	if fctx.isByoDualStack() {
+		fctx.state.Set(IdentifierSubnetIPv6, *fctx.config.Networks.IPv6.NodeSubnetID)
+		return nil
+	}
+
 	for _, suffix := range []string{"-pod", "-svc", ""} {
 		name := fctx.defaultSubnetIPv6Name() + suffix
 		identifier := getSubnetIdentifierBySuffix(name)
@@ -243,6 +256,11 @@ func (fctx *FlowContext) recoverSubnetIPv6ID(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
+	// BYO subnet: the router interface is user-managed, never remove it.
+	if fctx.isByoIPv4() {
+		return nil
+	}
+
 	routerID := fctx.state.Get(IdentifierRouter)
 	if routerID == nil {
 		return nil
@@ -270,6 +288,11 @@ func (fctx *FlowContext) deleteRouterInterface(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) deleteRouterInterfaceIPv6(ctx context.Context) error {
+	// BYO IPv6 node subnet: the router interface is user-managed, never remove it.
+	if fctx.isByoDualStack() {
+		return nil
+	}
+
 	routerID := fctx.state.Get(IdentifierRouter)
 	if routerID == nil {
 		return nil
@@ -294,6 +317,14 @@ func (fctx *FlowContext) deleteRouterInterfaceIPv6(ctx context.Context) error {
 
 func (fctx *FlowContext) deleteSecGroup(ctx context.Context) error {
 	log := shared.LogFromContext(ctx)
+
+	// BYO security group: never delete user-provided resources.
+	if fctx.config.Networks.SecurityGroupID != nil {
+		fctx.state.Set(NameSecGroup, "")
+		fctx.state.SetObject(ObjectSecGroup, nil)
+		return nil
+	}
+
 	current, err := findExisting(ctx, fctx.state.Get(IdentifierSecGroup), fctx.defaultSecurityGroupName(), fctx.access.GetSecurityGroupByID, fctx.access.GetSecurityGroupByName)
 	if err != nil {
 		return err
@@ -325,6 +356,13 @@ func (fctx *FlowContext) deleteSSHKeyPair(ctx context.Context) error {
 }
 
 func (fctx *FlowContext) deleteShareNetwork(ctx context.Context) error {
+	// BYO share network: never delete user-provided resources.
+	if fctx.config.Networks.ShareNetworkID != nil {
+		fctx.state.Set(IdentifierShareNetwork, "")
+		fctx.state.Set(NameShareNetwork, "")
+		return nil
+	}
+
 	if sn := fctx.config.Networks.ShareNetwork; sn == nil || !sn.Enabled {
 		return nil
 	}

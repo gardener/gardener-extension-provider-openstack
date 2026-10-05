@@ -333,6 +333,32 @@ var _ = Describe("Shoot validator", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
+				It("should succeed when networking is configured with dual-stack and nodeSubnetId", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: encode(&apiv1alpha1.InfrastructureConfig{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "InfrastructureConfig",
+							},
+							Networks: apiv1alpha1.Networks{
+								ID:       ptr.To("bc3d8461-eeec-4425-a01e-e3100f151913"),
+								SubnetID: ptr.To("cad4d8d0-871c-478b-8ac1-605a54d5eac0"),
+								Router:   &apiv1alpha1.Router{ID: "4609b94d-0af2-4ae8-bb2a-2c11966e15d0"},
+								IPv6: &apiv1alpha1.IPv6Config{
+									NodeSubnetID: ptr.To("cabcf1af-a69d-4284-b751-ddb0dd6c1a7a"),
+									PodCIDR:      "fd00::/64",
+									ServiceCIDR:  "fd01::/64",
+								},
+							},
+							FloatingPoolName: "pool-1",
+						}),
+					}
+
+					err := shootValidator.Validate(ctx, shoot, nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				It("should return err when networking is configured to use dual-stack without subnetPoolID or IPv6 config", func() {
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 

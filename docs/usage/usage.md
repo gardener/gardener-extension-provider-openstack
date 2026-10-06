@@ -247,6 +247,9 @@ serverGroup:
 #    triggerRollingOnUpdate: true # means any change of the machine label value will trigger rolling of all machines of the worker pool
 # additionalSecurityGroups:
 # - my-existing-security-group
+# additionalNetworkInterfaces:
+# - networkID: bc3d8461-eeec-4425-a01e-e3100f151913
+#   subnetID: cad4d8d0-871c-478b-8ac1-605a54d5eac0
 ```
 
 ### ServerGroups
@@ -271,6 +274,20 @@ will trigger a rolling of all machines of this worker pool.
 The `additionalSecurityGroups` field allows attaching one or more pre-existing OpenStack security groups to every node in the worker pool, in addition to the security group that is automatically managed by the infrastructure reconciler. The security groups are referenced by name and must already exist in OpenStack before the worker pool is reconciled.
 
 Any change to the list of additional security groups (adding, removing, or renaming entries) will trigger a rolling replacement of all machines in the worker pool. Reordering the list without changing the entries does not trigger a roll.
+
+### AdditionalNetworkInterfaces
+
+The `additionalNetworkInterfaces` field allows attaching one or more extra network interfaces to every node in the worker pool. Each entry specifies a pre-existing Neutron network and subnet; the extension pre-allocates a port in that subnet and passes it to the machine-controller-manager, which attaches it to the VM at creation time.
+
+```yaml
+additionalNetworkInterfaces:
+- networkID: bc3d8461-eeec-4425-a01e-e3100f151913
+  subnetID: cad4d8d0-871c-478b-8ac1-605a54d5eac0
+```
+
+The primary use case is giving worker nodes a direct interface on a network that is not routable from the default worker subnet — for example a dedicated Manila NFS storage network. Without an extra NIC the nodes cannot reach the Manila share servers at all; with it, NFS traffic flows directly over the extra interface without any router hop.
+
+Each extra port is named `<machineName>-<subnetID>` and is deleted together with the VM when the machine is removed. Adding, removing, or changing entries in `additionalNetworkInterfaces` triggers a rolling replacement of all machines in the worker pool.
 
 ### Node Templates
 Node templates allow users to override the capacity of the nodes as defined by the server flavor specified in the `CloudProfile`'s `machineTypes`. This is useful for certain dynamic scenarios as it allows users to customize cluster-autoscaler's behavior for these workergroup with their provided values.

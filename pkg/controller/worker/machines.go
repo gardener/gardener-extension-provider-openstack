@@ -217,6 +217,17 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 
 			machineClassSpec["subnetIDs"] = subnetIDs
 
+			if len(workerConfig.AdditionalNetworkInterfaces) > 0 {
+				additionalNICs := make([]map[string]interface{}, 0, len(workerConfig.AdditionalNetworkInterfaces))
+				for _, iface := range workerConfig.AdditionalNetworkInterfaces {
+					additionalNICs = append(additionalNICs, map[string]interface{}{
+						"networkID": iface.NetworkID,
+						"subnetID":  iface.SubnetID,
+					})
+				}
+				machineClassSpec["additionalNetworkInterfaces"] = additionalNICs
+			}
+
 			if volumeSize > 0 {
 				machineClassSpec["rootDiskSize"] = volumeSize
 			}
@@ -371,6 +382,20 @@ func (w *WorkerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		sortedSGs := append([]string(nil), workerConfig.AdditionalSecurityGroups...)
 		sort.Strings(sortedSGs)
 		additionalHashData = append(additionalHashData, sortedSGs...)
+	}
+
+	if len(workerConfig.AdditionalNetworkInterfaces) > 0 {
+		// Sort by networkID+subnetID so order doesn't affect the hash.
+		sortedNICs := append([]api.NetworkInterface(nil), workerConfig.AdditionalNetworkInterfaces...)
+		sort.Slice(sortedNICs, func(i, j int) bool {
+			if sortedNICs[i].NetworkID != sortedNICs[j].NetworkID {
+				return sortedNICs[i].NetworkID < sortedNICs[j].NetworkID
+			}
+			return sortedNICs[i].SubnetID < sortedNICs[j].SubnetID
+		})
+		for _, iface := range sortedNICs {
+			additionalHashData = append(additionalHashData, iface.NetworkID+"/"+iface.SubnetID)
+		}
 	}
 
 	// hash v1 would otherwise hash the ProviderConfig

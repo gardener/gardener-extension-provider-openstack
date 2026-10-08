@@ -292,10 +292,17 @@ func (fctx *FlowContext) podNetworkSecGroupRules() ([]rules.SecGroupRule, error)
 			Direction:      string(rules.DirIngress),
 			EtherType:      string(etherType),
 			RemoteIPPrefix: cidr,
-			Description:    fmt.Sprintf("%s: allow all incoming traffic from the pod network (overlay disabled)", family),
+			Description:    family + ": " + podNetworkRuleDescription,
 		})
 	}
 	return podRules, nil
+}
+
+const podNetworkRuleDescription = "allow all incoming traffic from the pod network (overlay disabled)"
+
+// isPodNetworkSecGroupRule returns true if the rule was created by podNetworkSecGroupRules.
+func isPodNetworkSecGroupRule(rule *rules.SecGroupRule) bool {
+	return rule.Direction == string(rules.DirIngress) && strings.HasSuffix(rule.Description, ": "+podNetworkRuleDescription)
 }
 
 // waitForSubnetCIDR polls the subnet until a CIDR is allocated by the subnet pool, returning it.

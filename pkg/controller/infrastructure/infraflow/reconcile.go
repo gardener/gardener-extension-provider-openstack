@@ -759,11 +759,13 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 	}
 	desiredRules = append(desiredRules, podNetworkRules...)
 
-	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(_ *rules.SecGroupRule) bool {
+	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(rule *rules.SecGroupRule) bool {
 		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
 		// As we don't store the role ids in the state, this function needs to be adjusted
 		// if values in existing rules are changed to identify them for update by replacement.
-		return false
+		// Pod network rules are an exception, they have to be removed if the overlay gets enabled
+		// or the pod CIDR changes.
+		return isPodNetworkSecGroupRule(rule)
 	}); err != nil {
 		return err
 	} else if modified {

@@ -158,6 +158,7 @@ var _ = Describe("ensureSecGroupRules", func() {
 			fctx         *FlowContext
 			sg           *groups.SecGroup
 			desiredRules []rules.SecGroupRule
+			allowDelete  func(*rules.SecGroupRule) bool
 		)
 
 		networkingWithProviderConfig := func(providerConfig string) *gardencorev1beta1.Networking {
@@ -187,11 +188,13 @@ var _ = Describe("ensureSecGroupRules", func() {
 			sg = &groups.SecGroup{ID: "sg-id", Name: "sg"}
 			fctx.state.SetObject(ObjectSecGroup, sg)
 			desiredRules = nil
+			allowDelete = nil
 
 			mockAccess.EXPECT().
 				UpdateSecurityGroupRules(ctx, sg, gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ *groups.SecGroup, r []rules.SecGroupRule, _ func(*rules.SecGroupRule) bool) (bool, error) {
+				DoAndReturn(func(_ context.Context, _ *groups.SecGroup, r []rules.SecGroupRule, d func(*rules.SecGroupRule) bool) (bool, error) {
 					desiredRules = r
+					allowDelete = d
 					return false, nil
 				}).
 				AnyTimes()
@@ -251,6 +254,39 @@ var _ = Describe("ensureSecGroupRules", func() {
 			fctx.shootNetworking = networkingWithProviderConfig(`{"overlay":{"enabled":"no"}}`)
 
 			Expect(fctx.ensureSecGroupRules(ctx)).NotTo(Succeed())
+		})
+
+		It("only allows deleting obsolete pod network rules created by the extension", func() {
+			fctx.shootNetworking = networkingWithProviderConfig(`{"overlay":{"enabled":true}}`)
+
+			Expect(fctx.ensureSecGroupRules(ctx)).To(Succeed())
+			Expect(allowDelete).NotTo(BeNil())
+
+			Expect(allowDelete(&rules.SecGroupRule{
+				Direction:      string(rules.DirIngress),
+				EtherType:      string(rules.EtherType4),
+				RemoteIPPrefix: "100.96.0.0/11",
+				Description:    "IPv4: allow all incoming traffic from the pod network (overlay disabled)",
+			})).To(BeTrue())
+			Expect(allowDelete(&rules.SecGroupRule{
+				Direction:      string(rules.DirIngress),
+				EtherType:      string(rules.EtherType6),
+				RemoteIPPrefix: "2001:db8:1::/64",
+				Description:    "IPv6: allow all incoming traffic from the pod network (overlay disabled)",
+			})).To(BeTrue())
+
+			// manually added rule for the same CIDR
+			Expect(allowDelete(&rules.SecGroupRule{
+				Direction:      string(rules.DirIngress),
+				EtherType:      string(rules.EtherType4),
+				RemoteIPPrefix: "100.96.0.0/11",
+				Description:    "pod network",
+			})).To(BeFalse())
+			Expect(allowDelete(&rules.SecGroupRule{
+				Direction:   string(rules.DirIngress),
+				EtherType:   string(rules.EtherType4),
+				Description: "IPv4: allow all incoming traffic within the same security group",
+			})).To(BeFalse())
 		})
 	})
 })

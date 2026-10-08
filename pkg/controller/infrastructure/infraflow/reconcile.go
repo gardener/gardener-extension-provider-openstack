@@ -85,7 +85,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 		fctx.ensureRouterInterfaceIPv6,
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6), shared.DoIf(fctx.isDualStack()))
 
-	_ = fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
+	ensureIPv6CIDRs := fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(ensureSubnetIPv6),
 		shared.DoIf(fctx.isDualStack()),
@@ -95,9 +95,10 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 		fctx.ensureSecGroup,
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter))
 
+	// depends on the IPv6 CIDRs, they are needed for the pod network rules if the overlay is disabled
 	_ = fctx.AddTask(g, "ensure security group rules",
 		fctx.ensureSecGroupRules,
-		shared.Timeout(defaultTimeout), shared.Dependencies(ensureSecGroup))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureSecGroup, ensureIPv6CIDRs))
 
 	_ = fctx.AddTask(g, "ensure ssh key pair",
 		fctx.ensureSSHKeyPair,
@@ -751,6 +752,12 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 			},
 		}...)
 	}
+
+	podNetworkRules, err := fctx.podNetworkSecGroupRules()
+	if err != nil {
+		return err
+	}
+	desiredRules = append(desiredRules, podNetworkRules...)
 
 	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(_ *rules.SecGroupRule) bool {
 		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.

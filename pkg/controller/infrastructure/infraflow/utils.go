@@ -17,8 +17,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"k8s.io/apimachinery/pkg/util/wait"
 	netutils "k8s.io/utils/net"
+
+	networkingutils "github.com/gardener/gardener-extension-provider-openstack/pkg/utils/networking"
 )
 
 const (
@@ -261,6 +264,38 @@ func (fctx *FlowContext) isDualStack() bool {
 		return false
 	}
 	return gardencorev1beta1.IsDualStack(fctx.shootNetworking.IPFamilies)
+}
+
+// podNetworkSecGroupRules returns ingress rules for the pod CIDRs if the overlay is disabled.
+// Without an overlay, pod traffic between nodes carries the pod IPs as source. These are only
+// allowed address pairs of the node ports and are not matched by the remote group rule on all
+// Neutron backends (e.g. ML2/OVN), so the traffic would be dropped at the receiving node.
+func (fctx *FlowContext) podNetworkSecGroupRules() ([]rules.SecGroupRule, error) {
+	overlayEnabled, err := networkingutils.IsOverlayEnabled(fctx.shootNetworking)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine if overlay is enabled: %w", err)
+	}
+	if overlayEnabled {
+		return nil, nil
+	}
+
+	var podRules []rules.SecGroupRule
+	for _, cidr := range fctx.computeInfrastructureNetworkingStatus().Pods {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			return nil, fmt.Errorf("invalid pod CIDR %q: %w", cidr, err)
+		}
+		etherType, family := rules.EtherType4, "IPv4"
+		if netutils.IsIPv6CIDRString(cidr) {
+			etherType, family = rules.EtherType6, "IPv6"
+		}
+		podRules = append(podRules, rules.SecGroupRule{
+			Direction:      string(rules.DirIngress),
+			EtherType:      string(etherType),
+			RemoteIPPrefix: cidr,
+			Description:    fmt.Sprintf("%s: allow all incoming traffic from the pod network (overlay disabled)", family),
+		})
+	}
+	return podRules, nil
 }
 
 // waitForSubnetCIDR polls the subnet until a CIDR is allocated by the subnet pool, returning it.

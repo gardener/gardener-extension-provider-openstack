@@ -220,10 +220,17 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 			if len(workerConfig.AdditionalNetworkInterfaces) > 0 {
 				additionalNICs := make([]map[string]interface{}, 0, len(workerConfig.AdditionalNetworkInterfaces))
 				for _, iface := range workerConfig.AdditionalNetworkInterfaces {
-					additionalNICs = append(additionalNICs, map[string]interface{}{
+					nic := map[string]interface{}{
 						"networkID": iface.NetworkID,
 						"subnetID":  iface.SubnetID,
-					})
+					}
+					if iface.PodNetwork {
+						nic["podNetwork"] = true
+					}
+					if len(iface.SecurityGroups) > 0 {
+						nic["securityGroups"] = iface.SecurityGroups
+					}
+					additionalNICs = append(additionalNICs, nic)
 				}
 				machineClassSpec["additionalNetworkInterfaces"] = additionalNICs
 			}

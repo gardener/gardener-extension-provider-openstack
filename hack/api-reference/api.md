@@ -1403,6 +1403,30 @@ string
 <p>SubnetID is the ID of the pre-existing OpenStack subnet within NetworkID.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>podNetwork</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PodNetwork specifies whether this additional network carries pod traffic. Defaults to false,<br />meaning the extra NIC is not part of the pod network (e.g. a dedicated storage NIC). If true,<br />the pod network CIDR range is whitelisted on the port's allowed address pairs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>securityGroups</code></br>
+<em>
+string array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecurityGroups is a list of security group names to associate with the additional NIC's port.<br />If empty, no security groups are applied.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

@@ -923,6 +923,8 @@ func Convert_openstack_MachineLabel_To_v1alpha1_MachineLabel(in *openstack.Machi
 func autoConvert_v1alpha1_NetworkInterface_To_openstack_NetworkInterface(in *NetworkInterface, out *openstack.NetworkInterface, s conversion.Scope) error {
 	out.NetworkID = in.NetworkID
 	out.SubnetID = in.SubnetID
+	out.PodNetwork = in.PodNetwork
+	out.SecurityGroups = *(*[]string)(unsafe.Pointer(&in.SecurityGroups))
 	return nil
 }
 
@@ -934,6 +936,8 @@ func Convert_v1alpha1_NetworkInterface_To_openstack_NetworkInterface(in *Network
 func autoConvert_openstack_NetworkInterface_To_v1alpha1_NetworkInterface(in *openstack.NetworkInterface, out *NetworkInterface, s conversion.Scope) error {
 	out.NetworkID = in.NetworkID
 	out.SubnetID = in.SubnetID
+	out.PodNetwork = in.PodNetwork
+	out.SecurityGroups = *(*[]string)(unsafe.Pointer(&in.SecurityGroups))
 	return nil
 }
 

@@ -89,6 +89,13 @@ type NetworkInterface struct {
 	NetworkID string
 	// SubnetID is the ID of the pre-existing OpenStack subnet within NetworkID.
 	SubnetID string
+	// PodNetwork specifies whether this additional network carries pod traffic. Defaults to false,
+	// meaning the extra NIC is not part of the pod network (e.g. a dedicated storage NIC). If true,
+	// the pod network CIDR range is whitelisted on the port's allowed address pairs.
+	PodNetwork bool
+	// SecurityGroups is a list of security group names to associate with the additional NIC's port.
+	// If empty, no security groups are applied.
+	SecurityGroups []string
 }
 
 // MachineLabel define key value pair to label machines.

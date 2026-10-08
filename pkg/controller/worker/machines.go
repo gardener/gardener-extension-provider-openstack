@@ -91,6 +91,8 @@ func (w *WorkerDelegate) GenerateMachineDeployments(ctx context.Context) (worker
 	return w.machineDeployments, nil
 }
 
+// generateMachineConfig generates the machine classes, machine deployments and machine images
+// for all worker pools and stores them in the WorkerDelegate.
 func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineDeployments = worker.MachineDeployments{}

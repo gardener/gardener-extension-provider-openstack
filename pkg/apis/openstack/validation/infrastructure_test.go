@@ -463,6 +463,24 @@ var _ = Describe("InfrastructureConfig validation", func() {
 			}))))
 		})
 
+		It("should allow adding networks.ipv6 to enable dual-stack on an existing IPv4 cluster", func() {
+			newConfig := infrastructureConfig.DeepCopy()
+			newConfig.Networks.IPv6 = &api.IPv6Config{SubnetPoolID: ptr.To("pool-id")}
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid removing networks.ipv6 once set", func() {
+			infrastructureConfig.Networks.IPv6 = &api.IPv6Config{SubnetPoolID: ptr.To("pool-id")}
+			newConfig := infrastructureConfig.DeepCopy()
+			newConfig.Networks.IPv6 = nil
+			errorList := ValidateInfrastructureConfigUpdate(infrastructureConfig, newConfig, nilPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("networks.ipv6"),
+			}))))
+		})
+
 		It("should pass with valid BYO nodeSubnetId and large enough podCIDR", func() {
 			infrastructureConfig.Networks.Workers = ""
 			infrastructureConfig.Networks.ID = ptr.To("bc3d8461-eeec-4425-a01e-e3100f151913")

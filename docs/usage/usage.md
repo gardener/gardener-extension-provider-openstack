@@ -250,6 +250,9 @@ serverGroup:
 # additionalNetworkInterfaces:
 # - networkID: bc3d8461-eeec-4425-a01e-e3100f151913
 #   subnetID: cad4d8d0-871c-478b-8ac1-605a54d5eac0
+#   podNetwork: false # optional, whitelist the pod network CIDR on the port when true
+#   securityGroups: # optional, pre-existing security group names to attach to the port
+#   - my-existing-security-group
 ```
 
 ### ServerGroups
@@ -283,11 +286,19 @@ The `additionalNetworkInterfaces` field allows attaching one or more extra netwo
 additionalNetworkInterfaces:
 - networkID: bc3d8461-eeec-4425-a01e-e3100f151913
   subnetID: cad4d8d0-871c-478b-8ac1-605a54d5eac0
+  podNetwork: false # optional, defaults to false
+  securityGroups: # optional, defaults to none
+  - my-existing-security-group
 ```
 
 The primary use case is giving worker nodes a direct interface on a network that is not routable from the default worker subnet — for example a dedicated Manila NFS storage network. Without an extra NIC the nodes cannot reach the Manila share servers at all; with it, NFS traffic flows directly over the extra interface without any router hop.
 
-Each extra port is named `<machineName>-<subnetID>` and is deleted together with the VM when the machine is removed. Adding, removing, or changing entries in `additionalNetworkInterfaces` triggers a rolling replacement of all machines in the worker pool.
+Per interface the following optional fields are available:
+
+- `podNetwork` (defaults to `false`): whether the extra network carries pod traffic. When `true`, the pod network CIDR range is whitelisted on the port's allowed address pairs so pods can be reached over this interface. Leave it `false` for a dedicated, pod-unaware NIC such as a storage network.
+- `securityGroups`: a list of pre-existing security group names to associate with the extra port. If omitted, no security groups are applied to the port.
+
+Each extra port is named `<machineName>-<subnetID>` and is deleted together with the VM when the machine is removed. Adding, removing, or changing entries in `additionalNetworkInterfaces` (including the `podNetwork` and `securityGroups` fields) triggers a rolling replacement of all machines in the worker pool.
 
 ### Node Templates
 Node templates allow users to override the capacity of the nodes as defined by the server flavor specified in the `CloudProfile`'s `machineTypes`. This is useful for certain dynamic scenarios as it allows users to customize cluster-autoscaler's behavior for these workergroup with their provided values.

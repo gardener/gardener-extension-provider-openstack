@@ -401,7 +401,9 @@ func (w *WorkerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 			return sortedNICs[i].SubnetID < sortedNICs[j].SubnetID
 		})
 		for _, iface := range sortedNICs {
-			additionalHashData = append(additionalHashData, iface.NetworkID+"/"+iface.SubnetID)
+			sortedSGs := append([]string(nil), iface.SecurityGroups...)
+			sort.Strings(sortedSGs)
+			additionalHashData = append(additionalHashData, fmt.Sprintf("%s/%s/%t/%s", iface.NetworkID, iface.SubnetID, iface.PodNetwork, strings.Join(sortedSGs, ",")))
 		}
 	}
 

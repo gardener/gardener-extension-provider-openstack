@@ -85,7 +85,7 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 		fctx.ensureRouterInterfaceIPv6,
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter, ensureSubnetIPv6), shared.DoIf(fctx.isDualStack()))
 
-	_ = fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
+	ensureIPv6CIDRs := fctx.AddTask(g, "ensure IPv6 CIDR services", fctx.ensureIPv6CIDRs,
 		shared.Timeout(defaultTimeout),
 		shared.Dependencies(ensureSubnetIPv6),
 		shared.DoIf(fctx.isDualStack()),
@@ -95,9 +95,10 @@ func (fctx *FlowContext) buildReconcileGraph() *flow.Graph {
 		fctx.ensureSecGroup,
 		shared.Timeout(defaultTimeout), shared.Dependencies(ensureRouter))
 
+	// depends on the IPv6 CIDRs, they are needed for the pod network rules if the overlay is disabled
 	_ = fctx.AddTask(g, "ensure security group rules",
 		fctx.ensureSecGroupRules,
-		shared.Timeout(defaultTimeout), shared.Dependencies(ensureSecGroup))
+		shared.Timeout(defaultTimeout), shared.Dependencies(ensureSecGroup, ensureIPv6CIDRs))
 
 	_ = fctx.AddTask(g, "ensure ssh key pair",
 		fctx.ensureSSHKeyPair,
@@ -752,11 +753,19 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 		}...)
 	}
 
-	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(_ *rules.SecGroupRule) bool {
+	podNetworkRules, err := fctx.podNetworkSecGroupRules()
+	if err != nil {
+		return err
+	}
+	desiredRules = append(desiredRules, podNetworkRules...)
+
+	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(rule *rules.SecGroupRule) bool {
 		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
 		// As we don't store the role ids in the state, this function needs to be adjusted
 		// if values in existing rules are changed to identify them for update by replacement.
-		return false
+		// Pod network rules are an exception, they have to be removed if the overlay gets enabled
+		// or the pod CIDR changes.
+		return isPodNetworkSecGroupRule(rule)
 	}); err != nil {
 		return err
 	} else if modified {

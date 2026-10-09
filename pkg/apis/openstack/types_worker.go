@@ -75,6 +75,27 @@ type WorkerConfig struct {
 	// auto-managed "nodes" security group.
 	// +optional
 	AdditionalSecurityGroups []string
+
+	// AdditionalNetworkInterfaces is a list of additional network interfaces to attach to
+	// every node in this worker pool. Each entry attaches an extra NIC on the specified
+	// pre-existing OpenStack network/subnet, enabling use cases such as Multus CNI.
+	// +optional
+	AdditionalNetworkInterfaces []NetworkInterface
+}
+
+// NetworkInterface describes an additional Neutron port to attach to a worker node.
+type NetworkInterface struct {
+	// NetworkID is the ID of the pre-existing OpenStack network.
+	NetworkID string
+	// SubnetID is the ID of the pre-existing OpenStack subnet within NetworkID.
+	SubnetID string
+	// PodNetwork specifies whether this additional network carries pod traffic. Defaults to false,
+	// meaning the extra NIC is not part of the pod network (e.g. a dedicated storage NIC). If true,
+	// the pod network CIDR range is whitelisted on the port's allowed address pairs.
+	PodNetwork bool
+	// SecurityGroups is a list of security group names to associate with the additional NIC's port.
+	// If empty, no security groups are applied.
+	SecurityGroups []string
 }
 
 // MachineLabel define key value pair to label machines.

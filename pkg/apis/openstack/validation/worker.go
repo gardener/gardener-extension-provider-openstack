@@ -23,6 +23,7 @@ func ValidateWorkerConfig(worker *core.Worker, workerConfig *api.WorkerConfig, c
 	allErrs = append(allErrs, ValidateNodeTemplate(workerConfig.NodeTemplate, fldPath.Child("nodeTemplate"))...)
 	allErrs = append(allErrs, ValidateMachineLabels(worker, workerConfig, fldPath.Child("machineLabels"))...)
 	allErrs = append(allErrs, ValidateAdditionalSecurityGroups(workerConfig.AdditionalSecurityGroups, fldPath.Child("additionalSecurityGroups"))...)
+	allErrs = append(allErrs, ValidateAdditionalNetworkInterfaces(workerConfig.AdditionalNetworkInterfaces, fldPath.Child("additionalNetworkInterfaces"))...)
 
 	return allErrs
 }
@@ -146,6 +147,31 @@ func ValidateAdditionalSecurityGroups(names []string, fldPath *field.Path) field
 			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), name, fmt.Sprintf("duplicate security group, already listed at index %d", j)))
 		} else {
 			seen[name] = i
+		}
+	}
+	return allErrs
+}
+
+// ValidateAdditionalNetworkInterfaces validates the additionalNetworkInterfaces list of a WorkerConfig.
+func ValidateAdditionalNetworkInterfaces(ifaces []api.NetworkInterface, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	type key struct{ networkID, subnetID string }
+	seen := make(map[key]int, len(ifaces))
+	for i, iface := range ifaces {
+		idxPath := fldPath.Index(i)
+		if iface.NetworkID == "" {
+			allErrs = append(allErrs, field.Required(idxPath.Child("networkID"), "networkID must not be empty"))
+		}
+		if iface.SubnetID == "" {
+			allErrs = append(allErrs, field.Required(idxPath.Child("subnetID"), "subnetID must not be empty"))
+		}
+		if iface.NetworkID != "" && iface.SubnetID != "" {
+			k := key{iface.NetworkID, iface.SubnetID}
+			if j, ok := seen[k]; ok {
+				allErrs = append(allErrs, field.Invalid(idxPath, iface, fmt.Sprintf("duplicate network interface, already listed at index %d", j)))
+			} else {
+				seen[k] = i
+			}
 		}
 	}
 	return allErrs

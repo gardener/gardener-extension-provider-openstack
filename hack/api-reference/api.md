@@ -1360,6 +1360,78 @@ boolean
 </table>
 
 
+<h3 id="networkinterface">NetworkInterface
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#workerconfig">WorkerConfig</a>)
+</p>
+
+<p>
+NetworkInterface describes an additional Neutron port to attach to a worker node.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>networkID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>NetworkID is the ID of the pre-existing OpenStack network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>subnetID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SubnetID is the ID of the pre-existing OpenStack subnet within NetworkID.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>podNetwork</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PodNetwork specifies whether this additional network carries pod traffic. Defaults to false,<br />meaning the extra NIC is not part of the pod network (e.g. a dedicated storage NIC). If true,<br />the pod network CIDR range is whitelisted on the port's allowed address pairs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>securityGroups</code></br>
+<em>
+string array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecurityGroups is a list of security group names to associate with the additional NIC's port.<br />If empty, no security groups are applied.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="networkstatus">NetworkStatus
 </h3>
 
@@ -2445,6 +2517,18 @@ string array
 <td>
 <em>(Optional)</em>
 <p>AdditionalSecurityGroups is a list of names of pre-existing OpenStack security<br />groups to attach to every node in this worker pool, in addition to the<br />auto-managed "nodes" security group.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>additionalNetworkInterfaces</code></br>
+<em>
+<a href="#networkinterface">NetworkInterface</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdditionalNetworkInterfaces is a list of additional network interfaces to attach to<br />every node in this worker pool. Each entry attaches an extra NIC on the specified<br />pre-existing OpenStack network/subnet, enabling use cases such as Multus CNI.</p>
 </td>
 </tr>
 

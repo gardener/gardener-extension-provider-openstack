@@ -244,7 +244,7 @@ images:
 - name: csi-driver-nfs
   sourceRepository: github.com/kubernetes-csi/csi-driver-nfs
   repository: registry.k8s.io/sig-storage/nfsplugin
-  tag: v4.13.4
+  tag: v4.13.5
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -301,7 +301,7 @@ images:
 - name: csi-provisioner
   sourceRepository: github.com/kubernetes-csi/external-provisioner
   repository: registry.k8s.io/sig-storage/csi-provisioner
-  tag: v6.3.0
+  tag: v6.4.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -330,7 +330,7 @@ images:
 - name: csi-resizer
   sourceRepository: github.com/kubernetes-csi/external-resizer
   repository: registry.k8s.io/sig-storage/csi-resizer
-  tag: v2.2.1
+  tag: v2.3.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -373,7 +373,7 @@ images:
 - name: machine-controller-manager-provider-openstack
   sourceRepository: github.com/gardener/machine-controller-manager-provider-openstack
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-openstack
-  tag: v0.27.1
+  tag: v0.28.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:

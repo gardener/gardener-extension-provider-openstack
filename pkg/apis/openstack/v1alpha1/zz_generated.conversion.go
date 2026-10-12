@@ -13,7 +13,6 @@ import (
 	unsafe "unsafe"
 
 	openstack "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
@@ -401,7 +400,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_CSIManila_To_openstack_CSIManila(in *CSIManila, out *openstack.CSIManila, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	*out = *(*openstack.CSIManila)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -411,7 +410,7 @@ func Convert_v1alpha1_CSIManila_To_openstack_CSIManila(in *CSIManila, out *opens
 }
 
 func autoConvert_openstack_CSIManila_To_v1alpha1_CSIManila(in *openstack.CSIManila, out *CSIManila, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	*out = *(*CSIManila)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -421,8 +420,7 @@ func Convert_openstack_CSIManila_To_v1alpha1_CSIManila(in *openstack.CSIManila, 
 }
 
 func autoConvert_v1alpha1_CloudControllerManagerConfig_To_openstack_CloudControllerManagerConfig(in *CloudControllerManagerConfig, out *openstack.CloudControllerManagerConfig, s conversion.Scope) error {
-	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	out.InternalLoadBalancer = in.InternalLoadBalancer
+	*out = *(*openstack.CloudControllerManagerConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -432,8 +430,7 @@ func Convert_v1alpha1_CloudControllerManagerConfig_To_openstack_CloudControllerM
 }
 
 func autoConvert_openstack_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *openstack.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
-	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	out.InternalLoadBalancer = in.InternalLoadBalancer
+	*out = *(*CloudControllerManagerConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -497,8 +494,7 @@ func Convert_openstack_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *ope
 }
 
 func autoConvert_v1alpha1_Constraints_To_openstack_Constraints(in *Constraints, out *openstack.Constraints, s conversion.Scope) error {
-	out.FloatingPools = *(*[]openstack.FloatingPool)(unsafe.Pointer(&in.FloatingPools))
-	out.LoadBalancerProviders = *(*[]openstack.LoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
+	*out = *(*openstack.Constraints)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -508,8 +504,7 @@ func Convert_v1alpha1_Constraints_To_openstack_Constraints(in *Constraints, out 
 }
 
 func autoConvert_openstack_Constraints_To_v1alpha1_Constraints(in *openstack.Constraints, out *Constraints, s conversion.Scope) error {
-	out.FloatingPools = *(*[]FloatingPool)(unsafe.Pointer(&in.FloatingPools))
-	out.LoadBalancerProviders = *(*[]LoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
+	*out = *(*Constraints)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -547,12 +542,7 @@ func Convert_openstack_ControlPlaneConfig_To_v1alpha1_ControlPlaneConfig(in *ope
 }
 
 func autoConvert_v1alpha1_FloatingPool_To_openstack_FloatingPool(in *FloatingPool, out *openstack.FloatingPool, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Region = (*string)(unsafe.Pointer(in.Region))
-	out.Domain = (*string)(unsafe.Pointer(in.Domain))
-	out.DefaultFloatingSubnet = (*string)(unsafe.Pointer(in.DefaultFloatingSubnet))
-	out.NonConstraining = (*bool)(unsafe.Pointer(in.NonConstraining))
-	out.LoadBalancerClasses = *(*[]openstack.LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
+	*out = *(*openstack.FloatingPool)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -562,12 +552,7 @@ func Convert_v1alpha1_FloatingPool_To_openstack_FloatingPool(in *FloatingPool, o
 }
 
 func autoConvert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.FloatingPool, out *FloatingPool, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Region = (*string)(unsafe.Pointer(in.Region))
-	out.Domain = (*string)(unsafe.Pointer(in.Domain))
-	out.DefaultFloatingSubnet = (*string)(unsafe.Pointer(in.DefaultFloatingSubnet))
-	out.NonConstraining = (*bool)(unsafe.Pointer(in.NonConstraining))
-	out.LoadBalancerClasses = *(*[]LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
+	*out = *(*FloatingPool)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -577,8 +562,7 @@ func Convert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.Float
 }
 
 func autoConvert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *FloatingPoolStatus, out *openstack.FloatingPoolStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*openstack.FloatingPoolStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -588,8 +572,7 @@ func Convert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *Flo
 }
 
 func autoConvert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *openstack.FloatingPoolStatus, out *FloatingPoolStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*FloatingPoolStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -599,11 +582,7 @@ func Convert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *ope
 }
 
 func autoConvert_v1alpha1_IPv6Config_To_openstack_IPv6Config(in *IPv6Config, out *openstack.IPv6Config, s conversion.Scope) error {
-	out.SubnetPoolID = (*string)(unsafe.Pointer(in.SubnetPoolID))
-	out.NodeCIDR = in.NodeCIDR
-	out.PodCIDR = in.PodCIDR
-	out.ServiceCIDR = in.ServiceCIDR
-	out.NodeSubnetID = (*string)(unsafe.Pointer(in.NodeSubnetID))
+	*out = *(*openstack.IPv6Config)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -613,11 +592,7 @@ func Convert_v1alpha1_IPv6Config_To_openstack_IPv6Config(in *IPv6Config, out *op
 }
 
 func autoConvert_openstack_IPv6Config_To_v1alpha1_IPv6Config(in *openstack.IPv6Config, out *IPv6Config, s conversion.Scope) error {
-	out.SubnetPoolID = (*string)(unsafe.Pointer(in.SubnetPoolID))
-	out.NodeCIDR = in.NodeCIDR
-	out.PodCIDR = in.PodCIDR
-	out.ServiceCIDR = in.ServiceCIDR
-	out.NodeSubnetID = (*string)(unsafe.Pointer(in.NodeSubnetID))
+	*out = *(*IPv6Config)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -707,9 +682,7 @@ func Convert_openstack_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in 
 }
 
 func autoConvert_v1alpha1_KeyStoneURL_To_openstack_KeyStoneURL(in *KeyStoneURL, out *openstack.KeyStoneURL, s conversion.Scope) error {
-	out.Region = in.Region
-	out.URL = in.URL
-	out.CACert = (*string)(unsafe.Pointer(in.CACert))
+	*out = *(*openstack.KeyStoneURL)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -719,9 +692,7 @@ func Convert_v1alpha1_KeyStoneURL_To_openstack_KeyStoneURL(in *KeyStoneURL, out 
 }
 
 func autoConvert_openstack_KeyStoneURL_To_v1alpha1_KeyStoneURL(in *openstack.KeyStoneURL, out *KeyStoneURL, s conversion.Scope) error {
-	out.Region = in.Region
-	out.URL = in.URL
-	out.CACert = (*string)(unsafe.Pointer(in.CACert))
+	*out = *(*KeyStoneURL)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -731,13 +702,7 @@ func Convert_openstack_KeyStoneURL_To_v1alpha1_KeyStoneURL(in *openstack.KeySton
 }
 
 func autoConvert_v1alpha1_LoadBalancerClass_To_openstack_LoadBalancerClass(in *LoadBalancerClass, out *openstack.LoadBalancerClass, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	out.FloatingSubnetID = (*string)(unsafe.Pointer(in.FloatingSubnetID))
-	out.FloatingSubnetTags = (*string)(unsafe.Pointer(in.FloatingSubnetTags))
-	out.FloatingSubnetName = (*string)(unsafe.Pointer(in.FloatingSubnetName))
-	out.FloatingNetworkID = (*string)(unsafe.Pointer(in.FloatingNetworkID))
-	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
+	*out = *(*openstack.LoadBalancerClass)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -747,13 +712,7 @@ func Convert_v1alpha1_LoadBalancerClass_To_openstack_LoadBalancerClass(in *LoadB
 }
 
 func autoConvert_openstack_LoadBalancerClass_To_v1alpha1_LoadBalancerClass(in *openstack.LoadBalancerClass, out *LoadBalancerClass, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	out.FloatingSubnetID = (*string)(unsafe.Pointer(in.FloatingSubnetID))
-	out.FloatingSubnetTags = (*string)(unsafe.Pointer(in.FloatingSubnetTags))
-	out.FloatingSubnetName = (*string)(unsafe.Pointer(in.FloatingSubnetName))
-	out.FloatingNetworkID = (*string)(unsafe.Pointer(in.FloatingNetworkID))
-	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
+	*out = *(*LoadBalancerClass)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -763,8 +722,7 @@ func Convert_openstack_LoadBalancerClass_To_v1alpha1_LoadBalancerClass(in *opens
 }
 
 func autoConvert_v1alpha1_LoadBalancerProvider_To_openstack_LoadBalancerProvider(in *LoadBalancerProvider, out *openstack.LoadBalancerProvider, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Region = (*string)(unsafe.Pointer(in.Region))
+	*out = *(*openstack.LoadBalancerProvider)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -774,8 +732,7 @@ func Convert_v1alpha1_LoadBalancerProvider_To_openstack_LoadBalancerProvider(in 
 }
 
 func autoConvert_openstack_LoadBalancerProvider_To_v1alpha1_LoadBalancerProvider(in *openstack.LoadBalancerProvider, out *LoadBalancerProvider, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Region = (*string)(unsafe.Pointer(in.Region))
+	*out = *(*LoadBalancerProvider)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -785,12 +742,7 @@ func Convert_openstack_LoadBalancerProvider_To_v1alpha1_LoadBalancerProvider(in 
 }
 
 func autoConvert_v1alpha1_MachineImage_To_openstack_MachineImage(in *MachineImage, out *openstack.MachineImage, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Version = in.Version
-	out.Image = in.Image
-	out.ID = in.ID
-	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*openstack.MachineImage)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -800,12 +752,7 @@ func Convert_v1alpha1_MachineImage_To_openstack_MachineImage(in *MachineImage, o
 }
 
 func autoConvert_openstack_MachineImage_To_v1alpha1_MachineImage(in *openstack.MachineImage, out *MachineImage, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Version = in.Version
-	out.Image = in.Image
-	out.ID = in.ID
-	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*MachineImage)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -815,9 +762,7 @@ func Convert_openstack_MachineImage_To_v1alpha1_MachineImage(in *openstack.Machi
 }
 
 func autoConvert_v1alpha1_MachineImageFlavor_To_openstack_MachineImageFlavor(in *MachineImageFlavor, out *openstack.MachineImageFlavor, s conversion.Scope) error {
-	out.Regions = *(*[]openstack.RegionIDMapping)(unsafe.Pointer(&in.Regions))
-	out.Image = in.Image
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*openstack.MachineImageFlavor)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -827,9 +772,7 @@ func Convert_v1alpha1_MachineImageFlavor_To_openstack_MachineImageFlavor(in *Mac
 }
 
 func autoConvert_openstack_MachineImageFlavor_To_v1alpha1_MachineImageFlavor(in *openstack.MachineImageFlavor, out *MachineImageFlavor, s conversion.Scope) error {
-	out.Regions = *(*[]RegionIDMapping)(unsafe.Pointer(&in.Regions))
-	out.Image = in.Image
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*MachineImageFlavor)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -839,10 +782,7 @@ func Convert_openstack_MachineImageFlavor_To_v1alpha1_MachineImageFlavor(in *ope
 }
 
 func autoConvert_v1alpha1_MachineImageVersion_To_openstack_MachineImageVersion(in *MachineImageVersion, out *openstack.MachineImageVersion, s conversion.Scope) error {
-	out.Version = in.Version
-	out.Image = in.Image
-	out.Regions = *(*[]openstack.RegionIDMapping)(unsafe.Pointer(&in.Regions))
-	out.CapabilityFlavors = *(*[]openstack.MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
+	*out = *(*openstack.MachineImageVersion)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -852,10 +792,7 @@ func Convert_v1alpha1_MachineImageVersion_To_openstack_MachineImageVersion(in *M
 }
 
 func autoConvert_openstack_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *openstack.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
-	out.Version = in.Version
-	out.Image = in.Image
-	out.Regions = *(*[]RegionIDMapping)(unsafe.Pointer(&in.Regions))
-	out.CapabilityFlavors = *(*[]MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
+	*out = *(*MachineImageVersion)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -865,8 +802,7 @@ func Convert_openstack_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *o
 }
 
 func autoConvert_v1alpha1_MachineImages_To_openstack_MachineImages(in *MachineImages, out *openstack.MachineImages, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Versions = *(*[]openstack.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	*out = *(*openstack.MachineImages)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -876,8 +812,7 @@ func Convert_v1alpha1_MachineImages_To_openstack_MachineImages(in *MachineImages
 }
 
 func autoConvert_openstack_MachineImages_To_v1alpha1_MachineImages(in *openstack.MachineImages, out *MachineImages, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	*out = *(*MachineImages)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -887,9 +822,7 @@ func Convert_openstack_MachineImages_To_v1alpha1_MachineImages(in *openstack.Mac
 }
 
 func autoConvert_v1alpha1_MachineLabel_To_openstack_MachineLabel(in *MachineLabel, out *openstack.MachineLabel, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Value = in.Value
-	out.TriggerRollingOnUpdate = in.TriggerRollingOnUpdate
+	*out = *(*openstack.MachineLabel)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -899,9 +832,7 @@ func Convert_v1alpha1_MachineLabel_To_openstack_MachineLabel(in *MachineLabel, o
 }
 
 func autoConvert_openstack_MachineLabel_To_v1alpha1_MachineLabel(in *openstack.MachineLabel, out *MachineLabel, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Value = in.Value
-	out.TriggerRollingOnUpdate = in.TriggerRollingOnUpdate
+	*out = *(*MachineLabel)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -911,16 +842,7 @@ func Convert_openstack_MachineLabel_To_v1alpha1_MachineLabel(in *openstack.Machi
 }
 
 func autoConvert_v1alpha1_NetworkStatus_To_openstack_NetworkStatus(in *NetworkStatus, out *openstack.NetworkStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.Name = in.Name
-	if err := Convert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(&in.FloatingPool, &out.FloatingPool, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_RouterStatus_To_openstack_RouterStatus(&in.Router, &out.Router, s); err != nil {
-		return err
-	}
-	out.Subnets = *(*[]openstack.Subnet)(unsafe.Pointer(&in.Subnets))
-	out.ShareNetwork = (*openstack.ShareNetworkStatus)(unsafe.Pointer(in.ShareNetwork))
+	*out = *(*openstack.NetworkStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -930,16 +852,7 @@ func Convert_v1alpha1_NetworkStatus_To_openstack_NetworkStatus(in *NetworkStatus
 }
 
 func autoConvert_openstack_NetworkStatus_To_v1alpha1_NetworkStatus(in *openstack.NetworkStatus, out *NetworkStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.Name = in.Name
-	if err := Convert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(&in.FloatingPool, &out.FloatingPool, s); err != nil {
-		return err
-	}
-	if err := Convert_openstack_RouterStatus_To_v1alpha1_RouterStatus(&in.Router, &out.Router, s); err != nil {
-		return err
-	}
-	out.Subnets = *(*[]Subnet)(unsafe.Pointer(&in.Subnets))
-	out.ShareNetwork = (*ShareNetworkStatus)(unsafe.Pointer(in.ShareNetwork))
+	*out = *(*NetworkStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -949,16 +862,7 @@ func Convert_openstack_NetworkStatus_To_v1alpha1_NetworkStatus(in *openstack.Net
 }
 
 func autoConvert_v1alpha1_Networks_To_openstack_Networks(in *Networks, out *openstack.Networks, s conversion.Scope) error {
-	out.Router = (*openstack.Router)(unsafe.Pointer(in.Router))
-	out.Worker = in.Worker
-	out.Workers = in.Workers
-	out.SubnetPool = (*openstack.SubnetPool)(unsafe.Pointer(in.SubnetPool))
-	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
-	out.SecurityGroupID = (*string)(unsafe.Pointer(in.SecurityGroupID))
-	out.ShareNetworkID = (*string)(unsafe.Pointer(in.ShareNetworkID))
-	out.ShareNetwork = (*openstack.ShareNetwork)(unsafe.Pointer(in.ShareNetwork))
-	out.IPv6 = (*openstack.IPv6Config)(unsafe.Pointer(in.IPv6))
+	*out = *(*openstack.Networks)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -968,16 +872,7 @@ func Convert_v1alpha1_Networks_To_openstack_Networks(in *Networks, out *openstac
 }
 
 func autoConvert_openstack_Networks_To_v1alpha1_Networks(in *openstack.Networks, out *Networks, s conversion.Scope) error {
-	out.Router = (*Router)(unsafe.Pointer(in.Router))
-	out.Worker = in.Worker
-	out.Workers = in.Workers
-	out.SubnetPool = (*SubnetPool)(unsafe.Pointer(in.SubnetPool))
-	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
-	out.SecurityGroupID = (*string)(unsafe.Pointer(in.SecurityGroupID))
-	out.ShareNetworkID = (*string)(unsafe.Pointer(in.ShareNetworkID))
-	out.ShareNetwork = (*ShareNetwork)(unsafe.Pointer(in.ShareNetwork))
-	out.IPv6 = (*IPv6Config)(unsafe.Pointer(in.IPv6))
+	*out = *(*Networks)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -987,7 +882,7 @@ func Convert_openstack_Networks_To_v1alpha1_Networks(in *openstack.Networks, out
 }
 
 func autoConvert_v1alpha1_NodeStatus_To_openstack_NodeStatus(in *NodeStatus, out *openstack.NodeStatus, s conversion.Scope) error {
-	out.KeyName = in.KeyName
+	*out = *(*openstack.NodeStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -997,7 +892,7 @@ func Convert_v1alpha1_NodeStatus_To_openstack_NodeStatus(in *NodeStatus, out *op
 }
 
 func autoConvert_openstack_NodeStatus_To_v1alpha1_NodeStatus(in *openstack.NodeStatus, out *NodeStatus, s conversion.Scope) error {
-	out.KeyName = in.KeyName
+	*out = *(*NodeStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1007,9 +902,7 @@ func Convert_openstack_NodeStatus_To_v1alpha1_NodeStatus(in *openstack.NodeStatu
 }
 
 func autoConvert_v1alpha1_RegionIDMapping_To_openstack_RegionIDMapping(in *RegionIDMapping, out *openstack.RegionIDMapping, s conversion.Scope) error {
-	out.Name = in.Name
-	out.ID = in.ID
-	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
+	*out = *(*openstack.RegionIDMapping)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1019,9 +912,7 @@ func Convert_v1alpha1_RegionIDMapping_To_openstack_RegionIDMapping(in *RegionIDM
 }
 
 func autoConvert_openstack_RegionIDMapping_To_v1alpha1_RegionIDMapping(in *openstack.RegionIDMapping, out *RegionIDMapping, s conversion.Scope) error {
-	out.Name = in.Name
-	out.ID = in.ID
-	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
+	*out = *(*RegionIDMapping)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1031,7 +922,7 @@ func Convert_openstack_RegionIDMapping_To_v1alpha1_RegionIDMapping(in *openstack
 }
 
 func autoConvert_v1alpha1_Router_To_openstack_Router(in *Router, out *openstack.Router, s conversion.Scope) error {
-	out.ID = in.ID
+	*out = *(*openstack.Router)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1041,7 +932,7 @@ func Convert_v1alpha1_Router_To_openstack_Router(in *Router, out *openstack.Rout
 }
 
 func autoConvert_openstack_Router_To_v1alpha1_Router(in *openstack.Router, out *Router, s conversion.Scope) error {
-	out.ID = in.ID
+	*out = *(*Router)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1051,9 +942,7 @@ func Convert_openstack_Router_To_v1alpha1_Router(in *openstack.Router, out *Rout
 }
 
 func autoConvert_v1alpha1_RouterStatus_To_openstack_RouterStatus(in *RouterStatus, out *openstack.RouterStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.IP = in.IP
-	out.ExternalFixedIPs = *(*[]string)(unsafe.Pointer(&in.ExternalFixedIPs))
+	*out = *(*openstack.RouterStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1063,9 +952,7 @@ func Convert_v1alpha1_RouterStatus_To_openstack_RouterStatus(in *RouterStatus, o
 }
 
 func autoConvert_openstack_RouterStatus_To_v1alpha1_RouterStatus(in *openstack.RouterStatus, out *RouterStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.IP = in.IP
-	out.ExternalFixedIPs = *(*[]string)(unsafe.Pointer(&in.ExternalFixedIPs))
+	*out = *(*RouterStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1075,9 +962,7 @@ func Convert_openstack_RouterStatus_To_v1alpha1_RouterStatus(in *openstack.Route
 }
 
 func autoConvert_v1alpha1_SecurityGroup_To_openstack_SecurityGroup(in *SecurityGroup, out *openstack.SecurityGroup, s conversion.Scope) error {
-	out.Purpose = openstack.Purpose(in.Purpose)
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*openstack.SecurityGroup)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1087,9 +972,7 @@ func Convert_v1alpha1_SecurityGroup_To_openstack_SecurityGroup(in *SecurityGroup
 }
 
 func autoConvert_openstack_SecurityGroup_To_v1alpha1_SecurityGroup(in *openstack.SecurityGroup, out *SecurityGroup, s conversion.Scope) error {
-	out.Purpose = Purpose(in.Purpose)
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*SecurityGroup)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1099,7 +982,7 @@ func Convert_openstack_SecurityGroup_To_v1alpha1_SecurityGroup(in *openstack.Sec
 }
 
 func autoConvert_v1alpha1_ServerGroup_To_openstack_ServerGroup(in *ServerGroup, out *openstack.ServerGroup, s conversion.Scope) error {
-	out.Policy = in.Policy
+	*out = *(*openstack.ServerGroup)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1109,7 +992,7 @@ func Convert_v1alpha1_ServerGroup_To_openstack_ServerGroup(in *ServerGroup, out 
 }
 
 func autoConvert_openstack_ServerGroup_To_v1alpha1_ServerGroup(in *openstack.ServerGroup, out *ServerGroup, s conversion.Scope) error {
-	out.Policy = in.Policy
+	*out = *(*ServerGroup)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1119,9 +1002,7 @@ func Convert_openstack_ServerGroup_To_v1alpha1_ServerGroup(in *openstack.ServerG
 }
 
 func autoConvert_v1alpha1_ServerGroupDependency_To_openstack_ServerGroupDependency(in *ServerGroupDependency, out *openstack.ServerGroupDependency, s conversion.Scope) error {
-	out.PoolName = in.PoolName
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*openstack.ServerGroupDependency)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1131,9 +1012,7 @@ func Convert_v1alpha1_ServerGroupDependency_To_openstack_ServerGroupDependency(i
 }
 
 func autoConvert_openstack_ServerGroupDependency_To_v1alpha1_ServerGroupDependency(in *openstack.ServerGroupDependency, out *ServerGroupDependency, s conversion.Scope) error {
-	out.PoolName = in.PoolName
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*ServerGroupDependency)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1143,7 +1022,7 @@ func Convert_openstack_ServerGroupDependency_To_v1alpha1_ServerGroupDependency(i
 }
 
 func autoConvert_v1alpha1_ShareNetwork_To_openstack_ShareNetwork(in *ShareNetwork, out *openstack.ShareNetwork, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	*out = *(*openstack.ShareNetwork)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1153,7 +1032,7 @@ func Convert_v1alpha1_ShareNetwork_To_openstack_ShareNetwork(in *ShareNetwork, o
 }
 
 func autoConvert_openstack_ShareNetwork_To_v1alpha1_ShareNetwork(in *openstack.ShareNetwork, out *ShareNetwork, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	*out = *(*ShareNetwork)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1163,8 +1042,7 @@ func Convert_openstack_ShareNetwork_To_v1alpha1_ShareNetwork(in *openstack.Share
 }
 
 func autoConvert_v1alpha1_ShareNetworkStatus_To_openstack_ShareNetworkStatus(in *ShareNetworkStatus, out *openstack.ShareNetworkStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*openstack.ShareNetworkStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1174,8 +1052,7 @@ func Convert_v1alpha1_ShareNetworkStatus_To_openstack_ShareNetworkStatus(in *Sha
 }
 
 func autoConvert_openstack_ShareNetworkStatus_To_v1alpha1_ShareNetworkStatus(in *openstack.ShareNetworkStatus, out *ShareNetworkStatus, s conversion.Scope) error {
-	out.ID = in.ID
-	out.Name = in.Name
+	*out = *(*ShareNetworkStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1185,7 +1062,7 @@ func Convert_openstack_ShareNetworkStatus_To_v1alpha1_ShareNetworkStatus(in *ope
 }
 
 func autoConvert_v1alpha1_Storage_To_openstack_Storage(in *Storage, out *openstack.Storage, s conversion.Scope) error {
-	out.CSIManila = (*openstack.CSIManila)(unsafe.Pointer(in.CSIManila))
+	*out = *(*openstack.Storage)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1195,7 +1072,7 @@ func Convert_v1alpha1_Storage_To_openstack_Storage(in *Storage, out *openstack.S
 }
 
 func autoConvert_openstack_Storage_To_v1alpha1_Storage(in *openstack.Storage, out *Storage, s conversion.Scope) error {
-	out.CSIManila = (*CSIManila)(unsafe.Pointer(in.CSIManila))
+	*out = *(*Storage)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1205,15 +1082,7 @@ func Convert_openstack_Storage_To_v1alpha1_Storage(in *openstack.Storage, out *S
 }
 
 func autoConvert_v1alpha1_StorageClassDefinition_To_openstack_StorageClassDefinition(in *StorageClassDefinition, out *openstack.StorageClassDefinition, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Default = (*bool)(unsafe.Pointer(in.Default))
-	out.Provisioner = (*string)(unsafe.Pointer(in.Provisioner))
-	out.Parameters = *(*map[string]string)(unsafe.Pointer(&in.Parameters))
-	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
-	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
-	out.ReclaimPolicy = (*string)(unsafe.Pointer(in.ReclaimPolicy))
-	out.VolumeBindingMode = (*string)(unsafe.Pointer(in.VolumeBindingMode))
-	out.Regions = *(*[]openstack.StorageClassRegion)(unsafe.Pointer(&in.Regions))
+	*out = *(*openstack.StorageClassDefinition)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1223,15 +1092,7 @@ func Convert_v1alpha1_StorageClassDefinition_To_openstack_StorageClassDefinition
 }
 
 func autoConvert_openstack_StorageClassDefinition_To_v1alpha1_StorageClassDefinition(in *openstack.StorageClassDefinition, out *StorageClassDefinition, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Default = (*bool)(unsafe.Pointer(in.Default))
-	out.Provisioner = (*string)(unsafe.Pointer(in.Provisioner))
-	out.Parameters = *(*map[string]string)(unsafe.Pointer(&in.Parameters))
-	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
-	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
-	out.ReclaimPolicy = (*string)(unsafe.Pointer(in.ReclaimPolicy))
-	out.VolumeBindingMode = (*string)(unsafe.Pointer(in.VolumeBindingMode))
-	out.Regions = *(*[]StorageClassRegion)(unsafe.Pointer(&in.Regions))
+	*out = *(*StorageClassDefinition)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1241,9 +1102,7 @@ func Convert_openstack_StorageClassDefinition_To_v1alpha1_StorageClassDefinition
 }
 
 func autoConvert_v1alpha1_StorageClassRegion_To_openstack_StorageClassRegion(in *StorageClassRegion, out *openstack.StorageClassRegion, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Unavailable = (*bool)(unsafe.Pointer(in.Unavailable))
-	out.Parameters = *(*map[string]string)(unsafe.Pointer(&in.Parameters))
+	*out = *(*openstack.StorageClassRegion)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1253,9 +1112,7 @@ func Convert_v1alpha1_StorageClassRegion_To_openstack_StorageClassRegion(in *Sto
 }
 
 func autoConvert_openstack_StorageClassRegion_To_v1alpha1_StorageClassRegion(in *openstack.StorageClassRegion, out *StorageClassRegion, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Unavailable = (*bool)(unsafe.Pointer(in.Unavailable))
-	out.Parameters = *(*map[string]string)(unsafe.Pointer(&in.Parameters))
+	*out = *(*StorageClassRegion)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1265,9 +1122,7 @@ func Convert_openstack_StorageClassRegion_To_v1alpha1_StorageClassRegion(in *ope
 }
 
 func autoConvert_v1alpha1_Subnet_To_openstack_Subnet(in *Subnet, out *openstack.Subnet, s conversion.Scope) error {
-	out.Purpose = openstack.Purpose(in.Purpose)
-	out.ID = in.ID
-	out.CIDR = in.CIDR
+	*out = *(*openstack.Subnet)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1277,9 +1132,7 @@ func Convert_v1alpha1_Subnet_To_openstack_Subnet(in *Subnet, out *openstack.Subn
 }
 
 func autoConvert_openstack_Subnet_To_v1alpha1_Subnet(in *openstack.Subnet, out *Subnet, s conversion.Scope) error {
-	out.Purpose = Purpose(in.Purpose)
-	out.ID = in.ID
-	out.CIDR = in.CIDR
+	*out = *(*Subnet)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1289,8 +1142,7 @@ func Convert_openstack_Subnet_To_v1alpha1_Subnet(in *openstack.Subnet, out *Subn
 }
 
 func autoConvert_v1alpha1_SubnetPool_To_openstack_SubnetPool(in *SubnetPool, out *openstack.SubnetPool, s conversion.Scope) error {
-	out.ID = in.ID
-	out.PrefixLength = in.PrefixLength
+	*out = *(*openstack.SubnetPool)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -1300,8 +1152,7 @@ func Convert_v1alpha1_SubnetPool_To_openstack_SubnetPool(in *SubnetPool, out *op
 }
 
 func autoConvert_openstack_SubnetPool_To_v1alpha1_SubnetPool(in *openstack.SubnetPool, out *SubnetPool, s conversion.Scope) error {
-	out.ID = in.ID
-	out.PrefixLength = in.PrefixLength
+	*out = *(*SubnetPool)(unsafe.Pointer(in))
 	return nil
 }
 

@@ -66,6 +66,9 @@ providerSpec:
 {{- if $machineClass.rootDiskType}}
     rootDiskType: {{ $machineClass.rootDiskType }}
 {{- end }}
+{{- if hasKey $machineClass "rootDiskAvailabilityZone" }}
+    rootDiskAvailabilityZone: {{ $machineClass.rootDiskAvailabilityZone | quote }}
+{{- end }}
 {{- if $machineClass.serverGroupID }}
     serverGroupID: {{ $machineClass.serverGroupID }}
 {{- end }}

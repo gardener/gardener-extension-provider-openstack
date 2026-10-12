@@ -91,6 +91,8 @@ func (w *WorkerDelegate) GenerateMachineDeployments(ctx context.Context) (worker
 	return w.machineDeployments, nil
 }
 
+// generateMachineConfig generates the machine classes, machine deployments and machine images
+// for all worker pools and stores them in the WorkerDelegate.
 func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineDeployments = worker.MachineDeployments{}
@@ -238,6 +240,12 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 						}
 					}
 				}
+			}
+
+			// Compute and volume availability zones may differ. Only relevant if the machine-controller-manager
+			// creates the root volume itself, which is the case if a root disk type is set.
+			if _, hasRootDiskType := machineClassSpec["rootDiskType"]; hasRootDiskType && w.cloudProfileConfig.RootDiskAvailabilityZone != nil {
+				machineClassSpec["rootDiskAvailabilityZone"] = *w.cloudProfileConfig.RootDiskAvailabilityZone
 			}
 
 			if machineImage.ID != "" {

@@ -104,6 +104,11 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.RootDiskAvailabilityZone != nil {
+		in, out := &in.RootDiskAvailabilityZone, &out.RootDiskAvailabilityZone
+		*out = new(string)
+		**out = **in
+	}
 	if in.NodeVolumeAttachLimit != nil {
 		in, out := &in.NodeVolumeAttachLimit, &out.NodeVolumeAttachLimit
 		*out = new(int32)

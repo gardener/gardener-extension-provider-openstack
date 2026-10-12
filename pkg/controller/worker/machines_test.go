@@ -1419,6 +1419,69 @@ var _ = Describe("Machines", func() {
 					}
 				}
 			})
+
+			DescribeTable("rootDiskAvailabilityZone from cloud profile config", func(rootDiskType *string, rootDiskAZ *string, expectedAZ *string) {
+				var providerConfig map[string]interface{}
+				Expect(json.Unmarshal(cluster.CloudProfile.Spec.ProviderConfig.Raw, &providerConfig)).To(Succeed())
+				if rootDiskAZ != nil {
+					providerConfig["rootDiskAvailabilityZone"] = *rootDiskAZ
+				}
+				providerConfigJSON, err := json.Marshal(providerConfig)
+				Expect(err).NotTo(HaveOccurred())
+
+				clusterWithAZ := &extensionscontroller.Cluster{
+					CloudProfile: cluster.CloudProfile.DeepCopy(),
+					Shoot:        cluster.Shoot,
+					Seed:         cluster.Seed,
+				}
+				clusterWithAZ.CloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: providerConfigJSON}
+
+				w.Spec.Pools[0].Volume = &extensionsv1alpha1.Volume{Size: "20Gi", Type: rootDiskType}
+				workerDelegate, _ = NewWorkerDelegate(c, scheme, chartApplier, w, clusterWithAZ, nil)
+
+				var capturedMachineClasses []map[string]interface{}
+				chartApplier.
+					EXPECT().
+					ApplyFromEmbeddedFS(
+						ctx,
+						charts.InternalChart,
+						filepath.Join("internal", "machineclass"),
+						namespace,
+						"machineclass",
+						gomock.AssignableToTypeOf(kubernetes.Values(nil)),
+					).
+					DoAndReturn(func(_ context.Context, _ embed.FS, _, _, _ string, opts ...kubernetes.ApplyOption) error {
+						applyOpts := &kubernetes.ApplyOptions{}
+						for _, o := range opts {
+							o.MutateApplyOptions(applyOpts)
+						}
+						if values, ok := applyOpts.Values.(map[string]interface{}); ok {
+							if classes, ok := values["machineClasses"].([]map[string]interface{}); ok {
+								capturedMachineClasses = classes
+							}
+						}
+						return nil
+					})
+
+				Expect(workerDelegate.DeployMachineClasses(ctx)).To(Succeed())
+
+				Expect(capturedMachineClasses).NotTo(BeEmpty())
+				for _, class := range capturedMachineClasses {
+					if !strings.Contains(class["name"].(string), "-"+w.Spec.Pools[0].Name+"-") {
+						continue
+					}
+					if expectedAZ == nil {
+						Expect(class).NotTo(HaveKey("rootDiskAvailabilityZone"))
+					} else {
+						Expect(class).To(HaveKeyWithValue("rootDiskAvailabilityZone", *expectedAZ))
+					}
+				}
+			},
+				Entry("sets the zone if a root disk type is used", ptr.To("premium"), ptr.To("nova"), ptr.To("nova")),
+				Entry("sets an empty zone to let Cinder choose its default zone", ptr.To("premium"), ptr.To(""), ptr.To("")),
+				Entry("does not set the zone if not configured", ptr.To("premium"), nil, nil),
+				Entry("does not set the zone if no root disk type is used", nil, ptr.To("nova"), nil),
+			)
 		},
 			Entry("with capabilities and using imageIDs", true, false),
 			Entry("with capabilities and using ImageNames", true, true),

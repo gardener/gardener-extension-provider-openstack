@@ -1,0 +1,162 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager
+  component_version: v0.63.0
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: other
+  contents: The orphan-VM safety controller no longer deletes the backing VM of a
+    preserved machine.
+  mimetype: text/markdown
+  reference: '[#1146](https://github.com/gardener/machine-controller-manager/pull/1146)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: other
+  contents: "De-couple cordoning and drain in the various operations that involve\
+    \ draining such as updates and machine preservation. \n"
+  mimetype: text/markdown
+  reference: '[#1119](https://github.com/gardener/machine-controller-manager/pull/1119)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: elankath
+  category: feature
+  contents: Support `node.machine.sapcloud.io/effective-creation-timeout` on MachineDeployment
+    to override shoot configured `machineControllerManager.machineCreationTimeout`
+    for use by dependency-watchdog
+  mimetype: text/markdown
+  reference: '[#1104](https://github.com/gardener/machine-controller-manager/pull/1104)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: elankath
+  category: feature
+  contents: 'Support new metrics: `machine_create_duration_seconds, machine_initialize_duration_seconds,
+    machine_join_duration_seconds,machine_drain_duration_seconds,machine_delete_duration_seconds`'
+  mimetype: text/markdown
+  reference: '[#1104](https://github.com/gardener/machine-controller-manager/pull/1104)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: elankath
+  category: bugfix
+  contents: Fix for Machine getting stuck with empty phase when finalizer addition
+    exhausts retry budget
+  mimetype: text/markdown
+  reference: '[#1142](https://github.com/gardener/machine-controller-manager/pull/1142)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: aaronfern
+  category: other
+  contents: Added integration tests for machine preservation
+  mimetype: text/markdown
+  reference: '[#1124](https://github.com/gardener/machine-controller-manager/pull/1124)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: aaronfern
+  category: bugfix
+  contents: Ensure auto-preserve failed machines are ordered by their `PreserveExpiryTime`
+    in case of deletion due to reduction is mcs.spec.Replica or mcs.spec.autoPreserveFailedMachineMax
+  mimetype: text/markdown
+  reference: '[#1138](https://github.com/gardener/machine-controller-manager/pull/1138)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: bugfix
+  contents: Patch `machine.Spec.Class.Name` on machine object with the new machine
+    class's name after it undergoes an inplace update.
+  mimetype: text/markdown
+  reference: '[#1153](https://github.com/gardener/machine-controller-manager/pull/1153)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gardener-ci-robot
+  category: bugfix
+  contents: Fix preservation reconcile loop to avoid unconditionally uncordoning nodes
+    unrelated to machine preservation, prevent spurious writes on non-preserved machines,
+    and eliminate conflict errors caused by stale machine object comparison in the
+    defer annotation sync.
+  mimetype: text/markdown
+  reference: '[#1118](https://github.com/gardener/machine-controller-manager/pull/1118)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: bugfix
+  contents: "MCM now deletes the backing node when its machine is force-deleted, and\
+    \ clears finalizers on nodes terminating without a backing machine. \nMachine\
+    \ creation status is also modified to distinguish cloud provider failures from\
+    \ node registration failures."
+  mimetype: text/markdown
+  reference: '[#1102](https://github.com/gardener/machine-controller-manager/pull/1102)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: thiyyakat
+  category: bugfix
+  contents: Fix drain error drop in preservation flow where a failed drain on a previously-visited
+    preserved node would not cause the reconciler to retry fast enough.
+  mimetype: text/markdown
+  reference: '[#1145](https://github.com/gardener/machine-controller-manager/pull/1145)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: Kumm-Kai
+  category: bugfix
+  contents: 'Prevent `error while evicting pod X: pod disruption budget X/X is misconfigured
+    and requires zero voluntary evictions` when pods are being evicted'
+  mimetype: text/markdown
+  reference: '[#1127](https://github.com/gardener/machine-controller-manager/pull/1127)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: takoverflow
+  category: feature
+  contents: Introduce simulation provider to run integration tests for MCM without
+    an actual cluster
+  mimetype: text/markdown
+  reference: '[#1129](https://github.com/gardener/machine-controller-manager/pull/1129)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: gagan16k
+  category: bugfix
+  contents: Revert changes on machineTerminationFlow which caused a machine to be
+    stuck in `Terminating` phase
+  mimetype: text/markdown
+  reference: '[#1157](https://github.com/gardener/machine-controller-manager/pull/1157)'
+  type: standard

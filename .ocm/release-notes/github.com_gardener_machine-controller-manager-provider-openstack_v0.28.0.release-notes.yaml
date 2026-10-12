@@ -1,0 +1,35 @@
+ocm:
+  component_name: github.com/gardener/machine-controller-manager-provider-openstack
+  component_version: v0.28.0
+release_notes:
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: MichaelEischer
+  category: bugfix
+  contents: machine-controller-manager-provider-openstack supports creating machines
+    without ssh key
+  mimetype: text/markdown
+  reference: '[#419](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/419)'
+  type: standard
+- audience: operator
+  author:
+    hostname: github.com
+    type: githubUser
+    username: hebelsan
+  category: bugfix
+  contents: Enable appCredential authentication using AppName
+  mimetype: text/markdown
+  reference: '[#395](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/395)'
+  type: standard
+- audience: developer
+  author:
+    hostname: github.com
+    type: githubUser
+    username: tobschli
+  category: noteworthy
+  contents: '`GetMachineStatus` is now implemented.'
+  mimetype: text/markdown
+  reference: '[#405](https://github.com/gardener/machine-controller-manager-provider-openstack/pull/405)'
+  type: standard

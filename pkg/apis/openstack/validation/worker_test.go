@@ -339,6 +339,72 @@ var _ = Describe("ValidateWorkerConfig", func() {
 		})
 	})
 
+	Describe("#ValidateAdditionalNetworkInterfaces", func() {
+		var fldPath = field.NewPath("config")
+
+		It("should return no errors for an empty list", func() {
+			Expect(ValidateAdditionalNetworkInterfaces(nil, fldPath.Child("additionalNetworkInterfaces"))).To(BeEmpty())
+		})
+
+		It("should return no errors for valid interfaces", func() {
+			Expect(ValidateAdditionalNetworkInterfaces([]api.NetworkInterface{
+				{NetworkID: "net-1", SubnetID: "subnet-1"},
+				{NetworkID: "net-1", SubnetID: "subnet-2"},
+				{NetworkID: "net-2", SubnetID: "subnet-1"},
+			}, fldPath.Child("additionalNetworkInterfaces"))).To(BeEmpty())
+		})
+
+		It("should return an error for an empty networkID", func() {
+			Expect(ValidateAdditionalNetworkInterfaces([]api.NetworkInterface{
+				{NetworkID: "", SubnetID: "subnet-1"},
+			}, fldPath.Child("additionalNetworkInterfaces"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("config.additionalNetworkInterfaces[0].networkID"),
+				})),
+			))
+		})
+
+		It("should return an error for an empty subnetID", func() {
+			Expect(ValidateAdditionalNetworkInterfaces([]api.NetworkInterface{
+				{NetworkID: "net-1", SubnetID: ""},
+			}, fldPath.Child("additionalNetworkInterfaces"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("config.additionalNetworkInterfaces[0].subnetID"),
+				})),
+			))
+		})
+
+		It("should return errors for both empty networkID and subnetID", func() {
+			Expect(ValidateAdditionalNetworkInterfaces([]api.NetworkInterface{
+				{NetworkID: "", SubnetID: ""},
+			}, fldPath.Child("additionalNetworkInterfaces"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("config.additionalNetworkInterfaces[0].networkID"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("config.additionalNetworkInterfaces[0].subnetID"),
+				})),
+			))
+		})
+
+		It("should return an error for duplicate network interfaces", func() {
+			Expect(ValidateAdditionalNetworkInterfaces([]api.NetworkInterface{
+				{NetworkID: "net-1", SubnetID: "subnet-1"},
+				{NetworkID: "net-2", SubnetID: "subnet-2"},
+				{NetworkID: "net-1", SubnetID: "subnet-1"},
+			}, fldPath.Child("additionalNetworkInterfaces"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("config.additionalNetworkInterfaces[2]"),
+				})),
+			))
+		})
+	})
+
 	Describe("#ValidateNodeTemplate", func() {
 		var (
 			fldPath      = field.NewPath("config")

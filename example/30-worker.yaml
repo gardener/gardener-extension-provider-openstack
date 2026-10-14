@@ -116,3 +116,9 @@ spec:
 #          memory: 50Gi
 #      additionalSecurityGroups:
 #      - my-existing-security-group
+#      additionalNetworkInterfaces:
+#      - networkID: bc3d8461-eeec-4425-a01e-e3100f151913
+#        subnetID: cad4d8d0-871c-478b-8ac1-605a54d5eac0
+#        podNetwork: false # optional, whitelist the pod network CIDR on the port when true
+#        securityGroups: # optional, pre-existing security group names to attach to the port
+#        - my-existing-security-group

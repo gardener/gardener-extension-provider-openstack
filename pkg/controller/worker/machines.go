@@ -224,9 +224,6 @@ func (w *WorkerDelegate) generateMachineConfig(ctx context.Context) error {
 						"networkID": iface.NetworkID,
 						"subnetID":  iface.SubnetID,
 					}
-					if iface.PodNetwork {
-						nic["podNetwork"] = true
-					}
 					if len(iface.SecurityGroups) > 0 {
 						nic["securityGroups"] = iface.SecurityGroups
 					}
@@ -403,7 +400,7 @@ func (w *WorkerDelegate) generateWorkerPoolHash(pool extensionsv1alpha1.WorkerPo
 		for _, iface := range sortedNICs {
 			sortedSGs := append([]string(nil), iface.SecurityGroups...)
 			sort.Strings(sortedSGs)
-			additionalHashData = append(additionalHashData, fmt.Sprintf("%s/%s/%t/%s", iface.NetworkID, iface.SubnetID, iface.PodNetwork, strings.Join(sortedSGs, ",")))
+			additionalHashData = append(additionalHashData, fmt.Sprintf("%s/%s/%s", iface.NetworkID, iface.SubnetID, strings.Join(sortedSGs, ",")))
 		}
 	}
 

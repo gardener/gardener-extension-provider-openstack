@@ -31,15 +31,39 @@ spec:
       expression: >-
         object.status.conditions.exists(c, c.type == 'NetworkUnavailable')
   variables:
-    # Extract the current NetworkUnavailable condition from the old object
+    # Rebuild each condition as a plain CEL map so no lazily-wrapped native
+    # NodeCondition struct ends up in the JSONPatch value. On K8s >= 1.37 the
+    # reflection-based CEL conversion (kubernetes/kubernetes#138771) keeps
+    # oldObject conditions as native structs that cannot be marshalled when
+    # placed into a JSONPatch value, which previously failed the policy.
+    # Timestamps are kept as CEL timestamp values, which serialize to RFC3339
+    # and match metav1.Time; do NOT wrap them in string(). Absent optional
+    # fields fall back to null, which metav1.Time.UnmarshalJSON decodes as the
+    # zero time.
+    # Extract the current NetworkUnavailable condition from the old object.
     - name: oldNetworkUnavailableCondition
       expression: >-
-        has(oldObject.status) && has(oldObject.status.conditions) ? 
-        oldObject.status.conditions.filter(c, c.type == 'NetworkUnavailable') : []
-    # Remove NetworkUnavailable from the new conditions
+        has(oldObject.status) && has(oldObject.status.conditions) ?
+        oldObject.status.conditions.filter(c, c.type == 'NetworkUnavailable').map(c, {
+          'type':               'NetworkUnavailable',
+          'status':             c.status,
+          'reason':             has(c.reason)  ? c.reason  : '',
+          'message':            has(c.message) ? c.message : '',
+          'lastTransitionTime': has(c.lastTransitionTime) ? c.lastTransitionTime : null,
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? c.lastHeartbeatTime  : null
+        }) : []
+    # Remove NetworkUnavailable from the new conditions and rebuild each kept
+    # condition as a plain CEL map for the same marshalling reason.
     - name: conditionsWithoutNetworkUnavailable
       expression: >-
-        object.status.conditions.filter(c, c.type != 'NetworkUnavailable')
+        object.status.conditions.filter(c, c.type != 'NetworkUnavailable').map(c, {
+          'type':               c.type,
+          'status':             c.status,
+          'reason':             has(c.reason)  ? c.reason  : '',
+          'message':            has(c.message) ? c.message : '',
+          'lastTransitionTime': has(c.lastTransitionTime) ? c.lastTransitionTime : null,
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? c.lastHeartbeatTime  : null
+        })
     # Reconstruct final conditions
     - name: finalConditions
       expression: >-

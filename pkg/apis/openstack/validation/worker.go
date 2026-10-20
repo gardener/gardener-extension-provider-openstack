@@ -62,6 +62,15 @@ func ValidateServerGroup(worker *core.Worker, sg *api.ServerGroup, cloudProfileC
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("policy"), fmt.Sprintf("using %q policy with multiple availability zones is not allowed", openstackclient.ServerGroupPolicyAffinity)))
 	}
 
+	if sg.MaxServerPerHost != nil {
+		if *sg.MaxServerPerHost < 1 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxServerPerHost"), *sg.MaxServerPerHost, "must be at least 1"))
+		}
+		if sg.Policy != openstackclient.ServerGroupPolicyAntiAffinity {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("maxServerPerHost"), "only supported with the anti-affinity policy"))
+		}
+	}
+
 	return allErrs
 }
 

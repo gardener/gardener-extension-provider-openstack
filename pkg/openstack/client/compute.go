@@ -7,7 +7,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/gophercloud/gophercloud/v2"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/keypairs"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
@@ -29,25 +31,43 @@ const (
 	// https://docs.openstack.org/api-guide/compute/microversions.html
 	// https://docs.openstack.org/api-ref/compute/?expanded=create-server-group-detail#create-server-group
 	softPolicyMicroversion = "2.15"
+	// serverGroupRulesMicroversion enables the singular policy field and server group rules.
+	serverGroupRulesMicroversion = "2.64"
 )
 
-// CreateServerGroup creates a server group with the specified policy.
-func (c *ComputeClient) CreateServerGroup(ctx context.Context, name, policy string) (*servergroups.ServerGroup, error) {
-	if policy != ServerGroupPolicyAffinity && policy != ServerGroupPolicyAntiAffinity {
-		c.client.Microversion = softPolicyMicroversion
-	}
-
+// CreateServerGroup creates a server group with the specified policy and optional maximum number of servers per host.
+func (c *ComputeClient) CreateServerGroup(ctx context.Context, name, policy string, maxServerPerHost *int32) (*servergroups.ServerGroup, error) {
+	// Microversions apply to individual operations. Do not change the shared client,
+	// since Nova 2.64 changes the request format and other calls can run concurrently.
+	client := *c.client
+	client.Microversion = ""
 	createOpts := servergroups.CreateOpts{
 		Name:     name,
 		Policies: []string{policy},
 	}
+	if maxServerPerHost != nil {
+		client.Microversion = serverGroupRulesMicroversion
+		createOpts.Policies = nil
+		createOpts.Policy = policy
+		createOpts.Rules = &servergroups.Rules{MaxServerPerHost: int(*maxServerPerHost)}
+	} else if policy != ServerGroupPolicyAffinity && policy != ServerGroupPolicyAntiAffinity {
+		client.Microversion = softPolicyMicroversion
+	}
 
-	return servergroups.Create(ctx, c.client, createOpts).Extract()
+	return servergroups.Create(ctx, &client, createOpts).Extract()
 }
 
 // GetServerGroup retrieves the server group with the specified id.
 func (c *ComputeClient) GetServerGroup(ctx context.Context, id string) (*servergroups.ServerGroup, error) {
-	return servergroups.Get(ctx, c.client, id).Extract()
+	client := *c.client
+	client.Microversion = serverGroupRulesMicroversion
+	group, err := servergroups.Get(ctx, &client, id).Extract()
+	if gophercloud.ResponseCodeIs(err, http.StatusNotAcceptable) {
+		// Older clouds do not support rules. Retain support for their legacy groups.
+		client.Microversion = ""
+		return servergroups.Get(ctx, &client, id).Extract()
+	}
+	return group, err
 }
 
 // DeleteServerGroup deletes the server group with the specified id. It returns nil if the server group could not be found.
@@ -62,7 +82,13 @@ func (c *ComputeClient) DeleteServerGroup(ctx context.Context, id string) error 
 
 // ListServerGroups retrieves the list of server groups.
 func (c *ComputeClient) ListServerGroups(ctx context.Context) ([]servergroups.ServerGroup, error) {
-	pages, err := servergroups.List(c.client, nil).AllPages(ctx)
+	client := *c.client
+	client.Microversion = serverGroupRulesMicroversion
+	pages, err := servergroups.List(&client, nil).AllPages(ctx)
+	if gophercloud.ResponseCodeIs(err, http.StatusNotAcceptable) {
+		client.Microversion = ""
+		pages, err = servergroups.List(&client, nil).AllPages(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}

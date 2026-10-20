@@ -108,7 +108,8 @@ spec:
 #      apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
 #      kind: WorkerConfig
 #      serverGroup:
-#        policy: soft-anti-affinity
+#        policy: anti-affinity
+#        maxServerPerHost: 2 # optional; requires anti-affinity and Nova API microversion >= 2.64
 #      nodeTemplate:
 #        capacity:
 #          cpu: 2

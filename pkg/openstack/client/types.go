@@ -91,7 +91,7 @@ type Storage interface {
 
 // Compute describes the operations of a client interacting with OpenStack's Compute service.
 type Compute interface {
-	CreateServerGroup(ctx context.Context, name, policy string) (*servergroups.ServerGroup, error)
+	CreateServerGroup(ctx context.Context, name, policy string, maxServerPerHost *int32) (*servergroups.ServerGroup, error)
 	GetServerGroup(ctx context.Context, id string) (*servergroups.ServerGroup, error)
 	DeleteServerGroup(ctx context.Context, id string) error
 	// Server

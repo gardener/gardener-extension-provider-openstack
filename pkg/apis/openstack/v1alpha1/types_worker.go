@@ -95,4 +95,9 @@ type ServerGroup struct {
 	// Policy describes the kind of affinity policy for instances of the server group.
 	// https://docs.openstack.org/python-openstackclient/ussuri/cli/command-objects/server-group.html
 	Policy string `json:"policy"`
+	// MaxServerPerHost limits the number of servers of this group that can reside on a single compute host.
+	// It must be at least 1 and is only supported with the anti-affinity policy and Nova API microversion 2.64 or later.
+	// If unset, OpenStack's default for the selected policy applies.
+	// +optional
+	MaxServerPerHost *int32 `json:"maxServerPerHost,omitempty"`
 }

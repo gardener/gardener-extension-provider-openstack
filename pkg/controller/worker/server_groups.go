@@ -11,8 +11,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
+	"k8s.io/utils/ptr"
 
 	api "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
+	osclient "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client"
 )
 
 func isServerGroupRequired(config *api.WorkerConfig) bool {
@@ -27,9 +29,37 @@ func generateServerGroupNamePrefixV2(uuid string) string {
 	return uuid[:min(len(uuid), 18)] + "-"
 }
 
-func generateServerGroupNameV2(uuid, poolName, policy string) string {
+func generateServerGroupNameV2(uuid, poolName, policy string, maxServerPerHost *int32) string {
 	hashSeed := fmt.Sprintf("pool=%s,policy=%s", poolName, policy)
+	// Preserve existing names for the default limit, including an explicit 1.
+	// Different limits need distinct names because server groups are immutable.
+	if maxServerPerHost != nil && *maxServerPerHost > 1 {
+		hashSeed += fmt.Sprintf(",maxServerPerHost=%d", *maxServerPerHost)
+	}
 	return fmt.Sprintf("%s%s", generateServerGroupNamePrefixV2(uuid), utils.ComputeSHA256Hex([]byte(hashSeed))[:8])
+}
+
+func serverGroupMatchesConfig(group *servergroups.ServerGroup, config *api.ServerGroup) bool {
+	if group == nil || config == nil {
+		return false
+	}
+	policy := ptr.Deref(group.Policy, "")
+	if group.Policy == nil && len(group.Policies) > 0 {
+		policy = group.Policies[0]
+	}
+	if policy != config.Policy {
+		return false
+	}
+	if policy != osclient.ServerGroupPolicyAntiAffinity {
+		return true
+	}
+
+	// Nova omits the rule (or returns an empty rules object) for its default of 1.
+	maxServerPerHost := 1
+	if group.Rules != nil && group.Rules.MaxServerPerHost != 0 {
+		maxServerPerHost = group.Rules.MaxServerPerHost
+	}
+	return maxServerPerHost == int(ptr.Deref(config.MaxServerPerHost, 1))
 }
 
 func filterServerGroupsByPrefix(sgs []servergroups.ServerGroup, prefix string) []servergroups.ServerGroup {

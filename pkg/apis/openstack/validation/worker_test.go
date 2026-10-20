@@ -55,6 +55,58 @@ var _ = Describe("ValidateWorkerConfig", func() {
 			Expect(ValidateServerGroup(worker, sg, cloudProfileConfig, fldPath)).To(BeEmpty())
 		})
 
+		It("should return no errors without a server group", func() {
+			Expect(ValidateServerGroup(worker, nil, cloudProfileConfig, fldPath)).To(BeEmpty())
+		})
+
+		DescribeTable("should accept positive maxServerPerHost values with anti-affinity", func(limit int32) {
+			sg.Policy = openstackclient.ServerGroupPolicyAntiAffinity
+			sg.MaxServerPerHost = ptr.To(limit)
+			cloudProfileConfig.ServerGroupPolicies = []string{sg.Policy}
+
+			Expect(ValidateServerGroup(worker, sg, cloudProfileConfig, fldPath)).To(BeEmpty())
+		},
+			Entry("one server per host", int32(1)),
+			Entry("multiple servers per host", int32(2)),
+		)
+
+		DescribeTable("should reject non-positive maxServerPerHost values", func(limit int32) {
+			sg.Policy = openstackclient.ServerGroupPolicyAntiAffinity
+			sg.MaxServerPerHost = ptr.To(limit)
+			cloudProfileConfig.ServerGroupPolicies = []string{sg.Policy}
+
+			Expect(ValidateServerGroup(worker, sg, cloudProfileConfig, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("config.maxServerPerHost"),
+					"BadValue": Equal(limit),
+					"Detail":   Equal("must be at least 1"),
+				})),
+			))
+		},
+			Entry("zero", int32(0)),
+			Entry("negative", int32(-1)),
+		)
+
+		DescribeTable("should reject maxServerPerHost with other policies", func(policy string) {
+			worker.Zones = []string{"1"}
+			sg.Policy = policy
+			sg.MaxServerPerHost = ptr.To(int32(2))
+			cloudProfileConfig.ServerGroupPolicies = []string{policy}
+
+			Expect(ValidateServerGroup(worker, sg, cloudProfileConfig, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("config.maxServerPerHost"),
+					"Detail": Equal("only supported with the anti-affinity policy"),
+				})),
+			))
+		},
+			Entry("affinity", "affinity"),
+			Entry("soft-affinity", "soft-affinity"),
+			Entry("soft-anti-affinity", "soft-anti-affinity"),
+		)
+
 		It("should return no errors for a valid server group configuration and multiple serverGroupPolicy in cloudprofile config", func() {
 			cloudProfileConfig.ServerGroupPolicies = append(cloudProfileConfig.ServerGroupPolicies, "anotherValidPolicy")
 			Expect(ValidateServerGroup(worker, sg, cloudProfileConfig, fldPath)).To(BeEmpty())

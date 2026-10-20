@@ -70,10 +70,10 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 		uuid = string(w.cluster.Shoot.Status.UID)
 	}
 	// Generate expected server group names
-	name := generateServerGroupNameV2(uuid, pool.Name, poolProviderConfig.ServerGroup.Policy)
+	name := generateServerGroupNameV2(uuid, pool.Name, poolProviderConfig.ServerGroup.Policy, poolProviderConfig.ServerGroup.MaxServerPerHost)
 
-	policyMatch := func(sg *servergroups.ServerGroup) bool {
-		return sg != nil && len(sg.Policies) > 0 && sg.Policies[0] == poolProviderConfig.ServerGroup.Policy
+	configMatches := func(sg *servergroups.ServerGroup) bool {
+		return serverGroupMatchesConfig(sg, poolProviderConfig.ServerGroup)
 	}
 
 	// Check if we have a current dependency in the status
@@ -86,17 +86,17 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 			// Server group exists, check if it's valid
 			if forceNewNameFormat {
 				// For K8s >= 1.35: must use new name format
-				if serverGroup.Name == name && serverGroup.Name == currentPoolDependency.Name && policyMatch(serverGroup) {
-					// Name and policy match, keep it
+				if serverGroup.Name == name && serverGroup.Name == currentPoolDependency.Name && configMatches(serverGroup) {
+					// Name, policy, and rules match, keep it
 					return nil, nil
 				}
 			} else {
-				// For K8s < 1.35: accept any name format, but policy must match
-				if serverGroup.Name == currentPoolDependency.Name && policyMatch(serverGroup) {
+				// For K8s < 1.35: accept any name format, but policy and rules must match
+				if serverGroup.Name == currentPoolDependency.Name && configMatches(serverGroup) {
 					// Current server group is valid, keep it
 					return nil, nil
 				}
-				// Policy changed, will recreate below
+				// Policy or rules changed, will recreate below
 			}
 		}
 	}
@@ -109,7 +109,7 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 
 	for _, serverGroup := range serverGroupList {
 		if forceNewNameFormat {
-			if serverGroup.Name == name && policyMatch(&serverGroup) {
+			if serverGroup.Name == name && configMatches(&serverGroup) {
 				return &api.ServerGroupDependency{
 					PoolName: pool.Name,
 					ID:       serverGroup.ID,
@@ -118,8 +118,8 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 			}
 		} else {
 			oldPrefix := generateServerGroupNamePrefixV1(w.ClusterTechnicalName(), pool.Name)
-			// For K8s < 1.35: accept both name formats, but policy must match. This allows us to adopt existing server groups created with the old name format and also allows us to adopt server groups created with the new name format (e.g. if the adoption with the old name format failed due to a policy change and the server group was recreated by the user with the new name format).
-			if (serverGroup.Name == name || strings.HasPrefix(serverGroup.Name, oldPrefix)) && policyMatch(&serverGroup) {
+			// For K8s < 1.35: accept both name formats, but policy and rules must match.
+			if (serverGroup.Name == name || strings.HasPrefix(serverGroup.Name, oldPrefix)) && configMatches(&serverGroup) {
 				return &api.ServerGroupDependency{
 					PoolName: pool.Name,
 					ID:       serverGroup.ID,
@@ -130,7 +130,7 @@ func (w *WorkerDelegate) reconcilePoolServerGroup(ctx context.Context, computeCl
 	}
 
 	// if we did not have a valid matching candidate for adoption, create a new server group.
-	result, err := computeClient.CreateServerGroup(ctx, name, poolProviderConfig.ServerGroup.Policy)
+	result, err := computeClient.CreateServerGroup(ctx, name, poolProviderConfig.ServerGroup.Policy, poolProviderConfig.ServerGroup.MaxServerPerHost)
 	if err != nil {
 		return nil, err
 	}

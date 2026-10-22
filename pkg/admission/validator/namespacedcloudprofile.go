@@ -74,6 +74,7 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, newObj, _ client.
 	allErrs = append(allErrs, p.validateMachineImagesOnlyInNamespacedCloudProfile(cpConfig)...)
 
 	allErrs = append(allErrs, p.validateMachineImages(cpConfig, profile.Spec.MachineImages, parentProfile.Spec)...)
+	allErrs = append(allErrs, validation.ValidateMachineTypeStorageTypes(profile.Spec.MachineTypes, field.NewPath("spec", "machineTypes"))...)
 	return allErrs.ToAggregate()
 }
 

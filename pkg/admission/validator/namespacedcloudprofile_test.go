@@ -480,6 +480,36 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 			}
 		})
 
+		It("should fail for NamespacedCloudProfile with invalid characters in machineType storage.type", func() {
+			namespacedCloudProfile.Spec.MachineTypes = []core.MachineType{
+				{
+					Name: "type-1",
+					Storage: &core.MachineTypeStorage{
+						Type: "fast\ntype",
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+
+			err := namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("spec.machineTypes[0].storage.type"))
+		})
+
+		It("should succeed for NamespacedCloudProfile with a valid machineType storage.type", func() {
+			namespacedCloudProfile.Spec.MachineTypes = []core.MachineType{
+				{
+					Name: "type-valid",
+					Storage: &core.MachineTypeStorage{
+						Type: "premium-ssd",
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+
+			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+		})
+
 		It("should fail for NamespacedCloudProfile specifying an invalid field in the provider config", func() {
 			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",

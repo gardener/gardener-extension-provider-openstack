@@ -282,6 +282,18 @@ func validateRegions(regions []api.RegionIDMapping, isCapabilityFlavor bool, jdx
 	return allErrs
 }
 
+// ValidateMachineTypeStorageTypes validates the storage.type field of each machine type.
+func ValidateMachineTypeStorageTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for i, mt := range machineTypes {
+		if mt.Storage == nil || mt.Storage.Type == "" {
+			continue
+		}
+		allErrs = append(allErrs, validateResourceName(mt.Storage.Type, fldPath.Index(i).Child("storage", "type"))...)
+	}
+	return allErrs
+}
+
 // NewProviderImagesContext creates a new ImagesContext for provider images.
 func NewProviderImagesContext(providerImages []api.MachineImages) *gardener.ImagesContext[api.MachineImages, api.MachineImageVersion] {
 	return gardener.NewImagesContext(

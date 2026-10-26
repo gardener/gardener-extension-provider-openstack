@@ -172,7 +172,7 @@ func (c *NetworkingClient) CreateRule(ctx context.Context, createOpts rules.Crea
 
 // DeleteRule delete security group rule
 func (c *NetworkingClient) DeleteRule(ctx context.Context, ruleID string) error {
-	return groups.Delete(ctx, c.client, ruleID).ExtractErr()
+	return rules.Delete(ctx, c.client, ruleID).ExtractErr()
 }
 
 // CreateSecurityGroup create a security group

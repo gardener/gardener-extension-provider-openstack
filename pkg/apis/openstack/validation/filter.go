@@ -114,16 +114,16 @@ func noWhitespace(value string, fld *field.Path) field.ErrorList {
 	return nil
 }
 
-// noControlChars rejects control characters (including newlines). It is used for fields such as
-// passwords that may legitimately contain spaces or quotes but must never contain line breaks that
-// could break out of a rendered scalar.
+// noControlChars rejects control characters and Unicode line/paragraph separators (U+2028/U+2029).
+// Used for passwords that may contain spaces but must never contain line breaks that could break out
+// of a rendered scalar. unicode.IsControl does not cover Zl/Zp, so they are checked explicitly.
 func noControlChars(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil // Allow empty
 	}
 	for _, r := range value {
-		if unicode.IsControl(r) {
-			return field.ErrorList{field.Invalid(fld, value, "must not contain control characters")}
+		if unicode.IsControl(r) || unicode.Is(unicode.Zl, r) || unicode.Is(unicode.Zp, r) {
+			return field.ErrorList{field.Invalid(fld, value, "must not contain control characters or Unicode line/paragraph separators")}
 		}
 	}
 	return nil

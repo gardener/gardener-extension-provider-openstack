@@ -364,7 +364,7 @@ var _ = Describe("Secret validation", func() {
 				}, "secret.data[applicationCredentialName]"),
 			)
 
-			DescribeTable("should fail when a secret-like field contains a control character",
+			DescribeTable("should fail when a secret-like field contains a control character or Unicode line separator",
 				func(data map[string][]byte, invalidField string) {
 					secret.Data = data
 
@@ -375,17 +375,35 @@ var _ = Describe("Secret validation", func() {
 						"BadValue": Equal("(hidden)"),
 					}))))
 				},
-				Entry("password", map[string][]byte{
+				Entry("password with newline", map[string][]byte{
 					openstack.DomainName: []byte("my-domain"),
 					openstack.TenantName: []byte("my-tenant"),
 					openstack.UserName:   []byte("my-user"),
 					openstack.Password:   []byte("my-password\n        privileged: true"),
 				}, "secret.data[password]"),
-				Entry("applicationCredentialSecret", map[string][]byte{
+				Entry("applicationCredentialSecret with newline", map[string][]byte{
 					openstack.DomainName:                  []byte("my-domain"),
 					openstack.TenantName:                  []byte("my-tenant"),
 					openstack.ApplicationCredentialID:     []byte("my-app-id"),
 					openstack.ApplicationCredentialSecret: []byte("my-app-secret\n        privileged: true"),
+				}, "secret.data[applicationCredentialSecret]"),
+				Entry("password with Unicode line separator (U+2028)", map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password injected: true"),
+				}, "secret.data[password]"),
+				Entry("password with Unicode paragraph separator (U+2029)", map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password injected: true"),
+				}, "secret.data[password]"),
+				Entry("applicationCredentialSecret with Unicode line separator (U+2028)", map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.ApplicationCredentialID:     []byte("my-app-id"),
+					openstack.ApplicationCredentialSecret: []byte("my-app-secret injected: true"),
 				}, "secret.data[applicationCredentialSecret]"),
 			)
 

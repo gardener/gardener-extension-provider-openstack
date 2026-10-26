@@ -43,8 +43,10 @@ func (sb *secretBinding) Validate(ctx context.Context, newObj, oldObj client.Obj
 			return fmt.Errorf("wrong object type %T for old object", oldObj)
 		}
 
-		// If the provider type did not change, we exit early.
-		if oldSecretBinding.Provider != nil && equality.Semantic.DeepEqual(secretBinding.Provider.Type, oldSecretBinding.Provider.Type) {
+		// If this provider has already validated the binding and its provider type did not change, we can exit early.
+		if oldSecretBinding.Labels[extensionProviderLabel] == "true" &&
+			oldSecretBinding.Provider != nil && secretBinding.Provider != nil &&
+			equality.Semantic.DeepEqual(secretBinding.Provider.Type, oldSecretBinding.Provider.Type) {
 			return nil
 		}
 	}

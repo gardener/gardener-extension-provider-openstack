@@ -39,13 +39,15 @@ func (cb *credentialsBinding) Validate(ctx context.Context, newObj, oldObj clien
 	}
 
 	if oldObj != nil {
-		_, ok := oldObj.(*security.CredentialsBinding)
+		oldCredentialsBinding, ok := oldObj.(*security.CredentialsBinding)
 		if !ok {
 			return fmt.Errorf("wrong object type %T for old object", oldObj)
 		}
 
-		// The relevant fields of the credentials binding are immutable so we can exit early on update
-		return nil
+		// The relevant fields are immutable, so a binding already validated by this provider can exit early on update.
+		if oldCredentialsBinding.Labels[extensionProviderLabel] == "true" {
+			return nil
+		}
 	}
 
 	// Explicitly use the client.Reader to prevent controller-runtime to start Informer for Secrets

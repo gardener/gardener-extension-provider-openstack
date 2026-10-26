@@ -25,8 +25,9 @@ import (
 var _ = Describe("CredentialsBinding validator", func() {
 	Describe("#Validate", func() {
 		const (
-			namespace = "garden-dev"
-			name      = "my-provider-account"
+			namespace                 = "garden-dev"
+			name                      = "my-provider-account"
+			extensionProviderLabelKey = "provider.extensions.gardener.cloud/openstack"
 		)
 
 		var (
@@ -105,10 +106,22 @@ var _ = Describe("CredentialsBinding validator", func() {
 			Expect(v.Validate(ctx, credentialsBinding, nil)).To(Succeed())
 		})
 
-		It("should return nil when the CredentialsBinding did not change", func() {
+		It("should revalidate the referenced credentials when the provider label is introduced", func() {
 			old := credentialsBinding.DeepCopy()
+			credentialsBinding.Labels = map[string]string{extensionProviderLabelKey: "true"}
+			apiReader := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+				Data:       map[string][]byte{openstack.Password: []byte("bad\nfield: injected")},
+			}).Build()
+			v := validator.NewCredentialsBindingValidator(test.FakeManager{APIReader: apiReader})
 
-			Expect(credentialsBindingValidator.Validate(ctx, credentialsBinding, old)).To(Succeed())
+			Expect(v.Validate(ctx, credentialsBinding, old)).To(HaveOccurred())
+		})
+
+		It("should skip validation when the CredentialsBinding was previously validated", func() {
+			credentialsBinding.Labels = map[string]string{extensionProviderLabelKey: "true"}
+
+			Expect(credentialsBindingValidator.Validate(ctx, credentialsBinding, credentialsBinding.DeepCopy())).To(Succeed())
 		})
 
 		Context("InternalSecret", func() {

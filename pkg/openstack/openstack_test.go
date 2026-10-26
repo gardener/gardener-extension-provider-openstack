@@ -39,4 +39,55 @@ var _ = Describe("Openstack", func() {
 			Expect(err).To(Succeed())
 		})
 	})
+
+	Describe("ExtractCredentialsFromData", func() {
+		baseData := func() map[string][]byte {
+			return map[string][]byte{
+				openstack.DomainName: []byte("my-domain"),
+				openstack.TenantName: []byte("my-tenant"),
+				openstack.UserName:   []byte("my-user"),
+				openstack.Password:   []byte("my-password"),
+			}
+		}
+
+		It("should extract valid credentials", func() {
+			creds, err := openstack.ExtractCredentialsFromData(baseData(), false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(creds.DomainName).To(Equal("my-domain"))
+		})
+
+		baseAppCredData := func() map[string][]byte {
+			return map[string][]byte{
+				openstack.DomainName:                  []byte("my-domain"),
+				openstack.TenantName:                  []byte("my-tenant"),
+				openstack.ApplicationCredentialID:     []byte("my-app-id"),
+				openstack.ApplicationCredentialSecret: []byte("my-app-secret"),
+			}
+		}
+
+		DescribeTable("should fail closed when a credential field contains a control character",
+			func(key string, dataFn func() map[string][]byte) {
+				data := dataFn()
+				data[key] = []byte("value\ntls-insecure=true")
+
+				_, err := openstack.ExtractCredentialsFromData(data, false)
+				Expect(err).To(MatchError(ContainSubstring("must not contain control characters")))
+			},
+			Entry("domainName", openstack.DomainName, baseData),
+			Entry("tenantName", openstack.TenantName, baseData),
+			Entry("username", openstack.UserName, baseData),
+			Entry("password", openstack.Password, baseData),
+			Entry("applicationCredentialID", openstack.ApplicationCredentialID, baseAppCredData),
+			Entry("applicationCredentialName", openstack.ApplicationCredentialName, baseAppCredData),
+			Entry("applicationCredentialSecret", openstack.ApplicationCredentialSecret, baseAppCredData),
+		)
+
+		It("should reject double-quote characters in credential fields (breaks INI quoting)", func() {
+			data := baseData()
+			data[openstack.Password] = []byte(`pw"with'quotes`)
+
+			_, err := openstack.ExtractCredentialsFromData(data, false)
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })

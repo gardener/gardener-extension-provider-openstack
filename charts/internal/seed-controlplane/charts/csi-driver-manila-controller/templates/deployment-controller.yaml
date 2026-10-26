@@ -56,7 +56,7 @@ spec:
             - --runtime-config-file=/runtimeconfig/runtimeconfig.json
             {{- end }}
             {{- range $userAgentHeader := .Values.userAgentHeaders }}
-            - --user-agent={{ $userAgentHeader }}
+            - {{ printf "--user-agent=%s" $userAgentHeader | quote }}
             {{- end }}
             - --kube-api-qps=100
             - --kube-api-burst=200

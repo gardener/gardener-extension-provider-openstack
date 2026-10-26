@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/Masterminds/semver/v3"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -493,10 +494,10 @@ func (vp *valuesProvider) getUserAgentHeaders(
 	// could be read and the respective fields in secret are not empty.
 	if credentials != nil {
 		if credentials.DomainName != "" {
-			headers = append(headers, credentials.DomainName)
+			headers = append(headers, sanitizeUserAgentHeader(credentials.DomainName))
 		}
 		if credentials.TenantName != "" {
-			headers = append(headers, credentials.TenantName)
+			headers = append(headers, sanitizeUserAgentHeader(credentials.TenantName))
 		}
 	}
 
@@ -505,6 +506,23 @@ func (vp *valuesProvider) getUserAgentHeaders(
 	}
 
 	return headers
+}
+
+// sanitizeUserAgentHeader strips characters that are unsafe to render into a container arg / HTTP
+// header value, so that tenant-controlled credential fields cannot inject YAML into the seed pod
+// specs (e.g. via embedded newlines) even for secrets created before validation was tightened.
+func sanitizeUserAgentHeader(value string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9',
+			r == '-', r == '_', r == '.':
+			return r
+		default:
+			return -1
+		}
+	}, value)
 }
 
 // getConfigChartValues collects and returns the configuration chart values.
@@ -523,6 +541,10 @@ func getConfigChartValues(
 
 	if cloudProfileConfig == nil {
 		return nil, fmt.Errorf("cloud profile config is nil - cannot determine keystone URL and other parameters")
+	}
+
+	if strings.ContainsFunc(infraStatus.Networks.Name, func(r rune) bool { return unicode.IsControl(r) || r == '"' }) {
+		return nil, fmt.Errorf("infraStatus network name must not contain control characters or double-quotes")
 	}
 
 	values := map[string]interface{}{

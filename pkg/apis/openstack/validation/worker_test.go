@@ -173,7 +173,7 @@ var _ = Describe("ValidateWorkerConfig", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("config.machineLabels[0].name"),
-						"Detail": Equal("does not match expected regex \"^[^{}\\\\[\\\\]\\\\n]+$\""),
+						"Detail": Equal("does not match expected regex \"^[^{}\\\\[\\\\]\\\\n\\\\r\\\"]+$\""),
 					})),
 				))
 			})
@@ -234,7 +234,7 @@ var _ = Describe("ValidateWorkerConfig", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("config.machineLabels[0].value"),
-						"Detail": Equal("does not match expected regex \"^[^{}\\\\[\\\\]\\\\n]+$\""),
+						"Detail": Equal("does not match expected regex \"^[^{}\\\\[\\\\]\\\\n\\\\r\\\"]+$\""),
 					})),
 				))
 			})

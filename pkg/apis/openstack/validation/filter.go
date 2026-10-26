@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	guuid "github.com/google/uuid"
@@ -16,16 +17,16 @@ import (
 )
 
 var (
-	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets,braces and newlines.
-	genericNameRegex            = `^[^{}\[\]\n]+$`
+	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets, braces, newlines, carriage returns and double-quotes (injection fence for INI-rendered values).
+	genericNameRegex            = `^[^{}\[\]\n\r"]+$`
 	validateResourceName        = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
-	validateDomainName          = hideSensitiveValue(noWhitespace)
-	validateTenantName          = combineValidationFuncs(noWhitespace, maxLength(64))
-	validateUserName            = hideSensitiveValue(noWhitespace)
-	validatePassword            = hideSensitiveValue(noNewlines)
-	validateAppCredentialID     = hideSensitiveValue(noWhitespace)
-	validateAppCredentialName   = hideSensitiveValue(noWhitespace)
-	validateAppCredentialSecret = hideSensitiveValue(noWhitespace)
+	validateDomainName          = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(64)))
+	validateTenantName          = combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(64))
+	validateUserName            = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(255)))
+	validatePassword            = hideSensitiveValue(combineValidationFuncs(noControlChars, noDoubleQuote))
+	validateAppCredentialID     = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote))
+	validateAppCredentialName   = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(255)))
+	validateAppCredentialSecret = hideSensitiveValue(combineValidationFuncs(noControlChars, noDoubleQuote))
 	validateInsecure            = allowedValues("true", "false")
 )
 
@@ -98,22 +99,42 @@ func uuid(u string, fld *field.Path) field.ErrorList {
 	return nil
 }
 
+// noWhitespace rejects any whitespace, matching Keystone's `[\S]+` name pattern so it never rejects
+// a value the OpenStack API accepts. Blocking interior newlines also closes the YAML-injection vector
+// since these fields are rendered into seed container args.
 func noWhitespace(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil // Allow empty
 	}
-	if strings.TrimSpace(value) != value {
-		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing whitespace")}
+	for _, r := range value {
+		if unicode.IsSpace(r) {
+			return field.ErrorList{field.Invalid(fld, value, "must not contain whitespace")}
+		}
 	}
 	return nil
 }
 
-func noNewlines(value string, fld *field.Path) field.ErrorList {
+// noControlChars rejects control characters (including newlines). It is used for fields such as
+// passwords that may legitimately contain spaces or quotes but must never contain line breaks that
+// could break out of a rendered scalar.
+func noControlChars(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil // Allow empty
 	}
-	if strings.Trim(value, "\n\r") != value {
-		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing newlines")}
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return field.ErrorList{field.Invalid(fld, value, "must not contain control characters")}
+		}
+	}
+	return nil
+}
+
+// noDoubleQuote rejects double-quote characters. All credential fields are rendered inside
+// double-quoted gcfg values (e.g. password="..."); an unescaped " terminates the token and causes
+// a fatal parse error in the CCM, so any secret containing " would have broken on first use.
+func noDoubleQuote(value string, fld *field.Path) field.ErrorList {
+	if strings.ContainsRune(value, '"') {
+		return field.ErrorList{field.Invalid(fld, value, "must not contain double-quote characters")}
 	}
 	return nil
 }

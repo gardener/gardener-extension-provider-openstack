@@ -45,7 +45,7 @@ spec:
         - --nodeid=$(NODE_ID)
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         {{- range $userAgentHeader := .Values.userAgentHeaders }}
-        - --user-agent={{ $userAgentHeader }}
+        - {{ printf "--user-agent=%s" $userAgentHeader | quote }}
         {{- end }}
         - --v=2
         - --vmodule=mount*=4,nodeserver=3,utils=2,driver=4,openstack=4,client=4,server=4,controllerserver=4

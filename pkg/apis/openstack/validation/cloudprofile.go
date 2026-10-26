@@ -377,6 +377,9 @@ func validateLoadBalancerClass(lbClass api.LoadBalancerClass, fldPath *field.Pat
 	if lbClass.FloatingSubnetID != nil {
 		allErrs = append(allErrs, uuid(*lbClass.FloatingSubnetID, fldPath.Child("floatingSubnetID"))...)
 	}
+	if lbClass.SubnetID != nil {
+		allErrs = append(allErrs, uuid(*lbClass.SubnetID, fldPath.Child("subnetID"))...)
+	}
 
 	allErrs = append(allErrs, validateResourceName(lbClass.Name, fldPath.Child("name"))...)
 	if lbClass.FloatingSubnetName != nil {

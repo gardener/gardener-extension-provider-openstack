@@ -36,33 +36,43 @@ spec:
     # reflection-based CEL conversion (kubernetes/kubernetes#138771) keeps
     # oldObject conditions as native structs that cannot be marshalled when
     # placed into a JSONPatch value, which previously failed the policy.
-    # Timestamps are kept as CEL timestamp values, which serialize to RFC3339
-    # and match metav1.Time; do NOT wrap them in string(). Absent optional
-    # fields fall back to null, which metav1.Time.UnmarshalJSON decodes as the
-    # zero time.
+    #
+    # A CEL map literal infers a single homogeneous value type from its first
+    # entry. Because 'type' is a string literal, CEL types the whole map as
+    # map<string, string>. On K8s >= 1.37 the type-checker tolerates dyn values
+    # mixed in; on K8s 1.36 it strictly rejects them, so c.status (dyn from the
+    # schema) failed with "expected type 'string' but found 'dyn'". Wrapping the
+    # scalar fields in string() keeps the map homogeneously typed on both.
+    #
+    # Timestamps must stay CEL timestamp values (not string()) so they serialize
+    # to RFC3339 and match metav1.Time. Their absent-field fallback must be null,
+    # NOT '' — metav1.Time.UnmarshalJSON('') errors, while null decodes to the
+    # zero time. A string()?:null ternary does not type-check (no bool/string/null
+    # overload), so both branches are wrapped in dyn() to unify to dyn and keep
+    # the null fallback.
     # Extract the current NetworkUnavailable condition from the old object.
     - name: oldNetworkUnavailableCondition
       expression: >-
         has(oldObject.status) && has(oldObject.status.conditions) ?
         oldObject.status.conditions.filter(c, c.type == 'NetworkUnavailable').map(c, {
           'type':               'NetworkUnavailable',
-          'status':             c.status,
-          'reason':             has(c.reason)  ? c.reason  : '',
-          'message':            has(c.message) ? c.message : '',
-          'lastTransitionTime': has(c.lastTransitionTime) ? c.lastTransitionTime : null,
-          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? c.lastHeartbeatTime  : null
+          'status':             string(c.status),
+          'reason':             has(c.reason)  ? string(c.reason)  : '',
+          'message':            has(c.message) ? string(c.message) : '',
+          'lastTransitionTime': has(c.lastTransitionTime) ? dyn(c.lastTransitionTime) : dyn(null),
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? dyn(c.lastHeartbeatTime)  : dyn(null)
         }) : []
     # Remove NetworkUnavailable from the new conditions and rebuild each kept
     # condition as a plain CEL map for the same marshalling reason.
     - name: conditionsWithoutNetworkUnavailable
       expression: >-
         object.status.conditions.filter(c, c.type != 'NetworkUnavailable').map(c, {
-          'type':               c.type,
-          'status':             c.status,
-          'reason':             has(c.reason)  ? c.reason  : '',
-          'message':            has(c.message) ? c.message : '',
-          'lastTransitionTime': has(c.lastTransitionTime) ? c.lastTransitionTime : null,
-          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? c.lastHeartbeatTime  : null
+          'type':               string(c.type),
+          'status':             string(c.status),
+          'reason':             has(c.reason)  ? string(c.reason)  : '',
+          'message':            has(c.message) ? string(c.message) : '',
+          'lastTransitionTime': has(c.lastTransitionTime) ? dyn(c.lastTransitionTime) : dyn(null),
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? dyn(c.lastHeartbeatTime)  : dyn(null)
         })
     # Reconstruct final conditions
     - name: finalConditions

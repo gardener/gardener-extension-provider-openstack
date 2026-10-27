@@ -271,7 +271,10 @@ func ValidateInfrastructureConfigUpdate(oldConfig, newConfig *api.Infrastructure
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Router, oldConfig.Networks.Router, networksPath.Child("router"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Worker, oldConfig.Networks.Worker, networksPath.Child("worker"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.Workers, oldConfig.Networks.Workers, networksPath.Child("workers"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.IPv6, oldConfig.Networks.IPv6, networksPath.Child("ipv6"))...)
+	// Allow nil -> non-nil (IPv4 single-stack to dual-stack migration), but block removal or modification once set.
+	if oldConfig.Networks.IPv6 != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.IPv6, oldConfig.Networks.IPv6, networksPath.Child("ipv6"))...)
+	}
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newConfig.Networks.SubnetPool, oldConfig.Networks.SubnetPool, networksPath.Child("subnetPool"))...)
 	// TODO: allow both enabling and disabling of share networks; for now only enabling is allowed.
 	if oldConfig.Networks.ShareNetwork != nil && oldConfig.Networks.ShareNetwork.Enabled {

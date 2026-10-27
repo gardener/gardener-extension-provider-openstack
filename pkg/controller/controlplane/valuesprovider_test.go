@@ -1229,6 +1229,57 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1"))
 		})
 	})
+
+	Describe("#getUserAgentHeaders", func() {
+		var (
+			vp      *valuesProvider
+			cluster *extensionscontroller.Cluster
+		)
+
+		BeforeEach(func() {
+			vp = &valuesProvider{}
+			cluster = &extensionscontroller.Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: technicalID,
+					},
+				},
+			}
+		})
+
+		It("should append sanitized domain and tenant followed by the technical ID", func() {
+			creds := &openstack.Credentials{DomainName: "my-domain", TenantName: "my-tenant"}
+			Expect(vp.getUserAgentHeaders(creds, cluster)).To(Equal([]string{"my-domain", "my-tenant", technicalID}))
+		})
+
+		It("should omit empty credential fields", func() {
+			creds := &openstack.Credentials{DomainName: "my-domain"}
+			Expect(vp.getUserAgentHeaders(creds, cluster)).To(Equal([]string{"my-domain", technicalID}))
+		})
+
+		It("should omit a credential field that sanitizes down to an empty string", func() {
+			creds := &openstack.Credentials{DomainName: "my-domain", TenantName: "新/租户"}
+			Expect(vp.getUserAgentHeaders(creds, cluster)).To(Equal([]string{"my-domain", technicalID}))
+		})
+
+		It("should handle nil credentials", func() {
+			Expect(vp.getUserAgentHeaders(nil, cluster)).To(Equal([]string{technicalID}))
+		})
+	})
+
+	Describe("#sanitizeUserAgentHeader", func() {
+		It("should keep alphanumerics and -_.", func() {
+			Expect(sanitizeUserAgentHeader("my-domain_1.0")).To(Equal("my-domain_1.0"))
+		})
+
+		It("should strip whitespace, newlines and other unsafe characters", func() {
+			Expect(sanitizeUserAgentHeader("ev\nil: true /bad")).To(Equal("eviltruebad"))
+		})
+
+		It("should strip non-ASCII runes", func() {
+			Expect(sanitizeUserAgentHeader("租户")).To(Equal(""))
+		})
+	})
 })
 
 func encode(obj runtime.Object) []byte {

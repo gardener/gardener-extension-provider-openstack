@@ -96,9 +96,8 @@ func ExtractCredentialsFromData(data map[string][]byte, allowDNSKeys bool) (*Cre
 	}
 
 	// Fail closed on credential fields that carry control characters. These values are rendered into
-	// cloudprovider.conf (an INI/gcfg file); a raw newline would let a tenant-controlled secret inject
-	// extra keys or [Section] headers. This guards paths that bypass the admission webhook and
-	// grandfathered secrets created before validation was tightened.
+	// cloudprovider.conf (a gcfg file); a raw newline would let a tenant-controlled secret inject
+	// extra keys or [Section] headers.
 	for key, value := range map[string]string{
 		DomainName:                  domainName,
 		TenantName:                  tenantName,

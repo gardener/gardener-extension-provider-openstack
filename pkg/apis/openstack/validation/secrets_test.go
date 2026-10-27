@@ -5,6 +5,8 @@
 package validation_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -364,6 +366,49 @@ var _ = Describe("Secret validation", func() {
 				}, "secret.data[applicationCredentialName]"),
 			)
 
+			DescribeTable("should fail when an identifier field contains a NUL or other non-whitespace control character",
+				func(data map[string][]byte, invalidField string) {
+					secret.Data = data
+
+					errs := ValidateCloudProviderSecret(secret, fldPath, false)
+					Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(invalidField),
+					}))))
+				},
+				Entry("domainName with NUL", map[string][]byte{
+					openstack.DomainName: []byte("my-domain\x00"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}, "secret.data[domainName]"),
+				Entry("tenantName with NUL", map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant\x00"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}, "secret.data[tenantName]"),
+				Entry("username with control char (U+0001)", map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user\x01"),
+					openstack.Password:   []byte("my-password"),
+				}, "secret.data[username]"),
+				Entry("applicationCredentialID with NUL", map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.ApplicationCredentialID:     []byte("my-id\x00"),
+					openstack.ApplicationCredentialSecret: []byte("my-app-secret"),
+				}, "secret.data[applicationCredentialID]"),
+				Entry("applicationCredentialName with NUL", map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.UserName:                    []byte("my-user"),
+					openstack.ApplicationCredentialName:   []byte("my-name\x00"),
+					openstack.ApplicationCredentialSecret: []byte("my-app-secret"),
+				}, "secret.data[applicationCredentialName]"),
+			)
+
 			DescribeTable("should fail when a secret-like field contains a control character or Unicode line separator",
 				func(data map[string][]byte, invalidField string) {
 					secret.Data = data
@@ -407,7 +452,19 @@ var _ = Describe("Secret validation", func() {
 				}, "secret.data[applicationCredentialSecret]"),
 			)
 
-			It("should allow a password containing spaces but reject double-quote characters", func() {
+			It("should allow a password containing spaces", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("p@ss word with spaces"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
+
+			It("should reject double-quote characters in the password", func() {
 				secret.Data = map[string][]byte{
 					openstack.DomainName: []byte("my-domain"),
 					openstack.TenantName: []byte("my-tenant"),
@@ -416,7 +473,11 @@ var _ = Describe("Secret validation", func() {
 				}
 
 				errs := ValidateCloudProviderSecret(secret, fldPath, false)
-				Expect(errs).NotTo(BeEmpty())
+				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("secret.data[password]"),
+					"BadValue": Equal("(hidden)"),
+				}))))
 			})
 
 			It("should reject double-quote characters in identifier fields", func() {
@@ -431,20 +492,42 @@ var _ = Describe("Secret validation", func() {
 				Expect(errs).NotTo(BeEmpty())
 			})
 
-			It("should fail when tenantName is too long", func() {
-				secret.Data = map[string][]byte{
-					openstack.DomainName: []byte("my-domain"),
-					openstack.TenantName: []byte("this-is-a-very-long-tenant-name-that-exceeds-the-maximum-allowed-length-of-64-characters"),
+			DescribeTable("should fail when a credential field exceeds its maximum length",
+				func(data map[string][]byte, invalidField string) {
+					secret.Data = data
+
+					errs := ValidateCloudProviderSecret(secret, fldPath, false)
+					Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(invalidField),
+					}))))
+				},
+				Entry("domainName longer than 64 characters", map[string][]byte{
+					openstack.DomainName: []byte(strings.Repeat("a", 65)),
+					openstack.TenantName: []byte("my-tenant"),
 					openstack.UserName:   []byte("my-user"),
 					openstack.Password:   []byte("my-password"),
-				}
-
-				errs := ValidateCloudProviderSecret(secret, fldPath, false)
-				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("secret.data[tenantName]"),
-				}))))
-			})
+				}, "secret.data[domainName]"),
+				Entry("tenantName longer than 64 characters", map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte(strings.Repeat("a", 65)),
+					openstack.UserName:   []byte("my-user"),
+					openstack.Password:   []byte("my-password"),
+				}, "secret.data[tenantName]"),
+				Entry("username longer than 255 characters", map[string][]byte{
+					openstack.DomainName: []byte("my-domain"),
+					openstack.TenantName: []byte("my-tenant"),
+					openstack.UserName:   []byte(strings.Repeat("a", 256)),
+					openstack.Password:   []byte("my-password"),
+				}, "secret.data[username]"),
+				Entry("applicationCredentialName longer than 255 characters", map[string][]byte{
+					openstack.DomainName:                  []byte("my-domain"),
+					openstack.TenantName:                  []byte("my-tenant"),
+					openstack.UserName:                    []byte("my-user"),
+					openstack.ApplicationCredentialName:   []byte(strings.Repeat("a", 256)),
+					openstack.ApplicationCredentialSecret: []byte("my-app-secret"),
+				}, "secret.data[applicationCredentialName]"),
+			)
 
 			It("should fail when authURL is invalid", func() {
 				secret.Data = map[string][]byte{

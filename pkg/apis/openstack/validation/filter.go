@@ -17,15 +17,15 @@ import (
 )
 
 var (
-	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets, braces, newlines, carriage returns and double-quotes (injection fence for INI-rendered values).
+	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets, braces, newlines, carriage returns and double-quotes (injection fence for gcfg-rendered values).
 	genericNameRegex            = `^[^{}\[\]\n\r"]+$`
 	validateResourceName        = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
-	validateDomainName          = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(64)))
-	validateTenantName          = combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(64))
-	validateUserName            = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(255)))
+	validateDomainName          = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(64)))
+	validateTenantName          = combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(64))
+	validateUserName            = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(255)))
 	validatePassword            = hideSensitiveValue(combineValidationFuncs(noControlChars, noDoubleQuote))
-	validateAppCredentialID     = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote))
-	validateAppCredentialName   = hideSensitiveValue(combineValidationFuncs(noWhitespace, noDoubleQuote, maxLength(255)))
+	validateAppCredentialID     = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote))
+	validateAppCredentialName   = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(255)))
 	validateAppCredentialSecret = hideSensitiveValue(combineValidationFuncs(noControlChars, noDoubleQuote))
 	validateInsecure            = allowedValues("true", "false")
 )
@@ -99,9 +99,7 @@ func uuid(u string, fld *field.Path) field.ErrorList {
 	return nil
 }
 
-// noWhitespace rejects any whitespace, matching Keystone's `[\S]+` name pattern so it never rejects
-// a value the OpenStack API accepts. Blocking interior newlines also closes the YAML-injection vector
-// since these fields are rendered into seed container args.
+// noWhitespace rejects any whitespace rune.
 func noWhitespace(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil // Allow empty

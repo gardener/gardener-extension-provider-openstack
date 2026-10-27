@@ -493,11 +493,11 @@ func (vp *valuesProvider) getUserAgentHeaders(
 	// Add the domain and project/tenant to the useragent headers if the secret
 	// could be read and the respective fields in secret are not empty.
 	if credentials != nil {
-		if credentials.DomainName != "" {
-			headers = append(headers, sanitizeUserAgentHeader(credentials.DomainName))
+		if h := sanitizeUserAgentHeader(credentials.DomainName); h != "" {
+			headers = append(headers, h)
 		}
-		if credentials.TenantName != "" {
-			headers = append(headers, sanitizeUserAgentHeader(credentials.TenantName))
+		if h := sanitizeUserAgentHeader(credentials.TenantName); h != "" {
+			headers = append(headers, h)
 		}
 	}
 
@@ -510,7 +510,7 @@ func (vp *valuesProvider) getUserAgentHeaders(
 
 // sanitizeUserAgentHeader strips characters that are unsafe to render into a container arg / HTTP
 // header value, so that tenant-controlled credential fields cannot inject YAML into the seed pod
-// specs (e.g. via embedded newlines) even for secrets created before validation was tightened.
+// specs (e.g. via embedded newlines).
 func sanitizeUserAgentHeader(value string) string {
 	return strings.Map(func(r rune) rune {
 		switch {

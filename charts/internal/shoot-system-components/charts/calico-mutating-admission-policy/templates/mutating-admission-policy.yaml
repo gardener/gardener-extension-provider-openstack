@@ -39,17 +39,15 @@ spec:
     #
     # A CEL map literal infers a single homogeneous value type from its first
     # entry. Because 'type' is a string literal, CEL types the whole map as
-    # map<string, string>. On K8s >= 1.37 the type-checker tolerates dyn values
-    # mixed in; on K8s 1.36 it strictly rejects them, so c.status (dyn from the
-    # schema) failed with "expected type 'string' but found 'dyn'". Wrapping the
-    # scalar fields in string() keeps the map homogeneously typed on both.
+    # map<string, string>. All values are wrapped in string() to keep the map
+    # homogeneously typed on all K8s versions (including 1.36 which strictly
+    # rejects non-string values — dyn() does not exist in cel-go v0.26).
     #
-    # Timestamps must stay CEL timestamp values (not string()) so they serialize
-    # to RFC3339 and match metav1.Time. Their absent-field fallback must be null,
-    # NOT '' — metav1.Time.UnmarshalJSON('') errors, while null decodes to the
-    # zero time. A string()?:null ternary does not type-check (no bool/string/null
-    # overload), so both branches are wrapped in dyn() to unify to dyn and keep
-    # the null fallback.
+    # Timestamps are converted via string() which produces RFC3339 format;
+    # metav1.Time.UnmarshalJSON parses quoted RFC3339 strings correctly.
+    # For absent optional timestamp fields the RFC3339 zero-time string
+    # '0001-01-01T00:00:00Z' is used as fallback, which is equivalent to what
+    # null decodes to (the zero time.Time value).
     # Extract the current NetworkUnavailable condition from the old object.
     - name: oldNetworkUnavailableCondition
       expression: >-
@@ -59,8 +57,8 @@ spec:
           'status':             string(c.status),
           'reason':             has(c.reason)  ? string(c.reason)  : '',
           'message':            has(c.message) ? string(c.message) : '',
-          'lastTransitionTime': has(c.lastTransitionTime) ? dyn(c.lastTransitionTime) : dyn(null),
-          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? dyn(c.lastHeartbeatTime)  : dyn(null)
+          'lastTransitionTime': has(c.lastTransitionTime) ? string(c.lastTransitionTime) : '0001-01-01T00:00:00Z',
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? string(c.lastHeartbeatTime)  : '0001-01-01T00:00:00Z'
         }) : []
     # Remove NetworkUnavailable from the new conditions and rebuild each kept
     # condition as a plain CEL map for the same marshalling reason.
@@ -71,8 +69,8 @@ spec:
           'status':             string(c.status),
           'reason':             has(c.reason)  ? string(c.reason)  : '',
           'message':            has(c.message) ? string(c.message) : '',
-          'lastTransitionTime': has(c.lastTransitionTime) ? dyn(c.lastTransitionTime) : dyn(null),
-          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? dyn(c.lastHeartbeatTime)  : dyn(null)
+          'lastTransitionTime': has(c.lastTransitionTime) ? string(c.lastTransitionTime) : '0001-01-01T00:00:00Z',
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? string(c.lastHeartbeatTime)  : '0001-01-01T00:00:00Z'
         })
     # Reconstruct final conditions
     - name: finalConditions

@@ -7,6 +7,7 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -1311,6 +1312,27 @@ var _ = Describe("ValuesProvider", func() {
 		It("should allow interior spaces unchanged", func() {
 			Expect(gcfgEscape("Default Domain")).To(Equal("Default Domain"))
 		})
+
+		// Round-trip tests: gcfgEscape produces output that, when embedded inside
+		// double-quotes and parsed by a gcfg-compatible reader, reproduces the original.
+		// gcfg uses the same escape sequences as Go interpreted string literals.
+		DescribeTable("round-trip: unescape(gcfgEscape(v)) == v",
+			func(original string) {
+				escaped := gcfgEscape(original)
+				// simulate gcfg parsing: interpret the escape sequences Go uses
+				unescaped := strings.NewReplacer(`\"`, `"`, `\\`, `\`).Replace(escaped)
+				Expect(unescaped).To(Equal(original), "round-trip failed for %q", original)
+			},
+			Entry("plain value", "simple"),
+			Entry("backslash-n literal", `secret\nvalue`),
+			Entry("trailing backslash", `trailing\`),
+			Entry("password with double-quote", `p@ss"word`),
+			Entry("backslash and double-quote combined", `p\a"ss`),
+			Entry("backslash followed by double-quote", `\"`),
+			Entry("interior spaces (Keystone domain)", "Default Domain"),
+			Entry("auth URL with double-quote", `https://keystone.example.com/"v3"`),
+			Entry("multiple backslashes", `\\double\\`),
+		)
 	})
 })
 

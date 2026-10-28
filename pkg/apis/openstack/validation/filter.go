@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	guuid "github.com/google/uuid"
@@ -114,6 +115,19 @@ func noNewlines(value string, fld *field.Path) field.ErrorList {
 	}
 	if strings.Trim(value, "\n\r") != value {
 		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing newlines")}
+	}
+	return nil
+}
+
+// noControlChars rejects control characters and Unicode line/paragraph separators (U+2028/U+2029).
+func noControlChars(value string, fld *field.Path) field.ErrorList {
+	if value == "" {
+		return nil
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) || unicode.Is(unicode.Zl, r) || unicode.Is(unicode.Zp, r) {
+			return field.ErrorList{field.Invalid(fld, value, "must not contain control characters or Unicode line/paragraph separators")}
+		}
 	}
 	return nil
 }

@@ -510,6 +510,26 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile Validator", func(isCapabili
 			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
 		})
 
+		It("should succeed for NamespacedCloudProfile with a Cinder storage.type containing brackets", func() {
+			namespacedCloudProfile.Spec.MachineTypes = []core.MachineType{
+				{
+					Name: "type-bracketed",
+					Storage: &core.MachineTypeStorage{
+						Type: "fast[ssd]",
+					},
+				},
+				{
+					Name: "type-braced",
+					Storage: &core.MachineTypeStorage{
+						Type: "fast{ssd}",
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+
+			Expect(namespacedCloudProfileValidator.Validate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+		})
+
 		It("should fail for NamespacedCloudProfile specifying an invalid field in the provider config", func() {
 			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
 "apiVersion":"openstack.provider.extensions.gardener.cloud/v1alpha1",

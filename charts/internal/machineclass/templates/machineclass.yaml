@@ -27,14 +27,14 @@ metadata:
 provider: "OpenStack"
 {{- if $machineClass.nodeTemplate }}
 nodeTemplate:
-  architecture: {{ $machineClass.nodeTemplate.architecture }}
+  architecture: {{ $machineClass.nodeTemplate.architecture | quote }}
   capacity: {{- toYaml $machineClass.nodeTemplate.capacity | nindent 4 }}
 {{- if $machineClass.nodeTemplate.virtualCapacity }}
   virtualCapacity: {{ toYaml $machineClass.nodeTemplate.virtualCapacity | nindent 4 }}
 {{- end }}
-  instanceType: {{ $machineClass.nodeTemplate.instanceType }}
-  region: {{ $machineClass.nodeTemplate.region }}
-  zone: {{ $machineClass.nodeTemplate.zone }}
+  instanceType: {{ $machineClass.nodeTemplate.instanceType | quote }}
+  region: {{ $machineClass.nodeTemplate.region | quote }}
+  zone: {{ $machineClass.nodeTemplate.zone | quote }}
 {{- end }}
 secretRef:
   name: {{ $machineClass.name }}
@@ -46,16 +46,16 @@ providerSpec:
   apiVersion: openstack.machine.gardener.cloud/v1alpha1
   kind: MachineProviderConfig
   spec:
-    region: {{ $machineClass.region }}
-    availabilityZone: {{ $machineClass.availabilityZone }}
-    flavorName: {{ $machineClass.machineType }}
-    keyName: {{ $machineClass.keyName }}
+    region: {{ $machineClass.region | quote }}
+    availabilityZone: {{ $machineClass.availabilityZone | quote }}
+    flavorName: {{ $machineClass.machineType | quote }}
+    keyName: {{ $machineClass.keyName | quote }}
 {{- if $machineClass.imageID }}
-    imageID: {{ $machineClass.imageID }}
+    imageID: {{ $machineClass.imageID | quote }}
 {{- else }}
-    imageName: {{ $machineClass.imageName }}
+    imageName: {{ $machineClass.imageName | quote }}
 {{- end }}
-    networkID: {{ $machineClass.networkID }}
+    networkID: {{ $machineClass.networkID | quote }}
     subnetIDs:
 {{ toYaml $machineClass.subnetIDs | indent 6 }}
     podNetworkCIDRs:
@@ -64,13 +64,13 @@ providerSpec:
     rootDiskSize: {{ $machineClass.rootDiskSize }}
 {{- end }}
 {{- if $machineClass.rootDiskType}}
-    rootDiskType: {{ $machineClass.rootDiskType }}
+    rootDiskType: {{ $machineClass.rootDiskType | quote }}
 {{- end }}
 {{- if hasKey $machineClass "rootDiskAvailabilityZone" }}
     rootDiskAvailabilityZone: {{ $machineClass.rootDiskAvailabilityZone | quote }}
 {{- end }}
 {{- if $machineClass.serverGroupID }}
-    serverGroupID: {{ $machineClass.serverGroupID }}
+    serverGroupID: {{ $machineClass.serverGroupID | quote }}
 {{- end }}
     securityGroups: {{- toYaml $machineClass.securityGroups | nindent 4 }}
 {{- if $machineClass.tags }}

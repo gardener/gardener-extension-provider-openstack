@@ -112,9 +112,7 @@ func noWhitespace(value string, fld *field.Path) field.ErrorList {
 }
 
 // noSurroundingWhitespace rejects leading or trailing whitespace but permits interior spaces.
-// Keystone allows names like "Default Domain", "my project", or "Jane Doe"; those values pass
-// gcfg parsing when rendered inside a double-quoted string. Surrounding whitespace is almost
-// certainly a data-entry error and would survive round-tripping unchanged anyway.
+// Keystone allows names like "Default Domain", "my project", or "Jane Doe".
 func noSurroundingWhitespace(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil

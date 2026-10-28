@@ -99,8 +99,6 @@ func uuid(u string, fld *field.Path) field.ErrorList {
 	return nil
 }
 
-// noWhitespace rejects any whitespace rune. Used for fields like application credential IDs
-// where even interior spaces are not meaningful (Keystone never uses them).
 func noWhitespace(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil

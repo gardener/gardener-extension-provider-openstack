@@ -1280,6 +1280,38 @@ var _ = Describe("ValuesProvider", func() {
 			Expect(sanitizeUserAgentHeader("租户")).To(Equal(""))
 		})
 	})
+
+	Describe("#gcfgEscape", func() {
+		It("should pass through values with no special characters", func() {
+			Expect(gcfgEscape("simple-value_123")).To(Equal("simple-value_123"))
+		})
+
+		It("should escape a single backslash to double backslash", func() {
+			Expect(gcfgEscape(`secret\nvalue`)).To(Equal(`secret\\nvalue`))
+		})
+
+		It("should escape a trailing backslash", func() {
+			Expect(gcfgEscape(`trailing\`)).To(Equal(`trailing\\`))
+		})
+
+		It("should escape double-quote to backslash-quote", func() {
+			Expect(gcfgEscape(`pass"word`)).To(Equal(`pass\"word`))
+		})
+
+		It("should escape both backslash and double-quote", func() {
+			Expect(gcfgEscape(`p\a"ss`)).To(Equal(`p\\a\"ss`))
+		})
+
+		It("should escape backslash before double-quote correctly (backslash first)", func() {
+			// Input: \" (backslash then double-quote)
+			// Expected: \\\" (escaped backslash then escaped double-quote)
+			Expect(gcfgEscape(`\"`)).To(Equal(`\\\"`))
+		})
+
+		It("should allow interior spaces unchanged", func() {
+			Expect(gcfgEscape("Default Domain")).To(Equal("Default Domain"))
+		})
+	})
 })
 
 func encode(obj runtime.Object) []byte {

@@ -97,7 +97,8 @@ func ExtractCredentialsFromData(data map[string][]byte, allowDNSKeys bool) (*Cre
 
 	// Fail closed on credential fields that carry control characters. These values are rendered into
 	// cloudprovider.conf (a gcfg file); a raw newline would let a tenant-controlled secret inject
-	// extra keys or [Section] headers.
+	// extra keys or [Section] headers. Double-quotes and backslashes are gcfg-escaped at render time
+	// and are therefore safe here.
 	for key, value := range map[string]string{
 		DomainName:                  domainName,
 		TenantName:                  tenantName,
@@ -107,8 +108,8 @@ func ExtractCredentialsFromData(data map[string][]byte, allowDNSKeys bool) (*Cre
 		ApplicationCredentialName:   applicationCredentialName,
 		ApplicationCredentialSecret: applicationCredentialSecret,
 	} {
-		if strings.ContainsFunc(value, func(r rune) bool { return unicode.IsControl(r) }) || strings.ContainsRune(value, '"') {
-			return nil, fmt.Errorf("value of %q must not contain control characters or double-quotes", key)
+		if strings.ContainsFunc(value, func(r rune) bool { return unicode.IsControl(r) }) {
+			return nil, fmt.Errorf("value of %q must not contain control characters", key)
 		}
 	}
 

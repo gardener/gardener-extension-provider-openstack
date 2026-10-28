@@ -20,13 +20,13 @@ var (
 	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets, braces, newlines, carriage returns and double-quotes (injection fence for gcfg-rendered values).
 	genericNameRegex            = `^[^{}\[\]\n\r"]+$`
 	validateResourceName        = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
-	validateDomainName          = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(64)))
-	validateTenantName          = combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(64))
-	validateUserName            = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(255)))
-	validatePassword            = hideSensitiveValue(combineValidationFuncs(noControlChars, noDoubleQuote))
-	validateAppCredentialID     = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote))
-	validateAppCredentialName   = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars, noDoubleQuote, maxLength(255)))
-	validateAppCredentialSecret = hideSensitiveValue(combineValidationFuncs(noControlChars, noDoubleQuote))
+	validateDomainName          = hideSensitiveValue(combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(64)))
+	validateTenantName          = combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(64))
+	validateUserName            = hideSensitiveValue(combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(255)))
+	validatePassword            = hideSensitiveValue(combineValidationFuncs(noControlChars))
+	validateAppCredentialID     = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars))
+	validateAppCredentialName   = hideSensitiveValue(combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(255)))
+	validateAppCredentialSecret = hideSensitiveValue(combineValidationFuncs(noControlChars))
 	validateInsecure            = allowedValues("true", "false")
 )
 
@@ -99,15 +99,30 @@ func uuid(u string, fld *field.Path) field.ErrorList {
 	return nil
 }
 
-// noWhitespace rejects any whitespace rune.
+// noWhitespace rejects any whitespace rune. Used for fields like application credential IDs
+// where even interior spaces are not meaningful (Keystone never uses them).
 func noWhitespace(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
-		return nil // Allow empty
+		return nil
 	}
 	for _, r := range value {
 		if unicode.IsSpace(r) {
 			return field.ErrorList{field.Invalid(fld, value, "must not contain whitespace")}
 		}
+	}
+	return nil
+}
+
+// noSurroundingWhitespace rejects leading or trailing whitespace but permits interior spaces.
+// Keystone allows names like "Default Domain", "my project", or "Jane Doe"; those values pass
+// gcfg parsing when rendered inside a double-quoted string. Surrounding whitespace is almost
+// certainly a data-entry error and would survive round-tripping unchanged anyway.
+func noSurroundingWhitespace(value string, fld *field.Path) field.ErrorList {
+	if value == "" {
+		return nil
+	}
+	if strings.TrimSpace(value) != value {
+		return field.ErrorList{field.Invalid(fld, value, "must not have leading or trailing whitespace")}
 	}
 	return nil
 }
@@ -123,16 +138,6 @@ func noControlChars(value string, fld *field.Path) field.ErrorList {
 		if unicode.IsControl(r) || unicode.Is(unicode.Zl, r) || unicode.Is(unicode.Zp, r) {
 			return field.ErrorList{field.Invalid(fld, value, "must not contain control characters or Unicode line/paragraph separators")}
 		}
-	}
-	return nil
-}
-
-// noDoubleQuote rejects double-quote characters. All credential fields are rendered inside
-// double-quoted gcfg values (e.g. password="..."); an unescaped " terminates the token and causes
-// a fatal parse error in the CCM, so any secret containing " would have broken on first use.
-func noDoubleQuote(value string, fld *field.Path) field.ErrorList {
-	if strings.ContainsRune(value, '"') {
-		return field.ErrorList{field.Invalid(fld, value, "must not contain double-quote characters")}
 	}
 	return nil
 }

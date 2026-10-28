@@ -82,12 +82,13 @@ var _ = Describe("Openstack", func() {
 			Entry("applicationCredentialSecret", openstack.ApplicationCredentialSecret, baseAppCredData),
 		)
 
-		It("should reject double-quote characters in credential fields (breaks INI quoting)", func() {
+		It("should allow double-quote characters in credential fields (gcfg-escaped at render time)", func() {
 			data := baseData()
 			data[openstack.Password] = []byte(`pw"with'quotes`)
 
-			_, err := openstack.ExtractCredentialsFromData(data, false)
-			Expect(err).To(HaveOccurred())
+			creds, err := openstack.ExtractCredentialsFromData(data, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(creds.Password).To(Equal(`pw"with'quotes`))
 		})
 	})
 })

@@ -323,6 +323,18 @@ var _ = Describe("Secret validation", func() {
 				}))))
 			})
 
+			It("should allow interior spaces in domainName (Keystone domains like 'Default Domain')", func() {
+				secret.Data = map[string][]byte{
+					openstack.DomainName: []byte("Default Domain"),
+					openstack.TenantName: []byte("my project"),
+					openstack.UserName:   []byte("Jane Doe"),
+					openstack.Password:   []byte("my-password"),
+				}
+
+				errs := ValidateCloudProviderSecret(secret, fldPath, false)
+				Expect(errs).To(BeEmpty())
+			})
+
 			DescribeTable("should fail when an identifier field contains an interior newline",
 				func(data map[string][]byte, invalidField string) {
 					secret.Data = data
@@ -464,7 +476,7 @@ var _ = Describe("Secret validation", func() {
 				Expect(errs).To(BeEmpty())
 			})
 
-			It("should reject double-quote characters in the password", func() {
+			It("should allow double-quote characters in the password (gcfg-escaped at render time)", func() {
 				secret.Data = map[string][]byte{
 					openstack.DomainName: []byte("my-domain"),
 					openstack.TenantName: []byte("my-tenant"),
@@ -473,14 +485,10 @@ var _ = Describe("Secret validation", func() {
 				}
 
 				errs := ValidateCloudProviderSecret(secret, fldPath, false)
-				Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("secret.data[password]"),
-					"BadValue": Equal("(hidden)"),
-				}))))
+				Expect(errs).To(BeEmpty())
 			})
 
-			It("should reject double-quote characters in identifier fields", func() {
+			It("should allow double-quote characters in identifier fields (gcfg-escaped at render time)", func() {
 				secret.Data = map[string][]byte{
 					openstack.DomainName: []byte(`my"domain`),
 					openstack.TenantName: []byte("my-tenant"),
@@ -489,7 +497,7 @@ var _ = Describe("Secret validation", func() {
 				}
 
 				errs := ValidateCloudProviderSecret(secret, fldPath, false)
-				Expect(errs).NotTo(BeEmpty())
+				Expect(errs).To(BeEmpty())
 			})
 
 			DescribeTable("should fail when a credential field exceeds its maximum length",

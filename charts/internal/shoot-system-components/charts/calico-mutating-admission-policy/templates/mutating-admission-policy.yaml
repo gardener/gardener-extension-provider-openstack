@@ -57,8 +57,8 @@ spec:
           'status':             string(c.status),
           'reason':             has(c.reason)  ? string(c.reason)  : '',
           'message':            has(c.message) ? string(c.message) : '',
-          'lastTransitionTime': has(c.lastTransitionTime) ? string(c.lastTransitionTime) : '0001-01-01T00:00:00Z',
-          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? string(c.lastHeartbeatTime)  : '0001-01-01T00:00:00Z'
+          'lastTransitionTime': has(c.lastTransitionTime) && c.lastTransitionTime != null ? string(c.lastTransitionTime) : '0001-01-01T00:00:00Z',
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  && c.lastHeartbeatTime  != null ? string(c.lastHeartbeatTime)  : '0001-01-01T00:00:00Z'
         }) : []
     # Remove NetworkUnavailable from the new conditions and rebuild each kept
     # condition as a plain CEL map for the same marshalling reason.
@@ -69,8 +69,8 @@ spec:
           'status':             string(c.status),
           'reason':             has(c.reason)  ? string(c.reason)  : '',
           'message':            has(c.message) ? string(c.message) : '',
-          'lastTransitionTime': has(c.lastTransitionTime) ? string(c.lastTransitionTime) : '0001-01-01T00:00:00Z',
-          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  ? string(c.lastHeartbeatTime)  : '0001-01-01T00:00:00Z'
+          'lastTransitionTime': has(c.lastTransitionTime) && c.lastTransitionTime != null ? string(c.lastTransitionTime) : '0001-01-01T00:00:00Z',
+          'lastHeartbeatTime':  has(c.lastHeartbeatTime)  && c.lastHeartbeatTime  != null ? string(c.lastHeartbeatTime)  : '0001-01-01T00:00:00Z'
         })
     # Reconstruct final conditions
     - name: finalConditions

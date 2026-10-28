@@ -1332,6 +1332,9 @@ var _ = Describe("ValuesProvider", func() {
 			Entry("interior spaces (Keystone domain)", "Default Domain"),
 			Entry("auth URL with double-quote", `https://keystone.example.com/"v3"`),
 			Entry("multiple backslashes", `\\double\\`),
+			Entry("floating subnet name with backslash", `public\q`),
+			Entry("floating subnet tags with backslash-n", `tag\nvalue`),
+			Entry("lb provider name with double-quote", `my"provider`),
 		)
 	})
 })

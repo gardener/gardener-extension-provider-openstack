@@ -534,6 +534,13 @@ func gcfgEscape(s string) string {
 	return s
 }
 
+// setEscapedStringValue is like utils.SetStringValue but gcfg-escapes the value before storing it.
+func setEscapedStringValue(values map[string]interface{}, key string, value *string) {
+	if value != nil && *value != "" {
+		values[key] = gcfgEscape(*value)
+	}
+}
+
 // getConfigChartValues collects and returns the configuration chart values.
 func getConfigChartValues(
 	cpConfig *api.ControlPlaneConfig,
@@ -567,7 +574,7 @@ func getConfigChartValues(
 		"applicationCredentialName":   gcfgEscape(c.ApplicationCredentialName),
 		"applicationCredentialSecret": gcfgEscape(c.ApplicationCredentialSecret),
 		"region":                      gcfgEscape(cp.Spec.Region),
-		"lbProvider":                  cpConfig.LoadBalancerProvider,
+		"lbProvider":                  gcfgEscape(cpConfig.LoadBalancerProvider),
 		"floatingNetworkID":           infraStatus.Networks.FloatingPool.ID,
 		"subnetID":                    subnet.ID,
 		"dhcpDomain":                  cloudProfileConfig.DHCPDomain,
@@ -614,8 +621,8 @@ func getConfigChartValues(
 	if defaultLoadBalancerClass := lookupLoadBalancerClass(loadBalancerClasses, api.DefaultLoadBalancerClass); defaultLoadBalancerClass != nil {
 		utils.SetStringValue(values, "floatingNetworkID", defaultLoadBalancerClass.FloatingNetworkID)
 		utils.SetStringValue(values, "floatingSubnetID", defaultLoadBalancerClass.FloatingSubnetID)
-		utils.SetStringValue(values, "floatingSubnetName", defaultLoadBalancerClass.FloatingSubnetName)
-		utils.SetStringValue(values, "floatingSubnetTags", defaultLoadBalancerClass.FloatingSubnetTags)
+		setEscapedStringValue(values, "floatingSubnetName", defaultLoadBalancerClass.FloatingSubnetName)
+		setEscapedStringValue(values, "floatingSubnetTags", defaultLoadBalancerClass.FloatingSubnetTags)
 		utils.SetStringValue(values, "subnetID", defaultLoadBalancerClass.SubnetID)
 	}
 
@@ -636,15 +643,15 @@ func generateLoadBalancerClassValues(lbClasses []api.LoadBalancerClass, infrastr
 	loadBalancerClassValues := []map[string]interface{}{}
 
 	for _, lbClass := range lbClasses {
-		values := map[string]interface{}{"name": lbClass.Name}
+		values := map[string]interface{}{"name": gcfgEscape(lbClass.Name)}
 
 		utils.SetStringValue(values, "floatingNetworkID", lbClass.FloatingNetworkID)
 		if !utils.IsEmptyString(lbClass.FloatingNetworkID) && infrastructureStatus.Networks.FloatingPool.ID != "" {
 			values["floatingNetworkID"] = infrastructureStatus.Networks.FloatingPool.ID
 		}
 		utils.SetStringValue(values, "floatingSubnetID", lbClass.FloatingSubnetID)
-		utils.SetStringValue(values, "floatingSubnetName", lbClass.FloatingSubnetName)
-		utils.SetStringValue(values, "floatingSubnetTags", lbClass.FloatingSubnetTags)
+		setEscapedStringValue(values, "floatingSubnetName", lbClass.FloatingSubnetName)
+		setEscapedStringValue(values, "floatingSubnetTags", lbClass.FloatingSubnetTags)
 		utils.SetStringValue(values, "subnetID", lbClass.SubnetID)
 
 		loadBalancerClassValues = append(loadBalancerClassValues, values)

@@ -58,7 +58,7 @@ spec:
         - --tls-cipher-suites={{ .Values.tlsCipherSuites | join "," }}
         - --use-service-account-credentials
         {{- range $userAgentHeader := .Values.userAgentHeaders }}
-        - --user-agent={{ $userAgentHeader }}
+        - {{ printf "--user-agent=%s" $userAgentHeader | quote }}
         {{- end }}
         - --v=2
         livenessProbe:

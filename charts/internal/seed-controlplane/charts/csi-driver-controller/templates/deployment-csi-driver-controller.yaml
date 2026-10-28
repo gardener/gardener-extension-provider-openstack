@@ -47,7 +47,7 @@ spec:
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster={{ .Release.Namespace }}
         {{- range $userAgentHeader := .Values.userAgentHeaders }}
-        - --user-agent={{ $userAgentHeader }}
+        - {{ printf "--user-agent=%s" $userAgentHeader | quote }}
         {{- end }}
         - --v=3
         - --provide-node-service=false

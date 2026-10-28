@@ -7,6 +7,7 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -1228,6 +1229,113 @@ var _ = Describe("ValuesProvider", func() {
 			testCluster.Shoot.Spec.Kubernetes.Version = "1.38.0"
 			Expect(mutatingAdmissionPolicyAPIVersion(testCluster)).To(Equal("v1"))
 		})
+	})
+
+	Describe("#getUserAgentHeaders", func() {
+		var (
+			vp      *valuesProvider
+			cluster *extensionscontroller.Cluster
+		)
+
+		BeforeEach(func() {
+			vp = &valuesProvider{}
+			cluster = &extensionscontroller.Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: technicalID,
+					},
+				},
+			}
+		})
+
+		It("should append sanitized domain and tenant followed by the technical ID", func() {
+			creds := &openstack.Credentials{DomainName: "my-domain", TenantName: "my-tenant"}
+			Expect(vp.getUserAgentHeaders(creds, cluster)).To(Equal([]string{"my-domain", "my-tenant", technicalID}))
+		})
+
+		It("should omit empty credential fields", func() {
+			creds := &openstack.Credentials{DomainName: "my-domain"}
+			Expect(vp.getUserAgentHeaders(creds, cluster)).To(Equal([]string{"my-domain", technicalID}))
+		})
+
+		It("should omit a credential field that sanitizes down to an empty string", func() {
+			creds := &openstack.Credentials{DomainName: "my-domain", TenantName: "新/租户"}
+			Expect(vp.getUserAgentHeaders(creds, cluster)).To(Equal([]string{"my-domain", technicalID}))
+		})
+
+		It("should handle nil credentials", func() {
+			Expect(vp.getUserAgentHeaders(nil, cluster)).To(Equal([]string{technicalID}))
+		})
+	})
+
+	Describe("#sanitizeUserAgentHeader", func() {
+		It("should keep alphanumerics and -_.", func() {
+			Expect(sanitizeUserAgentHeader("my-domain_1.0")).To(Equal("my-domain_1.0"))
+		})
+
+		It("should strip whitespace, newlines and other unsafe characters", func() {
+			Expect(sanitizeUserAgentHeader("ev\nil: true /bad")).To(Equal("eviltruebad"))
+		})
+
+		It("should strip non-ASCII runes", func() {
+			Expect(sanitizeUserAgentHeader("租户")).To(Equal(""))
+		})
+	})
+
+	Describe("#gcfgEscape", func() {
+		It("should pass through values with no special characters", func() {
+			Expect(gcfgEscape("simple-value_123")).To(Equal("simple-value_123"))
+		})
+
+		It("should escape a single backslash to double backslash", func() {
+			Expect(gcfgEscape(`secret\nvalue`)).To(Equal(`secret\\nvalue`))
+		})
+
+		It("should escape a trailing backslash", func() {
+			Expect(gcfgEscape(`trailing\`)).To(Equal(`trailing\\`))
+		})
+
+		It("should escape double-quote to backslash-quote", func() {
+			Expect(gcfgEscape(`pass"word`)).To(Equal(`pass\"word`))
+		})
+
+		It("should escape both backslash and double-quote", func() {
+			Expect(gcfgEscape(`p\a"ss`)).To(Equal(`p\\a\"ss`))
+		})
+
+		It("should escape backslash before double-quote correctly (backslash first)", func() {
+			// Input: \" (backslash then double-quote)
+			// Expected: \\\" (escaped backslash then escaped double-quote)
+			Expect(gcfgEscape(`\"`)).To(Equal(`\\\"`))
+		})
+
+		It("should allow interior spaces unchanged", func() {
+			Expect(gcfgEscape("Default Domain")).To(Equal("Default Domain"))
+		})
+
+		// Round-trip tests: gcfgEscape produces output that, when embedded inside
+		// double-quotes and parsed by a gcfg-compatible reader, reproduces the original.
+		// gcfg uses the same escape sequences as Go interpreted string literals.
+		DescribeTable("round-trip: unescape(gcfgEscape(v)) == v",
+			func(original string) {
+				escaped := gcfgEscape(original)
+				// simulate gcfg parsing: interpret the escape sequences Go uses
+				unescaped := strings.NewReplacer(`\"`, `"`, `\\`, `\`).Replace(escaped)
+				Expect(unescaped).To(Equal(original), "round-trip failed for %q", original)
+			},
+			Entry("plain value", "simple"),
+			Entry("backslash-n literal", `secret\nvalue`),
+			Entry("trailing backslash", `trailing\`),
+			Entry("password with double-quote", `p@ss"word`),
+			Entry("backslash and double-quote combined", `p\a"ss`),
+			Entry("backslash followed by double-quote", `\"`),
+			Entry("interior spaces (Keystone domain)", "Default Domain"),
+			Entry("auth URL with double-quote", `https://keystone.example.com/"v3"`),
+			Entry("multiple backslashes", `\\double\\`),
+			Entry("floating subnet name with backslash", `public\q`),
+			Entry("floating subnet tags with backslash-n", `tag\nvalue`),
+			Entry("lb provider name with double-quote", `my"provider`),
+		)
 	})
 })
 

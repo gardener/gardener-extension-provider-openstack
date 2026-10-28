@@ -851,6 +851,23 @@ var _ = Describe("LoadBalancerClass validation", func() {
 				"Field": Equal("loadBalancerClasses[0]"),
 			}))))
 		})
+
+		It("should fail as LoadBalancerClass has an invalid subnetID (non-UUID value)", func() {
+			loadBalancerClasses[0].SubnetID = ptr.To("not-a-valid-uuid")
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("loadBalancerClasses[0].subnetID"),
+			}))))
+		})
+
+		It("should pass as LoadBalancerClass has a valid subnetID UUID", func() {
+			loadBalancerClasses[0].SubnetID = ptr.To(testUUID)
+
+			errorList := ValidateLoadBalancerClasses(loadBalancerClasses, fieldPath)
+			Expect(errorList).To(BeEmpty())
+		})
 	})
 
 	Context("LoadBalancerClassList", func() {

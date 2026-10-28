@@ -25,7 +25,7 @@ floating-subnet-tags="{{ .Values.floatingSubnetTags }}"
 subnet-id="{{ .Values.subnetID }}"
 {{- end }}
 {{- range $i, $class := .Values.floatingClasses }}
-[LoadBalancerClass {{ $class.name | quote }}]
+[LoadBalancerClass "{{ $class.name }}"]
 {{- if $class.floatingNetworkID }}
 floating-network-id="{{ $class.floatingNetworkID }}"
 {{- end }}

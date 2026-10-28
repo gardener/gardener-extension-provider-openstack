@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	guuid "github.com/google/uuid"
@@ -16,16 +17,16 @@ import (
 )
 
 var (
-	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets,braces and newlines.
-	genericNameRegex            = `^[^{}\[\]\n]+$`
+	// genericNameRegex is used to validate openstack resource names. There are not many restrictions on the character set, but we will constrain brackets, braces, newlines, carriage returns and double-quotes (injection fence for gcfg-rendered values).
+	genericNameRegex            = `^[^{}\[\]\n\r"]+$`
 	validateResourceName        = combineValidationFuncs(regex(genericNameRegex), notEmpty, maxLength(255))
-	validateDomainName          = hideSensitiveValue(noWhitespace)
-	validateTenantName          = combineValidationFuncs(noWhitespace, maxLength(64))
-	validateUserName            = hideSensitiveValue(noWhitespace)
-	validatePassword            = hideSensitiveValue(noNewlines)
-	validateAppCredentialID     = hideSensitiveValue(noWhitespace)
-	validateAppCredentialName   = hideSensitiveValue(noWhitespace)
-	validateAppCredentialSecret = hideSensitiveValue(noWhitespace)
+	validateDomainName          = hideSensitiveValue(combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(64)))
+	validateTenantName          = combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(64))
+	validateUserName            = hideSensitiveValue(combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(255)))
+	validatePassword            = hideSensitiveValue(combineValidationFuncs(noControlChars))
+	validateAppCredentialID     = hideSensitiveValue(combineValidationFuncs(noWhitespace, noControlChars))
+	validateAppCredentialName   = hideSensitiveValue(combineValidationFuncs(noSurroundingWhitespace, noControlChars, maxLength(255)))
+	validateAppCredentialSecret = hideSensitiveValue(combineValidationFuncs(noControlChars))
 	validateInsecure            = allowedValues("true", "false")
 )
 
@@ -100,20 +101,39 @@ func uuid(u string, fld *field.Path) field.ErrorList {
 
 func noWhitespace(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
-		return nil // Allow empty
+		return nil
 	}
-	if strings.TrimSpace(value) != value {
-		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing whitespace")}
+	for _, r := range value {
+		if unicode.IsSpace(r) {
+			return field.ErrorList{field.Invalid(fld, value, "must not contain whitespace")}
+		}
 	}
 	return nil
 }
 
-func noNewlines(value string, fld *field.Path) field.ErrorList {
+// noSurroundingWhitespace rejects leading or trailing whitespace but permits interior spaces.
+// Keystone allows names like "Default Domain", "my project", or "Jane Doe".
+func noSurroundingWhitespace(value string, fld *field.Path) field.ErrorList {
+	if value == "" {
+		return nil
+	}
+	if strings.TrimSpace(value) != value {
+		return field.ErrorList{field.Invalid(fld, value, "must not have leading or trailing whitespace")}
+	}
+	return nil
+}
+
+// noControlChars rejects control characters and Unicode line/paragraph separators (U+2028/U+2029).
+// Used for passwords that may contain spaces but must never contain line breaks that could break out
+// of a rendered scalar. unicode.IsControl does not cover Zl/Zp, so they are checked explicitly.
+func noControlChars(value string, fld *field.Path) field.ErrorList {
 	if value == "" {
 		return nil // Allow empty
 	}
-	if strings.Trim(value, "\n\r") != value {
-		return field.ErrorList{field.Invalid(fld, value, "must not contain leading or trailing newlines")}
+	for _, r := range value {
+		if unicode.IsControl(r) || unicode.Is(unicode.Zl, r) || unicode.Is(unicode.Zp, r) {
+			return field.ErrorList{field.Invalid(fld, value, "must not contain control characters or Unicode line/paragraph separators")}
+		}
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/Masterminds/semver/v3"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -492,11 +493,11 @@ func (vp *valuesProvider) getUserAgentHeaders(
 	// Add the domain and project/tenant to the useragent headers if the secret
 	// could be read and the respective fields in secret are not empty.
 	if credentials != nil {
-		if credentials.DomainName != "" {
-			headers = append(headers, credentials.DomainName)
+		if h := sanitizeUserAgentHeader(credentials.DomainName); h != "" {
+			headers = append(headers, h)
 		}
-		if credentials.TenantName != "" {
-			headers = append(headers, credentials.TenantName)
+		if h := sanitizeUserAgentHeader(credentials.TenantName); h != "" {
+			headers = append(headers, h)
 		}
 	}
 
@@ -505,6 +506,39 @@ func (vp *valuesProvider) getUserAgentHeaders(
 	}
 
 	return headers
+}
+
+// sanitizeUserAgentHeader strips characters that are unsafe to render into a container arg / HTTP
+// header value, so that tenant-controlled credential fields cannot inject YAML into the seed pod
+// specs (e.g. via embedded newlines).
+func sanitizeUserAgentHeader(value string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9',
+			r == '-', r == '_', r == '.':
+			return r
+		default:
+			return -1
+		}
+	}, value)
+}
+
+// gcfgEscape escapes a string for safe embedding inside a double-quoted gcfg value.
+// gcfg uses Go string escaping: backslash is the escape character, so it must be doubled first,
+// and then double-quotes must be escaped so they do not terminate the enclosing token.
+func gcfgEscape(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
+}
+
+// setEscapedStringValue is like utils.SetStringValue but gcfg-escapes the value before storing it.
+func setEscapedStringValue(values map[string]interface{}, key string, value *string) {
+	if value != nil && *value != "" {
+		values[key] = gcfgEscape(*value)
+	}
 }
 
 // getConfigChartValues collects and returns the configuration chart values.
@@ -525,18 +559,22 @@ func getConfigChartValues(
 		return nil, fmt.Errorf("cloud profile config is nil - cannot determine keystone URL and other parameters")
 	}
 
+	if strings.ContainsFunc(infraStatus.Networks.Name, func(r rune) bool { return unicode.IsControl(r) }) {
+		return nil, fmt.Errorf("infraStatus network name must not contain control characters")
+	}
+
 	values := map[string]interface{}{
-		"domainName":                  c.DomainName,
-		"tenantName":                  c.TenantName,
-		"username":                    c.Username,
-		"password":                    c.Password,
+		"domainName":                  gcfgEscape(c.DomainName),
+		"tenantName":                  gcfgEscape(c.TenantName),
+		"username":                    gcfgEscape(c.Username),
+		"password":                    gcfgEscape(c.Password),
 		"insecure":                    c.Insecure,
-		"authUrl":                     c.AuthURL,
-		"applicationCredentialID":     c.ApplicationCredentialID,
-		"applicationCredentialName":   c.ApplicationCredentialName,
-		"applicationCredentialSecret": c.ApplicationCredentialSecret,
-		"region":                      cp.Spec.Region,
-		"lbProvider":                  cpConfig.LoadBalancerProvider,
+		"authUrl":                     gcfgEscape(c.AuthURL),
+		"applicationCredentialID":     gcfgEscape(c.ApplicationCredentialID),
+		"applicationCredentialName":   gcfgEscape(c.ApplicationCredentialName),
+		"applicationCredentialSecret": gcfgEscape(c.ApplicationCredentialSecret),
+		"region":                      gcfgEscape(cp.Spec.Region),
+		"lbProvider":                  gcfgEscape(cpConfig.LoadBalancerProvider),
 		"floatingNetworkID":           infraStatus.Networks.FloatingPool.ID,
 		"subnetID":                    subnet.ID,
 		"dhcpDomain":                  cloudProfileConfig.DHCPDomain,
@@ -544,7 +582,7 @@ func getConfigChartValues(
 		"ignoreVolumeAZ":              cloudProfileConfig.IgnoreVolumeAZ != nil && *cloudProfileConfig.IgnoreVolumeAZ,
 		// detect internal network.
 		// See https://github.com/kubernetes/cloud-provider-openstack/blob/v1.22.1/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#networking
-		"internalNetworkName": infraStatus.Networks.Name,
+		"internalNetworkName": gcfgEscape(infraStatus.Networks.Name),
 	}
 
 	if cpConfig.CloudControllerManager != nil {
@@ -583,8 +621,8 @@ func getConfigChartValues(
 	if defaultLoadBalancerClass := lookupLoadBalancerClass(loadBalancerClasses, api.DefaultLoadBalancerClass); defaultLoadBalancerClass != nil {
 		utils.SetStringValue(values, "floatingNetworkID", defaultLoadBalancerClass.FloatingNetworkID)
 		utils.SetStringValue(values, "floatingSubnetID", defaultLoadBalancerClass.FloatingSubnetID)
-		utils.SetStringValue(values, "floatingSubnetName", defaultLoadBalancerClass.FloatingSubnetName)
-		utils.SetStringValue(values, "floatingSubnetTags", defaultLoadBalancerClass.FloatingSubnetTags)
+		setEscapedStringValue(values, "floatingSubnetName", defaultLoadBalancerClass.FloatingSubnetName)
+		setEscapedStringValue(values, "floatingSubnetTags", defaultLoadBalancerClass.FloatingSubnetTags)
 		utils.SetStringValue(values, "subnetID", defaultLoadBalancerClass.SubnetID)
 	}
 
@@ -605,15 +643,15 @@ func generateLoadBalancerClassValues(lbClasses []api.LoadBalancerClass, infrastr
 	loadBalancerClassValues := []map[string]interface{}{}
 
 	for _, lbClass := range lbClasses {
-		values := map[string]interface{}{"name": lbClass.Name}
+		values := map[string]interface{}{"name": gcfgEscape(lbClass.Name)}
 
 		utils.SetStringValue(values, "floatingNetworkID", lbClass.FloatingNetworkID)
 		if !utils.IsEmptyString(lbClass.FloatingNetworkID) && infrastructureStatus.Networks.FloatingPool.ID != "" {
 			values["floatingNetworkID"] = infrastructureStatus.Networks.FloatingPool.ID
 		}
 		utils.SetStringValue(values, "floatingSubnetID", lbClass.FloatingSubnetID)
-		utils.SetStringValue(values, "floatingSubnetName", lbClass.FloatingSubnetName)
-		utils.SetStringValue(values, "floatingSubnetTags", lbClass.FloatingSubnetTags)
+		setEscapedStringValue(values, "floatingSubnetName", lbClass.FloatingSubnetName)
+		setEscapedStringValue(values, "floatingSubnetTags", lbClass.FloatingSubnetTags)
 		utils.SetStringValue(values, "subnetID", lbClass.SubnetID)
 
 		loadBalancerClassValues = append(loadBalancerClassValues, values)

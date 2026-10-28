@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/admission/validator"
@@ -25,8 +26,9 @@ var _ = Describe("SecretBinding validator", func() {
 
 	Describe("#Validate", func() {
 		const (
-			namespace = "garden-dev"
-			name      = "my-provider-account"
+			namespace                 = "garden-dev"
+			name                      = "my-provider-account"
+			extensionProviderLabelKey = "provider.extensions.gardener.cloud/openstack"
 		)
 
 		var (
@@ -34,21 +36,25 @@ var _ = Describe("SecretBinding validator", func() {
 
 			scheme        *runtime.Scheme
 			ctx           = context.TODO()
+			secretBinding *core.SecretBinding
+		)
+
+		newValidator := func(objs ...client.Object) {
+			apiReader := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+			secretBindingValidator = validator.NewSecretBindingValidator(test.FakeManager{APIReader: apiReader})
+		}
+
+		BeforeEach(func() {
+			scheme = runtime.NewScheme()
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
 			secretBinding = &core.SecretBinding{
 				SecretRef: corev1.SecretReference{
 					Name:      name,
 					Namespace: namespace,
 				},
 			}
-		)
 
-		BeforeEach(func() {
-			scheme = runtime.NewScheme()
-			Expect(corev1.AddToScheme(scheme)).To(Succeed())
-
-			apiReader := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-			mgr := test.FakeManager{APIReader: apiReader}
-			secretBindingValidator = validator.NewSecretBindingValidator(mgr)
+			newValidator()
 		})
 
 		It("should return err when obj is not a SecretBinding", func() {
@@ -68,18 +74,17 @@ var _ = Describe("SecretBinding validator", func() {
 		})
 
 		It("should return err when the corresponding Secret is not valid", func() {
-			apiReader := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+			newValidator(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 				Data:       map[string][]byte{"foo": []byte("bar")},
-			}).Build()
-			v := validator.NewSecretBindingValidator(test.FakeManager{APIReader: apiReader})
+			})
 
-			err := v.Validate(ctx, secretBinding, nil)
+			err := secretBindingValidator.Validate(ctx, secretBinding, nil)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return nil when the corresponding Secret is valid", func() {
-			apiReader := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+			newValidator(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 				Data: map[string][]byte{
 					openstack.DomainName: []byte("domain"),
@@ -87,11 +92,29 @@ var _ = Describe("SecretBinding validator", func() {
 					openstack.UserName:   []byte("user"),
 					openstack.Password:   []byte("password"),
 				},
-			}).Build()
-			v := validator.NewSecretBindingValidator(test.FakeManager{APIReader: apiReader})
+			})
 
-			err := v.Validate(ctx, secretBinding, nil)
+			err := secretBindingValidator.Validate(ctx, secretBinding, nil)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should revalidate the referenced Secret when the provider label is introduced", func() {
+			secretBinding.Provider = &core.SecretBindingProvider{Type: "openstack"}
+			oldSecretBinding := secretBinding.DeepCopy()
+			secretBinding.Labels = map[string]string{extensionProviderLabelKey: "true"}
+			newValidator(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+				Data:       map[string][]byte{openstack.Password: []byte("bad\nfield: injected")},
+			})
+
+			Expect(secretBindingValidator.Validate(ctx, secretBinding, oldSecretBinding)).To(HaveOccurred())
+		})
+
+		It("should skip validation when the SecretBinding was previously validated", func() {
+			secretBinding.Provider = &core.SecretBindingProvider{Type: "openstack"}
+			secretBinding.Labels = map[string]string{extensionProviderLabelKey: "true"}
+
+			Expect(secretBindingValidator.Validate(ctx, secretBinding, secretBinding.DeepCopy())).To(Succeed())
 		})
 	})
 })

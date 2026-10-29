@@ -6,123 +6,62 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"strings"
-	"testing"
 
 	"github.com/gophercloud/gophercloud/v2"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servergroups"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 )
 
-func TestCreateServerGroup(t *testing.T) {
-	for _, test := range []struct {
-		name             string
-		policy           string
-		maxServerPerHost *int32
-		microversion     string
-		body             string
-	}{
-		{
-			name:   "legacy affinity",
-			policy: "affinity",
-			body:   `{"server_group":{"name":"workers","policies":["affinity"]}}`,
-		},
-		{
-			name:   "legacy anti-affinity",
-			policy: "anti-affinity",
-			body:   `{"server_group":{"name":"workers","policies":["anti-affinity"]}}`,
-		},
-		{
-			name:         "soft anti-affinity",
-			policy:       "soft-anti-affinity",
-			microversion: "2.15",
-			body:         `{"server_group":{"name":"workers","policies":["soft-anti-affinity"]}}`,
-		},
-		{
-			name:         "soft affinity",
-			policy:       "soft-affinity",
-			microversion: "2.15",
-			body:         `{"server_group":{"name":"workers","policies":["soft-affinity"]}}`,
-		},
-		{
-			name:             "two servers per host",
-			policy:           "anti-affinity",
-			maxServerPerHost: ptr.To[int32](2),
-			microversion:     "2.64",
-			body:             `{"server_group":{"name":"workers","policy":"anti-affinity","rules":{"max_server_per_host":2}}}`,
-		},
-		{
-			name:             "explicit one server per host",
-			policy:           "anti-affinity",
-			maxServerPerHost: ptr.To[int32](1),
-			microversion:     "2.64",
-			body:             `{"server_group":{"name":"workers","policy":"anti-affinity","rules":{"max_server_per_host":1}}}`,
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
+var _ = Describe("Compute", func() {
+	Describe("CreateServerGroup", func() {
+		DescribeTable("should send the appropriate policy and rules without changing the shared microversion", func(policy string, maxServerPerHost *int32, microversion, expectedBody string) {
 			requests := 0
 			client := newServerGroupTestClient(func(request *http.Request) (*http.Response, error) {
 				requests++
-				if request.Method != http.MethodPost || request.URL.Path != "/os-server-groups" {
-					t.Errorf("unexpected request: %s %s", request.Method, request.URL)
-				}
-				if got := request.Header.Get("X-OpenStack-Nova-API-Version"); got != test.microversion {
-					t.Errorf("microversion = %q, want %q", got, test.microversion)
-				}
-				var actual, expected any
-				if err := json.NewDecoder(request.Body).Decode(&actual); err != nil {
-					t.Fatal(err)
-				}
-				if err := json.Unmarshal([]byte(test.body), &expected); err != nil {
-					t.Fatal(err)
-				}
-				if !reflect.DeepEqual(actual, expected) {
-					t.Errorf("body = %#v, want %#v", actual, expected)
-				}
+				Expect(request.Method).To(Equal(http.MethodPost))
+				Expect(request.URL.Path).To(Equal("/os-server-groups"))
+				Expect(request.Header.Get("X-OpenStack-Nova-API-Version")).To(Equal(microversion))
+				body, err := io.ReadAll(request.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(body).To(MatchJSON(expectedBody))
 				return serverGroupTestResponse(http.StatusOK, `{"server_group":{"id":"group-id","name":"workers"}}`), nil
 			})
 
-			group, err := client.CreateServerGroup(context.Background(), "workers", test.policy, test.maxServerPerHost)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if group.ID != "group-id" {
-				t.Errorf("group ID = %q, want group-id", group.ID)
-			}
-			if requests != 1 {
-				t.Errorf("requests = %d, want 1", requests)
-			}
-			if client.client.Microversion != "2.7" {
-				t.Errorf("shared microversion changed to %q", client.client.Microversion)
-			}
+			group, err := client.CreateServerGroup(context.Background(), "workers", policy, maxServerPerHost)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(group).NotTo(BeNil())
+			Expect(group.ID).To(Equal("group-id"))
+			Expect(requests).To(Equal(1))
+			Expect(client.client.Microversion).To(Equal("2.7"))
+		},
+			Entry("legacy affinity", "affinity", (*int32)(nil), "", `{"server_group":{"name":"workers","policies":["affinity"]}}`),
+			Entry("legacy anti-affinity", "anti-affinity", (*int32)(nil), "", `{"server_group":{"name":"workers","policies":["anti-affinity"]}}`),
+			Entry("soft anti-affinity", "soft-anti-affinity", (*int32)(nil), "2.15", `{"server_group":{"name":"workers","policies":["soft-anti-affinity"]}}`),
+			Entry("soft affinity", "soft-affinity", (*int32)(nil), "2.15", `{"server_group":{"name":"workers","policies":["soft-affinity"]}}`),
+			Entry("two servers per host", "anti-affinity", ptr.To[int32](2), "2.64", `{"server_group":{"name":"workers","policy":"anti-affinity","rules":{"max_server_per_host":2}}}`),
+			Entry("explicit one server per host", "anti-affinity", ptr.To[int32](1), "2.64", `{"server_group":{"name":"workers","policy":"anti-affinity","rules":{"max_server_per_host":1}}}`),
+		)
+
+		It("should not drop rules when the microversion is unsupported", func() {
+			requests := 0
+			client := newServerGroupTestClient(func(_ *http.Request) (*http.Response, error) {
+				requests++
+				return serverGroupTestResponse(http.StatusNotAcceptable, `{}`), nil
+			})
+			_, err := client.CreateServerGroup(context.Background(), "workers", "anti-affinity", ptr.To[int32](2))
+			Expect(err).To(HaveOccurred())
+			Expect(gophercloud.ResponseCodeIs(err, http.StatusNotAcceptable)).To(BeTrue())
+			Expect(requests).To(Equal(1), "must not retry without rules")
+			Expect(client.client.Microversion).To(Equal("2.7"))
 		})
-	}
-}
-
-func TestCreateServerGroupDoesNotDropRulesOnUnsupportedMicroversion(t *testing.T) {
-	requests := 0
-	client := newServerGroupTestClient(func(_ *http.Request) (*http.Response, error) {
-		requests++
-		return serverGroupTestResponse(http.StatusNotAcceptable, `{}`), nil
 	})
-	_, err := client.CreateServerGroup(context.Background(), "workers", "anti-affinity", ptr.To[int32](2))
-	if !gophercloud.ResponseCodeIs(err, http.StatusNotAcceptable) {
-		t.Fatalf("error = %v, want HTTP 406", err)
-	}
-	if requests != 1 {
-		t.Errorf("requests = %d, want 1 (no retry without rules)", requests)
-	}
-	if client.client.Microversion != "2.7" {
-		t.Errorf("shared microversion changed to %q", client.client.Microversion)
-	}
-}
 
-func TestReadServerGroups(t *testing.T) {
 	for _, operation := range []struct {
 		name string
 		path string
@@ -130,7 +69,7 @@ func TestReadServerGroups(t *testing.T) {
 		read func(*ComputeClient) ([]servergroups.ServerGroup, error)
 	}{
 		{
-			name: "get",
+			name: "GetServerGroup",
 			path: "/os-server-groups/group-id",
 			wrap: func(group string) string { return `{"server_group":` + group + `}` },
 			read: func(client *ComputeClient) ([]servergroups.ServerGroup, error) {
@@ -138,11 +77,12 @@ func TestReadServerGroups(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
+				Expect(group).NotTo(BeNil())
 				return []servergroups.ServerGroup{*group}, nil
 			},
 		},
 		{
-			name: "list",
+			name: "ListServerGroups",
 			path: "/os-server-groups",
 			wrap: func(group string) string { return `{"server_groups":[` + group + `]}` },
 			read: func(client *ComputeClient) ([]servergroups.ServerGroup, error) {
@@ -150,85 +90,67 @@ func TestReadServerGroups(t *testing.T) {
 			},
 		},
 	} {
-		for _, test := range []struct {
-			name           string
-			status         int
-			fallbackStatus int
-			invalidBody    bool
-		}{
-			{name: "modern rules", status: http.StatusOK},
-			{name: "legacy fallback", status: http.StatusNotAcceptable, fallbackStatus: http.StatusOK},
-			{name: "forbidden", status: http.StatusForbidden},
-			{name: "not found", status: http.StatusNotFound},
-			{name: "server error", status: http.StatusInternalServerError},
-			{name: "invalid response", status: http.StatusOK, invalidBody: true},
-			{name: "failed fallback", status: http.StatusNotAcceptable, fallbackStatus: http.StatusServiceUnavailable},
-		} {
-			t.Run(operation.name+"/"+test.name, func(t *testing.T) {
+		Describe(operation.name, func() {
+			DescribeTable("should preserve rules and errors, falling back only for an unsupported microversion", func(status, fallbackStatus int, invalidBody bool) {
 				requests := 0
 				client := newServerGroupTestClient(func(request *http.Request) (*http.Response, error) {
 					requests++
-					if request.Method != http.MethodGet || request.URL.Path != operation.path {
-						t.Errorf("unexpected request: %s %s", request.Method, request.URL)
-					}
+					Expect(request.Method).To(Equal(http.MethodGet))
+					Expect(request.URL.Path).To(Equal(operation.path))
 					version := "2.64"
-					status := test.status
+					responseStatus := status
 					body := operation.wrap(`{"id":"group-id","policy":"anti-affinity","rules":{"max_server_per_host":2}}`)
 					if requests > 1 {
 						version = ""
-						status = test.fallbackStatus
+						responseStatus = fallbackStatus
 						body = operation.wrap(`{"id":"group-id","policies":["anti-affinity"]}`)
 					}
-					if got := request.Header.Get("X-OpenStack-Nova-API-Version"); got != version {
-						t.Errorf("microversion = %q, want %q", got, version)
-					}
-					if test.invalidBody {
+					Expect(request.Header.Get("X-OpenStack-Nova-API-Version")).To(Equal(version))
+					if invalidBody {
 						body = "{"
 					}
-					return serverGroupTestResponse(status, body), nil
+					return serverGroupTestResponse(responseStatus, body), nil
 				})
 
 				groups, err := operation.read(client)
-				status, expectedRequests := test.status, 1
-				if test.fallbackStatus != 0 {
-					status, expectedRequests = test.fallbackStatus, 2
+				expectedRequests := 1
+				if fallbackStatus != 0 {
+					status, expectedRequests = fallbackStatus, 2
 				}
-				if requests != expectedRequests {
-					t.Errorf("requests = %d, want %d", requests, expectedRequests)
-				}
-				if client.client.Microversion != "2.7" {
-					t.Errorf("shared microversion changed to %q", client.client.Microversion)
-				}
-				if test.invalidBody {
-					if err == nil {
-						t.Fatal("expected invalid JSON error")
-					}
+				Expect(requests).To(Equal(expectedRequests))
+				Expect(client.client.Microversion).To(Equal("2.7"))
+				if invalidBody {
+					Expect(err).To(HaveOccurred())
 					return
 				}
 				if status != http.StatusOK {
-					if !gophercloud.ResponseCodeIs(err, status) {
-						t.Fatalf("error = %v, want HTTP %d", err, status)
-					}
+					Expect(err).To(HaveOccurred())
+					Expect(gophercloud.ResponseCodeIs(err, status)).To(BeTrue())
 					return
 				}
-				if err != nil {
-					t.Fatal(err)
-				}
-				if len(groups) != 1 || groups[0].ID != "group-id" {
-					t.Fatalf("unexpected groups: %#v", groups)
-				}
+				Expect(err).NotTo(HaveOccurred())
+				Expect(groups).To(HaveLen(1))
 				group := groups[0]
-				if test.fallbackStatus == 0 {
-					if group.Policy == nil || *group.Policy != "anti-affinity" || group.Rules == nil || group.Rules.MaxServerPerHost != 2 {
-						t.Errorf("modern policy and rules not retained: %#v", group)
-					}
-				} else if group.Rules != nil || !reflect.DeepEqual(group.Policies, []string{"anti-affinity"}) {
-					t.Errorf("unexpected legacy group: %#v", group)
+				Expect(group.ID).To(Equal("group-id"))
+				if fallbackStatus == 0 {
+					Expect(group.Policy).To(Equal(ptr.To("anti-affinity")))
+					Expect(group.Rules).To(Equal(&servergroups.Rules{MaxServerPerHost: 2}))
+				} else {
+					Expect(group.Rules).To(BeNil())
+					Expect(group.Policies).To(Equal([]string{"anti-affinity"}))
 				}
-			})
-		}
+			},
+				Entry("modern rules", http.StatusOK, 0, false),
+				Entry("legacy fallback", http.StatusNotAcceptable, http.StatusOK, false),
+				Entry("forbidden", http.StatusForbidden, 0, false),
+				Entry("not found", http.StatusNotFound, 0, false),
+				Entry("server error", http.StatusInternalServerError, 0, false),
+				Entry("invalid response", http.StatusOK, 0, true),
+				Entry("failed fallback", http.StatusNotAcceptable, http.StatusServiceUnavailable, false),
+			)
+		})
 	}
-}
+})
 
 type serverGroupRoundTripper func(*http.Request) (*http.Response, error)
 

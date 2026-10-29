@@ -50,6 +50,7 @@ func serverGroupMatchesConfig(group *servergroups.ServerGroup, config *api.Serve
 	if policy != config.Policy {
 		return false
 	}
+	// Validation allows maxServerPerHost only with anti-affinity, so other policies need no rules check.
 	if policy != osclient.ServerGroupPolicyAntiAffinity {
 		return true
 	}

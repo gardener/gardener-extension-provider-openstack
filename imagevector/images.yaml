@@ -345,7 +345,7 @@ images:
 - name: csi-snapshot-controller
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/snapshot-controller
-  tag: v8.6.0
+  tag: v8.7.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -359,7 +359,7 @@ images:
 - name: csi-snapshotter
   sourceRepository: github.com/kubernetes-csi/external-snapshotter
   repository: registry.k8s.io/sig-storage/csi-snapshotter
-  tag: v8.6.0
+  tag: v8.7.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:

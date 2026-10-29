@@ -283,18 +283,18 @@ func (mr *MockComputeMockRecorder) CreateServer(ctx, createOpts any) *gomock.Cal
 }
 
 // CreateServerGroup mocks base method.
-func (m *MockCompute) CreateServerGroup(ctx context.Context, name, policy string) (*servergroups.ServerGroup, error) {
+func (m *MockCompute) CreateServerGroup(ctx context.Context, name, policy string, maxServerPerHost *int32) (*servergroups.ServerGroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateServerGroup", ctx, name, policy)
+	ret := m.ctrl.Call(m, "CreateServerGroup", ctx, name, policy, maxServerPerHost)
 	ret0, _ := ret[0].(*servergroups.ServerGroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateServerGroup indicates an expected call of CreateServerGroup.
-func (mr *MockComputeMockRecorder) CreateServerGroup(ctx, name, policy any) *gomock.Call {
+func (mr *MockComputeMockRecorder) CreateServerGroup(ctx, name, policy, maxServerPerHost any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateServerGroup", reflect.TypeOf((*MockCompute)(nil).CreateServerGroup), ctx, name, policy)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateServerGroup", reflect.TypeOf((*MockCompute)(nil).CreateServerGroup), ctx, name, policy, maxServerPerHost)
 }
 
 // DeleteKeyPair mocks base method.

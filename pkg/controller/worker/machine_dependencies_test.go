@@ -20,6 +20,7 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -134,8 +135,8 @@ var _ = Describe("#MachineDependencies", func() {
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						serverGroupName1 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID1,
@@ -143,8 +144,8 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					}).Times(1)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						serverGroupName2 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID2,
@@ -197,8 +198,8 @@ var _ = Describe("#MachineDependencies", func() {
 
 				// First reconcile - create initial server group
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						serverGroupName = name
 						return &servergroups.ServerGroup{
 							ID:       "id",
@@ -234,8 +235,8 @@ var _ = Describe("#MachineDependencies", func() {
 						Policies: []string{policy},
 					},
 				}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						newServerGroupName = name
 						return &servergroups.ServerGroup{
 							ID:       "new-id",
@@ -257,6 +258,79 @@ var _ = Describe("#MachineDependencies", func() {
 				))
 			})
 		})
+
+		for _, kubernetesVersion := range []string{"1.34.0", "1.35.0"} {
+			Context("#PreReconcileHook with maxServerPerHost on Kubernetes "+kubernetesVersion, func() {
+				DescribeTable("should reconcile the effective limit and recover matching groups",
+					func(oldLimit, newLimit *int32, replace bool) {
+						ctx := context.Background()
+						const policy = "anti-affinity"
+						const poolName = "pool"
+						cluster := newClusterWithDefaultCloudProfileConfig(namespace, technicalID)
+						cluster.Shoot.Spec.Kubernetes.Version = kubernetesVersion
+						w.Spec.Pools = []extensionsv1alpha1.WorkerPool{*newWorkerPoolWithLimit(poolName, oldLimit)}
+						syncWorkerSpec(ctx, cl, w)
+						workerDelegate, _ = worker.NewWorkerDelegate(cl, scheme, nil, w, cluster, osFactory)
+
+						var current servergroups.ServerGroup
+						computeClient.EXPECT().ListServerGroups(ctx).Return(nil, nil)
+						computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, oldLimit).DoAndReturn(
+							func(_ context.Context, name, policy string, limit *int32) (*servergroups.ServerGroup, error) {
+								current = servergroups.ServerGroup{
+									ID: "original-id", Name: name, Policy: &policy,
+									Rules: &servergroups.Rules{MaxServerPerHost: int(ptr.Deref(limit, 1))},
+								}
+								return &current, nil
+							})
+						Expect(workerDelegate.PreReconcileHook(ctx)).To(Succeed())
+						original := current
+
+						w.Spec.Pools[0] = *newWorkerPoolWithLimit(poolName, newLimit)
+						syncWorkerSpec(ctx, cl, w)
+						computeClient.EXPECT().GetServerGroup(ctx, original.ID).Return(&original, nil)
+						if replace {
+							computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{original}, nil)
+							computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, newLimit).DoAndReturn(
+								func(_ context.Context, name, policy string, limit *int32) (*servergroups.ServerGroup, error) {
+									Expect(name).NotTo(Equal(original.Name))
+									current = servergroups.ServerGroup{
+										ID: "replacement-id", Name: name, Policy: &policy,
+										Rules: &servergroups.Rules{MaxServerPerHost: int(ptr.Deref(limit, 1))},
+									}
+									return &current, nil
+								})
+						}
+						Expect(workerDelegate.PreReconcileHook(ctx)).To(Succeed())
+						Expect(decodeWorkerStatus(w).ServerGroupDependencies).To(ConsistOf(apiv1alpha1.ServerGroupDependency{
+							PoolName: poolName, ID: current.ID, Name: current.Name,
+						}))
+
+						// A second reconcile must reuse the modern response without creating another group.
+						computeClient.EXPECT().GetServerGroup(ctx, current.ID).Return(&current, nil)
+						Expect(workerDelegate.PreReconcileHook(ctx)).To(Succeed())
+
+						// Restore without status must skip a same-name group with a different limit.
+						w.Status.ProviderStatus = workerProviderStatusRaw(nil)
+						syncWorkerStatus(ctx, cl, w)
+						wrong := current
+						wrong.ID = "wrong-limit-id"
+						wrong.Rules = &servergroups.Rules{MaxServerPerHost: 99}
+						computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{wrong, current}, nil)
+						Expect(workerDelegate.PreReconcileHook(ctx)).To(Succeed())
+						Expect(decodeWorkerStatus(w).ServerGroupDependencies).To(ConsistOf(apiv1alpha1.ServerGroupDependency{
+							PoolName: poolName, ID: current.ID, Name: current.Name,
+						}))
+					},
+					Entry("enables a custom limit", nil, ptr.To[int32](2), true),
+					Entry("changes a custom limit", ptr.To[int32](2), ptr.To[int32](3), true),
+					Entry("removes a custom limit", ptr.To[int32](2), nil, true),
+					Entry("resets a custom limit to one", ptr.To[int32](2), ptr.To[int32](1), true),
+					Entry("keeps an unchanged custom limit", ptr.To[int32](2), ptr.To[int32](2), false),
+					Entry("keeps the implicit default when explicitly set to one", nil, ptr.To[int32](1), false),
+					Entry("keeps an explicit default when omitted", ptr.To[int32](1), nil, false),
+				)
+			})
+		}
 
 		Context("#PreReconcileHook during Restore", func() {
 			It("should create server groups when called for restore scenario with missing dependencies", func() {
@@ -294,8 +368,8 @@ var _ = Describe("#MachineDependencies", func() {
 
 				// Expect PreReconcileHook to list then create the server group
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						serverGroupName1 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID1,
@@ -362,8 +436,8 @@ var _ = Describe("#MachineDependencies", func() {
 				// PreReconcileHook should list then create server groups for both pools
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						serverGroupName1 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID1,
@@ -371,8 +445,8 @@ var _ = Describe("#MachineDependencies", func() {
 							Policies: []string{policy},
 						}, nil
 					}).Times(1)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						serverGroupName2 = name
 						return &servergroups.ServerGroup{
 							ID:       serverGroupID2,
@@ -434,8 +508,8 @@ var _ = Describe("#MachineDependencies", func() {
 
 				// Should list server groups and find none, then create with new name format
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						// Verify the name uses the new format (UUID prefix)
 						Expect(name).To(HavePrefix(shootUID[:16]))
 						return &servergroups.ServerGroup{
@@ -519,8 +593,8 @@ var _ = Describe("#MachineDependencies", func() {
 
 				// Should list server groups, find none with old name, then create with new name format
 				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{}, nil)
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), policy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						// Verify the name uses the new format (UUID prefix)
 						Expect(name).To(HavePrefix(shootUID[:16]))
 						return &servergroups.ServerGroup{
@@ -568,8 +642,8 @@ var _ = Describe("#MachineDependencies", func() {
 					},
 				}, nil)
 				// Should create new server group with new name format
-				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy).DoAndReturn(
-					func(_ context.Context, name string, policy string) (*servergroups.ServerGroup, error) {
+				computeClient.EXPECT().CreateServerGroup(ctx, gomock.Any(), newPolicy, nil).DoAndReturn(
+					func(_ context.Context, name string, policy string, _ *int32) (*servergroups.ServerGroup, error) {
 						// Verify the name uses the new format (UUID prefix)
 						Expect(name).To(HavePrefix(shootUID[:16]))
 						return &servergroups.ServerGroup{
@@ -921,6 +995,17 @@ func newWorkerPoolWithPolicy(name string, policy *string) *extensionsv1alpha1.Wo
 			Raw: wppcJson,
 		}
 	}
+	return pool
+}
+
+func newWorkerPoolWithLimit(name string, limit *int32) *extensionsv1alpha1.WorkerPool {
+	pool := newWorkerPoolWithPolicy(name, ptr.To("anti-affinity"))
+	var config apiv1alpha1.WorkerConfig
+	Expect(json.Unmarshal(pool.ProviderConfig.Raw, &config)).To(Succeed())
+	config.ServerGroup.MaxServerPerHost = limit
+	raw, err := json.Marshal(config)
+	Expect(err).NotTo(HaveOccurred())
+	pool.ProviderConfig.Raw = raw
 	return pool
 }
 

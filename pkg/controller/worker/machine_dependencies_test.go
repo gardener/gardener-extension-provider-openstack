@@ -814,6 +814,68 @@ var _ = Describe("#MachineDependencies", func() {
 				workerStatus := decodeWorkerStatus(w)
 				Expect(workerStatus.ServerGroupDependencies).To(BeEmpty())
 			})
+			It("should not delete V1-named server groups belonging to a sibling shoot whose technical ID shares a common prefix", func() {
+				// Regression test: if this shoot's technicalID is a prefix of a sibling's technicalID,
+				// the old broad filter (<technicalID>-) would match and delete the sibling's server groups.
+				// The fix uses per-pool V1 prefixes (<technicalID>-<poolName>-) instead.
+				var (
+					ctx    = context.Background()
+					policy = "foo"
+
+					poolName      = "pool"
+					serverGroupID = "id"
+					// This shoot's V1-format server group for poolName.
+					serverGroupName = technicalID + "-" + poolName + "-rand"
+
+					// A sibling shoot whose technical ID starts with the same prefix.
+					// e.g. technicalID="shoot--proj--team", sibling="shoot--proj--team-prod"
+					siblingTechnicalID    = technicalID + "-prod"
+					siblingPoolName       = "workers"
+					siblingServerGroupID  = "sibling-id"
+					siblingServerGroupName = siblingTechnicalID + "-" + siblingPoolName + "-rand"
+				)
+
+				w.Spec.Pools = append(w.Spec.Pools, *(newWorkerPoolWithPolicy(poolName, &policy)))
+				w.Status.ProviderStatus = workerProviderStatusRaw([]apiv1alpha1.ServerGroupDependency{
+					{
+						PoolName: poolName,
+						ID:       serverGroupID,
+						Name:     serverGroupName,
+					},
+				})
+				syncWorkerSpec(ctx, cl, w)
+				syncWorkerStatus(ctx, cl, w)
+				workerDelegate, _ = worker.NewWorkerDelegate(
+					cl,
+					scheme,
+					nil,
+					w,
+					newClusterWithDefaultCloudProfileConfig(namespace, technicalID),
+					osFactory,
+				)
+
+				// Both this shoot's and the sibling's server groups are visible in the project.
+				computeClient.EXPECT().ListServerGroups(ctx).Return([]servergroups.ServerGroup{
+					{
+						ID:   serverGroupID,
+						Name: serverGroupName,
+					},
+					{
+						ID:   siblingServerGroupID,
+						Name: siblingServerGroupName,
+					},
+				}, nil)
+				// Only this shoot's own orphaned groups should be deleted — sibling must not be touched.
+				// serverGroupID is in our status so it is NOT deleted; siblingServerGroupID must not be deleted either.
+
+				err := workerDelegate.PostReconcileHook(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				workerStatus := decodeWorkerStatus(w)
+				Expect(workerStatus.ServerGroupDependencies).To(HaveLen(1))
+				Expect(workerStatus.ServerGroupDependencies[0].ID).To(Equal(serverGroupID))
+				_ = siblingTechnicalID // referenced above for clarity
+			})
 		})
 
 		Context("#PostDeleteHook", func() {

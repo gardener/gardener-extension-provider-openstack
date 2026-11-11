@@ -161,56 +161,59 @@ func (fctx *FlowContext) cleanupKubernetesLoadbalancers(ctx context.Context, log
 	return err
 }
 
-// cleanupKubernetesRoutes deletes all routes from the router which have a nextHop in the subnet.
+// cleanupKubernetesRoutes deletes routes written by this shoot's CCM route controller.
+// Routes are matched by destination: only routes whose destination falls within the shoot's
+// pod CIDR are removed, leaving operator-managed static routes untouched.
 func (fctx *FlowContext) cleanupKubernetesRoutes(ctx context.Context, routerID string) error {
+	if fctx.shootNetworking == nil || fctx.shootNetworking.Pods == nil {
+		return nil
+	}
+
 	router, err := fctx.networking.GetRouterByID(ctx, routerID)
 	if err != nil {
 		return err
 	}
-
 	if router == nil {
 		return nil
 	}
 
-	// Determine the workers CIDR: use allocated CIDR if available (subnet pool case),
-	// otherwise fall back to the static config CIDR.
-	workersCIDRStr := fctx.workersCIDR()
-	if workersCIDRStr == "" {
-		if allocated := fctx.state.Get(IdentifierWorkersCIDR); allocated != nil {
-			workersCIDRStr = *allocated
-		}
-	}
-	if workersCIDRStr == "" {
-		// No CIDR available; skip route cleanup.
-		return nil
-	}
-
-	var routes []routers.Route
-	_, workersNet, err := net.ParseCIDR(workersCIDRStr)
+	_, podNet, err := net.ParseCIDR(*fctx.shootNetworking.Pods)
 	if err != nil {
 		return err
 	}
 
+	var routes []routers.Route
 	for _, route := range router.Routes {
-		ipNode, _, err := net.ParseCIDR(route.NextHop + "/32")
+		_, routeDst, err := net.ParseCIDR(route.DestinationCIDR)
 		if err != nil {
 			return err
 		}
-		if !workersNet.Contains(ipNode) {
+		// Only remove routes whose entire destination prefix is within the pod CIDR.
+		// A supernet (e.g. /15 when pod CIDR is /16) starts inside but extends outside
+		// and must be preserved.
+		lastIP := lastIPOfNet(routeDst)
+		if !podNet.Contains(routeDst.IP) || !podNet.Contains(lastIP) {
 			routes = append(routes, route)
 		}
 	}
 
-	// return early if no changes were made
 	if len(router.Routes) == len(routes) {
 		return nil
 	}
 
-	if _, err := fctx.networking.UpdateRoutesForRouter(ctx, routes, routerID); err != nil {
-		return err
-	}
-	return nil
+	_, err = fctx.networking.UpdateRoutesForRouter(ctx, routes, routerID)
+	return err
 }
+
+// lastIPOfNet returns the broadcast (last) IP of the given network.
+func lastIPOfNet(n *net.IPNet) net.IP {
+	last := make(net.IP, len(n.IP))
+	for i := range n.IP {
+		last[i] = n.IP[i] | ^n.Mask[i]
+	}
+	return last
+}
+
 func (fctx *FlowContext) defaultRouterName() string {
 	return fctx.infra.Namespace
 }

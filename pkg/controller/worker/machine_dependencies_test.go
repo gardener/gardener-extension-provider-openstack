@@ -829,9 +829,9 @@ var _ = Describe("#MachineDependencies", func() {
 
 					// A sibling shoot whose technical ID starts with the same prefix.
 					// e.g. technicalID="shoot--proj--team", sibling="shoot--proj--team-prod"
-					siblingTechnicalID    = technicalID + "-prod"
-					siblingPoolName       = "workers"
-					siblingServerGroupID  = "sibling-id"
+					siblingTechnicalID     = technicalID + "-prod"
+					siblingPoolName        = "workers"
+					siblingServerGroupID   = "sibling-id"
 					siblingServerGroupName = siblingTechnicalID + "-" + siblingPoolName + "-rand"
 				)
 

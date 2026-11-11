@@ -105,7 +105,7 @@ func (fctx *FlowContext) cleanupKubernetesLoadbalancers(ctx context.Context, log
 	var (
 		clusterName = fctx.infra.Namespace
 		// do we need that if we anyway want to delete the gardener managed subnet ?
-		k8sSvcPrefix     = servicePrefix + clusterName
+		k8sSvcPrefix     = servicePrefix + clusterName + "_"
 		res              = make(chan error, len(lbList))
 		acceptableStates = map[string]struct{}{
 			"ACTIVE": {},

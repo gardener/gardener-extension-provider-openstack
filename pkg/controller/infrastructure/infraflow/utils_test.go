@@ -149,8 +149,8 @@ var _ = Describe("cleanupKubernetesRoutes", func() {
 		// 100.96.0.0/15 starts inside the pod CIDR (100.96.0.0/16) but extends to
 		// 100.97.0.0/16 which is outside it — must not be removed.
 		routerRoutes := []routers.Route{
-			{DestinationCIDR: "100.96.1.0/24", NextHop: "10.250.0.5"},  // CCM route — remove
-			{DestinationCIDR: "100.96.0.0/15", NextHop: "10.250.0.1"},  // supernet — keep
+			{DestinationCIDR: "100.96.1.0/24", NextHop: "10.250.0.5"}, // CCM route — remove
+			{DestinationCIDR: "100.96.0.0/15", NextHop: "10.250.0.1"}, // supernet — keep
 		}
 		mockNetworking.EXPECT().
 			GetRouterByID(ctx, routerID).

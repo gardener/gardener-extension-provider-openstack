@@ -466,3 +466,15 @@ with a few additions:
 - `.spec.provider.workers[].providerConfig.MachineLabels[]` (if `MachineLabels.triggerRollingUpdate` is set to `true`)
 
 The featuregate `NewWorkerPoolHash` has no impact on the hash calculation for now.
+
+## Profiling
+
+The controller exposes a [pprof](https://pkg.go.dev/net/http/pprof) endpoint on `127.0.0.1:8082` for runtime profiling. It binds to localhost only and is reachable exclusively via `kubectl port-forward`.
+
+To take a heap or goroutine snapshot from a running pod:
+
+```bash
+kubectl port-forward -n <extension-namespace> <pod-name> 8082:8082
+go tool pprof http://localhost:8082/debug/pprof/heap
+go tool pprof http://localhost:8082/debug/pprof/goroutine
+```

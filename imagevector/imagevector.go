@@ -11,11 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-const (
-	// TerraformerImageName is the name of the Terraformer image.
-	TerraformerImageName = "terraformer"
-)
-
 var (
 	// ImagesYAML contains the content of the images.yaml file
 	//go:embed images.yaml

@@ -187,9 +187,6 @@ var _ = BeforeSuite(func() {
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(openstackinstall.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(infrastructure.AddToManagerWithOptions(ctx, mgr, infrastructure.AddOptions{
-		// During testing in testmachinery cluster, there is no gardener-resource-manager to inject the volume mount.
-		// Hence, we need to run without projected token mount.
-		DisableProjectedTokenMount: true,
 		Controller: controller.Options{
 			MaxConcurrentReconciles: 5,
 		},

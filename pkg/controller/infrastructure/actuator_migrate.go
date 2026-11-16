@@ -15,11 +15,7 @@ import (
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 )
 
-// Migrate deletes the k8s infrastructure resources without deleting the corresponding resources in the IaaS provider.
-func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, _ *controller.Cluster) error {
-	tf, err := newTerraformer(log, a.restConfig, terraformerPurpose, infra, a.disableProjectedTokenMount)
-	if err != nil {
-		return err
-	}
-	return util.DetermineError(cleanupTerraformerResources(ctx, tf), helper.KnownCodes)
+// Migrate removes legacy Terraformer artifacts so that they cannot block deletion of the source shoot namespace.
+func (a *actuator) Migrate(ctx context.Context, _ logr.Logger, infra *extensionsv1alpha1.Infrastructure, _ *controller.Cluster) error {
+	return util.DetermineError(a.cleanupTerraformerResources(ctx, infra), helper.KnownCodes)
 }

@@ -6,47 +6,43 @@ package infrastructure
 
 import (
 	"context"
-	"time"
+	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/go-logr/logr"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// cleanupTerraformerResources deletes terraformer artifacts (config, state, secrets).
-func cleanupTerraformerResources(ctx context.Context, tf terraformer.Terraformer) error {
-	if err := tf.EnsureCleanedUp(ctx); err != nil {
-		return err
-	}
-	if err := tf.CleanupConfiguration(ctx); err != nil {
-		return err
-	}
-	return tf.RemoveTerraformerFinalizerFromConfig(ctx)
-}
+// cleanupTerraformerResources removes artifacts left behind when infrastructure state was migrated.
+// Their finalizers must be removed so that they cannot block deletion of the shoot namespace.
+func (a *actuator) cleanupTerraformerResources(ctx context.Context, infra *extensionsv1alpha1.Infrastructure) error {
+	const finalizer = "gardener.cloud/terraformer"
 
-// newTerraformer initializes a new Terraformer.
-func newTerraformer(
-	logger logr.Logger,
-	restConfig *rest.Config,
-	purpose string,
-	infra *extensionsv1alpha1.Infrastructure,
-	disableProjectedTokenMount bool,
-) (
-	terraformer.Terraformer,
-	error,
-) {
-	tf, err := terraformer.NewForConfig(logger, restConfig, purpose, infra.Namespace, infra.Name, "")
-	if err != nil {
-		return nil, err
-	}
+	for _, obj := range []client.Object{
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: infra.Namespace, Name: infra.Name + ".infra.tf-state"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: infra.Namespace, Name: infra.Name + ".infra.tf-vars"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: infra.Namespace, Name: infra.Name + ".infra.tf-config"}},
+	} {
+		key := client.ObjectKeyFromObject(obj)
+		if err := a.client.Get(ctx, key, obj); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("failed to get legacy Terraformer resource %s: %w", key, err)
+		}
 
-	owner := metav1.NewControllerRef(infra, extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.InfrastructureResource))
-	return tf.
-		UseProjectedTokenMount(!disableProjectedTokenMount).
-		SetTerminationGracePeriodSeconds(630).
-		SetDeadlineCleaning(5 * time.Minute).
-		SetDeadlinePod(15 * time.Minute).
-		SetOwnerRef(owner), nil
+		if controllerutil.ContainsFinalizer(obj, finalizer) {
+			if err := controllerutils.RemoveFinalizers(ctx, a.client, obj, finalizer); err != nil {
+				return fmt.Errorf("failed to remove finalizer from legacy Terraformer resource %s: %w", key, err)
+			}
+		}
+		if err := client.IgnoreNotFound(a.client.Delete(ctx, obj)); err != nil {
+			return fmt.Errorf("failed to delete legacy Terraformer resource %s: %w", key, err)
+		}
+	}
+	return nil
 }

@@ -38,7 +38,7 @@ func (fctx *FlowContext) Reconcile(ctx context.Context) error {
 	g := fctx.buildReconcileGraph()
 	f := g.Compile()
 	if err := f.Run(ctx, flow.Opts{Log: fctx.log}); err != nil {
-		fctx.log.Error(err, "flow reconciliation failed")
+		fctx.log.Error(err, "Infrastructure reconciliation failed")
 		return errors.Join(flow.Causes(err), fctx.persistState(ctx))
 	}
 
@@ -760,7 +760,7 @@ func (fctx *FlowContext) ensureSecGroupRules(ctx context.Context) error {
 	desiredRules = append(desiredRules, podNetworkRules...)
 
 	if modified, err := fctx.access.UpdateSecurityGroupRules(ctx, group, desiredRules, func(rule *rules.SecGroupRule) bool {
-		// Do NOT delete unknown rules to keep permissive behaviour as with terraform.
+		// Preserve user-added security group rules.
 		// As we don't store the role ids in the state, this function needs to be adjusted
 		// if values in existing rules are changed to identify them for update by replacement.
 		// Pod network rules are an exception, they have to be removed if the overlay gets enabled

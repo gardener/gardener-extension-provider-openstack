@@ -262,7 +262,7 @@ Some OpenStack environments don't need these regional mappings, hence, the `regi
 If your OpenStack environment only has regional values and it doesn't make sense to provide a (non-regional) fallback then simply
 omit `keystoneURL` and always specify `region`.
 
-If Gardener creates and manages the router of a shoot cluster, it is additionally possible to specify that the [enable_snat](https://registry.terraform.io/providers/terraform-provider-openstack/openstack/latest/docs/resources/networking_router_v2#enable_snat) field is set to `true` via `useSNAT: true` in the `CloudProfileConfig`.
+If Gardener creates and manages the router of a shoot cluster, it is additionally possible to specify that the [`external_gateway_info.enable_snat`](https://docs.openstack.org/api-ref/network/v2/index.html#update-router) field is set to `true` via `useSNAT: true` in the `CloudProfileConfig`.
 
 On some OpenStack enviroments, there may be the need to set options in the file `/etc/resolv.conf` on worker nodes.
 If the field `resolvConfOptions` is set, a systemd service will be installed which copies `/run/systemd/resolve/resolv.conf`

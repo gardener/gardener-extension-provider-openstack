@@ -13,7 +13,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 
-	openstackapi "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/helper"
 	"github.com/gardener/gardener-extension-provider-openstack/pkg/controller/infrastructure/infraflow"
 	openstackutils "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack"
@@ -31,23 +30,9 @@ func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1
 }
 
 func (a *actuator) delete(ctx context.Context, log logr.Logger, infra *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	var infraState *openstackapi.InfrastructureState
-	fsOk, err := helper.HasFlowState(infra.Status)
+	infraState, err := helper.InfrastructureStateFromRaw(infra.Status.State)
 	if err != nil {
 		return err
-	}
-	if fsOk {
-		// if it had a flow state, then we just decode it.
-		infraState, err = helper.InfrastructureStateFromRaw(infra.Status.State)
-		if err != nil {
-			return err
-		}
-	} else {
-		// otherwise migrate it from the terraform state if needed.
-		infraState, err = a.migrateFromTerraform(ctx, log, infra)
-		if err != nil {
-			return err
-		}
 	}
 
 	credentials, err := openstackutils.GetCredentials(ctx, a.client, infra.Spec.SecretRef, false)
@@ -70,14 +55,8 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, infra *extension
 	if err != nil {
 		return fmt.Errorf("failed to create flow context: %w", err)
 	}
-	err = fctx.Delete(ctx)
-	if err != nil {
+	if err := a.cleanupTerraformerResources(ctx, infra); err != nil {
 		return err
 	}
-
-	tf, err := newTerraformer(log, a.restConfig, terraformerPurpose, infra, a.disableProjectedTokenMount)
-	if err != nil {
-		return err
-	}
-	return cleanupTerraformerResources(ctx, tf)
+	return fctx.Delete(ctx)
 }

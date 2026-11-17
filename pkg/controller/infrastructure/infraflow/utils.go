@@ -163,7 +163,7 @@ func (fctx *FlowContext) cleanupKubernetesLoadbalancers(ctx context.Context, log
 
 // cleanupKubernetesRoutes deletes routes written by this shoot's CCM route controller.
 // Routes are matched by destination: only routes whose destination falls within the shoot's
-// pod CIDR are removed, leaving operator-managed static routes untouched.
+// pod CIDR are removed.
 // Overlay shoots are skipped entirely — their CCM never installs routes on the OpenStack router.
 func (fctx *FlowContext) cleanupKubernetesRoutes(ctx context.Context, routerID string) error {
 	if fctx.shootNetworking == nil || fctx.shootNetworking.Pods == nil {

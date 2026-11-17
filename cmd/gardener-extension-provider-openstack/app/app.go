@@ -167,7 +167,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			util.ApplyClientConnectionConfigurationToRESTConfig(configFileOpts.Completed().Config.ClientConnection, restOpts.Completed().Config)
 
-			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
+			mopts := mgrOpts.Completed().Options()
+			mopts.PprofBindAddress = "127.0.0.1:8082"
+			mgr, err := manager.New(restOpts.Completed().Config, mopts)
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}

@@ -73,6 +73,10 @@ providerSpec:
     serverGroupID: {{ $machineClass.serverGroupID | quote }}
 {{- end }}
     securityGroups: {{- toYaml $machineClass.securityGroups | nindent 4 }}
+{{- if $machineClass.additionalNetworkInterfaces }}
+    additionalNetworkInterfaces:
+{{ toYaml $machineClass.additionalNetworkInterfaces | indent 4 }}
+{{- end }}
 {{- if $machineClass.tags }}
     tags: {{- toYaml $machineClass.tags | nindent 6 }}
 {{- end }}

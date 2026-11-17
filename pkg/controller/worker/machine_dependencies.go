@@ -194,8 +194,11 @@ func (w *WorkerDelegate) cleanupServerGroupDependencies(ctx context.Context, com
 	}
 
 	// TODO remove after K8s v1.35.0 is the minimum required version, as the old name format will no longer be generated for new server groups and existing server groups should have been deleted by then.
-	// append both name formats for deletion
-	workerManagedServerGroups := filterServerGroupsByPrefix(groups, fmt.Sprintf("%s-", w.ClusterTechnicalName()))
+	// Use per-pool V1 prefixes to avoid matching sibling shoots whose technical ID shares a common prefix with this shoot's technical ID.
+	var workerManagedServerGroups []servergroups.ServerGroup
+	for _, pool := range w.worker.Spec.Pools {
+		workerManagedServerGroups = append(workerManagedServerGroups, filterServerGroupsByPrefix(groups, generateServerGroupNamePrefixV1(w.ClusterTechnicalName(), pool.Name))...)
+	}
 	uuid := string(w.cluster.Shoot.GetUID())
 	if len(uuid) == 0 {
 		uuid = string(w.cluster.Shoot.Status.UID)

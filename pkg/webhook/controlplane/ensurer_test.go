@@ -379,7 +379,7 @@ WantedBy=multi-user.target
 
 	Describe("#EnsureAdditionalFiles", func() {
 		var (
-			permissions uint32 = 0o755
+			permissions int32 = 0o755
 
 			filePath = "/opt/bin/update-resolv-conf.sh"
 

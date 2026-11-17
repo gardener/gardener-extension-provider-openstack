@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 
 	clientmocks "github.com/gardener/gardener-extension-provider-openstack/pkg/openstack/client/mocks"
@@ -86,7 +87,8 @@ var _ = Describe("cleanupKubernetesRoutes", func() {
 		mockNetworking = clientmocks.NewMockNetworking(ctrl)
 		fctx.networking = mockNetworking
 		fctx.shootNetworking = &gardencorev1beta1.Networking{
-			Pods: ptr.To(podCIDR),
+			Pods:           ptr.To(podCIDR),
+			ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"overlay":{"enabled":false}}`)},
 		}
 	})
 
@@ -141,6 +143,19 @@ var _ = Describe("cleanupKubernetesRoutes", func() {
 
 	It("returns early without any API call when shootNetworking is nil", func() {
 		fctx.shootNetworking = nil
+
+		Expect(fctx.cleanupKubernetesRoutes(ctx, routerID)).To(Succeed())
+	})
+
+	It("returns early without any API call for an overlay shoot, even when routes overlap with pod CIDR", func() {
+		// Overlay shoot: CCM never installs routes, so cleanup must be a no-op regardless
+		// of what's on the router. This prevents deleting routes that belong to another
+		// non-overlay shoot with an overlapping pod CIDR.
+		fctx.shootNetworking = &gardencorev1beta1.Networking{
+			Pods:           ptr.To(podCIDR),
+			ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"overlay":{"enabled":true}}`)},
+		}
+		// Neither GetRouterByID nor UpdateRoutesForRouter must be called.
 
 		Expect(fctx.cleanupKubernetesRoutes(ctx, routerID)).To(Succeed())
 	})

@@ -14,6 +14,10 @@ jobs:
   check-release-milestone:
     name: Check Release Milestone
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
     - uses: actions/checkout@v7
       with:
@@ -26,12 +30,14 @@ jobs:
 
     - name: Block merge if release milestone is missing
       uses: actions/github-script@v9
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const nextMinorRegex = /^(v[0-9]+\.[0-9]+)\.0-dev/gmi;
 
-          let match = nextMinorRegex.exec('${{ steps.version.outputs.version }}');
+          let match = nextMinorRegex.exec(process.env.VERSION);
           if (match == null) {
             core.info('VERSION does not indicate that the next version is a new minor release - skipping check');
             return;

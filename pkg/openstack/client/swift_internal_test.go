@@ -271,7 +271,7 @@ var _ = Describe("Swift deletion", func() {
 			Expect(err).NotTo(HaveOccurred())
 			bulkResponses = []string{string(body)}
 			err = storage.DeleteObjectsWithPrefix(context.Background(), container, "shoot/")
-			Expect(err).To(MatchError(`Swift bulk delete returned status "400 Bad Request" with 4 object errors; "403 Forbidden" (example object "backups/shoot/snapshot-1"); "503 Service Unavailable" (example object "backups/shoot/snapshot-3")`))
+			Expect(err).To(MatchError(`swift bulk delete returned status "400 Bad Request" with 4 object errors; "403 Forbidden" (example object "backups/shoot/snapshot-1"); "503 Service Unavailable" (example object "backups/shoot/snapshot-3")`))
 		})
 
 		It("reports when more than five distinct error statuses are present", func() {
@@ -306,13 +306,13 @@ var _ = Describe("Swift deletion", func() {
 			Expect(err).NotTo(HaveOccurred())
 			bulkResponses = []string{string(body)}
 			err = storage.DeleteObjectsWithPrefix(context.Background(), container, "shoot/")
-			Expect(err).To(MatchError(fmt.Sprintf("Swift bulk delete returned status %q with 1 object errors; %q (example object %q)", status, objectStatus, objectPath)))
+			Expect(err).To(MatchError(fmt.Sprintf("swift bulk delete returned status %q with 1 object errors; %q (example object %q)", status, objectStatus, objectPath)))
 		})
 
 		It("reports malformed entries without hiding valid error details", func() {
 			bulkResponses = []string{`{"Response Status":"400 Bad Request","Errors":[[],["snapshot"],["snapshot","403 Forbidden","extra"],["snapshot","503 Service Unavailable"]]}`}
 			err := storage.DeleteObjectsWithPrefix(context.Background(), container, "shoot/")
-			Expect(err).To(MatchError(`Swift bulk delete returned status "400 Bad Request" with 4 object errors; "503 Service Unavailable" (example object "snapshot"); 3 malformed object error entries`))
+			Expect(err).To(MatchError(`swift bulk delete returned status "400 Bad Request" with 4 object errors; "503 Service Unavailable" (example object "snapshot"); 3 malformed object error entries`))
 		})
 
 		It("propagates transport failures during bulk deletion", func() {

@@ -74,7 +74,7 @@ func (s *StorageClient) DeleteObjectsWithPrefix(ctx context.Context, container, 
 		// Already absent objects count as successfully deleted. The deleted and
 		// not-found counts must add up to the number of objects in this batch.
 		if response.NumberDeleted < 0 || response.NumberDeleted > len(batch) || response.NumberNotFound != len(batch)-response.NumberDeleted {
-			return fmt.Errorf("Swift bulk delete returned inconsistent counts: %d deleted, %d not found, %d requested", response.NumberDeleted, response.NumberNotFound, len(batch))
+			return fmt.Errorf("swift bulk delete returned inconsistent counts: %d deleted, %d not found, %d requested", response.NumberDeleted, response.NumberNotFound, len(batch))
 		}
 		objectList = objectList[len(batch):]
 	}
@@ -107,7 +107,7 @@ func swiftBulkDeleteError(response *objects.BulkDeleteResponse) error {
 	if malformedEntries > 0 {
 		details = append(details, fmt.Sprintf("%d malformed object error entries", malformedEntries))
 	}
-	message := fmt.Sprintf("Swift bulk delete returned status %q with %d object errors", response.ResponseStatus, len(response.Errors))
+	message := fmt.Sprintf("swift bulk delete returned status %q with %d object errors", response.ResponseStatus, len(response.Errors))
 	if len(details) > 0 {
 		message += "; " + strings.Join(details, "; ")
 	}

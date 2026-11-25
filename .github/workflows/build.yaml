@@ -16,7 +16,7 @@ on:
 
 jobs:
   prepare:
-    uses: gardener/cc-utils/.github/workflows/prepare.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/prepare.yaml@9a9c4f544c072143b4c95b8f32b935332c47389d # v1
     with:
       mode: ${{ inputs.mode }}
       version-operation: ${{ inputs.release-version }}
@@ -34,7 +34,7 @@ jobs:
       packages: write
       id-token: write
     secrets: inherit
-    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@9a9c4f544c072143b4c95b8f32b935332c47389d # v1
     strategy:
       matrix:
         args:
@@ -81,7 +81,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@9a9c4f544c072143b4c95b8f32b935332c47389d # v1
     strategy:
       matrix:
         args:
@@ -121,7 +121,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@bce63f62928717a11f610ec8022af9feb497d5df # v1
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@9a9c4f544c072143b4c95b8f32b935332c47389d # v1
         with:
           remove-trusted-label: false
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
@@ -136,7 +136,7 @@ jobs:
           tar czf /tmp/blobs.d/verify-log.tar.gz -C /tmp/blobs.d verify-log.txt
           tar czf /tmp/blobs.d/gosec-report.tar.gz gosec-report.sarif
       - name: add-reports-to-component-descriptor
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@bce63f62928717a11f610ec8022af9feb497d5df # v1
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@9a9c4f544c072143b4c95b8f32b935332c47389d # v1
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |

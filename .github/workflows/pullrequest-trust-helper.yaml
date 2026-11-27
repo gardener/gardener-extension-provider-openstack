@@ -10,6 +10,6 @@ jobs:
   pullrequest-trusted-helper:
     permissions:
       id-token: write
-    uses: gardener/cc-utils/.github/workflows/pullrequest-trust-helper.yaml@9a9c4f544c072143b4c95b8f32b935332c47389d # v1
+    uses: gardener/cc-utils/.github/workflows/pullrequest-trust-helper.yaml@00522ef3e8504bc7be46394a239a390f112336f6 # 1.2883.0
     with:
       trusted-teams: 'core,gardener-extension-provider-openstack-maintainers'

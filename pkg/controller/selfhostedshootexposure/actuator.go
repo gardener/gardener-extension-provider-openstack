@@ -171,6 +171,9 @@ func ensureSecurityGroupRule(ctx context.Context, networkingClient openstackclie
 	if err != nil {
 		return fmt.Errorf("could not find nodes subnet for %s: %w", purpose, err)
 	}
+	if err := validateNodesSubnetCIDR(subnet, family); err != nil {
+		return err
+	}
 
 	desired := securityGroupRuleOpts(exposure, securityGroupID, family, subnet.CIDR)
 

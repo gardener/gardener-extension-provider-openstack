@@ -47,6 +47,9 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 			Cause:        fmt.Errorf("waiting for floating pool and nodes subnet to be populated in infrastructure status"),
 		}
 	}
+	if err := validateNodesSubnetCIDR(nodesSubnet, family); err != nil {
+		return nil, err
+	}
 
 	if len(exposure.Spec.Endpoints) == 0 {
 		return nil, &ctrlerror.RequeueAfterError{
@@ -127,10 +130,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 		return nil, requeueOnConflict(util.DetermineError(fmt.Errorf("could not update pool members: %w", err), helper.KnownCodes))
 	}
 
-	// Allow the load balancer (and its health-monitor probes) to reach the control-plane machines
-	// on the exposure port. The amphora backend port address is not discoverable via the load
-	// balancer API, so the rule cannot be scoped to a single source; it allows the exposure port
-	// (the TLS-protected kube-apiserver) from anywhere.
+	// Allow the load balancer to reach the control-plane machines on the exposure port from the nodes subnet.
 	nodesSecurityGroup, err := helper.FindSecurityGroupByPurpose(infraStatus.SecurityGroups, openstackapi.PurposeNodes)
 	if err != nil {
 		return nil, &ctrlerror.RequeueAfterError{

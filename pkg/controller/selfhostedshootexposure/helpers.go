@@ -62,10 +62,27 @@ func exposureTag(exposure *extensionsv1alpha1.SelfHostedShootExposure) string {
 	return fmt.Sprintf("%s=%s", tagKey, exposure.Namespace)
 }
 
-// securityGroupRuleOpts builds the ingress rule that lets the load balancer forward traffic to the
-// control-plane machines on the exposure port. The amphora backend address is not discoverable, so
-// the rule cannot be scoped to a single source; it opens the exposure port (the TLS-protected
-// kube-apiserver) from anywhere.
+func validateNodesSubnetCIDR(subnet *openstackapi.Subnet, family gardencorev1beta1.IPFamily) error {
+	if subnet.CIDR == "" {
+		return &ctrlerror.RequeueAfterError{
+			RequeueAfter: requeueAfterDependency,
+			Cause:        fmt.Errorf("waiting for %s nodes subnet %q CIDR in infrastructure status; reconcile Infrastructure to populate it", family, subnet.ID),
+		}
+	}
+	prefix, err := netip.ParsePrefix(subnet.CIDR)
+	if err != nil {
+		return fmt.Errorf("invalid CIDR %q for nodes subnet %q in infrastructure status: %w", subnet.CIDR, subnet.ID, err)
+	}
+	matchesFamily := (family == gardencorev1beta1.IPFamilyIPv4 && prefix.Addr().Is4()) ||
+		(family == gardencorev1beta1.IPFamilyIPv6 && prefix.Addr().Is6() && !prefix.Addr().Is4In6())
+	if !matchesFamily {
+		return fmt.Errorf("CIDR %q for nodes subnet %q in infrastructure status does not match IP family %s", subnet.CIDR, subnet.ID, family)
+	}
+	return nil
+}
+
+// securityGroupRuleOpts builds the ingress rule that lets the load balancer forward traffic from
+// the nodes subnet to the control-plane machines on the exposure port.
 func securityGroupRuleOpts(exposure *extensionsv1alpha1.SelfHostedShootExposure, securityGroupID string, family gardencorev1beta1.IPFamily, nodes string) rules.CreateOpts {
 	etherType := rules.EtherType4
 	prefix := nodes

@@ -63,10 +63,11 @@ var _ = Describe("Actuator", func() {
 		exposure *extensionsv1alpha1.SelfHostedShootExposure
 		scheme   *runtime.Scheme
 
-		lbClient  *mocks.MockLoadbalancing
-		nwClient  *mocks.MockNetworking
-		factory   *mocks.MockFactory
-		ffFactory fakeFactoryFactory
+		lbClient     *mocks.MockLoadbalancing
+		nwClient     *mocks.MockNetworking
+		factory      *mocks.MockFactory
+		ffFactory    fakeFactoryFactory
+		infraSubnets []openstackv1alpha1.Subnet
 	)
 
 	buildInfraStatusRaw := func() []byte {
@@ -77,9 +78,7 @@ var _ = Describe("Actuator", func() {
 			},
 			Networks: openstackv1alpha1.NetworkStatus{
 				FloatingPool: openstackv1alpha1.FloatingPoolStatus{ID: fipPoolID},
-				Subnets: []openstackv1alpha1.Subnet{
-					{Purpose: openstackv1alpha1.PurposeNodes, ID: subnetID, CIDR: subnetCIDR},
-				},
+				Subnets:      infraSubnets,
 			},
 			SecurityGroups: []openstackv1alpha1.SecurityGroup{
 				{Purpose: openstackv1alpha1.PurposeNodes, ID: nodesSGID},
@@ -124,6 +123,10 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		ctrl = gomock.NewController(GinkgoT())
+		infraSubnets = []openstackv1alpha1.Subnet{
+			{Purpose: openstackv1alpha1.PurposeNodes, ID: subnetID, CIDR: subnetCIDR},
+			{Purpose: openstackv1alpha1.PurposeNodesIPv6, ID: "subnet-ipv6", CIDR: "2001:db8:1::/64"},
+		}
 
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
@@ -171,6 +174,76 @@ var _ = Describe("Actuator", func() {
 	}
 
 	Describe("Reconcile", func() {
+		DescribeTable("rejects invalid nodes CIDRs before cloud operations",
+			func(family gardencorev1beta1.IPFamily, cidr, message string) {
+				cluster.Shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{family}
+				index := 0
+				if family == gardencorev1beta1.IPFamilyIPv6 {
+					index = 1
+				}
+				infraSubnets[index].CIDR = cidr
+
+				_, err := makeActuator(newClient()).Reconcile(ctx, GinkgoLogr, exposure, cluster)
+				Expect(err).To(MatchError(ContainSubstring(message)))
+				if cidr == "" {
+					assertRequeue(err, 30*time.Second)
+				}
+			},
+			Entry("missing IPv4 CIDR", gardencorev1beta1.IPFamilyIPv4, "", "reconcile Infrastructure"),
+			Entry("legacy missing IPv6 CIDR", gardencorev1beta1.IPFamilyIPv6, "", "reconcile Infrastructure"),
+			Entry("malformed IPv4 CIDR", gardencorev1beta1.IPFamilyIPv4, "invalid", "invalid CIDR"),
+			Entry("malformed IPv6 CIDR", gardencorev1beta1.IPFamilyIPv6, "2001:db8::/129", "invalid CIDR"),
+			Entry("IPv6 address without prefix", gardencorev1beta1.IPFamilyIPv6, "2001:db8::1", "invalid CIDR"),
+			Entry("IPv6 CIDR for IPv4", gardencorev1beta1.IPFamilyIPv4, "2001:db8::/64", "does not match IP family IPv4"),
+			Entry("IPv4 CIDR for IPv6", gardencorev1beta1.IPFamilyIPv6, subnetCIDR, "does not match IP family IPv6"),
+			Entry("IPv4-mapped IPv6 CIDR", gardencorev1beta1.IPFamilyIPv6, "::ffff:10.0.0.0/120", "does not match IP family IPv6"),
+		)
+
+		It("repairs a broad rule after legacy infrastructure status gains its CIDR", func() {
+			const cidr = "2001:db8:1::/64"
+			cluster.Shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{
+				gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4,
+			}
+			exposure.Spec.Endpoints[0].Addresses = append(exposure.Spec.Endpoints[0].Addresses,
+				corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "2001:db8:1::10"})
+			infraSubnets[1].CIDR = ""
+			c := newClient()
+			a := makeActuator(c)
+
+			_, err := a.Reconcile(ctx, GinkgoLogr, exposure, cluster)
+			Expect(err).To(MatchError(ContainSubstring("reconcile Infrastructure")))
+			assertRequeue(err, 30*time.Second)
+
+			infra := &extensionsv1alpha1.Infrastructure{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootName}, infra)).To(Succeed())
+			infraSubnets[1].CIDR = cidr
+			infra.Status.ProviderStatus = &runtime.RawExtension{Raw: buildInfraStatusRaw()}
+			Expect(c.Update(ctx, infra)).To(Succeed())
+
+			lbClient.EXPECT().ListLoadbalancers(ctx, gomock.Any()).Return([]loadbalancers.LoadBalancer{*activeLB}, nil)
+			lbClient.EXPECT().GetLoadbalancer(ctx, lbID).Return(activeLB, nil)
+			lbClient.EXPECT().ListPools(ctx, gomock.Any()).Return([]pools.Pool{{ID: poolID, Name: lbName}}, nil)
+			lbClient.EXPECT().BatchUpdatePoolMembers(ctx, poolID, gomock.Any()).Return(nil)
+			gomock.InOrder(
+				nwClient.EXPECT().ListRules(ctx, rules.ListOpts{SecGroupID: nodesSGID, Description: lbName}).
+					Return([]rules.SecGroupRule{{
+						ID: "broad-rule", Direction: "ingress", EtherType: "IPv6", Protocol: "tcp",
+						PortRangeMin: 6443, PortRangeMax: 6443,
+					}}, nil),
+				nwClient.EXPECT().DeleteRule(ctx, "broad-rule").Return(nil),
+				nwClient.EXPECT().CreateRule(ctx, rules.CreateOpts{
+					Direction: rules.DirIngress, Description: lbName, EtherType: rules.EtherType6,
+					Protocol: rules.ProtocolTCP, PortRangeMin: 6443, PortRangeMax: 6443,
+					SecGroupID: nodesSGID, RemoteIPPrefix: cidr,
+				}).Return(&rules.SecGroupRule{ID: "scoped-rule"}, nil),
+				nwClient.EXPECT().GetFipByName(ctx, exposureTag).
+					Return([]floatingips.FloatingIP{{ID: fipID, FloatingIP: fipIP, PortID: vipPortID}}, nil),
+			)
+
+			_, err = a.Reconcile(ctx, GinkgoLogr, exposure, cluster)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("creates the load balancer and requeues while it provisions", func() {
 			c := newClient()
 			lbClient.EXPECT().ListLoadbalancers(ctx, gomock.Any()).Return(nil, nil)

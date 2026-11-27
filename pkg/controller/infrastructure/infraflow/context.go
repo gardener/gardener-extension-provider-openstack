@@ -287,6 +287,7 @@ func (fctx *FlowContext) computeInfrastructureStatus() *openstackv1alpha1.Infras
 		status.Networks.Subnets = append(status.Networks.Subnets, openstackv1alpha1.Subnet{
 			Purpose: openstackv1alpha1.PurposeNodesIPv6,
 			ID:      *v,
+			CIDR:    ptr.Deref(fctx.state.Get(IdentifierNodeSubnetIPv6CIDR), ""),
 		})
 	}
 

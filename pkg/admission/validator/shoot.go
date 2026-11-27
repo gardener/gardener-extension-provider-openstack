@@ -154,10 +154,10 @@ func (s *shoot) validateShootUpdate(ctx context.Context, oldShoot, shoot *core.S
 	// Only validate against cloud profile when related configuration is updated.
 	// This ensures that already running shoots won't break after constraints were removed from the cloud profile.
 	if credentials != nil &&
-		oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider ||
-		oldCpConfig.Zone != cpConfig.Zone ||
-		!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) ||
-		oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName {
+		(oldCpConfig.LoadBalancerProvider != cpConfig.LoadBalancerProvider ||
+			oldCpConfig.Zone != cpConfig.Zone ||
+			!equality.Semantic.DeepEqual(oldCpConfig.LoadBalancerClasses, cpConfig.LoadBalancerClasses) ||
+			oldValContext.infraConfig.FloatingPoolName != valContext.infraConfig.FloatingPoolName) {
 		allErrs = append(allErrs, openstackvalidation.ValidateControlPlaneConfigAgainstCloudProfile(oldCpConfig, cpConfig, credentials.DomainName, valContext.shoot.Spec.Region, valContext.infraConfig.FloatingPoolName, valContext.cloudProfileConfig, cpConfigPath)...)
 	}
 

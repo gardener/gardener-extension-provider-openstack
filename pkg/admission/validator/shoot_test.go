@@ -383,6 +383,111 @@ var _ = Describe("Shoot validator", func() {
 			})
 		})
 
+		Context("Shoot updates", func() {
+			var (
+				oldShoot    *core.Shoot
+				cpConfig    *apiv1alpha1.ControlPlaneConfig
+				infraConfig *apiv1alpha1.InfrastructureConfig
+			)
+
+			BeforeEach(func() {
+				oldShoot = shoot.DeepCopy()
+				cpConfig = &apiv1alpha1.ControlPlaneConfig{}
+				infraConfig = &apiv1alpha1.InfrastructureConfig{}
+				Expect(json.Unmarshal(shoot.Spec.Provider.ControlPlaneConfig.Raw, cpConfig)).To(Succeed())
+				Expect(json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, infraConfig)).To(Succeed())
+
+				cloudProfile := &gardencorev1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "cloudProfile"},
+					Spec: gardencorev1beta1.CloudProfileSpec{
+						ProviderConfig: &runtime.RawExtension{
+							Raw: encode(&apiv1alpha1.CloudProfileConfig{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: apiv1alpha1.SchemeGroupVersion.String(),
+									Kind:       "CloudProfileConfig",
+								},
+								Constraints: apiv1alpha1.Constraints{
+									FloatingPools: []apiv1alpha1.FloatingPool{{
+										Name:                "pool-1",
+										LoadBalancerClasses: []apiv1alpha1.LoadBalancerClass{{Name: "allowed"}},
+									}},
+								},
+							}),
+						},
+					},
+				}
+				binding := &gardencorev1beta1.SecretBinding{
+					ObjectMeta: metav1.ObjectMeta{Name: "credentials", Namespace: namespace},
+					SecretRef:  corev1.SecretReference{Name: "credentials", Namespace: namespace},
+				}
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "credentials", Namespace: namespace},
+					Data: map[string][]byte{
+						openstack.DomainName: []byte("domain"),
+						openstack.TenantName: []byte("tenant"),
+						openstack.UserName:   []byte("user"),
+						openstack.Password:   []byte("password"),
+					},
+				}
+				c := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(cloudProfile, binding).Build()
+				apiReaderScheme := runtime.NewScheme()
+				Expect(corev1.AddToScheme(apiReaderScheme)).To(Succeed())
+				apiReader := fakeclient.NewClientBuilder().WithScheme(apiReaderScheme).WithObjects(secret).Build()
+				shootValidator = validator.NewShootValidator(test.FakeManager{Scheme: scheme, Client: c, APIReader: apiReader})
+			})
+
+			DescribeTable("should guard profile validation without skipping independent validation",
+				func(withCredentials bool, change string, expectedField string) {
+					if withCredentials {
+						shoot.Spec.SecretBindingName = ptr.To("credentials")
+						oldShoot.Spec.SecretBindingName = ptr.To("credentials")
+					}
+
+					switch change {
+					case "provider":
+						cpConfig.LoadBalancerProvider = "unsupported"
+					case "zone":
+						cpConfig.Zone = ptr.To("zone2")
+					case "classes":
+						cpConfig.LoadBalancerClasses = []apiv1alpha1.LoadBalancerClass{{Name: "custom", FloatingSubnetName: ptr.To("custom-subnet")}}
+					case "pool":
+						infraConfig.FloatingPoolName = "pool-2"
+					case "invalid control plane":
+						cpConfig.Zone = ptr.To("zone2")
+						cpConfig.LoadBalancerProvider = ""
+					case "invalid worker":
+						cpConfig.Zone = ptr.To("zone2")
+						shoot.Spec.Provider.Workers[0].Volume.VolumeSize = ""
+					case "invalid networking":
+						cpConfig.Zone = ptr.To("zone2")
+						shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+					}
+					shoot.Spec.Provider.ControlPlaneConfig.Raw = encode(cpConfig)
+					shoot.Spec.Provider.InfrastructureConfig.Raw = encode(infraConfig)
+
+					err := shootValidator.Validate(ctx, shoot, oldShoot)
+					if expectedField == "" {
+						Expect(err).NotTo(HaveOccurred())
+					} else {
+						Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Field": Equal(expectedField),
+						}))))
+					}
+				},
+				Entry("w/o credential binding, unchanged configuration", false, "unchanged", ""),
+				Entry("w/o credential binding, changed provider", false, "provider", ""),
+				Entry("w/o credential binding, changed zone", false, "zone", ""),
+				Entry("w/o credential binding, changed load balancer classes", false, "classes", ""),
+				Entry("w/o credential binding, immutable floating pool", false, "pool", "spec.provider.infrastructureConfig.floatingPoolName"),
+				Entry("w/o credential binding, invalid control plane", false, "invalid control plane", "spec.provider.controlPlaneConfig.loadBalancerProvider"),
+				Entry("w/o credential binding, invalid worker", false, "invalid worker", "spec.provider.workers[0].volume.type"),
+				Entry("w/o credential binding, invalid networking", false, "invalid networking", "spec.networking.ipFamilies"),
+				Entry("credential-backed, unchanged provider absent from profile", true, "unchanged", ""),
+				Entry("credential-backed, changed provider violates profile", true, "provider", "spec.provider.controlPlaneConfig.loadBalancerProvider"),
+				Entry("credential-backed, changed classes violate profile", true, "classes", "spec.provider.controlPlaneConfig.loadBalancerClasses[0]"),
+			)
+		})
+
 		Context("DNS validation", func() {
 			var (
 				cloudProfile *gardencorev1beta1.CloudProfile
